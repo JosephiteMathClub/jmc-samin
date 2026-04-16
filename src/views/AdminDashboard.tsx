@@ -169,16 +169,25 @@ const AdminDashboard = () => {
   const toggleVerified = async (memberId: string, currentStatus: string) => {
     const newStatus = currentStatus === 'yes' ? 'no' : 'yes';
     try {
+      const member = members.find(m => m.id === memberId);
+      let updates: any = { verified: newStatus };
+      
+      if (newStatus === 'yes' && !member?.member_id) {
+        // Generate unique 6-digit ID
+        const generatedId = Math.floor(100000 + Math.random() * 900000).toString();
+        updates.member_id = generatedId;
+      }
+
       const { error } = await supabase
         .from('member')
-        .update({ verified: newStatus })
+        .update(updates)
         .eq('id', memberId);
       
       if (error) {
         throw error;
       }
       
-      setMembers(prev => prev.map(m => m.id === memberId ? { ...m, verified: newStatus } : m));
+      setMembers(prev => prev.map(m => m.id === memberId ? { ...m, ...updates } : m));
       showToast(`Member ${newStatus === 'yes' ? 'verified' : 'unverified'}`, 'success');
     } catch (err) {
       console.error('Error updating member:', err);
@@ -1608,8 +1617,10 @@ const AdminDashboard = () => {
                             </td>
                             <td className="py-4 px-4">
                               <div className="flex flex-col">
-                                <span className="text-[10px] font-bold uppercase tracking-widest text-indigo-400">{m.membership_type || 'General'}</span>
-                                {m.department && <span className="text-[9px] text-zinc-500 uppercase tracking-widest">{m.department}</span>}
+                                <span className="text-[10px] font-bold uppercase tracking-widest text-indigo-400">General Member</span>
+                                {m.member_id && (
+                                  <span className="text-[10px] font-mono font-bold text-white mt-1">ID: {m.member_id}</span>
+                                )}
                               </div>
                             </td>
                             <td className="py-4 px-4">
@@ -2115,9 +2126,6 @@ begin
     if not exists (select from information_schema.columns where table_name = 'profiles' and column_name = 'phone') then
       alter table public.profiles add column phone text;
     end if;
-    if not exists (select from information_schema.columns where table_name = 'profiles' and column_name = 'membership_type') then
-      alter table public.profiles add column membership_type text;
-    end if;
     if not exists (select from information_schema.columns where table_name = 'profiles' and column_name = 'intra_events_chosen') then
       alter table public.profiles add column intra_events_chosen boolean default false;
     end if;
@@ -2170,11 +2178,8 @@ begin
     if not exists (select from information_schema.columns where table_name = 'member' and column_name = 'email_address') then
       alter table public.member add column email_address text;
     end if;
-    if not exists (select from information_schema.columns where table_name = 'member' and column_name = 'membership_type') then
-      alter table public.member add column membership_type text;
-    end if;
-    if not exists (select from information_schema.columns where table_name = 'member' and column_name = 'department') then
-      alter table public.member add column department text;
+    if not exists (select from information_schema.columns where table_name = 'member' and column_name = 'member_id') then
+      alter table public.member add column member_id text;
     end if;
     if not exists (select from information_schema.columns where table_name = 'member' and column_name = 'photo_url') then
       alter table public.member add column photo_url text;
@@ -2182,6 +2187,12 @@ begin
     if not exists (select from information_schema.columns where table_name = 'member' and column_name = 'created_at') then
       alter table public.member add column created_at timestamp with time zone default now();
     end if;
+
+    -- Remove EC related columns
+    alter table public.member drop column if exists membership_type;
+    alter table public.member drop column if exists department;
+    alter table public.profiles drop column if exists membership_type;
+    alter table public.profiles drop column if exists department;
   end if;
 end $$;
 

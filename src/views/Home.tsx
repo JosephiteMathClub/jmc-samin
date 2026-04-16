@@ -296,18 +296,18 @@ const Home = () => {
 
           <ScrollReveal direction="up" distance={50} delay={0.2} className="relative w-full max-w-6xl mx-auto aspect-[16/9] rounded-[2.5rem] overflow-hidden glass-card border-white/10 group shadow-[0_0_100px_rgba(0,0,0,0.5)]">
             <AnimatePresence mode="wait">
-              <motion.img
-                key={currentIndex}
-                src={resolveImageUrl(gallery[currentIndex])}
-                alt={`Memory ${currentIndex + 1}`}
-                initial={shouldReduceGfx ? { opacity: 1 } : { opacity: 0, scale: 1.1 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={shouldReduceGfx ? { opacity: 1 } : { opacity: 0, scale: 1.05 }}
-                transition={{ duration: shouldReduceGfx ? 0.1 : 0.8, ease: "easeInOut" }}
-                className="w-full h-full object-cover"
-                referrerPolicy="no-referrer"
-                loading="lazy"
-              />
+              <div className="w-full h-full relative">
+                <Image
+                  key={currentIndex}
+                  src={resolveImageUrl(gallery[currentIndex])}
+                  alt={`Memory ${currentIndex + 1}`}
+                  fill
+                  priority={currentIndex === 0}
+                  className="object-cover"
+                  referrerPolicy="no-referrer"
+                  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 80vw, 1200px"
+                />
+              </div>
             </AnimatePresence>
 
             {/* Overlay Gradient */}
@@ -396,8 +396,7 @@ const Home = () => {
                           alt={t.name} 
                           fill
                           className="object-cover" 
-                          unoptimized={!t.imageUrl?.startsWith('http') && !t.imageUrl?.startsWith('/uploads/')}
-                          loading="lazy"
+                          referrerPolicy="no-referrer"
                         />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center bg-zinc-800">

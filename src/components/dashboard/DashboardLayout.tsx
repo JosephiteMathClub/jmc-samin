@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { usePerformance } from '../../hooks/usePerformance';
+import { resolveImageUrl } from '../../lib/utils';
 
 interface DashboardLayoutProps {
   activeTab: string;
@@ -68,9 +69,10 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
           <div className="flex items-center gap-4">
             <div className="w-20 lg:w-24 h-10 relative">
               <Image 
-                src={logoUrl || "/images/logo.png"} 
+                src={resolveImageUrl(logoUrl) || "/images/logo.png"} 
                 alt="JMC Logo" 
                 fill
+                priority
                 className="object-contain"
                 referrerPolicy="no-referrer"
               />

@@ -34,7 +34,7 @@ import { usePerformance } from '../hooks/usePerformance';
 
 const RegisterMember = () => {
   const { user, profile, isAdmin, loading: authLoading, refreshProfile } = useAuth();
-  const { content } = useContent();
+  const { content, loading: contentLoading } = useContent();
   const router = useRouter();
   const { showToast } = useToast();
   const { shouldReduceGfx } = usePerformance();
@@ -46,10 +46,9 @@ const RegisterMember = () => {
   const [roll, setRoll] = useState('');
   const [phone, setPhone] = useState('');
   const [emailAddress, setEmailAddress] = useState('');
-  const [membershipType, setMembershipType] = useState<'general' | 'executive'>('general');
   const [photoUrl, setPhotoUrl] = useState('');
+  const [memberId, setMemberId] = useState('');
   const [agreed, setAgreed] = useState(false);
-  const [department, setDepartment] = useState('');
   
   const [paymentMethod, setPaymentMethod] = useState<'bkash' | 'cash' | ''>('');
   const [trxnid, setTrxnid] = useState('');
@@ -85,9 +84,8 @@ const RegisterMember = () => {
         setRoll(data.roll || '');
         setPhone(data.phone || '');
         setEmailAddress(data.email_address || user.email || '');
-        setMembershipType(data.membership_type || '');
-        setDepartment(data.department || '');
         setPhotoUrl(data.photo_url || '');
+        setMemberId(data.member_id || '');
       }
     } catch (err) {
       console.error('Error checking member status:', err);
@@ -158,10 +156,6 @@ const RegisterMember = () => {
       showToast('Please agree to the declaration', 'error');
       return;
     }
-    if (!membershipType) {
-      showToast('Please select membership type', 'error');
-      return;
-    }
 
     setLoading(true);
     setError(null);
@@ -197,8 +191,6 @@ const RegisterMember = () => {
           class: className,
           section,
           roll,
-          membership_type: membershipType,
-          department,
           photo_url: photoUrl,
           payment_method: paymentMethod,
           trxnid: paymentMethod === 'bkash' ? trxnid : null,
@@ -219,8 +211,6 @@ const RegisterMember = () => {
           section,
           roll,
           phone,
-          membership_type: membershipType,
-          department,
           intra_events: true,
           intra_events_chosen: true,
           updated_at: new Date().toISOString()
@@ -241,7 +231,7 @@ const RegisterMember = () => {
     }
   };
 
-  if (authLoading || checkingMember) {
+  if (authLoading || checkingMember || contentLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#080808]">
         <Loader2 className="w-10 h-10 text-amber-500 animate-spin" />
@@ -273,7 +263,27 @@ const RegisterMember = () => {
               <p className="text-zinc-500 font-medium">Complete your details to access exclusive club activities.</p>
             </div>
 
-            {isMember ? (
+            {content?.registration?.registrationOpen === false ? (
+              <div className="p-12 rounded-[40px] bg-white/[0.03] border border-white/10 backdrop-blur-xl text-center space-y-8">
+                <div className="w-20 h-20 bg-amber-500/20 rounded-full flex items-center justify-center mx-auto border border-amber-500/30">
+                  <AlertCircle className="w-10 h-10 text-amber-500" />
+                </div>
+                <div className="space-y-4">
+                  <h3 className="text-2xl font-bold text-white uppercase tracking-tight">Registration Closed</h3>
+                  <p className="text-zinc-500 text-sm leading-relaxed max-w-sm mx-auto">
+                    {content?.registration?.registrationClosedMessage || "Registration for the current intra-events is currently closed. Please stay tuned for future updates."}
+                  </p>
+                </div>
+                <div className="pt-8 border-t border-white/5">
+                  <button 
+                    onClick={() => router.push('/')}
+                    className="px-8 py-4 rounded-2xl bg-white/5 border border-white/10 text-white text-xs font-bold uppercase tracking-widest hover:bg-white/10 transition-all"
+                  >
+                    Return Home
+                  </button>
+                </div>
+              </div>
+            ) : isMember ? (
               <div className="p-12 rounded-[40px] bg-white/[0.03] border border-white/10 backdrop-blur-xl text-center space-y-8">
                 <div className="w-24 h-24 rounded-full bg-amber-500/20 flex items-center justify-center text-amber-500 mx-auto border border-amber-500/30">
                   <CheckCircle2 className="w-12 h-12" />
@@ -296,9 +306,18 @@ const RegisterMember = () => {
                       <div className="px-6 py-4 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-between">
                         <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">Membership</span>
                         <span className="text-xs font-bold uppercase tracking-widest text-white">
-                          {membershipType || 'General'}
+                          General Member
                         </span>
                       </div>
+
+                      {memberId && (
+                        <div className="px-6 py-4 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-between">
+                          <span className="text-[10px] font-bold uppercase tracking-widest text-amber-500">Member ID</span>
+                          <span className="text-sm font-mono font-bold text-white tracking-widest">
+                            {memberId}
+                          </span>
+                        </div>
+                      )}
 
                       {paymentMethod === 'bkash' && (
                         <div className="px-6 py-4 rounded-2xl bg-white/5 border border-white/10 space-y-2 text-left">
@@ -322,26 +341,6 @@ const RegisterMember = () => {
                     className="px-8 py-4 rounded-2xl bg-white/5 border border-white/10 text-white font-bold hover:bg-white/10 transition-all w-full sm:w-auto"
                   >
                     Close This Tab
-                  </button>
-                </div>
-              </div>
-            ) : content?.registration?.registrationOpen === false && !isAdmin ? (
-              <div className="p-12 rounded-[40px] bg-white/[0.03] border border-white/10 backdrop-blur-xl text-center space-y-8">
-                <div className="w-20 h-20 bg-amber-500/20 rounded-full flex items-center justify-center mx-auto border border-amber-500/30">
-                  <AlertCircle className="w-10 h-10 text-amber-500" />
-                </div>
-                <div className="space-y-4">
-                  <h3 className="text-2xl font-bold text-white uppercase tracking-tight">Registration Closed</h3>
-                  <p className="text-zinc-500 text-sm leading-relaxed max-w-sm mx-auto">
-                    {content?.registration?.registrationClosedMessage || "Registration for the current intra-events is currently closed. Please stay tuned for future updates."}
-                  </p>
-                </div>
-                <div className="pt-8 border-t border-white/5">
-                  <button 
-                    onClick={() => router.push('/')}
-                    className="px-8 py-4 rounded-2xl bg-white/5 border border-white/10 text-white text-xs font-bold uppercase tracking-widest hover:bg-white/10 transition-all"
-                  >
-                    Return Home
                   </button>
                 </div>
               </div>
@@ -664,22 +663,20 @@ const RegisterMember = () => {
                 </button>
               </div>
 
-              <PrintableForm 
-                data={{
-                  fullName,
-                  school,
-                  className,
-                  section,
-                  roll,
-                  phone,
-                  emailAddress,
-                  membershipType,
-                  department,
-                  photoUrl
-                }}
-                declaration={content?.registration?.declaration}
-                logoUrl={content?.site?.logoUrl}
-              />
+                  <PrintableForm 
+                    data={{
+                      fullName,
+                      school,
+                      className,
+                      section,
+                      roll,
+                      phone,
+                      emailAddress,
+                      photoUrl
+                    }}
+                    declaration={content?.registration?.declaration}
+                    logoUrl={content?.site?.logoUrl}
+                  />
             </div>
           </motion.div>
         )}

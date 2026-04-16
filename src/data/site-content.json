@@ -1,5 +1,5 @@
 {
-  "lastUpdated": "2026-04-15T14:13:59.150Z",
+  "lastUpdated": "2026-04-16T13:03:28.083Z",
   "_instruction": "Update 'lastUpdated' whenever you manually edit this file to ensure changes take precedence over the admin panel.",
   "home": {
     "gallery": [
@@ -88,8 +88,8 @@
     "logoUrl": "/images/logo.png",
     "clubName": "Josephite Math Club",
     "established": "EST. 2015",
-    "maintenanceMode": false,
-    "maintenanceMessage": "The site is currently under maintenance"
+    "maintenanceMode": true,
+    "maintenanceMessage": "The site is currently going under some performance improvance. Please bear with us "
   },
   "about": {
     "stats": [
@@ -1148,7 +1148,8 @@
       "Copy the Transaction ID (TrxID) and enter it below"
     ],
     "cashInstructions": "Please pay your registration fee to the club treasurer.",
-    "registrationOpen": true
+    "registrationOpen": false,
+    "registrationClosedMessage": "We will disclose form access later on. Sorry for your inconvenience "
   },
   "gallery_page": {
     "images": []

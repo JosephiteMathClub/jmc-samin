@@ -5,6 +5,8 @@ import Image from 'next/image';
 
 import { usePerformance } from '../hooks/usePerformance';
 
+import { resolveImageUrl } from '../lib/utils';
+
 interface SplashScreenProps {
   isLoaded: boolean;
   logoUrl?: string;
@@ -15,6 +17,8 @@ const SplashScreen = ({ isLoaded, logoUrl, onFinish }: SplashScreenProps) => {
   const [progress, setProgress] = useState(0);
   const [isExiting, setIsExiting] = useState(false);
   const { shouldReduceGfx } = usePerformance();
+
+  const resolvedLogoUrl = resolveImageUrl(logoUrl) || "/images/logo.png";
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -71,12 +75,12 @@ const SplashScreen = ({ isLoaded, logoUrl, onFinish }: SplashScreenProps) => {
             >
               <div className="w-32 h-32 relative">
                 <Image 
-                  src={logoUrl || "/images/logo.png"} 
+                  src={resolvedLogoUrl} 
                   alt="JMC Logo" 
                   fill
+                  priority
                   className="object-contain filter drop-shadow-[0_0_20px_rgba(245,158,11,0.3)]"
                   referrerPolicy="no-referrer"
-                  fetchPriority="high"
                 />
               </div>
               

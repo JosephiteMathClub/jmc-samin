@@ -8,11 +8,14 @@ import ContactModal from "@/components/ContactModal";
 
 import { usePerformance } from "@/hooks/usePerformance";
 
+import { resolveImageUrl } from "@/lib/utils";
+
 const Footer = () => {
   const { content } = useContent();
   const [isContactOpen, setIsContactOpen] = useState(false);
   const { shouldReduceGfx } = usePerformance();
   const clubName = content?.site?.clubName || 'Josephite Math Club';
+  const logoUrl = resolveImageUrl(content?.site?.logoUrl) || "/images/logo.png";
 
   return (
     <footer className="bg-[#050505] text-zinc-400 py-20 border-t border-white/5 relative z-10">
@@ -23,12 +26,11 @@ const Footer = () => {
             <div className="flex items-center space-x-4">
               <div className="h-12 w-32 relative">
                 <Image 
-                  src={content?.site?.logoUrl || "/images/logo.png"} 
+                  src={logoUrl} 
                   alt="JMC Logo" 
                   fill
                   className="object-contain"
                   referrerPolicy="no-referrer"
-                  fetchPriority="high"
                 />
               </div>
               <div className="font-display font-bold leading-tight text-white">

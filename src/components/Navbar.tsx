@@ -8,6 +8,7 @@ import { useContent } from '../context/ContentContext';
 import { Menu, X, User, LogOut, LayoutDashboard } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { motion, AnimatePresence } from 'framer-motion';
+import { resolveImageUrl } from '../lib/utils';
 
 import { usePerformance } from '../hooks/usePerformance';
 
@@ -64,12 +65,12 @@ const Navbar = () => {
             <Link href="/" className="flex items-center space-x-4 group">
               <div className={`h-12 w-12 relative ${!shouldReduceGfx && 'group-hover:scale-110 transition-transform duration-500'}`}>
                 <Image 
-                  src={logoUrl || "/images/logo.png"} 
+                  src={resolveImageUrl(logoUrl) || "/images/logo.png"} 
                   alt="JMC Logo" 
                   fill
+                  priority
                   className="object-contain"
-                  unoptimized={!logoUrl?.startsWith('http') && !logoUrl?.startsWith('/uploads/')}
-                  fetchPriority="high"
+                  referrerPolicy="no-referrer"
                 />
               </div>
               <div className="flex flex-col">

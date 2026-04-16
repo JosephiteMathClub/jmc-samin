@@ -17,6 +17,7 @@ import {
   LayoutDashboard
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { useContent } from '../context/ContentContext';
 import { useRouter } from 'next/navigation';
 import { supabase } from '../lib/supabase';
 import ScrollReveal from '../components/ScrollReveal';
@@ -26,6 +27,7 @@ import { resolveImageUrl } from '../lib/utils';
 
 const Profile = () => {
   const { user, profile, loading: authLoading, isAdmin, signOut, refreshProfile } = useAuth();
+  const { content } = useContent();
   const router = useRouter();
   const { shouldReduceGfx } = usePerformance();
   
@@ -271,7 +273,7 @@ const Profile = () => {
                 </div>
 
                 {/* Registration Link */}
-                {!isMember && !checkingMember && (
+                {!isMember && !checkingMember && content?.registration?.registrationOpen !== false && (
                   <div className="p-8 md:p-12 rounded-[40px] bg-white/[0.03] border border-white/10 backdrop-blur-xl mt-8 relative overflow-hidden group">
                     <div className="absolute top-0 right-0 w-64 h-64 bg-[var(--c-6-start)]/5 rounded-full blur-[80px] -mr-32 -mt-32 group-hover:bg-[var(--c-6-start)]/10 transition-colors duration-700" />
                     
