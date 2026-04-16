@@ -74,7 +74,6 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
                 fill
                 priority
                 className="object-contain"
-                referrerPolicy="no-referrer"
               />
             </div>
             <div>

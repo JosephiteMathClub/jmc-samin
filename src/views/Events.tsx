@@ -168,7 +168,6 @@ const Events = () => {
                             fill
                             priority={i < 3}
                             className={`w-full h-full object-cover ${!shouldReduceGfx && 'group-hover:scale-110 transition-transform duration-1000'} opacity-60 group-hover:opacity-100`}
-                            referrerPolicy="no-referrer"
                           />
                           <div className="absolute top-6 left-6 flex flex-col gap-2">
                             <div className="px-4 py-2 rounded-full bg-black/50 backdrop-blur-md border border-white/10 text-[10px] font-bold uppercase tracking-widest text-[var(--c-6-start)]">

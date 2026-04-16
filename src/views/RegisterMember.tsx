@@ -735,7 +735,6 @@ const FormSection = ({ type, data, isStudentCopy = false, declaration, logoUrl }
               alt="JMC" 
               fill 
               className="object-contain" 
-              unoptimized={!logoUrl?.startsWith('http') && !logoUrl?.startsWith('/uploads/')}
             />
           ) : (
             <span className="text-[10px] font-bold">JMC LOGO</span>
@@ -769,7 +768,6 @@ const FormSection = ({ type, data, isStudentCopy = false, declaration, logoUrl }
               alt="Photo" 
               fill 
               className="object-cover" 
-              unoptimized={!data.photoUrl?.startsWith('http') && !data.photoUrl?.startsWith('/uploads/')}
             />
           ) : (
             'PHOTO'

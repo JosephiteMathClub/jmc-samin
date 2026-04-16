@@ -1,5 +1,5 @@
 {
-  "lastUpdated": "2026-04-16T13:03:28.083Z",
+  "lastUpdated": "2026-04-15T08:38:40.793Z",
   "_instruction": "Update 'lastUpdated' whenever you manually edit this file to ensure changes take precedence over the admin panel.",
   "home": {
     "gallery": [
@@ -89,7 +89,7 @@
     "clubName": "Josephite Math Club",
     "established": "EST. 2015",
     "maintenanceMode": true,
-    "maintenanceMessage": "The site is currently going under some performance improvance. Please bear with us "
+    "maintenanceMessage": "The site is currently under maintenance"
   },
   "about": {
     "stats": [
@@ -1139,17 +1139,17 @@
   },
   "registration": {
     "fee": "200 BDT",
-    "bkashNumber": "N/A",
+    "bkashNumber": "01712345678",
     "declaration": "I am willing to join the Josephite Math Club, I promise to perform my duties with honesty, respect the club values, and work for its development",
+    "registrationOpen": true,
+    "registrationClosedMessage": "Registration for the current intra-events is currently closed. Please stay tuned for future updates.",
     "instructions": [
       "Go to your bKash app or dial *247#",
       "Select \"Send Money\" and enter the number above",
       "Enter the registration fee amount",
       "Copy the Transaction ID (TrxID) and enter it below"
     ],
-    "cashInstructions": "Please pay your registration fee to the club treasurer.",
-    "registrationOpen": false,
-    "registrationClosedMessage": "We will disclose form access later on. Sorry for your inconvenience "
+    "cashInstructions": "Please pay your registration fee to the club treasurer."
   },
   "gallery_page": {
     "images": []

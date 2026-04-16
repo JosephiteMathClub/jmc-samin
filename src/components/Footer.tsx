@@ -30,7 +30,6 @@ const Footer = () => {
                   alt="JMC Logo" 
                   fill
                   className="object-contain"
-                  referrerPolicy="no-referrer"
                 />
               </div>
               <div className="font-display font-bold leading-tight text-white">

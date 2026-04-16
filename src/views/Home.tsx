@@ -304,7 +304,6 @@ const Home = () => {
                   fill
                   priority={currentIndex === 0}
                   className="object-cover"
-                  referrerPolicy="no-referrer"
                   sizes="(max-width: 768px) 100vw, (max-width: 1200px) 80vw, 1200px"
                 />
               </div>

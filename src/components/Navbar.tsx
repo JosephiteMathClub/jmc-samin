@@ -70,7 +70,6 @@ const Navbar = () => {
                   fill
                   priority
                   className="object-contain"
-                  referrerPolicy="no-referrer"
                 />
               </div>
               <div className="flex flex-col">

@@ -86,7 +86,6 @@ const Flashcard = ({ role, name, imageUrl, icon: Icon = User, onUpload, isAdmin 
             alt={name || 'Member'} 
             fill 
             className={`object-cover ${!shouldReduceGfx && 'transition-transform duration-700 group-hover:scale-110'}`}
-            referrerPolicy="no-referrer"
           />
         ) : (
           <div className="absolute inset-0 flex items-center justify-center text-amber-500/10">
