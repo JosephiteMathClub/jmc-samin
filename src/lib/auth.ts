@@ -12,8 +12,35 @@ export async function getAdminEmails() {
 
 export async function isAdmin(user: any) {
   if (!user || !user.email) return false;
+  
+  // 1. Check Hardcoded Whitelist (Super Admins)
   const ADMIN_EMAILS = await getAdminEmails();
-  return ADMIN_EMAILS.includes(user.email.toLowerCase());
+  if (ADMIN_EMAILS.includes(user.email.toLowerCase())) return true;
+
+  // 2. Check Database Role (Regular Admins)
+  try {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    
+    if (supabaseUrl && supabaseAnonKey) {
+      const { createClient } = await import('@supabase/supabase-js');
+      const supabase = createClient(supabaseUrl, supabaseAnonKey);
+      
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .maybeSingle();
+      
+      if (data && !error && data.role === 'admin') {
+        return true;
+      }
+    }
+  } catch (err) {
+    console.error("Error checking database admin role:", err);
+  }
+
+  return false;
 }
 
 export async function getAuthenticatedUser() {

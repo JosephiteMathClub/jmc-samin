@@ -33,7 +33,7 @@ import { resolveImageUrl } from '../lib/utils';
 import { usePerformance } from '../hooks/usePerformance';
 
 const RegisterMember = () => {
-  const { user, profile, loading: authLoading, refreshProfile } = useAuth();
+  const { user, profile, isAdmin, loading: authLoading, refreshProfile } = useAuth();
   const { content } = useContent();
   const router = useRouter();
   const { showToast } = useToast();
@@ -322,6 +322,26 @@ const RegisterMember = () => {
                     className="px-8 py-4 rounded-2xl bg-white/5 border border-white/10 text-white font-bold hover:bg-white/10 transition-all w-full sm:w-auto"
                   >
                     Close This Tab
+                  </button>
+                </div>
+              </div>
+            ) : content?.registration?.registrationOpen === false && !isAdmin ? (
+              <div className="p-12 rounded-[40px] bg-white/[0.03] border border-white/10 backdrop-blur-xl text-center space-y-8">
+                <div className="w-20 h-20 bg-amber-500/20 rounded-full flex items-center justify-center mx-auto border border-amber-500/30">
+                  <AlertCircle className="w-10 h-10 text-amber-500" />
+                </div>
+                <div className="space-y-4">
+                  <h3 className="text-2xl font-bold text-white uppercase tracking-tight">Registration Closed</h3>
+                  <p className="text-zinc-500 text-sm leading-relaxed max-w-sm mx-auto">
+                    {content?.registration?.registrationClosedMessage || "Registration for the current intra-events is currently closed. Please stay tuned for future updates."}
+                  </p>
+                </div>
+                <div className="pt-8 border-t border-white/5">
+                  <button 
+                    onClick={() => router.push('/')}
+                    className="px-8 py-4 rounded-2xl bg-white/5 border border-white/10 text-white text-xs font-bold uppercase tracking-widest hover:bg-white/10 transition-all"
+                  >
+                    Return Home
                   </button>
                 </div>
               </div>

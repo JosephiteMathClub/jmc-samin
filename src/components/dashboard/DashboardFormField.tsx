@@ -6,8 +6,10 @@ interface DashboardFormFieldProps {
   description?: string;
   value?: string;
   onChange?: (val: string) => void;
-  type?: 'text' | 'textarea' | 'number' | 'email' | 'url' | 'select';
+  type?: 'text' | 'textarea' | 'number' | 'email' | 'url' | 'select' | 'toggle';
   options?: { value: string; label: string }[];
+  checked?: boolean;
+  onCheckedChange?: (val: boolean) => void;
   placeholder?: string;
   error?: string;
   children?: React.ReactNode;
@@ -20,6 +22,8 @@ export const DashboardFormField: React.FC<DashboardFormFieldProps> = ({
   onChange,
   type = 'text',
   options,
+  checked,
+  onCheckedChange,
   placeholder,
   error,
   children
@@ -37,7 +41,19 @@ export const DashboardFormField: React.FC<DashboardFormFieldProps> = ({
     </div>
     <div className="relative">
       {children ? children : (
-        type === 'textarea' ? (
+        type === 'toggle' ? (
+          <button
+            type="button"
+            onClick={() => onCheckedChange?.(!checked)}
+            className={`w-12 h-6 rounded-full relative transition-all duration-300 ${
+              checked ? 'bg-amber-500' : 'bg-white/10'
+            }`}
+          >
+            <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all duration-300 ${
+              checked ? 'left-7' : 'left-1'
+            }`} />
+          </button>
+        ) : type === 'textarea' ? (
           <textarea
             value={value}
             onChange={(e) => onChange?.(e.target.value)}

@@ -2,7 +2,9 @@
 
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { usePathname } from "next/navigation";
 import { useContent } from "@/context/ContentContext";
+import { useAuth } from "@/context/AuthContext";
 import Navbar from "@/components/Navbar";
 import BackgroundFormulas from "@/components/BackgroundFormulas";
 import MathVisualizations from "@/components/MathVisualizations";
@@ -11,12 +13,22 @@ import SplashScreen from "@/components/SplashScreen";
 import FloatingSidebar from "@/components/FloatingSidebar";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import Footer from "@/components/Footer";
+import MaintenanceView from "@/components/MaintenanceView";
 import { usePerformance } from "@/hooks/usePerformance";
 
 export default function ClientLayout({ children }: { children: React.ReactNode }) {
   const { loading, content } = useContent();
+  const { isAdmin } = useAuth();
+  const pathname = usePathname();
   const [splashFinished, setSplashFinished] = useState(false);
   const { shouldReduceGfx } = usePerformance();
+
+  // Allow access to login and password reset pages even in maintenance mode
+  const isAuthPage = pathname?.startsWith('/login') || 
+                     pathname?.startsWith('/forgot-password') || 
+                     pathname?.startsWith('/reset-password');
+
+  const isMaintenance = content?.site?.maintenanceMode && !isAdmin && !isAuthPage;
 
   return (
     <AnimatePresence mode="wait">
@@ -26,6 +38,12 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
           isLoaded={!loading} 
           logoUrl={content?.site?.logoUrl}
           onFinish={() => setSplashFinished(true)} 
+        />
+      ) : isMaintenance ? (
+        <MaintenanceView 
+          key="maintenance"
+          message={content?.site?.maintenanceMessage}
+          logoUrl={content?.site?.logoUrl}
         />
       ) : (
         <motion.div

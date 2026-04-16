@@ -102,6 +102,52 @@ const AdminDashboard = () => {
   const [memberSearch, setMemberSearch] = useState('');
   const [memberFilter, setMemberFilter] = useState('all'); // 'all', 'yes', 'no'
 
+  const [profiles, setProfiles] = useState<any[]>([]);
+  const [loadingProfiles, setLoadingProfiles] = useState(false);
+  const [profileError, setProfileError] = useState<string | null>(null);
+  const [userSearch, setUserSearch] = useState('');
+  const [userFilter, setUserFilter] = useState('all'); // 'all', 'admin', 'member'
+
+  const fetchProfiles = useCallback(async () => {
+    if (!isSupabaseConfigured) return;
+    setLoadingProfiles(true);
+    setProfileError(null);
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      setProfiles(data || []);
+    } catch (err: any) {
+      console.error("Error fetching profiles:", err);
+      setProfileError(err.message);
+    } finally {
+      setLoadingProfiles(false);
+    }
+  }, []);
+
+  const toggleUserRole = async (profileId: string, currentRole: string) => {
+    if (!isSupabaseConfigured) return;
+    const newRole = currentRole === 'admin' ? 'member' : 'admin';
+    
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ role: newRole })
+        .eq('id', profileId);
+      
+      if (error) throw error;
+      
+      setProfiles(prev => prev.map(p => p.id === profileId ? { ...p, role: newRole } : p));
+      showToast(`User role updated to ${newRole}`, "success");
+    } catch (err: any) {
+      console.error("Error updating role:", err);
+      showToast(`Failed to update role: ${err.message}`, "error");
+    }
+  };
+
   const fetchMembers = useCallback(async () => {
     setLoadingMembers(true);
     setMemberError(null);
@@ -218,7 +264,10 @@ const AdminDashboard = () => {
     if (activeTab === 'members') {
       fetchMembers();
     }
-  }, [activeTab, fetchMembers]);
+    if (activeTab === 'access') {
+      fetchProfiles();
+    }
+  }, [activeTab, fetchMembers, fetchProfiles]);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -427,6 +476,7 @@ const AdminDashboard = () => {
     { id: 'members_list', label: 'Members List', icon: Users },
     { id: 'gallery', label: 'Gallery', icon: LayoutDashboard },
     { id: 'members', label: 'Members', icon: Award },
+    { id: 'access', label: 'Access Control', icon: ShieldAlert },
     { id: 'site', label: 'Site Config', icon: Settings },
   ];
 
@@ -1608,6 +1658,151 @@ const AdminDashboard = () => {
           </motion.div>
         )}
 
+        {activeTab === 'access' && (
+          <motion.div
+            key="access"
+            initial={shouldReduceGfx ? { opacity: 0 } : { opacity: 0, x: 20 }}
+            animate={shouldReduceGfx ? { opacity: 1 } : { opacity: 1, x: 0 }}
+            exit={shouldReduceGfx ? { opacity: 0 } : { opacity: 0, x: -20 }}
+            className="space-y-8"
+          >
+            <DashboardSection 
+              icon={ShieldAlert} 
+              title="User Access Control" 
+              description="Manage user roles and administrative permissions."
+            >
+              <div className="space-y-6">
+                <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
+                  <div className="relative w-full md:w-96">
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
+                    <input 
+                      type="text"
+                      placeholder="Search by name, email or ID..."
+                      value={userSearch}
+                      onChange={(e) => setUserSearch(e.target.value)}
+                      className="w-full pl-12 pr-6 py-3 bg-white/5 border border-white/10 rounded-xl focus:outline-none focus:border-amber-500/50 transition-all text-white text-xs font-bold uppercase tracking-widest"
+                    />
+                  </div>
+                  <div className="flex gap-2 w-full md:w-auto overflow-x-auto pb-2 md:pb-0">
+                    {['all', 'admin', 'member'].map((role) => (
+                      <button
+                        key={role}
+                        onClick={() => setUserFilter(role)}
+                        className={`px-4 py-2.5 rounded-xl border transition-all text-[10px] font-bold uppercase tracking-widest whitespace-nowrap ${
+                          userFilter === role 
+                            ? 'bg-amber-500 border-amber-500 text-black' 
+                            : 'bg-white/5 border-white/10 text-zinc-400 hover:border-white/20'
+                        }`}
+                      >
+                        {role === 'all' ? 'All Users' : role === 'admin' ? 'Admins' : 'Members'}
+                      </button>
+                    ))}
+                    <button 
+                      onClick={fetchProfiles}
+                      disabled={loadingProfiles}
+                      className="p-2.5 text-amber-500 hover:bg-amber-500/10 border border-white/10 rounded-xl transition-all"
+                    >
+                      <Loader2 className={`w-4 h-4 ${loadingProfiles ? 'animate-spin' : ''}`} />
+                    </button>
+                  </div>
+                </div>
+
+                {profileError && (
+                  <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-500 text-[10px] font-bold uppercase tracking-widest flex items-center gap-3">
+                    <AlertCircle className="w-4 h-4" />
+                    <span>Error: {profileError}</span>
+                    <button 
+                      onClick={fetchProfiles}
+                      className="ml-auto underline hover:text-red-400"
+                    >
+                      Retry
+                    </button>
+                  </div>
+                )}
+
+                <div className="overflow-x-auto rounded-2xl border border-white/5 bg-white/[0.01]">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="bg-white/5 border-b border-white/5">
+                        <th className="py-4 px-4 text-[10px] font-bold uppercase tracking-widest text-zinc-500">User</th>
+                        <th className="py-4 px-4 text-[10px] font-bold uppercase tracking-widest text-zinc-500">User ID</th>
+                        <th className="py-4 px-4 text-[10px] font-bold uppercase tracking-widest text-zinc-500">Role</th>
+                        <th className="py-4 px-4 text-[10px] font-bold uppercase tracking-widest text-zinc-500 text-right">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-white/5">
+                      {profiles
+                        .filter(p => {
+                          const searchLower = userSearch.toLowerCase();
+                          const matchesSearch = 
+                            p.full_name?.toLowerCase().includes(searchLower) || 
+                            p.email?.toLowerCase().includes(searchLower) ||
+                            p.id?.toLowerCase().includes(searchLower);
+                          const matchesFilter = userFilter === 'all' || p.role === userFilter;
+                          return matchesSearch && matchesFilter;
+                        })
+                        .map((p) => (
+                          <tr key={p.id} className="group hover:bg-white/[0.02] transition-colors">
+                            <td className="py-4 px-4">
+                              <div className="flex items-center gap-3">
+                                <div className="w-8 h-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center flex-shrink-0">
+                                  <UserIcon className="w-4 h-4 text-zinc-500" />
+                                </div>
+                                <div className="flex flex-col">
+                                  <span className="text-sm font-bold text-white">{p.full_name || 'No Name'}</span>
+                                  <span className="text-[10px] text-zinc-500">{p.email}</span>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="py-4 px-4">
+                              <span className="text-[10px] font-mono text-zinc-500">{p.id}</span>
+                            </td>
+                            <td className="py-4 px-4">
+                              <span className={`px-2 py-1 rounded-md text-[9px] font-bold uppercase tracking-widest ${
+                                p.role === 'admin' 
+                                  ? 'bg-amber-500/10 text-amber-500 border border-amber-500/20' 
+                                  : 'bg-zinc-500/10 text-zinc-500 border border-zinc-500/20'
+                              }`}>
+                                {p.role || 'member'}
+                              </span>
+                            </td>
+                            <td className="py-4 px-4 text-right">
+                              <button
+                                onClick={() => toggleUserRole(p.id, p.role || 'member')}
+                                className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all ${
+                                  p.role === 'admin'
+                                    ? 'bg-red-500/10 text-red-500 hover:bg-red-500/20'
+                                    : 'bg-amber-500/10 text-amber-500 hover:bg-amber-500/20'
+                                }`}
+                              >
+                                {p.role === 'admin' ? 'Make Member' : 'Make Admin'}
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      {profiles.filter(p => {
+                        const searchLower = userSearch.toLowerCase();
+                        const matchesSearch = 
+                          p.full_name?.toLowerCase().includes(searchLower) || 
+                          p.email?.toLowerCase().includes(searchLower) ||
+                          p.id?.toLowerCase().includes(searchLower);
+                        const matchesFilter = userFilter === 'all' || p.role === userFilter;
+                        return matchesSearch && matchesFilter;
+                      }).length === 0 && !loadingProfiles && (
+                        <tr>
+                          <td colSpan={4} className="py-12 text-center text-zinc-600 italic text-xs">
+                            No users found matching your criteria.
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </DashboardSection>
+          </motion.div>
+        )}
+
         {activeTab === 'site' && (
           <motion.div
             key="site"
@@ -1618,16 +1813,50 @@ const AdminDashboard = () => {
           >
             <DashboardSection icon={Settings} title="Global Site Settings" description="Configure basic site information.">
               <div className="grid grid-cols-1 gap-6">
-                <DashboardFormField 
-                  label="Club Name" 
-                  value={localContent?.site?.clubName} 
-                  onChange={(val) => updateField('site', 'clubName', val)} 
-                />
-                <DashboardFormField 
-                  label="Established Year" 
-                  value={localContent?.site?.established} 
-                  onChange={(val) => updateField('site', 'established', val)} 
-                />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <DashboardFormField 
+                    label="Club Name" 
+                    value={localContent?.site?.clubName} 
+                    onChange={(val) => updateField('site', 'clubName', val)} 
+                  />
+                  <DashboardFormField 
+                    label="Established Year" 
+                    value={localContent?.site?.established} 
+                    onChange={(val) => updateField('site', 'established', val)} 
+                  />
+                </div>
+                
+                <div className="p-6 rounded-3xl bg-red-500/5 border border-red-500/10 space-y-6">
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-1">
+                      <h4 className="text-sm font-bold text-red-500 uppercase tracking-widest">Maintenance Mode</h4>
+                      <p className="text-[10px] text-zinc-500 font-medium">When enabled, normal users will see a maintenance page. Admins can still access the site.</p>
+                    </div>
+                    <DashboardFormField 
+                      label="" 
+                      type="toggle"
+                      checked={localContent?.site?.maintenanceMode}
+                      onCheckedChange={(val) => updateField('site', 'maintenanceMode', val)}
+                    />
+                  </div>
+                  
+                  {localContent?.site?.maintenanceMode && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      className="pt-4 border-t border-red-500/10"
+                    >
+                      <DashboardFormField 
+                        label="Maintenance Message" 
+                        type="textarea"
+                        value={localContent?.site?.maintenanceMessage} 
+                        onChange={(val) => updateField('site', 'maintenanceMessage', val)} 
+                        placeholder="Enter the message users will see..."
+                      />
+                    </motion.div>
+                  )}
+                </div>
+
                 <DashboardFileUpload 
                   label="Club Logo" 
                   value={localContent?.site?.logoUrl} 
@@ -1674,6 +1903,37 @@ const AdminDashboard = () => {
 
             <DashboardSection icon={Award} title="Registration Settings" description="Configure member registration details and payment instructions.">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="md:col-span-2 p-6 rounded-3xl bg-amber-500/5 border border-amber-500/10 space-y-6">
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-1">
+                      <h4 className="text-sm font-bold text-amber-500 uppercase tracking-widest">Registration Availability</h4>
+                      <p className="text-[10px] text-zinc-500 font-medium">Manually turn on or off access to the registration form for users.</p>
+                    </div>
+                    <DashboardFormField 
+                      label="" 
+                      type="toggle"
+                      checked={localContent?.registration?.registrationOpen}
+                      onCheckedChange={(val) => updateField('registration', 'registrationOpen', val)}
+                    />
+                  </div>
+                  
+                  {!localContent?.registration?.registrationOpen && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      className="pt-4 border-t border-amber-500/10"
+                    >
+                      <DashboardFormField 
+                        label="Registration Closed Message" 
+                        type="textarea"
+                        value={localContent?.registration?.registrationClosedMessage} 
+                        onChange={(val) => updateField('registration', 'registrationClosedMessage', val)} 
+                        placeholder="Enter the message users will see when registration is closed..."
+                      />
+                    </motion.div>
+                  )}
+                </div>
+
                 <DashboardFormField 
                   label="Registration Fee" 
                   value={localContent?.registration?.fee} 

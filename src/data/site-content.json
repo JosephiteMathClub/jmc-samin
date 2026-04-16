@@ -1,5 +1,5 @@
 {
-  "lastUpdated": "2026-04-11T15:56:00Z",
+  "lastUpdated": "2026-04-15T14:13:59.150Z",
   "_instruction": "Update 'lastUpdated' whenever you manually edit this file to ensure changes take precedence over the admin panel.",
   "home": {
     "gallery": [
@@ -87,7 +87,9 @@
   "site": {
     "logoUrl": "/images/logo.png",
     "clubName": "Josephite Math Club",
-    "established": "EST. 2015"
+    "established": "EST. 2015",
+    "maintenanceMode": false,
+    "maintenanceMessage": "The site is currently under maintenance"
   },
   "about": {
     "stats": [
@@ -733,7 +735,7 @@
           {
             "id": "root-panel-executive-recent-generalSecretary-0-5vb375vtw",
             "name": "Tahsin Ahnaf Mahir",
-            "role": "Tahsin Ahnaf Mahir",
+            "role": "General Secretary",
             "imageUrl": ""
           }
         ]
@@ -1133,11 +1135,11 @@
       "facebook": "https://www.facebook.com/2015JMC/",
       "instagram": "https://www.instagram.com/jmc_.official/"
     },
-    "location": "St. Joseph Higher Secondary School, Asad avenue, Dhaka-1207"
+    "location": "St. Joseph Higher Secondary School"
   },
   "registration": {
     "fee": "200 BDT",
-    "bkashNumber": "01712345678",
+    "bkashNumber": "N/A",
     "declaration": "I am willing to join the Josephite Math Club, I promise to perform my duties with honesty, respect the club values, and work for its development",
     "instructions": [
       "Go to your bKash app or dial *247#",
@@ -1145,7 +1147,8 @@
       "Enter the registration fee amount",
       "Copy the Transaction ID (TrxID) and enter it below"
     ],
-    "cashInstructions": "Please pay your registration fee to the club treasurer."
+    "cashInstructions": "Please pay your registration fee to the club treasurer.",
+    "registrationOpen": true
   },
   "gallery_page": {
     "images": []

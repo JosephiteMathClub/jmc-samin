@@ -79,7 +79,9 @@ const MathVisualizations: React.FC<MathVisualizationsProps> = ({ reduced = false
     resize();
 
     const drawGrid = () => {
-      ctx.drawImage(gridCanvas, 0, 0, window.innerWidth, window.innerHeight);
+      if (gridCanvas.width > 0 && gridCanvas.height > 0) {
+        ctx.drawImage(gridCanvas, 0, 0, window.innerWidth, window.innerHeight);
+      }
     };
 
     const updateLorenz = () => {
