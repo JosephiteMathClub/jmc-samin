@@ -162,7 +162,6 @@ export const UserManagement = () => {
             <thead>
               <tr className="border-b border-white/5 bg-white/[0.02]">
                 <th className="px-8 py-5 text-[10px] font-bold text-zinc-500 uppercase tracking-[0.2em]">User</th>
-                <th className="px-8 py-5 text-[10px] font-bold text-zinc-500 uppercase tracking-[0.2em]">School</th>
                 <th className="px-8 py-5 text-[10px] font-bold text-zinc-500 uppercase tracking-[0.2em]">UID</th>
                 <th className="px-8 py-5 text-[10px] font-bold text-zinc-500 uppercase tracking-[0.2em]">Role</th>
                 <th className="px-8 py-5 text-[10px] font-bold text-zinc-500 uppercase tracking-[0.2em] text-right">Actions</th>
@@ -173,7 +172,6 @@ export const UserManagement = () => {
                 [1, 2, 3, 4, 5].map((i) => (
                   <tr key={i}>
                     <td className="px-8 py-6"><Skeleton className="h-10 w-48 rounded-full" /></td>
-                    <td className="px-8 py-6"><Skeleton className="h-4 w-32" /></td>
                     <td className="px-8 py-6"><Skeleton className="h-4 w-24" /></td>
                     <td className="px-8 py-6"><Skeleton className="h-6 w-20 rounded-full" /></td>
                     <td className="px-8 py-6 text-right"><Skeleton className="h-8 w-24 rounded-xl ml-auto" /></td>
@@ -198,9 +196,6 @@ export const UserManagement = () => {
                           <p className="text-xs text-zinc-500">{user.email}</p>
                         </div>
                       </div>
-                    </td>
-                    <td className="px-8 py-6">
-                      <p className="text-xs text-zinc-400 truncate max-w-[150px]">{user.school || 'N/A'}</p>
                     </td>
                     <td className="px-8 py-6">
                       <code className="text-[10px] text-zinc-600 font-mono bg-black/40 px-2 py-1 rounded-md">{user.id}</code>

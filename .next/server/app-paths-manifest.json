@@ -1,6 +1,4 @@
 {
-  "/login/page": "app/login/page.js",
-  "/profile/page": "app/profile/page.js",
-  "/admin/page": "app/admin/page.js",
-  "/events/page": "app/events/page.js"
+  "/api/content/route": "app/api/content/route.js",
+  "/page": "app/page.js"
 }

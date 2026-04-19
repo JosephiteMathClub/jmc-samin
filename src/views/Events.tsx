@@ -36,21 +36,23 @@ const EventsSkeleton = () => (
 const Events = () => {
   const { content, loading } = useContent();
   const eventsContent = content?.events || {};
-  const events = eventsContent.events || [];
+  const events = React.useMemo(() => eventsContent.events || [], [eventsContent.events]);
   const [filter, setFilter] = React.useState('all');
   const [search, setSearch] = React.useState('');
   const { shouldReduceGfx } = usePerformance();
 
-  if (loading) return <EventsSkeleton />;
+  const filteredEvents = React.useMemo(() => {
+    return events.filter((e: any) => {
+      const matchesFilter = filter === 'all' || e.category?.toLowerCase() === filter.toLowerCase();
+      const title = e.title || '';
+      const description = e.description || '';
+      const matchesSearch = title.toLowerCase().includes(search.toLowerCase()) || 
+                            description.toLowerCase().includes(search.toLowerCase());
+      return matchesFilter && matchesSearch;
+    });
+  }, [events, filter, search]);
 
-  const filteredEvents = events.filter((e: any) => {
-    const matchesFilter = filter === 'all' || e.category?.toLowerCase() === filter.toLowerCase();
-    const title = e.title || '';
-    const description = e.description || '';
-    const matchesSearch = title.toLowerCase().includes(search.toLowerCase()) || 
-                          description.toLowerCase().includes(search.toLowerCase());
-    return matchesFilter && matchesSearch;
-  });
+  if (loading) return <EventsSkeleton />;
 
   const categories = eventsContent.categories || [
     { id: 'all', name: 'All', icon: 'Calendar' },

@@ -30,8 +30,14 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     );
   }, []);
 
+  const value = React.useMemo(() => ({ 
+    showToast, 
+    removeToast, 
+    updateToast 
+  }), [showToast, removeToast, updateToast]);
+
   return (
-    <ToastContext.Provider value={{ showToast, removeToast, updateToast }}>
+    <ToastContext.Provider value={value}>
       {children}
       <ToastContainer toasts={toasts} onClose={removeToast} />
     </ToastContext.Provider>

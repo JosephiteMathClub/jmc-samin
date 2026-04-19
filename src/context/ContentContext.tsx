@@ -1,7 +1,9 @@
 "use client";
 import React, { useEffect, useState } from 'react';
+import { produce } from 'immer';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
+import { runOnIdle, fetchOptimized } from '../lib/performance-utils';
 
 interface ContentContextType {
   content: any;
@@ -132,22 +134,19 @@ export const ContentProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [loading, setLoading] = useState(true);
   const { isAdmin } = useAuth();
 
-    // Helper to set nested property
+    // Helper to set nested property using immer
     const setNestedProperty = (obj: any, path: string, value: any) => {
-      const newObj = JSON.parse(JSON.stringify(obj));
-      const parts = path.split('.');
-      let current = newObj;
-      for (let i = 0; i < parts.length - 1; i++) {
-        const part = parts[i];
-        if (!(part in current)) current[part] = {};
-        current = current[part];
-      }
-      current[parts[parts.length - 1]] = value;
-      
-      // Update lastUpdated timestamp
-      newObj.lastUpdated = new Date().toISOString();
-      
-      return newObj;
+      return produce(obj, (draft: any) => {
+        const parts = path.split('.');
+        let current = draft;
+        for (let i = 0; i < parts.length - 1; i++) {
+          const part = parts[i];
+          if (!(part in current)) current[part] = {};
+          current = current[part];
+        }
+        current[parts[parts.length - 1]] = value;
+        draft.lastUpdated = new Date().toISOString();
+      });
     };
 
   useEffect(() => {
@@ -158,15 +157,12 @@ export const ContentProvider: React.FC<{ children: React.ReactNode }> = ({ child
       let remoteContent = {};
       let remoteUpdatedAt = "1970-01-01T00:00:00Z";
 
-      // 1. Try to fetch file-based content (local source)
+      // 1. Try to fetch file-based content (using optimized decompressor)
       try {
-        const response = await fetch('/api/content');
-        if (response.ok) {
-          const result = await response.json();
-          if (result && !result.error) {
-            localContent = result.data;
-            localUpdatedAt = result.updatedAt;
-          }
+        const result = await fetchOptimized('/api/content');
+        if (result && !result.error) {
+          localContent = result.data;
+          localUpdatedAt = result.updatedAt;
         }
       } catch (err) {
         // Silent fail for regular users
@@ -254,7 +250,7 @@ export const ContentProvider: React.FC<{ children: React.ReactNode }> = ({ child
     };
   }, [isAdmin]);
 
-    const updateContent = async (section: string, data: any) => {
+    const updateContent = React.useCallback(async (section: string, data: any) => {
       if (!isAdmin) return;
       const newContent = { 
         ...content, 
@@ -296,9 +292,9 @@ export const ContentProvider: React.FC<{ children: React.ReactNode }> = ({ child
         throw new Error(`Failed to save changes to the database: ${errorMessage}. Please ensure the 'site_content' table exists and RLS policies are configured.`);
       }
     }
-  };
+  }, [isAdmin, content]);
 
-  const updateNestedField = async (jsonPath: string, value: any) => {
+  const updateNestedField = React.useCallback(async (jsonPath: string, value: any) => {
     if (!isAdmin) return;
     
     const newContent = setNestedProperty(content, jsonPath, value);
@@ -331,9 +327,9 @@ export const ContentProvider: React.FC<{ children: React.ReactNode }> = ({ child
         console.error("Error updating Supabase content:", err);
       }
     }
-  };
+  }, [isAdmin, content]);
 
-    const saveAllContent = async (newContent: any) => {
+    const saveAllContent = React.useCallback(async (newContent: any) => {
       if (!isAdmin) return;
       
       const contentWithTimestamp = {
@@ -375,9 +371,9 @@ export const ContentProvider: React.FC<{ children: React.ReactNode }> = ({ child
           throw new Error(`Failed to save changes to the database: ${errorMessage}. Please ensure the 'site_content' table exists and RLS policies are configured.`);
         }
       }
-    };
+    }, [isAdmin]);
 
-  const seedDatabase = async () => {
+  const seedDatabase = React.useCallback(async () => {
     if (!isAdmin || !isSupabaseConfigured) return;
     
     try {
@@ -393,10 +389,19 @@ export const ContentProvider: React.FC<{ children: React.ReactNode }> = ({ child
     } catch (err) {
       throw err;
     }
-  };
+  }, [isAdmin, content]);
+
+  const value = React.useMemo(() => ({ 
+    content, 
+    updateContent, 
+    updateNestedField, 
+    saveAllContent, 
+    seedDatabase, 
+    loading 
+  }), [content, loading, updateContent, updateNestedField, saveAllContent, seedDatabase]);
 
   return (
-    <ContentContext.Provider value={{ content, updateContent, updateNestedField, saveAllContent, seedDatabase, loading }}>
+    <ContentContext.Provider value={value}>
       {children}
     </ContentContext.Provider>
   );

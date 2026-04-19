@@ -38,7 +38,7 @@ const PanelSkeleton = () => (
 
 // --- COMPONENTS ---
 
-const Flashcard = ({ role, name, imageUrl, icon: Icon = User, onUpload, isAdmin }: any) => {
+const Flashcard = React.memo(({ role, name, imageUrl, icon: Icon = User, onUpload, isAdmin }: any) => {
   const [uploading, setUploading] = React.useState(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const { showToast } = useToast();
@@ -78,6 +78,7 @@ const Flashcard = ({ role, name, imageUrl, icon: Icon = User, onUpload, isAdmin 
     <motion.div
       whileHover={shouldReduceGfx ? {} : { y: -10, scale: 1.02 }}
       className={`glass-card overflow-hidden ${!shouldReduceGfx && 'transition-all duration-500'} group relative flex flex-col border-white/5 bg-[#0a0a0c]/80`}
+      style={{ willChange: "transform", contain: "content" }}
     >
       <div className="aspect-[4/5] relative overflow-hidden bg-zinc-900/50">
         {imageUrl ? (
@@ -86,6 +87,7 @@ const Flashcard = ({ role, name, imageUrl, icon: Icon = User, onUpload, isAdmin 
             alt={name || 'Member'} 
             fill 
             className={`object-cover ${!shouldReduceGfx && 'transition-transform duration-700 group-hover:scale-110'}`}
+            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 25vw, 20vw"
           />
         ) : (
           <div className="absolute inset-0 flex items-center justify-center text-amber-500/10">
@@ -129,7 +131,9 @@ const Flashcard = ({ role, name, imageUrl, icon: Icon = User, onUpload, isAdmin 
       </div>
     </motion.div>
   );
-};
+});
+
+Flashcard.displayName = 'Flashcard';
 
 const SectionHeading = ({ children, subtitle }: any) => {
   const { shouldReduceGfx } = usePerformance();
@@ -166,21 +170,20 @@ const Panel = () => {
   const [activeTab, setActiveTab] = React.useState('current');
   const { shouldReduceGfx } = usePerformance();
 
-  if (loading) return <PanelSkeleton />;
-
   const panel = content.panel;
-  if (!panel) return null;
 
-  const activePanelData = panel.executive?.[activeTab] || {};
+  const activePanelData = React.useMemo(() => panel?.executive?.[activeTab] || {}, [panel, activeTab]);
 
-  const handleMemberUpdate = async (jsonPath: string, value: any) => {
+  const handleMemberUpdate = React.useCallback(async (jsonPath: string, value: any) => {
     try {
       await updateNestedField(jsonPath, value);
-      // No need to reload, context update will trigger re-render
     } catch (err) {
       console.error('Update error:', err);
     }
-  };
+  }, [updateNestedField]);
+
+  if (loading) return <PanelSkeleton />;
+  if (!panel) return null;
 
   return (
     <div className="min-h-screen py-32 px-4 sm:px-6 lg:px-8 bg-[#050505]">

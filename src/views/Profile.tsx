@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
+import { OptimizedImage } from '../components/OptimizedImage';
 import { 
   User, 
   Mail, 
@@ -14,13 +15,18 @@ import {
   CheckCircle2,
   AlertCircle,
   ChevronRight,
-  LayoutDashboard
+  LayoutDashboard,
+  Trophy,
+  Medal,
+  Star as StarIcon,
+  Briefcase
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useContent } from '../context/ContentContext';
 import { useRouter } from 'next/navigation';
-import { supabase } from '../lib/supabase';
+import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import ScrollReveal from '../components/ScrollReveal';
+import confetti from 'canvas-confetti';
 
 import { usePerformance } from '../hooks/usePerformance';
 import { resolveImageUrl } from '../lib/utils';
@@ -35,30 +41,102 @@ const Profile = () => {
   const [fullName, setFullName] = useState('');
   const [isMember, setIsMember] = useState(false);
   const [verified, setVerified] = useState('no');
+  const [memberId, setMemberId] = useState<string | null>(null);
+  const [achievements, setAchievements] = useState<any[]>([]);
+  const [loadingAchievements, setLoadingAchievements] = useState(false);
   const [checkingMember, setCheckingMember] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const celebratedRef = React.useRef(false);
+
+  const triggerCelebration = React.useCallback((topPosition: number) => {
+    if (shouldReduceGfx) return;
+    
+    const duration = 5 * 1000;
+    const animationEnd = Date.now() + duration;
+    const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 9999 };
+
+    const randomInRange = (min: number, max: number) => Math.random() * (max - min) + min;
+
+    // Thematic colors based on position
+    const colors = topPosition === 1 ? ['#fbbf24', '#f59e0b', '#ffffff'] : // Gold
+                   topPosition === 2 ? ['#94a3b8', '#cbd5e1', '#ffffff'] : // Silver
+                   ['#b45309', '#d97706', '#ffffff']; // Bronze
+
+    // Initial burst
+    confetti({ 
+      ...defaults, 
+      particleCount: 150, 
+      spread: 70, 
+      origin: { y: 0.6 },
+      colors 
+    });
+
+    const interval: any = setInterval(function() {
+      const timeLeft = animationEnd - Date.now();
+
+      if (timeLeft <= 0) {
+        return clearInterval(interval);
+      }
+
+      const particleCount = 40 * (timeLeft / duration);
+      // Realistic side bursts
+      confetti({ ...defaults, particleCount, origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 }, colors });
+      confetti({ ...defaults, particleCount, origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 }, colors });
+    }, 450);
+  }, [shouldReduceGfx]);
+
+  const fetchAchievements = React.useCallback(async (mId: string) => {
+    if (!mId || !isSupabaseConfigured) return;
+    setLoadingAchievements(true);
+    try {
+      const { data, error } = await supabase
+        .from('event_participation')
+        .select('*')
+        .eq('member_id', mId)
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      setAchievements(data || []);
+      
+      // Trigger celebration if there are wins and we haven't celebrated this mount
+      const wins = (data || []).filter((a: any) => a.position !== null);
+      if (wins.length > 0 && !celebratedRef.current) {
+        celebratedRef.current = true;
+        const topPosition = Math.min(...wins.map((w: any) => w.position));
+        // Add slight delay so content is visible
+        setTimeout(() => triggerCelebration(topPosition), 800);
+      }
+    } catch (err) {
+      console.error("Error fetching achievements:", err);
+    } finally {
+      setLoadingAchievements(false);
+    }
+  }, [triggerCelebration]);
 
   const checkMemberStatus = React.useCallback(async () => {
     if (!user) return;
     try {
       const { data, error } = await supabase
         .from('member')
-        .select('id, verified')
+        .select('id, verified, member_id')
         .eq('id', user.id)
         .maybeSingle();
       
       if (data) {
         setIsMember(true);
         setVerified(data.verified || 'no');
+        const mId = data.member_id || null;
+        setMemberId(mId);
+        if (mId) fetchAchievements(mId);
       }
     } catch (err) {
       console.error('Error checking member status:', err);
     } finally {
       setCheckingMember(false);
     }
-  }, [user]);
+  }, [user, fetchAchievements]);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -110,6 +188,9 @@ const Profile = () => {
     router.push('/');
   };
 
+  const wins = achievements.filter(a => a.position !== null).sort((a, b) => a.position - b.position);
+  const pending = achievements.filter(a => a.position === null);
+
   if (authLoading || !user) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#080808]">
@@ -132,7 +213,7 @@ const Profile = () => {
                   <div className="relative mb-8 inline-block group">
                     <div className="w-32 h-32 rounded-full overflow-hidden border-4 border-white/10 group-hover:border-[var(--c-6-start)]/50 transition-all relative">
                       {profile?.avatar_url ? (
-                        <Image 
+                        <OptimizedImage 
                           src={resolveImageUrl(profile.avatar_url)} 
                           alt={profile.full_name || "User Avatar"} 
                           fill
@@ -258,6 +339,96 @@ const Profile = () => {
                               {isMember ? "Verified Member" : "Not Registered"}
                             </p>
                           </div>
+                          <div className="p-8 rounded-3xl bg-white/5 border border-white/5">
+                            <p className="text-xs font-bold uppercase tracking-widest text-zinc-500 mb-2">Member ID</p>
+                            <p className="text-white font-mono font-bold tracking-wider">
+                              {memberId || 'PENDING'}
+                            </p>
+                          </div>
+                   
+                          {achievements.length > 0 && (
+                            <div className="md:col-span-2 space-y-8">
+                              {/* Major Achievements (Wins) */}
+                              {wins.length > 0 && (
+                                <div className="p-8 rounded-3xl bg-amber-500/5 border border-amber-500/10 space-y-6">
+                                  <div className="flex items-center gap-4">
+                                    <Trophy className="w-6 h-6 text-amber-500" />
+                                    <h3 className="text-xl font-bold text-white uppercase tracking-wider">Major Achievements</h3>
+                                  </div>
+                                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    {wins.map((ach) => (
+                                      <motion.div 
+                                        key={ach.id}
+                                        initial={{ opacity: 0, scale: 0.9 }}
+                                        animate={{ opacity: 1, scale: 1 }}
+                                        className="p-5 rounded-2xl bg-black/40 border border-white/5 flex items-center gap-4 relative overflow-hidden group"
+                                      >
+                                        <div className={`p-3 rounded-xl ${
+                                          ach.position === 1 ? 'bg-amber-500/10 text-amber-500' :
+                                          ach.position === 2 ? 'bg-zinc-400/10 text-zinc-400' :
+                                          'bg-amber-800/10 text-amber-800'
+                                        }`}>
+                                          {ach.position === 1 ? <Trophy className="w-5 h-5" /> : 
+                                          ach.position === 2 ? <Medal className="w-5 h-5" /> : 
+                                          <StarIcon className="w-5 h-5" />}
+                                        </div>
+                                        <div className="flex-1">
+                                          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500">
+                                            {ach.position === 1 ? 'First' : ach.position === 2 ? 'Second' : 'Third'} Position
+                                          </p>
+                                          <p className="text-sm font-bold text-white">{ach.event_name}</p>
+                                          <p className="text-[10px] text-zinc-600 font-bold uppercase tracking-widest">{ach.category}</p>
+                                        </div>
+
+                                        {ach.position === 1 && (
+                                          <motion.div 
+                                            animate={{ 
+                                              scale: [1, 1.2, 1],
+                                              rotate: [0, 5, -5, 0],
+                                              opacity: [0.5, 1, 0.5]
+                                            }}
+                                            transition={{ duration: 3, repeat: Infinity }}
+                                            className="absolute -right-4 -bottom-4 text-amber-500/20"
+                                          >
+                                            <Trophy className="w-24 h-24" />
+                                          </motion.div>
+                                        )}
+                                      </motion.div>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* Pending Participations */}
+                              {pending.length > 0 && (
+                                <div className="p-8 rounded-3xl bg-white/5 border border-white/10 space-y-6">
+                                  <div className="flex items-center gap-4">
+                                    <Briefcase className="w-6 h-6 text-indigo-400" />
+                                    <h3 className="text-xl font-bold text-white uppercase tracking-wider">Active Participations</h3>
+                                  </div>
+                                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    {pending.map((ach) => (
+                                      <motion.div 
+                                        key={ach.id}
+                                        initial={{ opacity: 0, y: 10 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        className="p-5 rounded-2xl bg-white/5 border border-white/5 flex items-center gap-4 relative"
+                                      >
+                                        <div className="p-3 rounded-xl bg-indigo-500/10 text-indigo-400">
+                                          <Loader2 className="w-5 h-5 animate-spin-slow" />
+                                        </div>
+                                        <div className="flex-1">
+                                          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-400">Result Pending</p>
+                                          <p className="text-sm font-bold text-white">{ach.event_name}</p>
+                                          <p className="text-[10px] text-zinc-600 font-bold uppercase tracking-widest">{ach.category}</p>
+                                        </div>
+                                      </motion.div>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          )}
                           {isMember && (
                             <div className="p-8 rounded-3xl bg-white/5 border border-white/5">
                               <p className="text-xs font-bold uppercase tracking-widest text-zinc-500 mb-2">Payment Status</p>

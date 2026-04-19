@@ -29,21 +29,23 @@ const NoticesSkeleton = () => (
 const Notices = () => {
   const { content, loading } = useContent();
   const noticesContent = content?.notices || {};
-  const notices = noticesContent.notices || [];
+  const notices = React.useMemo(() => noticesContent.notices || [], [noticesContent.notices]);
   const [filter, setFilter] = React.useState('all');
   const [search, setSearch] = React.useState('');
   const { shouldReduceGfx } = usePerformance();
 
-  if (loading) return <NoticesSkeleton />;
+  const filteredNotices = React.useMemo(() => {
+    return notices.filter((n: any) => {
+      const matchesFilter = filter === 'all' || n.type?.toLowerCase() === filter.toLowerCase();
+      const title = n.title || '';
+      const contentText = n.content || '';
+      const matchesSearch = title.toLowerCase().includes(search.toLowerCase()) || 
+                            contentText.toLowerCase().includes(search.toLowerCase());
+      return matchesFilter && matchesSearch;
+    });
+  }, [notices, filter, search]);
 
-  const filteredNotices = notices.filter((n: any) => {
-    const matchesFilter = filter === 'all' || n.type?.toLowerCase() === filter.toLowerCase();
-    const title = n.title || '';
-    const contentText = n.content || '';
-    const matchesSearch = title.toLowerCase().includes(search.toLowerCase()) || 
-                          contentText.toLowerCase().includes(search.toLowerCase());
-    return matchesFilter && matchesSearch;
-  });
+  if (loading) return <NoticesSkeleton />;
 
   const categories = noticesContent.categories || [
     { id: 'all', name: 'All', icon: 'Bell' },

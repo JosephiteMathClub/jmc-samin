@@ -163,8 +163,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setIsAdmin(false);
   };
 
+  const value = React.useMemo(() => ({ 
+    user, 
+    loading, 
+    isAdmin, 
+    profile, 
+    signOut, 
+    refreshProfile 
+  }), [user, loading, isAdmin, profile, refreshProfile]);
+
   return (
-    <AuthContext.Provider value={{ user, loading, isAdmin, profile, signOut, refreshProfile }}>
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );

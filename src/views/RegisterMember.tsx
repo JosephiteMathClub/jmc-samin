@@ -195,25 +195,16 @@ const RegisterMember = () => {
           payment_method: paymentMethod,
           trxnid: paymentMethod === 'bkash' ? trxnid : null,
           bkash_number: paymentMethod === 'bkash' ? bkashNumber : null,
-          verified: 'no',
-          updated_at: new Date().toISOString()
+          verified: 'no'
         });
 
       if (memberError) throw memberError;
 
-      // 2. Update profile
+      // 2. Update profile (only necessary info)
       const { error: profileError } = await supabase
         .from('profiles')
         .update({
-          full_name: fullName,
-          school,
-          class: className,
-          section,
-          roll,
-          phone,
-          intra_events: true,
-          intra_events_chosen: true,
-          updated_at: new Date().toISOString()
+          full_name: fullName
         })
         .eq('id', user?.id);
 

@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowRight, Calculator, Brain, Users, ChevronLeft, ChevronRight, Quote, Code, Cpu, Globe, BookOpen, Lightbulb, Zap, Trophy, Star } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { OptimizedImage } from '../components/OptimizedImage';
 import ScrollReveal from '../components/ScrollReveal';
 import TypewriterText from '../components/TypewriterText';
 import { usePerformance } from '../hooks/usePerformance';
@@ -51,19 +52,24 @@ const Home = () => {
   const { home } = content;
   const [currentIndex, setCurrentIndex] = useState(0);
   const { shouldReduceGfx, isMobile } = usePerformance();
-  const testimonials = home?.testimonials || [];
-  const duplicatedTestimonials = [...testimonials, ...testimonials];
+  const testimonials = React.useMemo(() => home?.testimonials || [], [home?.testimonials]);
+  const duplicatedTestimonials = React.useMemo(() => {
+    return [...testimonials, ...testimonials, ...testimonials, ...testimonials];
+  }, [testimonials]);
 
-  const gallery = home?.gallery && home.gallery.length > 0 
-    ? home.gallery
-    : [
-        "/images/gallery/gallery1.jpg",
-        "/images/gallery/gallery2.jpg",
-        "/images/gallery/gallery3.jpg",
-        "/images/gallery/gallery4.jpg",
-        "/images/gallery/gallery5.jpg",
-        "/images/gallery/gallery6.jpg",
-      ];
+  const gallery = React.useMemo(() => {
+    const customGallery = (home?.gallery || []).filter((url: string) => !!url && typeof url === 'string');
+    return customGallery.length > 0 
+      ? customGallery 
+      : [
+          "/images/gallery/gallery1.jpg",
+          "/images/gallery/gallery2.jpg",
+          "/images/gallery/gallery3.jpg",
+          "/images/gallery/gallery4.jpg",
+          "/images/gallery/gallery5.jpg",
+          "/images/gallery/gallery6.jpg",
+        ];
+  }, [home?.gallery]);
 
   useEffect(() => {
     if (gallery.length === 0) return;
@@ -124,7 +130,7 @@ const Home = () => {
                 opacity: [0.05, 0.08, 0.05],
               }}
               transition={{ duration: 30, repeat: Infinity, ease: "linear" }}
-              style={{ willChange: "transform, opacity" }}
+              style={{ willChange: "transform, opacity", transform: "translate3d(0,0,0)" }}
               className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-[var(--c-6-start)]/10 blur-[80px] rounded-full"
             />
             <motion.div
@@ -134,7 +140,7 @@ const Home = () => {
                 opacity: [0.03, 0.06, 0.03],
               }}
               transition={{ duration: 35, repeat: Infinity, ease: "linear" }}
-              style={{ willChange: "transform, opacity" }}
+              style={{ willChange: "transform, opacity", transform: "translate3d(0,0,0)" }}
               className="absolute bottom-[-10%] right-[-10%] w-[60%] h-[60%] bg-[var(--c-2-start)]/10 blur-[100px] rounded-full"
             />
         </div>
@@ -237,11 +243,13 @@ const Home = () => {
                   ease: "easeInOut",
                   delay: i * 2
                 }}
-                className="absolute"
-                style={{
+                style={{ 
+                  willChange: "transform, opacity", 
+                  transform: "translate3d(0,0,0)",
                   top: `${20 + i * 30}%`,
                   left: `${10 + i * 35}%`,
                 }}
+                className="absolute"
               >
                 <Icon className="w-16 h-16 text-[var(--c-6-start)]/60" />
               </motion.div>
@@ -294,50 +302,58 @@ const Home = () => {
             </ScrollReveal>
           </div>
 
-          <ScrollReveal direction="up" distance={50} delay={0.2} className="relative w-full max-w-6xl mx-auto aspect-[16/9] rounded-[2.5rem] overflow-hidden glass-card border-white/10 group shadow-[0_0_100px_rgba(0,0,0,0.5)]">
-            <AnimatePresence mode="wait">
-              <div className="w-full h-full relative">
-                <Image
+          <ScrollReveal direction="up" distance={50} delay={0.2} className="relative w-full max-w-6xl mx-auto group">
+            <div className="aspect-[16/9] rounded-[2.5rem] overflow-hidden glass-card border-white/10 shadow-[0_0_100px_rgba(0,0,0,0.5)] h-full w-full">
+              <AnimatePresence mode="wait">
+                <motion.div 
                   key={currentIndex}
-                  src={resolveImageUrl(gallery[currentIndex])}
-                  alt={`Memory ${currentIndex + 1}`}
-                  fill
-                  priority={currentIndex === 0}
-                  className="object-cover"
-                  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 80vw, 1200px"
-                />
+                  initial={shouldReduceGfx ? { opacity: 1 } : { opacity: 0, scale: 1.1 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={shouldReduceGfx ? { opacity: 1 } : { opacity: 0, scale: 1.05 }}
+                  transition={{ duration: shouldReduceGfx ? 0.1 : 0.8, ease: "easeInOut" }}
+                  className="w-full h-full relative"
+                >
+                  <OptimizedImage
+                    src={resolveImageUrl(gallery[currentIndex])}
+                    alt={`Memory ${currentIndex + 1}`}
+                    fill
+                    priority={currentIndex === 0}
+                    className="object-cover"
+                    sizes="(max-width: 768px) 100vw, (max-width: 1200px) 80vw, 1200px"
+                  />
+                </motion.div>
+              </AnimatePresence>
+
+              {/* Overlay Gradient */}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
+
+              {/* Navigation Arrows */}
+              <button
+                onClick={prevImage}
+                className="absolute left-8 top-1/2 -translate-y-1/2 p-4 rounded-full bg-black/40 text-white hover:bg-[var(--c-2-start)] hover:text-white transition-all opacity-0 group-hover:opacity-100 backdrop-blur-xl border border-white/10 scale-90 hover:scale-100"
+              >
+                <ChevronLeft className="w-8 h-8" />
+              </button>
+              
+              <button
+                onClick={nextImage}
+                className="absolute right-8 top-1/2 -translate-y-1/2 p-4 rounded-full bg-black/40 text-white hover:bg-[var(--c-2-start)] hover:text-white transition-all opacity-0 group-hover:opacity-100 backdrop-blur-xl border border-white/10 scale-90 hover:scale-100"
+              >
+                <ChevronRight className="w-8 h-8" />
+              </button>
+
+              {/* Indicators */}
+              <div className="absolute bottom-10 left-1/2 -translate-x-1/2 flex gap-4">
+                {gallery.map((_: any, idx: number) => (
+                  <button
+                    key={idx}
+                    onClick={() => setCurrentIndex(idx)}
+                    className={`h-1.5 rounded-full transition-all duration-500 ${
+                      idx === currentIndex ? 'w-12 bg-[var(--c-2-start)]' : 'w-4 bg-white/30 hover:bg-white/60'
+                    }`}
+                  />
+                ))}
               </div>
-            </AnimatePresence>
-
-            {/* Overlay Gradient */}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
-
-            {/* Navigation Arrows */}
-            <button
-              onClick={prevImage}
-              className="absolute left-8 top-1/2 -translate-y-1/2 p-4 rounded-full bg-black/40 text-white hover:bg-[var(--c-2-start)] hover:text-white transition-all opacity-0 group-hover:opacity-100 backdrop-blur-xl border border-white/10 scale-90 hover:scale-100"
-            >
-              <ChevronLeft className="w-8 h-8" />
-            </button>
-            
-            <button
-              onClick={nextImage}
-              className="absolute right-8 top-1/2 -translate-y-1/2 p-4 rounded-full bg-black/40 text-white hover:bg-[var(--c-2-start)] hover:text-white transition-all opacity-0 group-hover:opacity-100 backdrop-blur-xl border border-white/10 scale-90 hover:scale-100"
-            >
-              <ChevronRight className="w-8 h-8" />
-            </button>
-
-            {/* Indicators */}
-            <div className="absolute bottom-10 left-1/2 -translate-x-1/2 flex gap-4">
-              {gallery.map((_: any, idx: number) => (
-                <button
-                  key={idx}
-                  onClick={() => setCurrentIndex(idx)}
-                  className={`h-1.5 rounded-full transition-all duration-500 ${
-                    idx === currentIndex ? 'w-12 bg-[var(--c-2-start)]' : 'w-4 bg-white/30 hover:bg-white/60'
-                  }`}
-                />
-              ))}
             </div>
           </ScrollReveal>
         </div>
@@ -390,12 +406,11 @@ const Home = () => {
                   <div className="flex items-center gap-6">
                     <div className="w-20 h-20 rounded-2xl overflow-hidden border-2 border-[var(--c-1-start)]/20 bg-zinc-900 shrink-0 rotate-3 group-hover/card:rotate-0 transition-transform duration-500 relative">
                       {t.imageUrl ? (
-                        <Image 
+                        <OptimizedImage 
                           src={resolveImageUrl(t.imageUrl)} 
                           alt={t.name} 
                           fill
                           className="object-cover" 
-                          referrerPolicy="no-referrer"
                         />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center bg-zinc-800">
