@@ -6,16 +6,17 @@ import { headers } from 'next/headers';
 import { rateLimit } from '@/lib/rate-limit';
 import { requireAdmin } from '@/lib/auth';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
-const isSupabaseConfigured = Boolean(supabaseUrl && supabaseAnonKey);
-
-const supabase = isSupabaseConfigured 
-  ? createClient(supabaseUrl, supabaseAnonKey)
-  : null;
+const getSupabase = () => {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co';
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder';
+  return createClient(url, key);
+};
 
 export async function POST(req: NextRequest) {
   try {
+    // 1. Initialize Supabase safely
+    const supabase = getSupabase();
+    const isSupabaseConfigured = Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
     // 1. Rate Limiting
     const ip = (await headers()).get('x-forwarded-for') || 'unknown';
     const { success, remaining, reset } = rateLimit(ip, 10, 60000);
@@ -69,7 +70,7 @@ export async function POST(req: NextRequest) {
     let fileUrl = '';
 
     // 1. Try Supabase Storage first (Persistent)
-    if (supabase) {
+    if (isSupabaseConfigured) {
       try {
         const { data, error } = await supabase.storage
           .from('images')

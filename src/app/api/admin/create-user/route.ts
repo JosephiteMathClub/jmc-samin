@@ -4,18 +4,22 @@ import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
 import { DEFAULT_ADMINS } from '../../../../lib/constants';
 
-// We create a supabase client with the service role key to perform administrative actions
-// This client MUST NOT be exposed to the browser
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  {
+// Helper function to get the admin client
+function getSupabaseAdmin() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  
+  if (!url || !key) {
+    throw new Error('Supabase admin environment variables are missing');
+  }
+  
+  return createClient(url, key, {
     auth: {
       autoRefreshToken: false,
       persistSession: false
     }
-  }
-);
+  });
+}
 
 export async function POST(req: Request) {
   try {
@@ -30,12 +34,19 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Email and password are required' }, { status: 400 });
     }
 
-    // 1. Verify the requester is an admin
+    // 1. Initialize admin client safely
+    const supabaseAdmin = getSupabaseAdmin();
+
+    // 2. Verify the requester is an admin
     const cookieStore = await cookies();
     
+    // Ensure we have values to prevent crash during build time evaluation
+    const anonUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co';
+    const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder';
+
     const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      anonUrl,
+      anonKey,
       {
         cookies: {
           getAll() {
