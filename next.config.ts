@@ -39,6 +39,7 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  transpilePackages: ['html5-qrcode', 'qrcode.react'],
 };
 
 export default nextConfig;
