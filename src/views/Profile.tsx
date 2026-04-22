@@ -24,8 +24,10 @@ import {
   X,
   Upload
 } from 'lucide-react';
-import { QRCodeSVG } from 'qrcode.react';
+import dynamic from 'next/dynamic';
 import { useAuth } from '../context/AuthContext';
+
+const QRCode = dynamic(() => import('../components/QRCode'), { ssr: false });
 import { useContent } from '../context/ContentContext';
 import { useToast } from '../context/ToastContext';
 import { useRouter } from 'next/navigation';
@@ -291,7 +293,7 @@ const Profile = () => {
                 </button>
 
                 <div className="mx-auto w-48 h-48 p-4 bg-white rounded-3xl shadow-[0_0_50px_rgba(0,180,219,0.3)]">
-                  <QRCodeSVG 
+                  <QRCode 
                     value={JSON.stringify({
                       name: profile?.full_name || fullName,
                       id: memberId,

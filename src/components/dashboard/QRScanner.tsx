@@ -1,6 +1,5 @@
 "use client";
 import React, { useEffect, useRef } from 'react';
-import { Html5QrcodeScanner, Html5QrcodeSupportedFormats } from 'html5-qrcode';
 import { X } from 'lucide-react';
 
 interface QRScannerProps {
@@ -11,34 +10,47 @@ interface QRScannerProps {
 }
 
 const QRScanner: React.FC<QRScannerProps> = ({ onScan, onClose, fps = 10, qrbox = 250 }) => {
-  const scannerRef = useRef<Html5QrcodeScanner | null>(null);
+  const scannerRef = useRef<any>(null);
 
   useEffect(() => {
-    scannerRef.current = new Html5QrcodeScanner(
-      "qr-reader",
-      { 
-        fps, 
-        qrbox,
-        formatsToSupport: [ Html5QrcodeSupportedFormats.QR_CODE ],
-        rememberLastUsedCamera: true,
-        aspectRatio: 1.0,
-      },
-      /* verbose= */ false
-    );
+    let scanner: any = null;
 
-    scannerRef.current.render(
-      (decodedText) => {
-        onScan(decodedText);
-      },
-      (error) => {
-        // Silently handle scan errors (common during continuous scanning)
-        // console.warn(error);
+    const startScanner = async () => {
+      try {
+        const { Html5QrcodeScanner, Html5QrcodeSupportedFormats } = await import('html5-qrcode');
+        
+        scanner = new Html5QrcodeScanner(
+          "qr-reader",
+          { 
+            fps, 
+            qrbox,
+            formatsToSupport: [ Html5QrcodeSupportedFormats.QR_CODE ],
+            rememberLastUsedCamera: true,
+            aspectRatio: 1.0,
+          },
+          /* verbose= */ false
+        );
+
+        scanner.render(
+          (decodedText: string) => {
+            onScan(decodedText);
+          },
+          (error: any) => {
+            // Silently handle scan errors
+          }
+        );
+        
+        scannerRef.current = scanner;
+      } catch (err) {
+        console.error("Failed to initialize scanner", err);
       }
-    );
+    };
+
+    startScanner();
 
     return () => {
-      if (scannerRef.current) {
-        scannerRef.current.clear().catch(err => console.error("Failed to clear scanner", err));
+      if (scanner) {
+        scanner.clear().catch((err: any) => console.error("Failed to clear scanner", err));
       }
     };
   }, [onScan, fps, qrbox]);
