@@ -61,6 +61,32 @@ const RegisterMember = () => {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [showPrintView, setShowPrintView] = useState(false);
+  
+  // Admin-specific registration states
+  const [registerFor, setRegisterFor] = useState<'self' | 'other' | null>(null);
+  const [hasAccount, setHasAccount] = useState<boolean | null>(null);
+  const [searchEmail, setSearchEmail] = useState('');
+  const [searching, setSearching] = useState(false);
+  const [foundUserId, setFoundUserId] = useState<string | null>(null);
+  const [existingProfile, setExistingProfile] = useState<any>(null);
+
+  const resetForm = () => {
+    setFullName('');
+    setEmailAddress('');
+    setPhone('');
+    setClassName('');
+    setSection('');
+    setRoll('');
+    setPhotoUrl('');
+    setPaymentMethod('');
+    setTrxnid('');
+    setBkashNumber('');
+    setFoundUserId(null);
+    setHasAccount(null);
+    setSearchEmail('');
+    setAgreed(false);
+    setError(null);
+  };
 
   const checkMemberStatus = React.useCallback(async () => {
     if (!user) return;
@@ -98,12 +124,44 @@ const RegisterMember = () => {
     if (!authLoading && !user) {
       router.push('/login');
     }
-    if (profile && !isMember) {
+    // Only pre-fill if registering for self
+    if (profile && !isMember && registerFor === 'self') {
       setFullName(profile.full_name || '');
       setEmailAddress(user?.email || '');
       checkMemberStatus();
     }
-  }, [user, authLoading, router, profile, checkMemberStatus, isMember]);
+  }, [user, authLoading, router, profile, checkMemberStatus, isMember, registerFor]);
+
+  const handleSearchUser = async () => {
+    if (!searchEmail) return;
+    setSearching(true);
+    setError(null);
+    try {
+      const { data, error: searchError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('email', searchEmail.toLowerCase().trim())
+        .maybeSingle();
+      
+      if (searchError) throw searchError;
+      
+      if (data) {
+        setFoundUserId(data.id);
+        setExistingProfile(data);
+        setFullName(data.full_name || '');
+        setEmailAddress(data.email || '');
+        showToast('User found!', 'success');
+      } else {
+        setError('No user found with this email.');
+        setFoundUserId(null);
+        setExistingProfile(null);
+      }
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setSearching(false);
+    }
+  };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -178,13 +236,25 @@ const RegisterMember = () => {
     }
 
     try {
+      let finalUserId = user?.id;
+
+      // If admin registering for someone else
+      if (isAdmin && registerFor === 'other') {
+        if (!foundUserId) {
+          showToast('Please find an existing user first', 'error');
+          setLoading(false);
+          return;
+        }
+        finalUserId = foundUserId;
+      }
+
       // 1. Insert into member table
       const { error: memberError } = await supabase
         .from('member')
         .upsert({
-          id: user?.id,
+          id: finalUserId,
           full_name: fullName,
-          email: user?.email,
+          email: registerFor === 'self' ? user?.email : emailAddress,
           email_address: emailAddress,
           phone,
           school,
@@ -206,12 +276,17 @@ const RegisterMember = () => {
         .update({
           full_name: fullName
         })
-        .eq('id', user?.id);
+        .eq('id', finalUserId);
 
       if (profileError) throw profileError;
 
-      await refreshProfile();
-      setIsMember(true);
+      if (registerFor === 'self') {
+        await refreshProfile();
+        setIsMember(true);
+      } else {
+        // Form is cleared on "Register Another" click or we can clear it here too
+      }
+      
       setSuccess(true);
       showToast('Registration successful!', 'success');
     } catch (err: any) {
@@ -254,7 +329,103 @@ const RegisterMember = () => {
               <p className="text-zinc-500 font-medium">Complete your details to access exclusive club activities.</p>
             </div>
 
-            {content?.registration?.registrationOpen === false ? (
+            {isAdmin && !success && (
+              <div className="mb-12 flex flex-col items-center gap-6">
+                <div className="flex flex-col items-center gap-4">
+                  <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-[0.3em]">Select Registration Mode</p>
+                  <div className="flex gap-4 p-1 rounded-2xl bg-white/5 border border-white/10">
+                    <button 
+                      onClick={() => {
+                        setRegisterFor('self');
+                        if (profile) {
+                          setFullName(profile.full_name || '');
+                          setEmailAddress(user?.email || '');
+                        }
+                      }}
+                      className={`px-6 py-3 rounded-xl text-xs font-bold uppercase tracking-widest transition-all ${registerFor === 'self' ? 'bg-amber-500 text-black shadow-lg shadow-amber-500/20' : 'text-zinc-500 hover:text-white'}`}
+                    >
+                      Registering for Myself
+                    </button>
+                    <button 
+                      onClick={() => {
+                        setRegisterFor('other');
+                        resetForm();
+                        setRegisterFor('other'); // Restore after resetForm clears it
+                      }}
+                      className={`px-6 py-3 rounded-xl text-xs font-bold uppercase tracking-widest transition-all ${registerFor === 'other' ? 'bg-amber-500 text-black shadow-lg shadow-amber-500/20' : 'text-zinc-500 hover:text-white'}`}
+                    >
+                      Registering for Someone Else
+                    </button>
+                  </div>
+                </div>
+
+                {registerFor === 'other' && (
+                  <motion.div 
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="w-full space-y-6"
+                  >
+                    <div className="p-8 rounded-3xl bg-white/5 border border-white/10 space-y-4">
+                      <p className="text-[10px] font-bold text-zinc-300 uppercase tracking-[0.2em] text-center">Account Verification</p>
+                      <h4 className="text-sm font-bold text-white text-center">Does the user have an existing account on this website?</h4>
+                      <div className="flex gap-4 justify-center pt-2">
+                        <button 
+                          onClick={() => setHasAccount(true)}
+                          className={`flex-1 px-8 py-4 rounded-xl border text-xs font-bold uppercase tracking-widest transition-all ${hasAccount === true ? 'bg-white/10 border-amber-500/50 text-white shadow-lg' : 'border-white/5 text-zinc-500 hover:border-white/20'}`}
+                        >
+                          Yes, Link Existing
+                        </button>
+                      </div>
+                    </div>
+
+                    {hasAccount === true && (
+                      <div className="space-y-4">
+                        <div className="flex gap-4">
+                          <input 
+                            type="email"
+                            placeholder="Enter user's account email"
+                            value={searchEmail}
+                            onChange={(e) => setSearchEmail(e.target.value)}
+                            className="flex-1 px-6 py-4 bg-white/5 border border-white/10 rounded-2xl focus:outline-none focus:border-amber-500/50 text-white font-bold text-sm"
+                          />
+                          <button 
+                            onClick={handleSearchUser}
+                            disabled={searching}
+                            className="px-8 py-4 bg-white/10 border border-white/10 rounded-2xl text-white font-bold text-xs uppercase tracking-widest hover:bg-white/20 transition-all disabled:opacity-50"
+                          >
+                            {searching ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Search'}
+                          </button>
+                        </div>
+                        {foundUserId && (
+                          <div className="flex flex-col gap-2">
+                             <div className="p-4 rounded-2xl bg-green-500/10 border border-green-500/20 text-green-500 text-[10px] font-bold uppercase tracking-widest flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                <CheckCircle2 className="w-4 h-4" />
+                                Linked to: {fullName} ({emailAddress})
+                              </div>
+                              <button 
+                                onClick={() => {
+                                  setFoundUserId(null);
+                                  setHasAccount(null);
+                                  setSearchEmail('');
+                                  setFullName('');
+                                  setEmailAddress('');
+                                }}
+                                className="px-3 py-1 bg-white/10 hover:bg-white/20 rounded-lg text-white transition-all underline decoration-white/20 underline-offset-2"
+                              >
+                                Change
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </motion.div>
+                )}
+              </div>
+            )}
+
+            {(content?.registration?.registrationOpen === false && !isAdmin) ? (
               <div className="p-12 rounded-[40px] bg-white/[0.03] border border-white/10 backdrop-blur-xl text-center space-y-8">
                 <div className="w-20 h-20 bg-amber-500/20 rounded-full flex items-center justify-center mx-auto border border-amber-500/30">
                   <AlertCircle className="w-10 h-10 text-amber-500" />
@@ -274,34 +445,70 @@ const RegisterMember = () => {
                   </button>
                 </div>
               </div>
-            ) : isMember ? (
+            ) : (isMember && registerFor === 'self' && !success) || (isAdmin && registerFor === null && !success) ? (
+              <div className="p-12 rounded-[40px] bg-white/[0.03] border border-white/10 backdrop-blur-xl text-center space-y-8">
+                <div className="w-24 h-24 rounded-full bg-amber-500/20 flex items-center justify-center text-amber-500 mx-auto border border-amber-500/30">
+                  <User className="w-12 h-12" />
+                </div>
+                <div>
+                  <h3 className="text-2xl font-bold text-white mb-4">
+                    {isAdmin ? 'Choose Registration Mode' : 'Already a Member'}
+                  </h3>
+                  <p className="text-zinc-500 max-w-sm mx-auto">
+                    {isAdmin 
+                      ? 'Please select whether you are registering for yourself or enrolling another member into the system.' 
+                      : 'You are already registered and verified in our system. You can view your credentials in your profile.'}
+                  </p>
+                </div>
+                {!isAdmin && (
+                  <div className="pt-8 border-t border-white/5">
+                    <button 
+                      onClick={() => router.push('/profile')}
+                      className="px-8 py-4 rounded-2xl bg-amber-500 text-black font-bold text-xs uppercase tracking-widest hover:bg-amber-400 transition-all"
+                    >
+                      View My Profile
+                    </button>
+                  </div>
+                )}
+              </div>
+            ) : success ? (
               <div className="p-12 rounded-[40px] bg-white/[0.03] border border-white/10 backdrop-blur-xl text-center space-y-8">
                 <div className="w-24 h-24 rounded-full bg-amber-500/20 flex items-center justify-center text-amber-500 mx-auto border border-amber-500/30">
                   <CheckCircle2 className="w-12 h-12" />
                 </div>
                 <div>
-                  <h3 className="text-2xl font-bold text-white mb-2">Registration Complete!</h3>
+                  <h3 className="text-2xl font-bold text-white mb-2">
+                    {registerFor === 'self' ? 'Registration Complete!' : 'Member Registered!'}
+                  </h3>
                   <div className="flex flex-col items-center gap-4">
-                    <p className="text-zinc-500">You are a member of the Josephite Math Club.</p>
+                    <p className="text-zinc-500">
+                      {registerFor === 'self' 
+                        ? 'You are a member of the Josephite Math Club.' 
+                        : 'The member has been successfully added to the database.'}
+                    </p>
                     
                     <div className="w-full max-w-sm space-y-3">
-                      <div className="px-6 py-4 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-between">
-                        <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">Payment Status</span>
-                        <span className={`text-xs font-bold uppercase tracking-widest ${
-                          verified === 'yes' ? 'text-green-500' : 'text-amber-500'
-                        }`}>
-                          {verified === 'yes' ? 'Paid' : 'Verifying'}
-                        </span>
-                      </div>
+                      {registerFor === 'self' && (
+                        <>
+                          <div className="px-6 py-4 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-between">
+                            <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">Payment Status</span>
+                            <span className={`text-xs font-bold uppercase tracking-widest ${
+                              verified === 'yes' ? 'text-green-500' : 'text-amber-500'
+                            }`}>
+                              {verified === 'yes' ? 'Paid' : 'Verifying'}
+                            </span>
+                          </div>
 
-                      <div className="px-6 py-4 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-between">
-                        <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">Membership</span>
-                        <span className="text-xs font-bold uppercase tracking-widest text-white">
-                          General Member
-                        </span>
-                      </div>
+                          <div className="px-6 py-4 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-between">
+                            <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">Membership</span>
+                            <span className="text-xs font-bold uppercase tracking-widest text-white">
+                              General Member
+                            </span>
+                          </div>
+                        </>
+                      )}
 
-                      {memberId && (
+                      {memberId && registerFor === 'self' && (
                         <div className="px-6 py-4 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-between">
                           <span className="text-[10px] font-bold uppercase tracking-widest text-amber-500">Member ID</span>
                           <span className="text-sm font-mono font-bold text-white tracking-widest">
@@ -309,33 +516,39 @@ const RegisterMember = () => {
                           </span>
                         </div>
                       )}
-
-                      {paymentMethod === 'bkash' && (
-                        <div className="px-6 py-4 rounded-2xl bg-white/5 border border-white/10 space-y-2 text-left">
-                          <div className="flex justify-between items-center">
-                            <span className="text-[8px] font-bold uppercase tracking-widest text-zinc-500">TrxID</span>
-                            <span className="text-[10px] font-mono font-bold text-white">{trxnid}</span>
-                          </div>
-                          <div className="flex justify-between items-center">
-                            <span className="text-[8px] font-bold uppercase tracking-widest text-zinc-500">bKash Number</span>
-                            <span className="text-[10px] font-mono font-bold text-white">{bkashNumber}</span>
-                          </div>
-                        </div>
-                      )}
                     </div>
                   </div>
                 </div>
                 
                 <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                  <button 
-                    onClick={() => window.close()}
-                    className="px-8 py-4 rounded-2xl bg-white/5 border border-white/10 text-white font-bold hover:bg-white/10 transition-all w-full sm:w-auto"
-                  >
-                    Close This Tab
-                  </button>
+                  {registerFor === 'self' && success ? (
+                    <button 
+                      onClick={() => window.close()}
+                      className="px-8 py-4 rounded-2xl bg-white/5 border border-white/10 text-white font-bold hover:bg-white/10 transition-all w-full sm:w-auto"
+                    >
+                      Close This Tab
+                    </button>
+                  ) : registerFor === 'other' && success ? (
+                    <button 
+                      onClick={() => {
+                        setSuccess(false);
+                        resetForm();
+                      }}
+                      className="px-8 py-4 rounded-2xl bg-amber-500 text-black font-bold hover:bg-amber-400 transition-all w-full sm:w-auto uppercase tracking-widest text-xs"
+                    >
+                      Register Another
+                    </button>
+                  ) : (
+                    <button 
+                      onClick={() => router.push('/')}
+                      className="px-8 py-4 rounded-2xl bg-white/5 border border-white/10 text-white font-bold hover:bg-white/10 transition-all w-full sm:w-auto"
+                    >
+                      Return Home
+                    </button>
+                  )}
                 </div>
               </div>
-            ) : (
+            ) : (registerFor === 'self') || (registerFor === 'other' && hasAccount !== null) ? (
               <div className="p-8 md:p-12 rounded-[40px] bg-white/[0.03] border border-white/10 backdrop-blur-xl">
                 <form onSubmit={handleRegisterMember} className="space-y-10">
                   {/* Photo Upload Section */}
@@ -622,7 +835,7 @@ const RegisterMember = () => {
                   </button>
                 </form>
               </div>
-            )}
+            ) : null}
           </ScrollReveal>
         </div>
       </div>

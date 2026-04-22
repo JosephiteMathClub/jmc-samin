@@ -26,7 +26,8 @@ const ContentContext = React.createContext<ContentContextType>({
 const DEFAULT_CONTENT = {
   site: {
     clubName: "Josephite Math Club",
-    logoUrl: ""
+    logoUrl: "",
+    eventMode: false
   },
   home: {
     heroTagline: "Est. 2015 * Excellence in Mathematics",

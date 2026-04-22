@@ -13,10 +13,14 @@ export async function middleware(req: NextRequest) {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://gqcwzxnuawpfqvrukcmn.supabase.co";
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdxY3d6eG51YXdwZnF2cnVrY21uIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE4NTYxNzIsImV4cCI6MjA4NzQzMjE3Mn0.ScX8MryJZvfRpa6H0RCeylRVhzlf7hdHnGE5YrbgIwQ";
 
+  let response = NextResponse.next({
+    request: {
+      headers: req.headers,
+    },
+  });
+
   // If Supabase is not configured, we skip auth checks but keep security headers
-  if (!supabaseUrl || !supabaseAnonKey) {
-    // We still need to apply headers later, so we just skip the auth part
-  } else {
+  if (supabaseUrl && supabaseAnonKey) {
     const supabase = createServerClient(
       supabaseUrl,
       supabaseAnonKey,
@@ -27,13 +31,13 @@ export async function middleware(req: NextRequest) {
           },
           setAll(cookiesToSet) {
             cookiesToSet.forEach(({ name, value, options }) => req.cookies.set(name, value))
-            res = NextResponse.next({
+            response = NextResponse.next({
               request: {
                 headers: req.headers,
               },
             })
             cookiesToSet.forEach(({ name, value, options }) =>
-              res.cookies.set(name, value, options)
+              response.cookies.set(name, value, options)
             )
           },
         },
@@ -42,18 +46,21 @@ export async function middleware(req: NextRequest) {
 
     let user = null;
     try {
-      const { data } = await supabase.auth.getUser();
-      user = data.user;
+      const { data: { user: foundUser }, error } = await supabase.auth.getUser();
+      user = foundUser;
+      
+      if (error && !['Refresh Token Not Found', 'invalid_grant', 'session_not_found', 'Auth session missing!'].some(msg => error.message.includes(msg))) {
+        console.error("Middleware: getUser error:", error.message);
+      }
     } catch (e) {
-      console.error("Middleware: getUser error:", e);
+      // Ignore exceptions from session resolution in middleware as they are often just expired sessions
     }
 
-    // 2. Route Protection
+    // Protection logic
     const isAdminPath = req.nextUrl.pathname.startsWith('/admin');
     const isApiPath = req.nextUrl.pathname.startsWith('/api');
 
     if (isAdminPath || (isApiPath && req.method === 'POST')) {
-      // If we have a user, check admin status
       if (user) {
         if (isAdminPath) {
           const adminEmailsEnv = process.env.NEXT_PUBLIC_ADMIN_EMAILS;
@@ -71,27 +78,29 @@ export async function middleware(req: NextRequest) {
     }
   }
 
-  // 3. Apply Security Headers at the end to ensure they are present on the final response
+  // 3. Apply Security Headers
+  // Use a more permissive CSP for RSC and local navigation
+  const origin = req.nextUrl.origin;
   const cspHeader = `
-    default-src 'self';
-    script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.supabase.co;
-    style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
-    img-src 'self' blob: data: https://*.supabase.co https://picsum.photos https://images.unsplash.com;
-    font-src 'self' https://fonts.gstatic.com;
-    connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.googleapis.com https://*.google-analytics.com https://*.googletagmanager.com localhost:* 127.0.0.1:*;
+    default-src 'self' ${origin};
+    script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.supabase.co ${origin};
+    style-src 'self' 'unsafe-inline' https://fonts.googleapis.com ${origin};
+    img-src 'self' blob: data: https://*.supabase.co https://picsum.photos https://images.unsplash.com ${origin};
+    font-src 'self' https://fonts.gstatic.com ${origin};
+    connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.googleapis.com https://*.google-analytics.com https://*.googletagmanager.com ${origin} localhost:* 127.0.0.1:*;
     object-src 'none';
-    base-uri 'self';
-    form-action 'self';
+    base-uri 'self' ${origin};
+    form-action 'self' ${origin};
   `.replace(/\s{2,}/g, ' ').trim();
 
-  res.headers.set('Content-Security-Policy', cspHeader);
-  res.headers.set('X-Content-Type-Options', 'nosniff');
-  res.headers.set('X-XSS-Protection', '1; mode=block');
-  res.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
-  res.headers.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
-  res.headers.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
+  response.headers.set('Content-Security-Policy', cspHeader);
+  response.headers.set('X-Content-Type-Options', 'nosniff');
+  response.headers.set('X-XSS-Protection', '1; mode=block');
+  response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+  response.headers.set('Permissions-Policy', 'camera=(self), microphone=(self), geolocation=(self)');
+  response.headers.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
 
-  return res;
+  return response;
 }
 
 export const config = {

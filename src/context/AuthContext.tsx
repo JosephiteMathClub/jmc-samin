@@ -123,17 +123,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Get initial session
     supabase.auth.getSession().then(({ data: { session }, error }) => {
       if (error) {
-        console.error("AuthContext: getSession error:", error);
-        if (error.message.includes('Refresh Token Not Found') || error.message.includes('invalid_grant')) {
-          // Clear session if refresh token is invalid
-          supabase.auth.signOut().catch(e => console.error("AuthContext: signOut error:", e));
+        // We only log if it's not a standard session expiry error
+        const benignErrors = ['Refresh Token Not Found', 'invalid_grant', 'session_not_found'];
+        const isBenign = benignErrors.some(msg => error.message.includes(msg));
+        
+        if (!isBenign) {
+          console.error("AuthContext: getSession error:", error);
+        }
+
+        if (isBenign) {
+          // Clear stale local session immediately if refresh token is known invalid
+          supabase.auth.signOut({ scope: 'local' }).catch(e => {});
           handleAuthChange(null);
           return;
         }
       }
       handleAuthChange(session?.user ?? null);
     }).catch(err => {
-      console.error("AuthContext: getSession exception:", err);
+      // Catch exceptions as well
       handleAuthChange(null);
     });
 

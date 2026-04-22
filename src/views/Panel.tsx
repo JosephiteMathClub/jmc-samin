@@ -38,7 +38,7 @@ const PanelSkeleton = () => (
 
 // --- COMPONENTS ---
 
-const Flashcard = React.memo(({ role, name, imageUrl, icon: Icon = User, onUpload, isAdmin }: any) => {
+const Flashcard = React.memo(({ role, name, imageUrl, icon: Icon = User, onUpload, isAdmin, isBig }: any) => {
   const [uploading, setUploading] = React.useState(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const { showToast } = useToast();
@@ -77,7 +77,7 @@ const Flashcard = React.memo(({ role, name, imageUrl, icon: Icon = User, onUploa
   return (
     <motion.div
       whileHover={shouldReduceGfx ? {} : { y: -10, scale: 1.02 }}
-      className={`glass-card overflow-hidden ${!shouldReduceGfx && 'transition-all duration-500'} group relative flex flex-col border-white/5 bg-[#0a0a0c]/80`}
+      className={`glass-card overflow-hidden ${!shouldReduceGfx && 'transition-all duration-500'} group relative flex flex-col border-white/5 bg-[#0a0a0c]/80 h-full`}
       style={{ willChange: "transform", contain: "content" }}
     >
       <div className="aspect-[4/5] relative overflow-hidden bg-zinc-900/50">
@@ -86,12 +86,13 @@ const Flashcard = React.memo(({ role, name, imageUrl, icon: Icon = User, onUploa
             src={resolveImageUrl(imageUrl)} 
             alt={name || 'Member'} 
             fill 
-            className={`object-cover ${!shouldReduceGfx && 'transition-transform duration-700 group-hover:scale-110'}`}
-            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 25vw, 20vw"
+            className={`object-cover object-center ${!shouldReduceGfx && 'transition-transform duration-700 group-hover:scale-110'}`}
+            sizes={isBig ? "(max-width: 768px) 100vw, 500px" : "(max-width: 768px) 100vw, (max-width: 1200px) 25vw, 20vw"}
+            referrerPolicy="no-referrer"
           />
         ) : (
           <div className="absolute inset-0 flex items-center justify-center text-amber-500/10">
-            <Icon className="w-24 h-24" />
+            <Icon className={isBig ? "w-32 h-32" : "w-24 h-24"} />
           </div>
         )}
         
@@ -121,11 +122,11 @@ const Flashcard = React.memo(({ role, name, imageUrl, icon: Icon = User, onUploa
           />
         )}
       </div>
-      <div className="p-6 bg-gradient-to-b from-transparent to-black/40 backdrop-blur-md border-t border-white/5 text-center">
-        <p className="font-bold text-white font-display tracking-tight text-lg leading-tight mb-1 group-hover:text-[var(--c-6-start)] transition-colors">
+      <div className={`${isBig ? 'p-8 min-h-[140px]' : 'p-6 min-h-[110px]'} bg-gradient-to-b from-transparent to-black/40 backdrop-blur-md border-t border-white/5 text-center flex-1 flex flex-col justify-center`}>
+        <p className={`font-bold text-white font-display tracking-tight leading-tight mb-2 group-hover:text-[var(--c-6-start)] transition-colors ${isBig ? 'text-2xl' : 'text-lg'}`}>
           {name || 'New Member'}
         </p>
-        <p className="text-[var(--c-5-start)] text-[10px] uppercase tracking-[0.2em] font-bold">
+        <p className={`text-[var(--c-5-start)] uppercase tracking-[0.2em] font-bold ${isBig ? 'text-xs' : 'text-[10px]'}`}>
           {role || 'Member'}
         </p>
       </div>
@@ -138,9 +139,9 @@ Flashcard.displayName = 'Flashcard';
 const SectionHeading = ({ children, subtitle }: any) => {
   const { shouldReduceGfx } = usePerformance();
   return (
-    <ScrollReveal direction="up" distance={shouldReduceGfx ? 10 : 30} className="mb-16 text-center">
+    <ScrollReveal direction="up" distance={shouldReduceGfx ? 10 : 30} className="mb-10 text-center">
       <motion.h2 
-        className="text-4xl md:text-7xl font-bold text-white font-display tracking-tighter mb-4 uppercase"
+        className="text-3xl md:text-5xl lg:text-6xl font-bold text-white font-display tracking-tighter mb-4 uppercase"
       >
         {children}
       </motion.h2>
@@ -186,8 +187,8 @@ const Panel = () => {
   if (!panel) return null;
 
   return (
-    <div className="min-h-screen py-32 px-4 sm:px-6 lg:px-8 bg-[#050505]">
-      <div className="max-w-7xl mx-auto space-y-32">
+    <div className="min-h-screen py-16 md:py-32 px-4 sm:px-8 bg-[#050505]">
+      <div className="max-w-screen-2xl mx-auto space-y-20 md:space-y-32">
         
         {/* --- MODERATORS SECTION --- */}
         <section>
@@ -205,7 +206,7 @@ const Panel = () => {
                 }
               }
             }}
-            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8"
+            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8"
           >
             {panel.moderators?.map((m: any, i: number) => (
               <motion.div
@@ -217,7 +218,6 @@ const Panel = () => {
               >
                 <Flashcard 
                   {...m} 
-                  isBig 
                   icon={Shield} 
                   isAdmin={isAdmin}
                   onUpload={(url: string) => handleMemberUpdate(`panel.moderators.${i}.imageUrl`, url)}
@@ -268,8 +268,8 @@ const Panel = () => {
             >
             <div>
               <SubHeading>President</SubHeading>
-              <div className="flex justify-center">
-                <div className="w-full max-w-md">
+              <div className="flex justify-center px-4">
+                <div className="grid grid-cols-1 md:grid-cols-1 gap-8 w-full max-w-xl">
                   {activePanelData.president?.map((p: any, i: number) => (
                     <Flashcard 
                       key={i} 
@@ -301,8 +301,8 @@ const Panel = () => {
 
             <div>
               <SubHeading>General Secretary</SubHeading>
-              <div className="flex justify-center">
-                <div className="w-full max-w-md">
+              <div className="flex justify-center px-4">
+                <div className="grid grid-cols-1 md:grid-cols-1 gap-8 w-full max-w-xl">
                   {activePanelData.generalSecretary?.map((p: any, i: number) => (
                     <Flashcard 
                       key={i} 
@@ -331,7 +331,7 @@ const Panel = () => {
                     }
                   }
                 }}
-                className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-8"
+                className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-6 md:gap-8"
               >
                 {activePanelData.vicePresidents?.map((p: any, i: number) => (
                   <motion.div
@@ -380,7 +380,7 @@ const Panel = () => {
               <h3 className="text-xl font-bold text-white font-display uppercase tracking-widest">{panel.departmentsSubtitle || "Department Heads"}</h3>
             </div>
             
-            <div className="p-8 grid grid-cols-1 md:grid-cols-2 gap-6 bg-black/40">
+            <div className="p-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 bg-black/40">
               {activePanelData.departments?.map((d: any, i: number) => (
                 <div key={i} className="glass-card p-6 border-white/5 flex flex-col items-center text-center group hover:bg-white/5 transition-all relative">
                   <p className="text-[var(--c-6-start)] font-bold text-xs mb-2 uppercase tracking-tighter">{d.dept}</p>

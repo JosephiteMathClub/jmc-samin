@@ -58,7 +58,10 @@ const DashboardMemberManagementSectionComponent: React.FC<DashboardMemberManagem
     full_name: '',
     class: '',
     section: '',
-    roll: ''
+    roll: '',
+    email: '',
+    phone: '',
+    hasAccount: false
   });
 
   const handleManualAdd = async (e: React.FormEvent) => {
@@ -67,7 +70,7 @@ const DashboardMemberManagementSectionComponent: React.FC<DashboardMemberManagem
     try {
       const data = await addMember(formData);
       setSuccessData(data);
-      setFormData({ full_name: '', class: '', section: '', roll: '' });
+      setFormData({ full_name: '', class: '', section: '', roll: '', email: '', phone: '', hasAccount: false });
       // Don't close immediately, show success first
     } catch (err) {
       // Error handled by addMember toast
@@ -153,6 +156,27 @@ const DashboardMemberManagementSectionComponent: React.FC<DashboardMemberManagem
                 </div>
               ) : (
                 <form onSubmit={handleManualAdd} className="space-y-8">
+                  <div className="p-6 rounded-2xl bg-white/5 border border-white/10 space-y-4">
+                    <p className="text-[10px] font-bold text-zinc-300 uppercase tracking-[0.2em] text-center">Account Verification</p>
+                    <h4 className="text-sm font-bold text-white text-center">Does the user have an existing account on this website?</h4>
+                    <div className="flex gap-4 justify-center pt-2">
+                      <button 
+                        type="button"
+                        onClick={() => setFormData({...formData, hasAccount: true})}
+                        className={`flex-1 px-8 py-4 rounded-xl border text-xs font-bold uppercase tracking-widest transition-all ${formData.hasAccount === true ? 'bg-white/10 border-amber-500/50 text-white shadow-lg' : 'border-white/5 text-zinc-500 hover:border-white/20'}`}
+                      >
+                        Yes, Link Existing
+                      </button>
+                      <button 
+                        type="button"
+                        onClick={() => setFormData({...formData, hasAccount: false})}
+                        className={`flex-1 px-8 py-4 rounded-xl border text-xs font-bold uppercase tracking-widest transition-all ${formData.hasAccount === false ? 'bg-white/10 border-amber-500/50 text-white shadow-lg' : 'border-white/5 text-zinc-500 hover:border-white/20'}`}
+                      >
+                        No, Create New One
+                      </button>
+                    </div>
+                  </div>
+
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-2">
                       <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 ml-1">Full Name</label>
@@ -165,6 +189,30 @@ const DashboardMemberManagementSectionComponent: React.FC<DashboardMemberManagem
                         className="w-full px-6 py-4 bg-white/5 border border-white/10 rounded-xl focus:outline-none focus:border-amber-500/50 transition-all text-white font-bold text-xs"
                       />
                     </div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 ml-1">Email Address</label>
+                      <input 
+                        type="email"
+                        required
+                        value={formData.email}
+                        onChange={(e) => setFormData({...formData, email: e.target.value})}
+                        placeholder="EMAIL@EXAMPLE.COM"
+                        className="w-full px-6 py-4 bg-white/5 border border-white/10 rounded-xl focus:outline-none focus:border-amber-500/50 transition-all text-white font-bold text-xs"
+                      />
+                    </div>
+                    {!formData.hasAccount && (
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 ml-1">Phone Number (Will be Password)</label>
+                        <input 
+                          type="tel"
+                          required={!formData.hasAccount}
+                          value={formData.phone}
+                          onChange={(e) => setFormData({...formData, phone: e.target.value})}
+                          placeholder="e.g. +8801..."
+                          className="w-full px-6 py-4 bg-white/5 border border-white/10 rounded-xl focus:outline-none focus:border-amber-500/50 transition-all text-white font-bold text-xs"
+                        />
+                      </div>
+                    )}
                     <div className="space-y-2">
                       <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 ml-1">Class</label>
                       <input 

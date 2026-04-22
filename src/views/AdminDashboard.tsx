@@ -174,28 +174,79 @@ const AdminDashboard = () => {
     }
   };
 
-  const addMember = async (memberData: { full_name: string, class: string, section: string, roll: string }) => {
+  const addMember = async (memberData: { 
+    full_name: string, 
+    class: string, 
+    section: string, 
+    roll: string, 
+    email: string, 
+    phone?: string, 
+    hasAccount: boolean 
+  }) => {
     if (!isSupabaseConfigured) return;
     try {
+      let userId: string | null = null;
+
+      // If user doesn't have an account, create one automatically
+      if (!memberData.hasAccount && memberData.email && memberData.phone) {
+        showToast("Creating user account...", "info");
+        const createRes = await fetch('/api/admin/create-user', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            email: memberData.email,
+            phone: memberData.phone,
+            password: memberData.phone, // Password is the phone number
+            fullName: memberData.full_name
+          }),
+        });
+
+        const createData = await createRes.json();
+        if (!createRes.ok) {
+          throw new Error(createData.error || 'Failed to create user account');
+        }
+        userId = createData.user.id;
+        showToast("User account created!", "success");
+      } else if (memberData.hasAccount && memberData.email) {
+        // If user has an account, find their ID by email
+        const { data: userData, error: userError } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('email', memberData.email)
+          .single();
+        
+        if (userError) {
+          throw new Error("Could not find an existing account with that email. Please ensure the user has signed up first.");
+        }
+        userId = userData.id;
+      }
+
       const prefix = "JMC";
       const digits = Math.floor(100000 + Math.random() * 900000).toString();
       const generatedId = `${prefix}-${digits}`;
       
       // Use crypto.randomUUID() if available, fallback to a manual UUID if not
-      const tempId = typeof crypto !== 'undefined' && crypto.randomUUID 
+      const tempId = userId || (typeof crypto !== 'undefined' && crypto.randomUUID 
         ? crypto.randomUUID() 
-        : '00000000-0000-4000-8000-' + Math.random().toString(16).slice(2, 14).padStart(12, '0');
+        : '00000000-0000-4000-8000-' + Math.random().toString(16).slice(2, 14).padStart(12, '0'));
 
       const { data, error } = await supabase
         .from('member')
         .insert({
           id: tempId,
-          ...memberData,
+          full_name: memberData.full_name,
+          class: memberData.class,
+          section: memberData.section,
+          roll: memberData.roll,
+          email: memberData.email,
+          email_address: memberData.email,
+          phone: memberData.phone,
           member_id: generatedId,
           verified: 'yes',
           payment_method: 'Manual (Admin)',
           school: 'St Joseph',
-          email: `${generatedId.toLowerCase()}@jmc.dummy`, // Add a dummy email to avoid potential null issues
           created_at: new Date().toISOString()
         })
         .select()
@@ -204,7 +255,7 @@ const AdminDashboard = () => {
       if (error) {
         // Specifically catch foreign key constraint errors
         if (error.code === '23503') {
-          throw new Error("Database integrity error: Manual registration requires the 'member' table 'id' column to NOT require an existing Auth User. Please ask the developer to update the SQL schema.");
+          throw new Error("Database integrity error: Manual registration requires an existing Auth user's ID. If account creation failed, this record cannot be saved.");
         }
         throw error;
       }

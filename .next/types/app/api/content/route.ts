@@ -1,4 +1,4 @@
-// File: C:\Users\l47id\Downloads\josephite-math-club\src\app\api\content\route.ts
+// File: D:\josephite-math-club\src\app\api\content\route.ts
 import * as entry from '../../../../../src/app/api/content/route.js'
 import type { NextRequest } from 'next/server.js'
 

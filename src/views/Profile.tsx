@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
 import { OptimizedImage } from '../components/OptimizedImage';
@@ -19,10 +19,15 @@ import {
   Trophy,
   Medal,
   Star as StarIcon,
-  Briefcase
+  Briefcase,
+  QrCode,
+  X,
+  Upload
 } from 'lucide-react';
+import { QRCodeSVG } from 'qrcode.react';
 import { useAuth } from '../context/AuthContext';
 import { useContent } from '../context/ContentContext';
+import { useToast } from '../context/ToastContext';
 import { useRouter } from 'next/navigation';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import ScrollReveal from '../components/ScrollReveal';
@@ -34,8 +39,10 @@ import { resolveImageUrl } from '../lib/utils';
 const Profile = () => {
   const { user, profile, loading: authLoading, isAdmin, signOut, refreshProfile } = useAuth();
   const { content } = useContent();
+  const { showToast } = useToast();
   const router = useRouter();
   const { shouldReduceGfx } = usePerformance();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
   const [isEditing, setIsEditing] = useState(false);
   const [fullName, setFullName] = useState('');
@@ -46,9 +53,64 @@ const Profile = () => {
   const [loadingAchievements, setLoadingAchievements] = useState(false);
   const [checkingMember, setCheckingMember] = useState(true);
   const [loading, setLoading] = useState(false);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [showQrModal, setShowQrModal] = useState(false);
   const celebratedRef = React.useRef(false);
+
+  const handleAvatarClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user) return;
+
+    // Validate size (max 2MB)
+    if (file.size > 2 * 1024 * 1024) {
+      showToast('Image must be less than 2MB', 'error');
+      return;
+    }
+
+    setUploadingAvatar(true);
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${user.id}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+      const filePath = `uploads/avatars/${fileName}`;
+
+      const { data, error: uploadError } = await supabase.storage
+        .from('images')
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      // Update profile with the new avatar URL
+      // We store it as /uploads/avatars/... as per our resolveImageUrl logic
+      const avatarUrl = `/${filePath}`;
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({ avatar_url: avatarUrl })
+        .eq('id', user.id);
+
+      if (updateError) throw updateError;
+      
+      await refreshProfile();
+      // Also update member table if they are a member
+      if (isMember) {
+        await supabase
+          .from('member')
+          .update({ photo_url: avatarUrl })
+          .eq('id', user.id);
+      }
+      showToast('Profile picture updated successfully!', 'success');
+    } catch (err: any) {
+      console.error('Error uploading avatar:', err);
+      showToast(err.message || 'Failed to upload profile picture', 'error');
+    } finally {
+      setUploadingAvatar(false);
+    }
+  };
 
   const triggerCelebration = React.useCallback((topPosition: number) => {
     if (shouldReduceGfx) return;
@@ -201,6 +263,66 @@ const Profile = () => {
 
   return (
     <div className="pt-32 pb-24">
+      {/* QR ID Modal */}
+      <AnimatePresence>
+        {showQrModal && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center px-4">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowQrModal(false)}
+              className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+            />
+            
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="relative w-full max-w-sm glass-card p-1 border-[var(--c-6-start)]/30 overflow-hidden"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="bg-gradient-to-br from-[var(--c-6-start)]/20 to-transparent p-8 text-center space-y-6">
+                <button 
+                  onClick={() => setShowQrModal(false)}
+                  className="absolute top-4 right-4 p-2 rounded-full bg-white/5 hover:bg-white/10 transition-colors"
+                >
+                  <X className="w-4 h-4 text-zinc-400" />
+                </button>
+
+                <div className="mx-auto w-48 h-48 p-4 bg-white rounded-3xl shadow-[0_0_50px_rgba(0,180,219,0.3)]">
+                  <QRCodeSVG 
+                    value={JSON.stringify({
+                      name: profile?.full_name || fullName,
+                      id: memberId,
+                      email: user.email,
+                      v: '1.0'
+                    })}
+                    size={160}
+                    level="H"
+                    includeMargin={false}
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <h4 className="text-xl font-bold text-white uppercase tracking-tight">{profile?.full_name || fullName}</h4>
+                  <p className="text-zinc-500 text-xs font-mono tracking-widest">{memberId || 'TEMPORARY ID'}</p>
+                </div>
+
+                <div className="pt-4 border-t border-white/10">
+                  <div className="inline-flex items-center gap-2 px-6 py-2 rounded-full bg-[var(--c-6-start)]/20 border border-[var(--c-6-start)]/30">
+                    <CheckCircle2 className="w-4 h-4 text-[var(--c-6-start)]" />
+                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white">Verified Josephite</span>
+                  </div>
+                </div>
+
+                <p className="text-[10px] text-zinc-600 font-medium italic">Scan for digital verification</p>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
       <div className="container mx-auto px-4">
         <div className="max-w-6xl mx-auto">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
@@ -225,9 +347,28 @@ const Profile = () => {
                           <User className="w-16 h-16" />
                         </div>
                       )}
+                      
+                      {uploadingAvatar && (
+                        <div className="absolute inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-10">
+                          <Loader2 className="w-8 h-8 text-white animate-spin" />
+                        </div>
+                      )}
                     </div>
-                    <button className={`absolute bottom-0 right-0 p-3 rounded-full bg-[var(--c-6-start)] text-white shadow-xl ${!shouldReduceGfx && 'hover:scale-110 transition-transform'}`}>
-                      <Camera className="w-4 h-4" />
+                    
+                    <input 
+                      type="file" 
+                      ref={fileInputRef} 
+                      className="hidden" 
+                      accept="image/png, image/jpeg, image/webp" 
+                      onChange={handleFileChange} 
+                    />
+
+                    <button 
+                      onClick={handleAvatarClick}
+                      disabled={uploadingAvatar}
+                      className={`absolute bottom-0 right-0 p-3 rounded-full bg-[var(--c-6-start)] text-white shadow-xl ${!shouldReduceGfx && !uploadingAvatar && 'hover:scale-110 transition-transform'} disabled:opacity-50`}
+                    >
+                      {uploadingAvatar ? <Loader2 className="w-4 h-4 animate-spin" /> : <Camera className="w-4 h-4" />}
                     </button>
                   </div>
 
@@ -251,8 +392,15 @@ const Profile = () => {
                         Admin Dashboard
                       </button>
                     )}
-                    <button 
-                      onClick={() => setIsEditing(!isEditing)}
+                      <button 
+                        onClick={() => setShowQrModal(true)}
+                        className="w-full py-4 rounded-2xl bg-[var(--c-6-start)]/10 border border-[var(--c-6-start)]/20 text-[var(--c-6-start)] font-bold hover:bg-[var(--c-6-start)]/20 transition-all flex items-center justify-center gap-2 group/id"
+                      >
+                        <QrCode className="w-4 h-4 group-hover/id:rotate-12 transition-transform" />
+                        Show ID
+                      </button>
+                      <button 
+                        onClick={() => setIsEditing(!isEditing)}
                       className="w-full py-4 rounded-2xl bg-white/5 border border-white/10 text-white font-bold hover:bg-white/10 transition-all flex items-center justify-center gap-2"
                     >
                       <Settings className="w-4 h-4" />
