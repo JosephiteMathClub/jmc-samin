@@ -25,10 +25,10 @@ CREATE POLICY "Allow admin update access"
 ON site_content FOR ALL 
 TO authenticated
 USING (
-  auth.jwt() ->> 'email' IN ('l47idkpro@gmail.com')
+  auth.jwt() ->> 'email' IN ('admin@example.com')
 )
 WITH CHECK (
-  auth.jwt() ->> 'email' IN ('l47idkpro@gmail.com')
+  auth.jwt() ->> 'email' IN ('admin@example.com')
 );
 
 -- Function to handle updated_at
@@ -76,7 +76,7 @@ BEGIN
       WHERE id = auth.uid() AND role = 'admin'
     )
     OR (
-      auth.jwt() ->> 'email' IN ('l47idkpro@gmail.com', 'jarysucksatgames@gmail.com')
+      auth.jwt() ->> 'email' IN ('admin@example.com', 'another@example.com')
     )
   );
 END;

@@ -10,8 +10,8 @@ export async function middleware(req: NextRequest) {
     },
   });
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://gqcwzxnuawpfqvrukcmn.supabase.co";
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdxY3d6eG51YXdwZnF2cnVrY21uIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE4NTYxNzIsImV4cCI6MjA4NzQzMjE3Mn0.ScX8MryJZvfRpa6H0RCeylRVhzlf7hdHnGE5YrbgIwQ";
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://placeholder-project.supabase.co";
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "placeholder-key";
 
   let response = NextResponse.next({
     request: {
