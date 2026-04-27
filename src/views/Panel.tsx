@@ -260,9 +260,9 @@ const Panel = () => {
           <AnimatePresence mode="wait">
             <motion.div 
               key={activeTab}
-              initial={shouldReduceGfx ? { opacity: 1 } : { opacity: 0, x: 20, filter: 'blur(10px)' }}
-              animate={shouldReduceGfx ? { opacity: 1 } : { opacity: 1, x: 0, filter: 'blur(0px)' }}
-              exit={shouldReduceGfx ? { opacity: 1 } : { opacity: 0, x: -20, filter: 'blur(10px)' }}
+              initial={shouldReduceGfx ? { opacity: 1 } : { opacity: 0, x: 20 }}
+              animate={shouldReduceGfx ? { opacity: 1 } : { opacity: 1, x: 0 }}
+              exit={shouldReduceGfx ? { opacity: 1 } : { opacity: 0, x: -20 }}
               transition={{ duration: shouldReduceGfx ? 0.1 : 0.5, ease: [0.22, 1, 0.36, 1] }}
               className="space-y-16"
             >

@@ -14,15 +14,21 @@ export function usePerformance() {
     const listener = (e: MediaQueryListEvent) => setPrefersReducedMotion(e.matches);
     mediaQuery.addEventListener('change', listener);
 
-    // Aggressive heuristic for low-end device
+    // Heuristic for low-end device or slow network
     const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-    const isLowEnd = 
-      (navigator.hardwareConcurrency && navigator.hardwareConcurrency <= 4) || // Reverted to 4 cores
-      ((navigator as any).deviceMemory && (navigator as any).deviceMemory <= 4) || // Reverted to 4GB
-      isMobileDevice ||
-      (window.innerWidth < 768); // Reverted to standard mobile width
+    
+    // Check for slow connection
+    const connection = (navigator as any).connection;
+    const isSlowConnection = connection && (connection.saveData || /2g|3g/.test(connection.effectiveType));
 
-    setIsLowPower(isLowEnd);
+    const isLowEnd = 
+      (navigator.hardwareConcurrency && navigator.hardwareConcurrency <= 4) || 
+      ((navigator as any).deviceMemory && (navigator as any).deviceMemory <= 4) || 
+      isMobileDevice ||
+      isSlowConnection ||
+      (window.innerWidth < 768);
+
+    setIsLowPower(!!isLowEnd);
     setIsMobile(isMobileDevice);
 
     return () => mediaQuery.removeEventListener('change', listener);

@@ -32,9 +32,22 @@ const cormorant = Cormorant_Garamond({
   weight: ["300", "400", "500", "600", "700"],
 });
 
+export const viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+};
+
 export const metadata = {
-  title: "Josephite Math Club",
-  description: "The official website of the Josephite Math Club",
+  title: "Josephite Math Club | JMC Official",
+  description: "The official website of the Josephite Math Club. Promoting excellence in mathematics through events, competitions, and research.",
+  keywords: ["Math Club", "Josephite", "JMC", "Mathematics", "Competition", "Research"],
+  authors: [{ name: "Josephite Math Club" }],
+  openGraph: {
+    title: "Josephite Math Club",
+    description: "Promoting excellence in mathematics.",
+    type: "website",
+  },
 };
 
 export default function RootLayout({

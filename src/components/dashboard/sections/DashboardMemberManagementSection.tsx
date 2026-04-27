@@ -27,7 +27,15 @@ interface DashboardMemberManagementSectionProps {
   fetchMembers: () => Promise<void>;
   toggleVerified: (memberId: string, currentStatus: string) => Promise<void>;
   deleteMember: (member: any) => Promise<void>;
-  addMember: (memberData: { full_name: string, class: string, section: string, roll: string }) => Promise<any>;
+  addMember: (memberData: { 
+    full_name: string, 
+    class: string, 
+    section: string, 
+    roll: string,
+    email: string,
+    phone?: string,
+    hasAccount: boolean
+  }) => Promise<any>;
   handleMemberPhotoUpload: (e: React.ChangeEvent<HTMLInputElement>, memberId: string) => Promise<void>;
   uploading: string | null;
   shouldReduceGfx: boolean;

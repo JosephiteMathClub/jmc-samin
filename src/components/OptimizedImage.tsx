@@ -60,8 +60,8 @@ export const OptimizedImage: React.FC<OptimizedImageProps> = ({
         src={src}
         alt={alt}
         className={cn(
-          "transition-all duration-700 ease-in-out",
-          isLoaded ? "opacity-100 scale-100 blur-0" : "opacity-0 scale-105 blur-lg",
+          "transition-all duration-700 ease-in-out will-change-[transform,opacity,filter]",
+          isLoaded ? "opacity-100 scale-100" : "opacity-0 scale-105 blur-lg",
           className
         )}
         width={width}

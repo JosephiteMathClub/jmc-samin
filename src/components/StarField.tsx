@@ -53,13 +53,17 @@ const StarField: React.FC<StarFieldProps> = ({ reduced = false }) => {
       draw() {
         if (!ctx) return;
         this.twinkleOpacity += this.twinkleSpeed;
-        const opacity = (Math.sin(this.twinkleOpacity) + 1) / 2 * 0.6 + 0.1;
+        const opacity = (Math.sin(this.twinkleOpacity) + 1) / 2 * 0.4 + 0.05; // Slightly dimmer
         
         ctx.fillStyle = `rgba(${this.color}, ${opacity})`;
         ctx.beginPath();
-        ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
-        ctx.closePath();
-        ctx.fill();
+        // Use rect instead of arc for performance if tiny
+        if (this.size < 1) {
+          ctx.fillRect(this.x, this.y, this.size, this.size);
+        } else {
+          ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+          ctx.fill();
+        }
       }
 
       update(width: number, height: number) {
@@ -141,21 +145,17 @@ const StarField: React.FC<StarFieldProps> = ({ reduced = false }) => {
       draw() {
         if (!this.active || !ctx) return;
         ctx.save();
-        ctx.strokeStyle = `rgba(255, 255, 255, ${this.opacity * 0.5})`;
-        ctx.lineWidth = 2;
+        ctx.strokeStyle = `rgba(255, 255, 255, ${this.opacity * 0.4})`;
+        ctx.lineWidth = 1; // Thinner
         ctx.lineCap = 'round';
         ctx.beginPath();
         ctx.moveTo(this.x, this.y);
         ctx.lineTo(this.x + this.length, this.y - this.length);
         ctx.stroke();
 
-        // Head glow
-        const gradient = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, 4);
-        gradient.addColorStop(0, `rgba(255, 255, 255, ${this.opacity})`);
-        gradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
-        ctx.fillStyle = gradient;
+        ctx.fillStyle = `rgba(255, 255, 255, ${this.opacity})`;
         ctx.beginPath();
-        ctx.arc(this.x, this.y, 4, 0, Math.PI * 2);
+        ctx.arc(this.x, this.y, 2, 0, Math.PI * 2);
         ctx.fill();
         ctx.restore();
       }
@@ -165,20 +165,22 @@ const StarField: React.FC<StarFieldProps> = ({ reduced = false }) => {
 
     const init = () => {
       particles = [];
-      const divisor = isMobile ? 40000 : 25000; // Increased divisor = fewer particles
-      const numberOfParticles = (canvas.width * canvas.height) / divisor;
+      const divisor = reduced ? 50000 : 30000;
+      const numberOfParticles = (window.innerWidth * window.innerHeight) / divisor;
       for (let i = 0; i < numberOfParticles; i++) {
-        let x = Math.random() * canvas.width;
-        let y = Math.random() * canvas.height;
+        let x = Math.random() * window.innerWidth;
+        let y = Math.random() * window.innerHeight;
         particles.push(new Particle(x, y));
       }
       
-      comets = Array.from({ length: isMobile ? 1 : 2 }).map(() => new Comet(canvas.width, canvas.height));
+      comets = Array.from({ length: 4 }).map(() => new Comet(window.innerWidth, window.innerHeight));
     };
 
     const handleResize = () => {
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width = window.innerWidth * dpr;
+      canvas.height = window.innerHeight * dpr;
+      ctx.scale(dpr, dpr);
       init();
     };
 
@@ -194,23 +196,27 @@ const StarField: React.FC<StarFieldProps> = ({ reduced = false }) => {
     const animate = (currentTime: number) => {
       animationFrameId = requestAnimationFrame(animate);
       
-      // Throttle to ~30fps
       const deltaTime = currentTime - lastTime;
-      if (deltaTime < 32) return; 
+      if (deltaTime < 45) return; // Throttled to ~22fps
       lastTime = currentTime;
 
+      // Clear physical buffer reliably
+      ctx.save();
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
       ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.restore();
+
       for (let i = 0; i < particles.length; i++) {
         particles[i].draw();
-        particles[i].update(canvas.width, canvas.height);
+        particles[i].update(window.innerWidth, window.innerHeight);
       }
       for (let i = 0; i < comets.length; i++) {
-        comets[i].update(canvas.width, canvas.height);
+        comets[i].update(window.innerWidth, window.innerHeight);
         comets[i].draw();
       }
     };
 
-    requestAnimationFrame(animate);
+    animationFrameId = requestAnimationFrame(animate);
 
     return () => {
       window.removeEventListener('resize', handleResize);
@@ -222,8 +228,7 @@ const StarField: React.FC<StarFieldProps> = ({ reduced = false }) => {
   return (
     <canvas
       ref={canvasRef}
-      className="fixed inset-0 pointer-events-none -z-20"
-      style={{ filter: 'blur(0.5px)' }}
+      className="absolute inset-0 pointer-events-none z-0"
     />
   );
 };

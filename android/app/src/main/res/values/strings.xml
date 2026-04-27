@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Josephite Math Club</string>
+    <string name="title_activity_main">Josephite Math Club</string>
+    <string name="package_name">com.jmc.app</string>
+    <string name="custom_url_scheme">com.jmc.app</string>
+</resources>

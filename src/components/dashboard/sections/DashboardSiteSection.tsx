@@ -71,19 +71,47 @@ const DashboardSiteSectionComponent: React.FC<DashboardSiteSectionProps> = ({
             onChange={(val) => updateField('logoSubtext', val)} 
           />
         </div>
-        <div className="mt-6 flex items-center gap-4 p-5 rounded-2xl bg-amber-500/5 border border-amber-500/10">
-          <div className="flex-1">
-            <h4 className="text-sm font-bold text-white uppercase tracking-tight">Event Mode</h4>
-            <p className="text-[10px] text-zinc-500 font-medium">Enable specialized participation tracking with QR scanning for active events.</p>
+        
+        <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="flex items-center gap-4 p-5 rounded-2xl bg-amber-500/5 border border-amber-500/10">
+            <div className="flex-1">
+              <h4 className="text-sm font-bold text-white uppercase tracking-tight">Event Mode</h4>
+              <p className="text-[10px] text-zinc-500 font-medium">Enable specialized participation tracking with QR scanning for active events.</p>
+            </div>
+            <input 
+              type="checkbox" 
+              id="eventMode"
+              checked={data?.eventMode || false} 
+              onChange={(e) => updateField('eventMode', e.target.checked)}
+              className="w-6 h-6 rounded-lg border-white/10 bg-white/5 text-amber-500 focus:ring-amber-500 transition-all cursor-pointer"
+            />
           </div>
-          <input 
-            type="checkbox" 
-            id="eventMode"
-            checked={data?.eventMode || false} 
-            onChange={(e) => updateField('eventMode', e.target.checked)}
-            className="w-6 h-6 rounded-lg border-white/10 bg-white/5 text-amber-500 focus:ring-amber-500 transition-all cursor-pointer"
-          />
+
+          <div className="flex items-center gap-4 p-5 rounded-2xl bg-red-500/5 border border-red-500/10">
+            <div className="flex-1">
+              <h4 className="text-sm font-bold text-white uppercase tracking-tight">Maintenance Mode</h4>
+              <p className="text-[10px] text-zinc-500 font-medium">Take the site offline for non-admin users while performing updates.</p>
+            </div>
+            <input 
+              type="checkbox" 
+              id="maintenanceMode"
+              checked={data?.maintenanceMode || false} 
+              onChange={(e) => updateField('maintenanceMode', e.target.checked)}
+              className="w-6 h-6 rounded-lg border-white/10 bg-white/5 text-red-500 focus:ring-red-500 transition-all cursor-pointer"
+            />
+          </div>
         </div>
+
+        {data?.maintenanceMode && (
+          <div className="mt-4">
+            <DashboardFormField 
+              label="Maintenance Message" 
+              value={data?.maintenanceMessage} 
+              onChange={(val) => updateField('maintenanceMessage', val)} 
+            />
+          </div>
+        )}
+
         <div className="mt-8">
            <DashboardFileUpload 
               label="Site Logo (Icon)" 
@@ -150,33 +178,54 @@ const DashboardSiteSectionComponent: React.FC<DashboardSiteSectionProps> = ({
               <input 
                 type="checkbox" 
                 id="isRegistrationOpen"
-                checked={registrationData?.isOpen} 
-                onChange={(e) => updateRegistrationField('isOpen', e.target.checked)}
+                checked={registrationData?.registrationOpen} 
+                onChange={(e) => updateRegistrationField('registrationOpen', e.target.checked)}
                 className="w-5 h-5 rounded border-white/10 bg-white/5 text-amber-500 focus:ring-amber-500"
               />
               <label htmlFor="isRegistrationOpen" className="text-xs font-bold uppercase tracking-widest text-white cursor-pointer">Registration is Open</label>
             </div>
+            
+            {!registrationData?.registrationOpen && (
+              <DashboardFormField 
+                label="Registration Closed Message" 
+                type="textarea"
+                value={registrationData?.registrationClosedMessage} 
+                onChange={(val) => updateRegistrationField('registrationClosedMessage', val)} 
+              />
+            )}
+
             <DashboardFormField 
-              label="Registration Deadline" 
-              value={registrationData?.deadline} 
-              onChange={(val) => updateRegistrationField('deadline', val)} 
+              label="bKash Number" 
+              value={registrationData?.bkashNumber} 
+              onChange={(val) => updateRegistrationField('bkashNumber', val)} 
             />
+            
             <DashboardFormField 
               label="Fee Amount" 
               value={registrationData?.fee} 
               onChange={(val) => updateRegistrationField('fee', val)} 
             />
+            
             <DashboardFormField 
-              label="Payment Notice" 
+              label="Payment Instructions (One per line)" 
               type="textarea"
-              value={registrationData?.notice} 
-              onChange={(val) => updateRegistrationField('notice', val)} 
+              value={Array.isArray(registrationData?.instructions) ? registrationData.instructions.join('\n') : registrationData?.instructions} 
+              onChange={(val) => updateRegistrationField('instructions', val.split('\n').filter((s: string) => s.trim()))} 
+              description="Enter each instruction step on a new line."
             />
+
             <DashboardFormField 
-              label="Payment Instructions" 
+              label="Cash Instructions" 
               type="textarea"
-              value={registrationData?.instructions} 
-              onChange={(val) => updateRegistrationField('instructions', val)} 
+              value={registrationData?.cashInstructions} 
+              onChange={(val) => updateRegistrationField('cashInstructions', val)} 
+            />
+
+            <DashboardFormField 
+              label="Declaration Text" 
+              type="textarea"
+              value={registrationData?.declaration} 
+              onChange={(val) => updateRegistrationField('declaration', val)} 
             />
          </div>
       </DashboardSection>
@@ -195,9 +244,8 @@ const DashboardSiteSectionComponent: React.FC<DashboardSiteSectionProps> = ({
                 loading={isSeeding}
                 className="w-full sm:w-auto"
                 icon={RefreshCw}
-             >
-                Seed Default Content
-             </DashboardButton>
+                label="Seed Default Content"
+             />
           </div>
         </div>
       </DashboardSection>

@@ -21,7 +21,9 @@ import {
   QrCode,
   Keyboard,
   ArrowLeft,
-  Calendar
+  Calendar,
+  Upload,
+  FileSpreadsheet
 } from 'lucide-react';
 import { supabase, isSupabaseConfigured } from '../../lib/supabase';
 import { useToast } from '../../context/ToastContext';
@@ -48,6 +50,8 @@ export const EventParticipation = () => {
   const [addingMember, setAddingMember] = useState(false);
   const [memberIdInput, setMemberIdInput] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
+  const [isBulkUploading, setIsBulkUploading] = useState(false);
+  const bulkUploadRef = useRef<HTMLInputElement>(null);
 
   // Event Mode States
   const eventMode = content?.site?.eventMode || false;
@@ -172,10 +176,62 @@ export const EventParticipation = () => {
     setAddingMember(false);
   };
 
+  const handleBulkUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !activeEvent || !activeCategory) return;
+    
+    setIsBulkUploading(true);
+    showToast("Starting bulk upload...", "info");
+    
+    try {
+      const text = await file.text();
+      // Split by newline, comma, or semicolon and filter out empty strings
+      const ids = text.split(/[\r\n,;]+/).map(id => id.trim().toUpperCase()).filter(id => id && id.startsWith('JMC-'));
+      
+      if (ids.length === 0) {
+        throw new Error("No valid JMC IDs found in the file.");
+      }
+      
+      showToast(`Processing ${ids.length} entries...`, "info");
+      
+      let successCount = 0;
+      let failCount = 0;
+      const errors: string[] = [];
+
+      for (const id of ids) {
+        try {
+          const success = await addParticipantByMemberId(id);
+          if (success) successCount++;
+          else failCount++;
+        } catch (err: any) {
+          failCount++;
+          errors.push(`${id}: ${err.message}`);
+        }
+      }
+
+      if (successCount > 0) {
+        showToast(`Successfully added ${successCount} participants!`, "success");
+        fetchParticipations();
+      }
+      if (failCount > 0) {
+        showToast(`${failCount} entries failed. Check console for details.`, "error");
+        console.error("Bulk upload errors:", errors);
+      }
+    } catch (err: any) {
+      showToast(err.message, "error");
+    } finally {
+      setIsBulkUploading(false);
+      if (bulkUploadRef.current) bulkUploadRef.current.value = '';
+    }
+  };
+
   const [lastScannedId, setLastScannedId] = useState<string | null>(null);
+  const [isScanning, setIsScanning] = useState(false);
   const scannedCooldownRef = useRef<{ [key: string]: number }>({});
 
   const handleQRScan = async (decodedText: string) => {
+    if (isScanning) return;
+    
     let scannedId = '';
     try {
       const data = JSON.parse(decodedText);
@@ -186,14 +242,24 @@ export const EventParticipation = () => {
 
     if (!scannedId) return;
 
-    // Cooldown check (5 seconds per ID) to prevent spamming
+    // Cooldown check (3 seconds per ID) to prevent spamming the same ID
     const now = Date.now();
-    if (scannedCooldownRef.current[scannedId] && now - scannedCooldownRef.current[scannedId] < 5000) {
+    if (scannedCooldownRef.current[scannedId] && now - scannedCooldownRef.current[scannedId] < 3000) {
       return;
     }
     
     scannedCooldownRef.current[scannedId] = now;
-    await addParticipantByMemberId(scannedId);
+    setLastScannedId(scannedId);
+    setIsScanning(true);
+    
+    try {
+      await addParticipantByMemberId(scannedId);
+    } finally {
+      // Small pause before allowing the next scan to ensure DB update and toast visibility
+      setTimeout(() => {
+        setIsScanning(false);
+      }, 500);
+    }
   };
 
   const updatePosition = async (participationId: string, position: number | null) => {
@@ -372,7 +438,7 @@ export const EventParticipation = () => {
                 </button>
               </motion.div>
             ) : (
-              <motion.div 
+                <motion.div 
                 key="active-view"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
@@ -407,6 +473,23 @@ export const EventParticipation = () => {
                         }`}
                       >
                         <QrCode className="w-3.5 h-3.5" /> Scanner
+                      </button>
+                    </div>
+                    <div className="flex gap-2">
+                      <input 
+                        type="file" 
+                        ref={bulkUploadRef}
+                        onChange={handleBulkUpload}
+                        accept=".csv,.txt"
+                        className="hidden"
+                      />
+                      <button 
+                        onClick={() => bulkUploadRef.current?.click()}
+                        disabled={isBulkUploading}
+                        className="px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-[10px] font-bold text-zinc-400 uppercase tracking-widest hover:bg-white/10 hover:text-white transition-all flex items-center gap-2"
+                      >
+                        {isBulkUploading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
+                        {isBulkUploading ? "Uploading..." : "Bulk Upload"}
                       </button>
                     </div>
                     <div className="px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-center">
@@ -587,13 +670,32 @@ export const EventParticipation = () => {
                   </div>
                 </DashboardFormField>
               </div>
-              <DashboardButton 
-                onClick={handleAddParticipant}
-                label={addingMember ? "Adding..." : "Add Participant"}
-                disabled={addingMember || !memberIdInput.trim() || !activeEvent}
-                icon={addingMember ? Loader2 : Plus}
-                className="h-[54px]"
-              />
+              <div className="flex gap-2 h-[54px]">
+                <DashboardButton 
+                  onClick={handleAddParticipant}
+                  label={addingMember ? "Adding..." : "Add Participant"}
+                  disabled={addingMember || !memberIdInput.trim() || !activeEvent}
+                  icon={addingMember ? Loader2 : Plus}
+                  className="flex-1"
+                />
+                
+                <input 
+                  type="file" 
+                  ref={bulkUploadRef}
+                  onChange={handleBulkUpload}
+                  accept=".csv,.txt"
+                  className="hidden"
+                />
+                <button 
+                  onClick={() => bulkUploadRef.current?.click()}
+                  disabled={isBulkUploading || !activeEvent}
+                  className="h-full px-6 rounded-2xl bg-white/5 border border-white/10 text-[10px] font-bold text-zinc-400 uppercase tracking-widest hover:bg-white/10 hover:text-white transition-all flex items-center gap-2 disabled:opacity-50"
+                  title="Bulk Upload CSV"
+                >
+                  {isBulkUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileSpreadsheet className="w-4 h-4" />}
+                  {isBulkUploading ? "..." : "Bulk"}
+                </button>
+              </div>
             </div>
 
             {/* List Search and Table */}
@@ -732,6 +834,8 @@ export const EventParticipation = () => {
             handleQRScan(data);
           }} 
           onClose={() => setIsQRScannerOpen(false)} 
+          lastScannedId={lastScannedId}
+          isProcessing={isScanning}
         />
       )}
     </div>

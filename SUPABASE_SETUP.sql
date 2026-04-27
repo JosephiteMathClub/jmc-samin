@@ -19,17 +19,12 @@ ON site_content FOR SELECT
 USING (true);
 
 -- 4. Create a policy to allow only ADMINS to UPDATE the content
--- Replace the emails below with your actual admin emails.
 DROP POLICY IF EXISTS "Allow admin update access" ON site_content;
 CREATE POLICY "Allow admin update access" 
 ON site_content FOR ALL 
 TO authenticated
-USING (
-  auth.jwt() ->> 'email' IN ('admin@example.com')
-)
-WITH CHECK (
-  auth.jwt() ->> 'email' IN ('admin@example.com')
-);
+USING (public.is_admin())
+WITH CHECK (public.is_admin());
 
 -- Function to handle updated_at
 CREATE OR REPLACE FUNCTION handle_updated_at()
@@ -70,13 +65,17 @@ CREATE OR REPLACE FUNCTION public.is_admin()
 RETURNS boolean AS $$
 BEGIN
   -- Check if user is in profiles with admin role OR has hardcoded admin email
+  -- TIP: You can add more emails to the IN list below
   RETURN (
     EXISTS (
       SELECT 1 FROM public.profiles 
       WHERE id = auth.uid() AND role = 'admin'
     )
     OR (
-      auth.jwt() ->> 'email' IN ('admin@example.com', 'another@example.com')
+      auth.jwt() ->> 'email' IN (
+        'jarysucksatgames@gmail.com', -- Current User
+        'admin@example.com'
+      )
     )
   );
 END;
@@ -126,7 +125,14 @@ DROP POLICY IF EXISTS "Allow public read members" ON public.member;
 CREATE POLICY "Allow public read members" ON public.member FOR SELECT USING (true);
 
 DROP POLICY IF EXISTS "Allow users to manage own member entry" ON public.member;
-CREATE POLICY "Allow users to manage own member entry" ON public.member FOR ALL TO authenticated USING (auth.uid() = id);
+-- Users can only INSERT their own record and update NON-SENSITIVE fields
+CREATE POLICY "Allow users to insert own member entry" ON public.member FOR INSERT TO authenticated WITH CHECK (auth.uid() = id);
+CREATE POLICY "Allow users to update own member entry" ON public.member FOR UPDATE TO authenticated 
+USING (auth.uid() = id) 
+WITH CHECK (
+  auth.uid() = id AND 
+  (CASE WHEN verified IS DISTINCT FROM (SELECT m.verified FROM public.member m WHERE m.id = id) THEN false ELSE true END)
+);
 
 DROP POLICY IF EXISTS "Allow admins to manage all members" ON public.member;
 CREATE POLICY "Allow admins to manage all members" ON public.member FOR ALL TO authenticated USING (is_admin());

@@ -30,19 +30,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const lastUserId = React.useRef<string | null>(null);
 
-  const fetchProfile = async (currentUser: User) => {
+  const ADMIN_EMAILS = React.useMemo(() => {
     const adminEmailsEnv = process.env.NEXT_PUBLIC_ADMIN_EMAILS;
-    const ADMIN_EMAILS = Array.from(new Set([
+    return Array.from(new Set([
       ...(adminEmailsEnv ? adminEmailsEnv.split(',') : []),
       ...DEFAULT_ADMINS
     ])).map(e => e.trim().toLowerCase()).filter(Boolean);
-    
+  }, []);
+
+  const fetchProfile = React.useCallback(async (currentUser: User) => {
     const userEmail = (currentUser.email || "").toLowerCase();
     
     try {
       const { data, error } = await supabase
         .from('profiles')
-        .select('*')
+        .select('id, full_name, role, avatar_url')
         .eq('id', currentUser.id)
         .maybeSingle();
       
@@ -74,7 +76,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setIsAdmin(false);
       }
     }
-  };
+  }, [ADMIN_EMAILS]);
 
   const handleAuthChange = React.useCallback(async (user: User | null) => {
     if (user?.id === lastUserId.current && profile && !loading) {
@@ -83,12 +85,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     
     lastUserId.current = user?.id || null;
     setUser(user);
-    
-    const adminEmailsEnv = process.env.NEXT_PUBLIC_ADMIN_EMAILS;
-    const ADMIN_EMAILS = Array.from(new Set([
-      ...(adminEmailsEnv ? adminEmailsEnv.split(',') : []),
-      ...DEFAULT_ADMINS
-    ])).map(e => e.trim().toLowerCase()).filter(Boolean);
     
     if (user) {
       const userEmail = (user.email || "").toLowerCase();
@@ -106,13 +102,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
     setLoading(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [fetchProfile, profile, loading]);
 
   const refreshProfile = React.useCallback(async () => {
     if (user) {
       await fetchProfile(user);
     }
-  }, [user]);
+  }, [user, fetchProfile]);
 
   useEffect(() => {
     if (!isSupabaseConfigured) {

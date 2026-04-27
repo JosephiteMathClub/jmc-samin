@@ -89,7 +89,11 @@ const RegisterMember = () => {
   };
 
   const checkMemberStatus = React.useCallback(async () => {
-    if (!user) return;
+    if (!user) {
+      setCheckingMember(false);
+      return;
+    }
+    
     try {
       const { data, error } = await supabase
         .from('member')
@@ -121,16 +125,42 @@ const RegisterMember = () => {
   }, [user]);
 
   useEffect(() => {
-    if (!authLoading && !user) {
+    // Safety timeout: resolve loading state if it takes too long
+    const timer = setTimeout(() => {
+      if (checkingMember) {
+        console.warn('Registration: Member check timed out, proceeding anyway.');
+        setCheckingMember(false);
+      }
+    }, 5000);
+
+    return () => clearTimeout(timer);
+  }, [checkingMember]);
+
+  useEffect(() => {
+    if (authLoading) return;
+
+    if (!user) {
+      setCheckingMember(false);
       router.push('/login');
+      return;
     }
-    // Only pre-fill if registering for self
-    if (profile && !isMember && registerFor === 'self') {
-      setFullName(profile.full_name || '');
-      setEmailAddress(user?.email || '');
+
+    // Set default mode for normal users (not admin)
+    if (!isAdmin && registerFor === null) {
+      setRegisterFor('self');
+    }
+
+    // Check member status as soon as we have a user
+    if (checkingMember) {
       checkMemberStatus();
     }
-  }, [user, authLoading, router, profile, checkMemberStatus, isMember, registerFor]);
+
+    // Pre-fill profile info if registering for self and we have a profile
+    if (profile && registerFor === 'self' && fullName === '') {
+      setFullName(profile.full_name || '');
+      setEmailAddress(user?.email || '');
+    }
+  }, [user, authLoading, isAdmin, router, profile, checkMemberStatus, registerFor, checkingMember, fullName]);
 
   const handleSearchUser = async () => {
     if (!searchEmail) return;

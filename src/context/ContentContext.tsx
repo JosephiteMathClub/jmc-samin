@@ -27,7 +27,9 @@ const DEFAULT_CONTENT = {
   site: {
     clubName: "Josephite Math Club",
     logoUrl: "",
-    eventMode: false
+    eventMode: false,
+    maintenanceMode: false,
+    maintenanceMessage: "The site is currently under maintenance"
   },
   home: {
     heroTagline: "Est. 2015 * Excellence in Mathematics",
@@ -127,6 +129,20 @@ const DEFAULT_CONTENT = {
       subtitle: "COMMUNITY",
       description: "The heartbeat of Josephite Math Club - our diverse and passionate community of mathematicians.",
       members: []
+    },
+    registration: {
+      fee: "200 BDT",
+      bkashNumber: "01712345678",
+      declaration: "I am willing to join the Josephite Math Club, I promise to perform my duties with honesty, respect the club values, and work for its development",
+      registrationOpen: true,
+      registrationClosedMessage: "Registration for the current intra-events is currently closed. Please stay tuned for future updates.",
+      instructions: [
+        "Go to your bKash app or dial *247#",
+        "Select \"Send Money\" and enter the number above",
+        "Enter the registration fee amount",
+        "Copy the Transaction ID (TrxID) and enter it below"
+      ],
+      cashInstructions: "Please pay your registration fee to the club treasurer."
     }
   };
 
@@ -152,6 +168,11 @@ export const ContentProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   useEffect(() => {
     const fetchContent = async () => {
+      // Safety timeout for content loading
+      const timeoutId = setTimeout(() => {
+        setLoading(false);
+      }, 5000);
+
       setLoading(true);
       let localContent = { ...DEFAULT_CONTENT };
       let localUpdatedAt = "1970-01-01T00:00:00Z";
@@ -199,6 +220,7 @@ export const ContentProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
       setContent(mergedContent);
       setLoading(false);
+      clearTimeout(timeoutId);
 
       // 4. Auto-sync if they are out of sync (only if admin)
       if (isSupabaseConfigured && isAdmin && Math.abs(localTime - remoteTime) > 5000) {

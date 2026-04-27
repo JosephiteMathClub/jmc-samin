@@ -14,6 +14,7 @@ interface ConfirmModalProps {
   confirmLabel?: string;
   cancelLabel?: string;
   type?: 'danger' | 'warning' | 'info';
+  disabled?: boolean;
 }
 
 const ConfirmModal: React.FC<ConfirmModalProps> = ({
@@ -24,7 +25,8 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
   onCancel,
   confirmLabel = "Confirm",
   cancelLabel = "Cancel",
-  type = 'warning'
+  type = 'warning',
+  disabled = false
 }) => {
   const { shouldReduceGfx } = usePerformance();
 
@@ -36,7 +38,7 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            onClick={onCancel}
+            onClick={() => !disabled && onCancel()}
             className={`absolute inset-0 bg-black/80 ${shouldReduceGfx ? '' : 'backdrop-blur-sm'}`}
           />
           
@@ -47,7 +49,11 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
             className="relative w-full max-w-md bg-zinc-900 border border-white/10 rounded-[2rem] p-8 shadow-2xl overflow-hidden"
           >
             <div className="absolute top-0 right-0 p-6">
-              <button onClick={onCancel} className="text-zinc-500 hover:text-white transition-colors">
+              <button 
+                onClick={onCancel} 
+                disabled={disabled}
+                className="text-zinc-500 hover:text-white transition-colors disabled:opacity-50"
+              >
                 <X className="w-6 h-6" />
               </button>
             </div>
@@ -69,16 +75,17 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
               <div className="flex gap-4 w-full pt-4">
                 <button
                   onClick={onCancel}
-                  className="flex-1 py-4 bg-white/5 hover:bg-white/10 text-white font-bold uppercase tracking-widest text-[10px] rounded-xl transition-all border border-white/5"
+                  disabled={disabled}
+                  className="flex-1 py-4 bg-white/5 hover:bg-white/10 text-white font-bold uppercase tracking-widest text-[10px] rounded-xl transition-all border border-white/5 disabled:opacity-50"
                 >
                   {cancelLabel}
                 </button>
                 <button
                   onClick={() => {
                     onConfirm();
-                    onCancel();
                   }}
-                  className={`flex-1 py-4 font-bold uppercase tracking-widest text-[10px] rounded-xl transition-all shadow-lg ${
+                  disabled={disabled}
+                  className={`flex-1 py-4 font-bold uppercase tracking-widest text-[10px] rounded-xl transition-all shadow-lg disabled:opacity-50 ${
                     type === 'danger' ? 'bg-red-500 hover:bg-red-400 text-white shadow-red-500/20' :
                     type === 'warning' ? 'bg-amber-500 hover:bg-amber-400 text-black shadow-amber-500/20' :
                     'bg-blue-500 hover:bg-blue-400 text-white shadow-blue-500/20'

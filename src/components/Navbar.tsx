@@ -17,6 +17,7 @@ const Navbar = () => {
   const { content } = useContent();
   const [isOpen, setIsOpen] = React.useState(false);
   const [scrolled, setScrolled] = React.useState(false);
+  const [scrollProgress, setScrollProgress] = React.useState(0);
   const pathname = usePathname();
   const { shouldReduceGfx } = usePerformance();
 
@@ -26,6 +27,13 @@ const Navbar = () => {
       if (!ticking) {
         window.requestAnimationFrame(() => {
           setScrolled(window.scrollY > 20);
+          
+          const windowHeight = document.documentElement.scrollHeight - window.innerHeight;
+          const currentProgress = windowHeight > 0 
+            ? (window.scrollY / windowHeight) * 100 
+            : 0;
+          setScrollProgress(currentProgress);
+          
           ticking = false;
         });
         ticking = true;
@@ -33,6 +41,22 @@ const Navbar = () => {
     };
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  const [timeState, setTimeState] = React.useState<{ date: string, time: string } | null>(null);
+
+  React.useEffect(() => {
+    const updateTime = () => {
+      const now = new Date();
+      setTimeState({
+        date: now.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).toUpperCase(),
+        time: now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0')
+      });
+    };
+    
+    updateTime();
+    const interval = setInterval(updateTime, 60000); // Update every minute
+    return () => clearInterval(interval);
   }, []);
 
   const navLinks = [
@@ -56,14 +80,23 @@ const Navbar = () => {
       className={`${isAdminPage ? 'relative bg-[#080808] border-b border-white/5' : 'fixed top-0 left-0 w-full z-50'} transition-all duration-500 ${
         !isAdminPage && scrolled 
           ? 'glass-nav py-3 border-b border-white/10 shadow-2xl' 
-          : !isAdminPage ? 'bg-transparent py-6 border-b border-transparent' : 'py-4'
+          : !isAdminPage ? 'bg-transparent py-4 border-b border-transparent' : 'py-4'
       }`}
     >
+      {/* Elegant Scroll Progress Bar */}
+      {!isAdminPage && scrolled && (
+        <motion.div 
+          className="absolute bottom-0 left-0 h-[2px] bg-gradient-to-r from-[var(--c-6-start)] via-[var(--c-2-start)] to-[var(--c-6-start)] z-[60]"
+          initial={{ width: 0 }}
+          animate={{ width: `${scrollProgress}%` }}
+          transition={{ type: 'spring', damping: 20, stiffness: 100 }}
+        />
+      )}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className={`flex justify-between transition-all duration-500 ${scrolled ? 'h-16' : 'h-24'}`}>
           <div className="flex items-center">
-            <Link href="/" className="flex items-center space-x-4 group">
-              <div className={`h-12 w-12 relative ${!shouldReduceGfx && 'group-hover:scale-110 transition-transform duration-500'}`}>
+            <Link href="/" className="flex items-center space-x-4 group relative px-4 py-2 hud-bracket hud-bracket-tl hud-bracket-br">
+              <div className={`h-10 w-10 relative ${!shouldReduceGfx && 'group-hover:scale-110 transition-transform duration-500'}`}>
                 <Image 
                   src={resolveImageUrl(logoUrl) || "/images/logo.png"} 
                   alt="JMC Logo" 
@@ -73,23 +106,55 @@ const Navbar = () => {
                 />
               </div>
               <div className="flex flex-col">
-                <span className={`text-lg font-display font-bold tracking-tight text-white ${!shouldReduceGfx && 'group-hover:text-[var(--c-6-start)] transition-colors duration-500'}`}>{clubName}</span>
-                <span className="text-[8px] uppercase tracking-[0.4em] text-zinc-500 font-bold">{content?.site?.established || 'EST. 2015'}</span>
+                <span className={`text-md font-display font-bold tracking-tight text-white ${!shouldReduceGfx && 'group-hover:text-[var(--c-6-start)] transition-colors duration-500'}`}>{clubName}</span>
+                <div className="flex items-center space-x-2">
+                  <span className="mono-label text-zinc-500">{content?.site?.established || 'EST. 2015'}</span>
+                  <span className="w-1 h-1 rounded-full bg-[var(--c-6-start)] animate-pulse" />
+                </div>
               </div>
             </Link>
           </div>
 
+          {/* Desktop Status Monitor */}
+          {!isAdminPage && (
+            <div className="hidden lg:flex items-center justify-center flex-1 mx-8 pointer-events-none opacity-40">
+              <div className="flex space-x-8 mono-label text-[8px] text-zinc-500">
+                <div className="flex flex-col items-center">
+                  <span>LAT: 23.8103° N</span>
+                  <span className="glow-text-cyan">LON: 90.4125° E</span>
+                </div>
+                <div className="h-4 w-px bg-white/10 self-center" />
+                <div className="flex flex-col items-center">
+                  <span>SYS_READY</span>
+                  <span className="glow-text-cyan">CORE: [STABLE]</span>
+                </div>
+                <div className="h-4 w-px bg-white/10 self-center" />
+                <div className="flex flex-col items-center">
+                  <span>{timeState?.date || 'SYS_CALIBRATING'}</span>
+                  <span className="glow-text-cyan">UTC: {timeState?.time || '--:--'}</span>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Desktop Links */}
-          <div className="hidden md:flex items-center space-x-10">
+          <div className="hidden md:flex items-center space-x-8">
             {navLinks.map((link) => (
               <Link
                 key={link.path}
                 href={link.path}
-                className={`text-xs uppercase tracking-widest font-bold transition-all duration-500 hover:text-[var(--c-6-start)] ${
+                className={`mono-label transition-all duration-500 hover:text-[var(--c-6-start)] relative group py-2 ${
                   pathname === link.path ? 'text-[var(--c-6-start)]' : 'text-zinc-500'
                 }`}
               >
                 {link.name}
+                {pathname === link.path && (
+                  <motion.div 
+                    layoutId="nav-underline"
+                    className="absolute -bottom-1 left-0 w-full h-[1px] bg-[var(--c-6-start)] shadow-[0_0_8px_rgba(0,180,219,0.5)]"
+                  />
+                )}
+                <span className="absolute -top-1 -right-1 w-0.5 h-0.5 bg-[var(--c-6-start)] opacity-0 group-hover:opacity-100 transition-opacity" />
               </Link>
             ))}
             {isAdmin && (

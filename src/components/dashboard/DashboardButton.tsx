@@ -8,10 +8,11 @@ interface DashboardButtonProps {
   onClick: (e: React.MouseEvent) => void;
   icon?: LucideIcon;
   label: string;
-  variant?: 'primary' | 'secondary' | 'danger' | 'ghost';
+  variant?: 'primary' | 'secondary' | 'danger' | 'ghost' | 'outline';
   size?: 'sm' | 'md' | 'lg';
   className?: string;
   disabled?: boolean;
+  loading?: boolean;
 }
 
 export const DashboardButton: React.FC<DashboardButtonProps> = ({ 
@@ -21,7 +22,8 @@ export const DashboardButton: React.FC<DashboardButtonProps> = ({
   variant = 'primary',
   size = 'md',
   className = '',
-  disabled = false
+  disabled = false,
+  loading = false
 }) => {
   const { shouldReduceGfx } = usePerformance();
 
@@ -29,7 +31,8 @@ export const DashboardButton: React.FC<DashboardButtonProps> = ({
     primary: 'bg-gradient-to-b from-[#00B4DB] to-[#162E65] text-white shadow-lg shadow-[#00B4DB]/20 border border-white/10',
     secondary: 'bg-white/5 text-white hover:bg-white/10 border border-white/5',
     danger: 'bg-red-500/10 text-red-500 hover:bg-red-500/20 border border-red-500/10',
-    ghost: 'bg-transparent text-zinc-500 hover:text-white hover:bg-white/5'
+    ghost: 'bg-transparent text-zinc-500 hover:text-white hover:bg-white/5',
+    outline: 'bg-transparent text-white border border-white/20 hover:border-white/40 hover:bg-white/5'
   };
 
   const sizes = {
@@ -40,10 +43,10 @@ export const DashboardButton: React.FC<DashboardButtonProps> = ({
 
   return (
     <motion.button
-      whileHover={shouldReduceGfx ? {} : { scale: 1.02 }}
-      whileTap={shouldReduceGfx ? {} : { scale: 0.98 }}
+      whileHover={shouldReduceGfx || disabled || loading ? {} : { scale: 1.02 }}
+      whileTap={shouldReduceGfx || disabled || loading ? {} : { scale: 0.98 }}
       onClick={onClick}
-      disabled={disabled}
+      disabled={disabled || loading}
       className={`
         flex items-center justify-center gap-2 rounded-xl font-bold uppercase tracking-widest transition-all duration-300
         disabled:opacity-50 disabled:cursor-not-allowed
@@ -52,7 +55,11 @@ export const DashboardButton: React.FC<DashboardButtonProps> = ({
         ${className}
       `}
     >
-      {Icon && <Icon className={`${size === 'sm' ? 'w-3.5 h-3.5' : 'w-4 h-4'}`} />}
+      {loading ? (
+        <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+      ) : (
+        Icon && <Icon className={`${size === 'sm' ? 'w-3.5 h-3.5' : 'w-4 h-4'}`} />
+      )}
       {label}
     </motion.button>
   );

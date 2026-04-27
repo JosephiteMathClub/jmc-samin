@@ -1,15 +1,24 @@
 "use client";
 import React, { useEffect, useRef } from 'react';
-import { X } from 'lucide-react';
+import { X, Loader2, CheckCircle2 } from 'lucide-react';
 
 interface QRScannerProps {
   onScan: (decodedText: string) => void;
   onClose: () => void;
   fps?: number;
   qrbox?: number;
+  lastScannedId?: string | null;
+  isProcessing?: boolean;
 }
 
-const QRScanner: React.FC<QRScannerProps> = ({ onScan, onClose, fps = 10, qrbox = 250 }) => {
+const QRScanner: React.FC<QRScannerProps> = ({ 
+  onScan, 
+  onClose, 
+  fps = 10, 
+  qrbox = 250,
+  lastScannedId,
+  isProcessing
+}) => {
   const scannerRef = useRef<any>(null);
 
   useEffect(() => {
@@ -73,10 +82,32 @@ const QRScanner: React.FC<QRScannerProps> = ({ onScan, onClose, fps = 10, qrbox 
         
         <div id="qr-reader" className="w-full rounded-2xl overflow-hidden border border-white/10"></div>
         
-        <div className="mt-4 p-4 rounded-xl bg-amber-500/5 border border-amber-500/10">
-          <p className="text-[10px] text-zinc-400 font-bold uppercase tracking-widest text-center leading-relaxed">
-            Position the member's profile QR code within the frame to automatically add them to the participant list.
-          </p>
+        <div className="mt-4 flex flex-col gap-3">
+          {lastScannedId && (
+            <div className={`p-4 rounded-xl border ${isProcessing ? 'bg-amber-500/10 border-amber-500/30' : 'bg-green-500/10 border-green-500/30'} flex items-center justify-between`}>
+              <div>
+                <p className="text-[8px] font-bold text-zinc-500 uppercase tracking-widest">Last Scanned</p>
+                <code className="text-sm font-mono font-bold text-white">{lastScannedId}</code>
+              </div>
+              {isProcessing ? (
+                <div className="flex items-center gap-2">
+                  <Loader2 className="w-4 h-4 text-amber-500 animate-spin" />
+                  <span className="text-[10px] font-bold text-amber-500 uppercase">Processing...</span>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-green-500" />
+                  <span className="text-[10px] font-bold text-green-500 uppercase">Done</span>
+                </div>
+              )}
+            </div>
+          )}
+
+          <div className="p-4 rounded-xl bg-white/5 border border-white/10">
+            <p className="text-[10px] text-zinc-400 font-bold uppercase tracking-widest text-center leading-relaxed">
+              {isProcessing ? "Adding participant to list..." : "Position the member's profile QR code within the frame."}
+            </p>
+          </div>
         </div>
       </div>
     </div>
