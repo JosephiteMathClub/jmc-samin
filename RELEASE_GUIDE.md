@@ -103,4 +103,4 @@ This involves creating a tiny native shell that loads your web app.
 ## 4. Troubleshooting
 
 ### "TypeError: Failed to fetch"
-This usually indicates a connection issue or a CSP block. We have relaxed security headers in `src/proxy.ts` to allow Supabase connections. Check your `.env` file to ensure `NEXT_PUBLIC_SUPABASE_URL` is set.
+This usually indicates a connection issue or a CSP block. We have relaxed security headers in `src/middleware.ts` to allow Supabase connections. Check your `.env` file to ensure `NEXT_PUBLIC_SUPABASE_URL` is set.
