@@ -104,3 +104,9 @@ This involves creating a tiny native shell that loads your web app.
 
 ### "TypeError: Failed to fetch"
 This usually indicates a connection issue or a CSP block. We have relaxed security headers in `src/middleware.ts` to allow Supabase connections. Check your `.env` file to ensure `NEXT_PUBLIC_SUPABASE_URL` is set.
+
+### Security & Deployment (Netlify)
+If Netlify blocks your deploy due to **CVE-2025-55182**:
+- We have upgraded `next` to `15.1.3` (patched).
+- We have added an `.nvmrc` file set to `22` to satisfy `@capacitor/cli` requirements.
+- Ensure your Netlify environment uses **Node 22+**.
