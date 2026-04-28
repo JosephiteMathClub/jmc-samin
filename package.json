@@ -14,7 +14,6 @@
     "@capacitor/cli": "^8.3.1",
     "@capacitor/core": "^8.3.1",
     "@capacitor/ios": "^8.3.1",
-    "@ducanh2912/next-pwa": "^10.2.9",
     "@google/genai": "^1.29.0",
     "@hookform/resolvers": "^5.2.2",
     "@supabase/ssr": "^0.10.0",

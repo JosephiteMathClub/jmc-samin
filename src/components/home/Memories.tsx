@@ -62,7 +62,7 @@ export const Memories: React.FC<MemoriesProps> = ({ home, gallery, shouldReduceG
         </div>
 
         <ScrollReveal direction="up" distance={50} delay={0.2} className="relative group perspective-2000">
-          <div className="aspect-[21/9] rounded-[3rem] overflow-hidden glass-card border-white/5 shadow-[0_0_150px_rgba(0,0,0,0.8)] h-full w-full transform group-hover:rotate-x-1 transition-transform duration-1000">
+          <div className="aspect-[21/9] md:aspect-[21/9] h-[350px] md:h-auto rounded-[2rem] md:rounded-[3rem] overflow-hidden glass-card border-white/5 shadow-[0_0_150px_rgba(0,0,0,0.8)] h-full w-full transform group-hover:rotate-x-1 transition-transform duration-1000">
             <AnimatePresence mode="wait">
               <motion.div 
                 key={currentIndex}
@@ -91,27 +91,27 @@ export const Memories: React.FC<MemoriesProps> = ({ home, gallery, shouldReduceG
               </motion.div>
             </AnimatePresence>
 
-            <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 flex justify-between px-8 z-30 pointer-events-none">
+            <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 flex justify-between px-4 md:px-8 z-30 pointer-events-none">
               <motion.button
                 whileHover={{ scale: 1.1, backgroundColor: 'rgba(233, 51, 180, 0.9)' }}
                 onClick={prevImage}
-                className="p-5 rounded-full glass border-white/10 text-white pointer-events-auto backdrop-blur-3xl shadow-2xl transition-colors duration-500"
+                className="p-3 md:p-5 rounded-full glass border-white/10 text-white pointer-events-auto backdrop-blur-3xl shadow-2xl transition-colors duration-500"
               >
-                <ChevronLeft className="w-8 h-8" />
+                <ChevronLeft className="w-5 h-5 md:w-8 md:h-8" />
               </motion.button>
               
               <motion.button
                 whileHover={{ scale: 1.1, backgroundColor: 'rgba(233, 51, 180, 0.9)' }}
                 onClick={nextImage}
-                className="p-5 rounded-full glass border-white/10 text-white pointer-events-auto backdrop-blur-3xl shadow-2xl transition-colors duration-500"
+                className="p-3 md:p-5 rounded-full glass border-white/10 text-white pointer-events-auto backdrop-blur-3xl shadow-2xl transition-colors duration-500"
               >
-                <ChevronRight className="w-8 h-8" />
+                <ChevronRight className="w-5 h-5 md:w-8 md:h-8" />
               </motion.button>
             </div>
 
-            <div className="absolute bottom-12 right-12 glass border-white/10 px-6 py-3 rounded-full flex items-center gap-4 z-30 backdrop-blur-3xl">
-              <div className="text-[10px] font-mono font-bold tracking-[0.2em] text-white">Capture_Index</div>
-              <div className="text-lg font-mono text-[var(--c-2-start)] leading-none">{String(currentIndex + 1).padStart(2, '0')}</div>
+            <div className="absolute bottom-6 right-6 md:bottom-12 md:right-12 glass border-white/10 px-4 py-2 md:px-6 md:py-3 rounded-full flex items-center gap-3 md:gap-4 z-30 backdrop-blur-3xl">
+              <div className="text-[8px] md:text-[10px] font-mono font-bold tracking-[0.2em] text-white">Capture_Index</div>
+              <div className="text-sm md:text-lg font-mono text-[var(--c-2-start)] leading-none">{String(currentIndex + 1).padStart(2, '0')}</div>
             </div>
           </div>
         </ScrollReveal>

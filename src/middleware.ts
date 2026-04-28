@@ -68,7 +68,7 @@ export async function middleware(req: NextRequest) {
     const allowedOrigins = [
       'capacitor://localhost',
       'http://localhost',
-      'https://ais-pre-atrdtng4dlxlbcnpe6o546-118654560279.asia-southeast1.run.app' // Replace with your production domain
+      'https://jmc-sjs.org' // Your production domain
     ];
     
     if (origin_header && (allowedOrigins.includes(origin_header) || origin_header.includes('localhost'))) {
