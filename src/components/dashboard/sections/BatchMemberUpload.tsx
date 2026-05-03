@@ -11,7 +11,6 @@ import {
   FileDown,
   Info
 } from 'lucide-react';
-import * as XLSX from 'xlsx';
 import { supabase } from '../../../lib/supabase';
 
 interface BatchMemberUploadProps {
@@ -35,22 +34,27 @@ export const BatchMemberUpload: React.FC<BatchMemberUploadProps> = ({
   const [dragActive, setDragActive] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const downloadTemplate = () => {
-    const templateData = [
-      {
-        "Full Name": "John Doe",
-        "Email": "john@example.com",
-        "Phone": "01712345678",
-        "Class": "10",
-        "Section": "A",
-        "Roll": "01"
-      }
-    ];
+  const downloadTemplate = async () => {
+    try {
+      const XLSX = await import('xlsx');
+      const templateData = [
+        {
+          "Full Name": "John Doe",
+          "Email": "john@example.com",
+          "Phone": "01712345678",
+          "Class": "10",
+          "Section": "A",
+          "Roll": "01"
+        }
+      ];
 
-    const ws = XLSX.utils.json_to_sheet(templateData);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Members");
-    XLSX.writeFile(wb, "JMC_Batch_Upload_Template.xlsx");
+      const ws = XLSX.utils.json_to_sheet(templateData);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Members");
+      XLSX.writeFile(wb, "JMC_Batch_Upload_Template.xlsx");
+    } catch (err: any) {
+      showToast("Could not load spreadsheet library", "error");
+    }
   };
 
   const processFile = async (file: File) => {
@@ -60,6 +64,7 @@ export const BatchMemberUpload: React.FC<BatchMemberUploadProps> = ({
 
     reader.onload = async (e) => {
       try {
+        const XLSX = await import('xlsx');
         const data = new Uint8Array(e.target?.result as ArrayBuffer);
         const workbook = XLSX.read(data, { type: 'array' });
         const sheetName = workbook.SheetNames[0];
