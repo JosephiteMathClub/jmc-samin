@@ -1,125 +1,119 @@
 import { createServerClient } from '@supabase/ssr';
-import { NextResponse } from 'next/server';
-import type { NextRequest } from 'next/server';
+import { NextResponse, type NextRequest } from 'next/server';
 import { DEFAULT_ADMINS } from './lib/constants';
 
-export async function middleware(req: NextRequest) {
-  let res = NextResponse.next({
-    request: {
-      headers: req.headers,
-    },
+export async function middleware(request: NextRequest) {
+  let supabaseResponse = NextResponse.next({
+    request,
   });
 
-  let supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://placeholder-project.supabase.co";
+  let supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
   if (supabaseUrl && !supabaseUrl.startsWith('http')) {
     supabaseUrl = `https://${supabaseUrl}`;
   }
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "placeholder-key";
+  // Sanitize URL: remove trailing slash and rest/v1 suffix if present
+  supabaseUrl = supabaseUrl.replace(/\/$/, '').replace(/\/rest\/v1$/, '');
+  
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
 
-  let response = NextResponse.next({
-    request: {
-      headers: req.headers,
-    },
-  });
+  // Skip auth flow if not configured or using placeholder
+  const isConfigured = supabaseUrl && supabaseAnonKey && !supabaseUrl.includes('placeholder');
 
-  // If Supabase is not configured, we skip auth checks but keep security headers
-  if (supabaseUrl && supabaseAnonKey) {
-    const supabase = createServerClient(
-      supabaseUrl,
-      supabaseAnonKey,
-      {
-        cookies: {
-          getAll() {
-            return req.cookies.getAll()
-          },
-          setAll(cookiesToSet) {
-            cookiesToSet.forEach(({ name, value, options }) => req.cookies.set(name, value))
-            response = NextResponse.next({
-              request: {
-                headers: req.headers,
-              },
-            })
-            cookiesToSet.forEach(({ name, value, options }) =>
-              response.cookies.set(name, value, options)
-            )
-          },
+  if (isConfigured) {
+  const supabase = createServerClient(
+    supabaseUrl,
+    supabaseAnonKey,
+    {
+      cookies: {
+        getAll() {
+          return request.cookies.getAll();
         },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
+          supabaseResponse = NextResponse.next({
+            request,
+          });
+          cookiesToSet.forEach(({ name, value, options }) => {
+            // Force SameSite=None for AI Studio iframes
+            const overridenOptions = {
+              ...options,
+              sameSite: 'none' as const,
+              secure: true,
+            };
+            supabaseResponse.cookies.set(name, value, overridenOptions);
+          });
+        },
+      },
+      cookieOptions: {
+        sameSite: 'none',
+        secure: true,
       }
-    );
+    }
+  );
 
-    let user = null;
-    try {
-      const { data: { user: foundUser }, error } = await supabase.auth.getUser();
-      user = foundUser;
+    // IMPORTANT: DO NOT remove this getUser() call. It refreshes the session if needed.
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (request.nextUrl.pathname.startsWith('/admin')) {
+      if (!user) {
+        const url = request.nextUrl.clone();
+        url.pathname = '/login';
+        url.searchParams.set('redirect', request.nextUrl.pathname);
+        
+        // Return a response that includes the refreshed cookies
+        const redirectResponse = NextResponse.redirect(url);
+        supabaseResponse.cookies.getAll().forEach((cookie) => {
+          redirectResponse.cookies.set(cookie.name, cookie.value, {
+            path: cookie.path,
+            domain: cookie.domain,
+            secure: true,
+            sameSite: 'none',
+            maxAge: cookie.maxAge,
+          });
+        });
+        return redirectResponse;
+      }
       
-      if (error && !['Refresh Token Not Found', 'invalid_grant', 'session_not_found', 'Auth session missing!'].some(msg => error.message.includes(msg))) {
-        console.error("Middleware: getUser error:", error.message);
+      const adminEmailsEnv = (process.env.NEXT_PUBLIC_ADMIN_EMAILS || "").toLowerCase();
+      const envAdmins = adminEmailsEnv.split(',').map(e => e.trim()).filter(Boolean);
+      const allAdmins = [...envAdmins, ...DEFAULT_ADMINS.map(e => e.toLowerCase()), 'l47idkpro@gmail.com'];
+      
+      if (!allAdmins.includes(user.email?.toLowerCase() || "")) {
+        const homeResponse = NextResponse.redirect(new URL('/', request.url));
+        supabaseResponse.cookies.getAll().forEach((cookie) => {
+          homeResponse.cookies.set(cookie.name, cookie.value, {
+            path: cookie.path,
+            domain: cookie.domain,
+            secure: true,
+            sameSite: 'none',
+            maxAge: cookie.maxAge,
+          });
+        });
+        return homeResponse;
       }
-    } catch (e) {
-      // Ignore exceptions from session resolution in middleware as they are often just expired sessions
-    }
-
-    // Protection logic
-    const isAdminPath = req.nextUrl.pathname.startsWith('/admin');
-    const isApiPath = req.nextUrl.pathname.startsWith('/api');
-
-    // CORS for mobile app
-    const origin_header = req.headers.get('origin');
-    const allowedOrigins = [
-      'capacitor://localhost',
-      'http://localhost',
-      'https://jmc-sjs.org' // Your production domain
-    ];
-    
-    if (origin_header && (allowedOrigins.includes(origin_header) || origin_header.includes('localhost'))) {
-      response.headers.set('Access-Control-Allow-Origin', origin_header);
-      response.headers.set('Access-Control-Allow-Credentials', 'true');
-      response.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-      response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
-    }
-
-    if (req.method === 'OPTIONS' && isApiPath) {
-      return new NextResponse(null, { status: 204, headers: response.headers });
-    }
-
-    if (isAdminPath || (isApiPath && req.method === 'POST')) {
-      if (user) {
-        if (isAdminPath) {
-          const adminEmailsEnv = process.env.NEXT_PUBLIC_ADMIN_EMAILS;
-          const ADMIN_EMAILS = Array.from(new Set([
-            ...(adminEmailsEnv ? adminEmailsEnv.split(',') : []),
-            ...DEFAULT_ADMINS
-          ])).map(e => e.trim().toLowerCase()).filter(Boolean);
-          
-          const userEmail = (user.email || "").toLowerCase();
-          if (!ADMIN_EMAILS.includes(userEmail)) {
-            return NextResponse.redirect(new URL('/', req.url));
-          }
-        }
-      } 
     }
   }
 
-  // Apply Security Headers (Simplified for troubleshooting)
-  response.headers.set('X-Content-Type-Options', 'nosniff');
-  response.headers.set('X-XSS-Protection', '1; mode=block');
-  response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
-  response.headers.set('Permissions-Policy', 'camera=(self), microphone=(self), geolocation=(self)');
-  response.headers.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
+  // Security Headers
+  supabaseResponse.headers.set('X-Content-Type-Options', 'nosniff');
+  supabaseResponse.headers.set('X-XSS-Protection', '1; mode=block');
+  supabaseResponse.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+  
+  // CORS handles mobile app requests
+  const origin = request.headers.get('origin');
+  if (origin && (origin.includes('localhost') || origin.includes('capacitor://') || origin.includes('jmc-sjs.org'))) {
+    supabaseResponse.headers.set('Access-Control-Allow-Origin', origin);
+    supabaseResponse.headers.set('Access-Control-Allow-Credentials', 'true');
+    supabaseResponse.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    supabaseResponse.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+  }
 
-  return response;
+  return supabaseResponse;
 }
 
 export const config = {
   matcher: [
-    /*
-     * Match all request paths except for the ones starting with:
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     * Feel free to modify this pattern to include more paths.
-     */
-    '/((?!_next/static|_next/image|images|favicon.ico).*)',
+    '/((?!_next/static|_next/image|favicon.ico|images|api).*)',
   ],
 };
 

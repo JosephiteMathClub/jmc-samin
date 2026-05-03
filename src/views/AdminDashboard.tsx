@@ -14,6 +14,7 @@ import {
   ShieldAlert,
   Award,
   Trophy,
+  BookOpen,
 } from 'lucide-react';
 import { useContent } from '../context/ContentContext';
 import { useAuth } from '../context/AuthContext';
@@ -36,6 +37,7 @@ const DashboardEventsSection = dynamic(() => import('../components/dashboard/sec
 const DashboardNoticesSection = dynamic(() => import('../components/dashboard/sections/DashboardNoticesSection').then(mod => mod.DashboardNoticesSection), { loading: () => <Skeleton className="h-64 w-full rounded-3xl" /> });
 const DashboardPanelSection = dynamic(() => import('../components/dashboard/sections/DashboardPanelSection').then(mod => mod.DashboardPanelSection), { loading: () => <Skeleton className="h-64 w-full rounded-3xl" /> });
 const DashboardGallerySection = dynamic(() => import('../components/dashboard/sections/DashboardGallerySection').then(mod => mod.DashboardGallerySection), { loading: () => <Skeleton className="h-64 w-full rounded-3xl" /> });
+const DashboardArticlesSection = dynamic(() => import('../components/dashboard/sections/DashboardArticlesSection'), { loading: () => <Skeleton className="h-64 w-full rounded-3xl" /> });
 const DashboardSiteSection = dynamic(() => import('../components/dashboard/sections/DashboardSiteSection').then(mod => mod.DashboardSiteSection), { loading: () => <Skeleton className="h-64 w-full rounded-3xl" /> });
 const DashboardMemberManagementSection = dynamic(() => import('../components/dashboard/sections/DashboardMemberManagementSection').then(mod => mod.DashboardMemberManagementSection), { loading: () => <Skeleton className="h-64 w-full rounded-3xl" /> });
 
@@ -223,18 +225,27 @@ const AdminDashboard = () => {
         userId = userData.id;
       }
 
-      const prefix = "JMC";
-      const digits = Math.floor(100000 + Math.random() * 900000).toString();
-      const generatedId = `${prefix}-${digits}`;
-      
       // Use crypto.randomUUID() if available, fallback to a manual UUID if not
       const tempId = userId || (typeof crypto !== 'undefined' && crypto.randomUUID 
         ? crypto.randomUUID() 
         : '00000000-0000-4000-8000-' + Math.random().toString(16).slice(2, 14).padStart(12, '0'));
 
+      // Check if member already exists to preserve their member_id
+      const { data: existingMember } = await supabase
+        .from('member')
+        .select('member_id')
+        .eq('id', tempId)
+        .maybeSingle();
+
+      const memberIdToUse = existingMember?.member_id || (() => {
+        const prefix = "JMC";
+        const digits = Math.floor(100000 + Math.random() * 900000).toString();
+        return `${prefix}-${digits}`;
+      })();
+      
       const { data, error } = await supabase
         .from('member')
-        .insert({
+        .upsert({
           id: tempId,
           full_name: memberData.full_name,
           class: memberData.class,
@@ -243,12 +254,12 @@ const AdminDashboard = () => {
           email: memberData.email,
           email_address: memberData.email,
           phone: memberData.phone,
-          member_id: generatedId,
+          member_id: memberIdToUse,
           verified: 'yes',
           payment_method: 'Manual (Admin)',
           school: 'St Joseph',
-          created_at: new Date().toISOString()
-        })
+          updated_at: new Date().toISOString()
+        }, { onConflict: 'id' })
         .select()
         .single();
       
@@ -562,6 +573,7 @@ const AdminDashboard = () => {
     { id: 'notices', label: 'Notices', icon: Bell },
     { id: 'panel', label: 'Panel', icon: Users },
     { id: 'gallery', label: 'Gallery', icon: LayoutDashboard },
+    { id: 'articles', label: 'Articles', icon: BookOpen },
     { id: 'members', label: 'Members', icon: Award },
     { id: 'access', label: 'Access Control', icon: ShieldAlert },
     { id: 'site', label: 'Site Config', icon: Settings },
@@ -664,6 +676,10 @@ const AdminDashboard = () => {
             handleFileUpload={handleFileUpload}
             shouldReduceGfx={shouldReduceGfx}
           />
+        )}
+
+        {activeTab === 'articles' && (
+          <DashboardArticlesSection />
         )}
 
         {activeTab === 'members' && (

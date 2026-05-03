@@ -165,7 +165,7 @@ const StarField: React.FC<StarFieldProps> = ({ reduced = false }) => {
 
     const init = () => {
       particles = [];
-      const divisor = reduced ? 50000 : 30000;
+      const divisor = reduced ? 80000 : 30000;
       const numberOfParticles = (window.innerWidth * window.innerHeight) / divisor;
       for (let i = 0; i < numberOfParticles; i++) {
         let x = Math.random() * window.innerWidth;
@@ -210,9 +210,11 @@ const StarField: React.FC<StarFieldProps> = ({ reduced = false }) => {
         particles[i].draw();
         particles[i].update(window.innerWidth, window.innerHeight);
       }
-      for (let i = 0; i < comets.length; i++) {
-        comets[i].update(window.innerWidth, window.innerHeight);
-        comets[i].draw();
+      if (!reduced) {
+        for (let i = 0; i < comets.length; i++) {
+          comets[i].update(window.innerWidth, window.innerHeight);
+          comets[i].draw();
+        }
       }
     };
 

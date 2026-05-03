@@ -12,13 +12,16 @@ import {
   User as UserIcon, 
   Camera,
   CheckCircle2,
-  XCircle
+  XCircle,
+  FileSpreadsheet
 } from 'lucide-react';
 import { DashboardSection } from '../DashboardSection';
 import { DashboardButton } from '../DashboardButton';
 import Image from 'next/image';
 import { resolveImageUrl } from '../../../lib/utils';
 import ConfirmModal from '../../ConfirmModal';
+import { BatchMemberUpload } from './BatchMemberUpload';
+import { useToast } from '../../../context/ToastContext';
 
 interface DashboardMemberManagementSectionProps {
   members: any[];
@@ -59,7 +62,9 @@ const DashboardMemberManagementSectionComponent: React.FC<DashboardMemberManagem
   const [memberFilter, setMemberFilter] = useState('yes'); // Default to 'yes' as per request
   const [memberToDelete, setMemberToDelete] = useState<any | null>(null);
   const [isManualAddOpen, setIsManualAddOpen] = useState(false);
+  const [addMode, setAddMode] = useState<'single' | 'batch'>('single');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { showToast } = useToast();
   const [successData, setSuccessData] = useState<any | null>(null);
 
   const [formData, setFormData] = useState({
@@ -112,29 +117,74 @@ const DashboardMemberManagementSectionComponent: React.FC<DashboardMemberManagem
       <DashboardSection 
         icon={Plus} 
         title="Add New Member" 
-        description="Manually register a member and verify their payment automatically."
+        description="Manually register members individually or batch upload via Excel spreadsheet."
       >
         <div className="space-y-6">
           {!isManualAddOpen ? (
-            <button 
-              onClick={() => {
-                setIsManualAddOpen(true);
-                setSuccessData(null);
-              }}
-              className="w-full py-12 border-2 border-dashed border-white/10 rounded-3xl text-zinc-500 hover:text-amber-500 hover:border-amber-500/50 transition-all flex items-center justify-center gap-3 font-bold text-xs uppercase tracking-widest group"
-            >
-              <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center group-hover:bg-amber-500 group-hover:text-black transition-all">
-                <Plus className="w-5 h-5" />
-              </div>
-              Start Manual Registration
-            </button>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <button 
+                onClick={() => {
+                  setAddMode('single');
+                  setIsManualAddOpen(true);
+                  setSuccessData(null);
+                }}
+                className="py-12 border-2 border-dashed border-white/10 rounded-3xl text-zinc-500 hover:text-amber-500 hover:border-amber-500/50 transition-all flex flex-col items-center justify-center gap-3 font-bold text-xs uppercase tracking-widest group bg-white/[0.01]"
+              >
+                <div className="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center group-hover:bg-amber-500 group-hover:text-black transition-all">
+                  <Plus className="w-6 h-6" />
+                </div>
+                Single Registration
+              </button>
+
+              <button 
+                onClick={() => {
+                  setAddMode('batch');
+                  setIsManualAddOpen(true);
+                  setSuccessData(null);
+                }}
+                className="py-12 border-2 border-dashed border-white/10 rounded-3xl text-zinc-500 hover:text-amber-500 hover:border-amber-500/50 transition-all flex flex-col items-center justify-center gap-3 font-bold text-xs uppercase tracking-widest group bg-white/[0.01]"
+              >
+                <div className="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center group-hover:bg-amber-500 group-hover:text-black transition-all">
+                  <FileSpreadsheet className="w-6 h-6" />
+                </div>
+                Batch Spreadsheet Upload
+              </button>
+            </div>
           ) : (
             <motion.div 
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               className="p-8 rounded-3xl bg-white/[0.02] border border-white/5 space-y-8"
             >
-              {successData ? (
+              <div className="flex items-center justify-between border-b border-white/5 pb-6">
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 rounded-full bg-amber-500/10 flex items-center justify-center border border-amber-500/20">
+                    {addMode === 'single' ? <Plus className="w-5 h-5 text-amber-500" /> : <FileSpreadsheet className="w-5 h-5 text-amber-500" />}
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-bold text-white uppercase tracking-widest">
+                      {addMode === 'single' ? 'Manual Registration' : 'Batch Spreadsheet Upload'}
+                    </h4>
+                    <p className="text-[10px] text-zinc-500 uppercase tracking-widest">
+                      {addMode === 'single' ? 'Fill out the form below to register a single member.' : 'Upload an Excel or CSV file to register multiple members.'}
+                    </p>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => setIsManualAddOpen(false)}
+                  className="p-2 hover:bg-white/10 rounded-full transition-colors text-zinc-500 hover:text-white"
+                >
+                  <XCircle className="w-6 h-6" />
+                </button>
+              </div>
+
+              {addMode === 'batch' ? (
+                <BatchMemberUpload 
+                  addMember={addMember}
+                  showToast={showToast}
+                  onComplete={() => fetchMembers()}
+                />
+              ) : successData ? (
                 <div className="text-center space-y-6 py-6 font-display">
                   <div className="w-20 h-20 bg-green-500/20 border border-green-500/20 rounded-full flex items-center justify-center mx-auto">
                     <CheckCircle2 className="w-10 h-10 text-green-500" />
@@ -333,96 +383,174 @@ const DashboardMemberManagementSectionComponent: React.FC<DashboardMemberManagem
             </div>
           )}
 
-          <div className="overflow-x-auto rounded-2xl border border-white/5 bg-white/[0.01]">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="bg-white/5 border-b border-white/5">
-                  <th className="py-4 px-4 text-[10px] font-bold uppercase tracking-widest text-zinc-500">Unique ID</th>
-                  <th className="py-4 px-4 text-[10px] font-bold uppercase tracking-widest text-zinc-500">Name</th>
-                  <th className="py-4 px-4 text-[10px] font-bold uppercase tracking-widest text-zinc-500">Class/Section</th>
-                  <th className="py-4 px-4 text-[10px] font-bold uppercase tracking-widest text-zinc-500">Roll</th>
-                  <th className="py-4 px-4 text-[10px] font-bold uppercase tracking-widest text-zinc-500">Payment</th>
-                  <th className="py-4 px-4 text-[10px] font-bold uppercase tracking-widest text-zinc-500 text-right">Action</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-white/5">
-                {filteredMembers.map((m) => (
-                  <tr key={m.id} className="group hover:bg-white/[0.02] transition-colors">
-                      <td className="py-4 px-4">
-                        <span className="text-[10px] font-mono font-bold text-amber-500">{m.member_id || 'PENDING'}</span>
+          <div className="overflow-hidden rounded-2xl border border-white/5 bg-white/[0.01]">
+            {/* Desktop Table View */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-white/5 border-b border-white/5">
+                    <th className="py-4 px-4 text-[10px] font-bold uppercase tracking-widest text-zinc-500">Unique ID</th>
+                    <th className="py-4 px-4 text-[10px] font-bold uppercase tracking-widest text-zinc-500">Name</th>
+                    <th className="py-4 px-4 text-[10px] font-bold uppercase tracking-widest text-zinc-500">Class/Section</th>
+                    <th className="py-4 px-4 text-[10px] font-bold uppercase tracking-widest text-zinc-500">Roll</th>
+                    <th className="py-4 px-4 text-[10px] font-bold uppercase tracking-widest text-zinc-500">Payment</th>
+                    <th className="py-4 px-4 text-[10px] font-bold uppercase tracking-widest text-zinc-500 text-right">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-white/5">
+                  {filteredMembers.map((m) => (
+                    <tr key={m.id} className="group hover:bg-white/[0.02] transition-colors">
+                        <td className="py-4 px-4">
+                          <span className="text-[10px] font-mono font-bold text-amber-500">{m.member_id || 'PENDING'}</span>
+                        </td>
+                        <td className="py-4 px-4">
+                          <div className="flex items-center gap-3">
+                            <div className="relative group/avatar">
+                              {m.photo_url ? (
+                                <div className="w-8 h-8 rounded-full overflow-hidden border border-white/10 flex-shrink-0 relative">
+                                  <Image 
+                                    src={resolveImageUrl(m.photo_url)} 
+                                    alt="" 
+                                    fill 
+                                    className="object-cover" 
+                                    unoptimized={!m.photo_url?.startsWith('http') && !m.photo_url?.startsWith('/uploads/')}
+                                    referrerPolicy="no-referrer"
+                                  />
+                                </div>
+                              ) : (
+                                <div className="w-8 h-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center flex-shrink-0">
+                                  <UserIcon className="w-4 h-4 text-zinc-500" />
+                                </div>
+                              )}
+                            </div>
+                            <div className="flex flex-col">
+                              <span className="text-xs font-bold text-white">{m.full_name}</span>
+                              <span className="text-[9px] text-zinc-500">{m.email_address || m.email}</span>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="py-4 px-4">
+                          <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">{m.class} / {m.section || '-'}</span>
+                        </td>
+                        <td className="py-4 px-4">
+                          <span className="text-[10px] font-mono text-zinc-400">{m.roll}</span>
+                        </td>
+                        <td className="py-4 px-4">
+                          <div className="flex flex-col gap-1">
+                            <span className={`text-[9px] font-bold uppercase tracking-widest ${m.verified === 'yes' ? 'text-green-500' : 'text-amber-500'}`}>
+                              {m.verified === 'yes' ? 'Confirmed' : 'Pending'}
+                            </span>
+                            <span className="text-[8px] text-zinc-600 uppercase tracking-tighter">{m.payment_method}</span>
+                          </div>
+                        </td>
+                        <td className="py-4 px-4 text-right">
+                          <div className="flex items-center justify-end gap-2 text-right">
+                            <button
+                              onClick={() => toggleVerified(m.id, m.verified)}
+                              className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all ${
+                                m.verified === 'yes'
+                                  ? 'bg-red-500/10 text-red-500 hover:bg-red-500/20'
+                                  : 'bg-green-500/10 text-green-500 hover:bg-green-500/20'
+                              }`}
+                            >
+                              {m.verified === 'yes' ? 'Unverify' : 'Verify'}
+                            </button>
+                            <button
+                              onClick={() => setMemberToDelete(m)}
+                              className="p-1.5 bg-red-500/10 text-red-500 rounded-lg hover:bg-red-500/20 transition-all opacity-40 hover:opacity-100"
+                              title="Delete Member From Database"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  {filteredMembers.length === 0 && !loadingMembers && (
+                    <tr>
+                      <td colSpan={6} className="py-12 text-center text-zinc-600 italic text-xs">
+                        No members found matching your criteria.
                       </td>
-                      <td className="py-4 px-4">
-                        <div className="flex items-center gap-3">
-                          <div className="relative group/avatar">
-                            {m.photo_url ? (
-                              <div className="w-8 h-8 rounded-full overflow-hidden border border-white/10 flex-shrink-0 relative">
-                                <Image 
-                                  src={resolveImageUrl(m.photo_url)} 
-                                  alt="" 
-                                  fill 
-                                  className="object-cover" 
-                                  unoptimized={!m.photo_url?.startsWith('http') && !m.photo_url?.startsWith('/uploads/')}
-                                  referrerPolicy="no-referrer"
-                                />
-                              </div>
-                            ) : (
-                              <div className="w-8 h-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center flex-shrink-0">
-                                <UserIcon className="w-4 h-4 text-zinc-500" />
-                              </div>
-                            )}
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Mobile Card View */}
+            <div className="md:hidden divide-y divide-white/5">
+              {filteredMembers.length === 0 && !loadingMembers ? (
+                <div className="py-12 text-center text-zinc-600 italic text-xs">
+                  No members found matching your criteria.
+                </div>
+              ) : (
+                filteredMembers.map((m) => (
+                  <div key={m.id} className="p-6 space-y-4">
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-center gap-3">
+                        {m.photo_url ? (
+                          <div className="w-10 h-10 rounded-full overflow-hidden border border-white/10 relative">
+                            <Image 
+                              src={resolveImageUrl(m.photo_url)} 
+                              alt="" 
+                              fill 
+                              className="object-cover"
+                              referrerPolicy="no-referrer"
+                            />
                           </div>
-                          <div className="flex flex-col">
-                            <span className="text-xs font-bold text-white">{m.full_name}</span>
-                            <span className="text-[9px] text-zinc-500">{m.email_address || m.email}</span>
+                        ) : (
+                          <div className="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center">
+                            <UserIcon className="w-5 h-5 text-zinc-500" />
                           </div>
+                        )}
+                        <div className="min-w-0">
+                          <p className="text-sm font-bold text-white truncate">{m.full_name}</p>
+                          <p className="text-[10px] text-zinc-500 truncate">{m.email_address || m.email}</p>
                         </div>
-                      </td>
-                      <td className="py-4 px-4">
-                        <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">{m.class} / {m.section || '-'}</span>
-                      </td>
-                      <td className="py-4 px-4">
-                        <span className="text-[10px] font-mono text-zinc-400">{m.roll}</span>
-                      </td>
-                      <td className="py-4 px-4">
-                        <div className="flex flex-col gap-1">
-                          <span className={`text-[9px] font-bold uppercase tracking-widest ${m.verified === 'yes' ? 'text-green-500' : 'text-amber-500'}`}>
+                      </div>
+                      <span className="text-[9px] font-mono font-bold text-amber-500 bg-amber-500/5 px-2 py-1 rounded">
+                        {m.member_id || 'PENDING'}
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4 pt-2">
+                       <div className="space-y-1">
+                          <span className="text-[8px] font-bold text-zinc-600 uppercase tracking-widest block">Class/Section</span>
+                          <span className="text-[10px] font-bold text-zinc-300">{m.class} / {m.section || '-'}</span>
+                       </div>
+                       <div className="space-y-1">
+                          <span className="text-[8px] font-bold text-zinc-600 uppercase tracking-widest block">Roll Number</span>
+                          <span className="text-[10px] font-bold text-zinc-300">{m.roll}</span>
+                       </div>
+                       <div className="space-y-1">
+                          <span className="text-[8px] font-bold text-zinc-600 uppercase tracking-widest block">Payment</span>
+                          <span className={`text-[10px] font-bold uppercase tracking-widest ${m.verified === 'yes' ? 'text-green-500' : 'text-amber-500'}`}>
                             {m.verified === 'yes' ? 'Confirmed' : 'Pending'}
                           </span>
-                          <span className="text-[8px] text-zinc-600 uppercase tracking-tighter">{m.payment_method}</span>
-                        </div>
-                      </td>
-                      <td className="py-4 px-4 text-right">
-                        <div className="flex items-center justify-end gap-2 text-right">
+                       </div>
+                       <div className="flex justify-end gap-2 items-center">
                           <button
                             onClick={() => toggleVerified(m.id, m.verified)}
-                            className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all ${
+                            className={`px-3 py-1.5 rounded-lg text-[9px] font-bold uppercase tracking-widest transition-all ${
                               m.verified === 'yes'
-                                ? 'bg-red-500/10 text-red-500 hover:bg-red-500/20'
-                                : 'bg-green-500/10 text-green-500 hover:bg-green-500/20'
+                                ? 'bg-red-500/10 text-red-500'
+                                : 'bg-green-500/10 text-green-500'
                             }`}
                           >
                             {m.verified === 'yes' ? 'Unverify' : 'Verify'}
                           </button>
                           <button
                             onClick={() => setMemberToDelete(m)}
-                            className="p-1.5 bg-red-500/10 text-red-500 rounded-lg hover:bg-red-500/20 transition-all opacity-40 hover:opacity-100"
-                            title="Delete Member From Database"
+                            className="p-2 bg-red-500/10 text-red-500 rounded-lg"
                           >
-                            <Trash2 className="w-4 h-4" />
+                            <Trash2 className="w-3.5 h-3.5" />
                           </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                {filteredMembers.length === 0 && !loadingMembers && (
-                  <tr>
-                    <td colSpan={6} className="py-12 text-center text-zinc-600 italic text-xs">
-                      No members found matching your criteria.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
+                       </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
           </div>
         </div>
       </DashboardSection>

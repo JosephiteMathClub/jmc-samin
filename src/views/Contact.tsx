@@ -11,14 +11,40 @@ const Contact = () => {
   const [success, setSuccess] = React.useState(false);
   const { shouldReduceGfx } = usePerformance();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
+    
+    // Get form data
+    const formData = new FormData(e.currentTarget as HTMLFormElement);
+    const data = {
+      name: formData.get('name'),
+      email: formData.get('email'),
+      subject: formData.get('subject'),
+      message: formData.get('message'),
+    };
+
+    try {
+      const response = await fetch('/api/contact', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to send message');
+      }
+
       setSuccess(true);
       setTimeout(() => setSuccess(false), 5000);
-    }, 1500);
+      (e.target as HTMLFormElement).reset();
+    } catch (error: any) {
+      console.error('Contact error:', error);
+      // In a real app, you'd show a toast error here
+    } finally {
+      setLoading(false);
+    }
   };
 
   const contactInfo = [
@@ -128,38 +154,42 @@ const Contact = () => {
                         <div className="space-y-4">
                           <label className="text-[10px] font-bold uppercase tracking-[0.3em] text-zinc-600 ml-2">Full Name</label>
                           <input 
+                            name="name"
                             type="text"
                             required
                             placeholder="JOHN DOE"
-                            className="w-full px-8 py-5 bg-white/5 border border-white/10 rounded-full focus:outline-none focus:border-[var(--c-6-start)]/50 focus:ring-4 focus:ring-[var(--c-6-start)]/10 transition-all text-white placeholder:text-zinc-800 font-bold text-[10px] tracking-widest uppercase"
+                            className="w-full px-8 py-5 bg-white/5 border border-white/10 rounded-full focus:outline-none focus:border-[var(--c-6-start)]/50 focus:ring-4 focus:ring-[var(--c-6-start)]/10 transition-all text-white placeholder:text-zinc-800 font-medium text-sm"
                           />
                         </div>
                         <div className="space-y-4">
                           <label className="text-[10px] font-bold uppercase tracking-[0.3em] text-zinc-600 ml-2">Email Address</label>
                           <input 
+                            name="email"
                             type="email"
                             required
                             placeholder="NAME@EXAMPLE.COM"
-                            className="w-full px-8 py-5 bg-white/5 border border-white/10 rounded-full focus:outline-none focus:border-[var(--c-6-start)]/50 focus:ring-4 focus:ring-[var(--c-6-start)]/10 transition-all text-white placeholder:text-zinc-800 font-bold text-[10px] tracking-widest uppercase"
+                            className="w-full px-8 py-5 bg-white/5 border border-white/10 rounded-full focus:outline-none focus:border-[var(--c-6-start)]/50 focus:ring-4 focus:ring-[var(--c-6-start)]/10 transition-all text-white placeholder:text-zinc-800 font-medium text-sm"
                           />
                         </div>
                       </div>
                       <div className="space-y-4">
                         <label className="text-[10px] font-bold uppercase tracking-[0.3em] text-zinc-600 ml-2">Subject</label>
                         <input 
+                          name="subject"
                           type="text"
                           required
                           placeholder="HOW CAN WE HELP?"
-                          className="w-full px-8 py-5 bg-white/5 border border-white/10 rounded-full focus:outline-none focus:border-[var(--c-6-start)]/50 focus:ring-4 focus:ring-[var(--c-6-start)]/10 transition-all text-white placeholder:text-zinc-800 font-bold text-[10px] tracking-widest uppercase"
+                          className="w-full px-8 py-5 bg-white/5 border border-white/10 rounded-full focus:outline-none focus:border-[var(--c-6-start)]/50 focus:ring-4 focus:ring-[var(--c-6-start)]/10 transition-all text-white placeholder:text-zinc-800 font-medium text-sm"
                         />
                       </div>
                       <div className="space-y-4">
                         <label className="text-[10px] font-bold uppercase tracking-[0.3em] text-zinc-600 ml-2">Message</label>
                         <textarea 
+                          name="message"
                           required
                           rows={6}
                           placeholder="TELL US MORE ABOUT YOUR INQUIRY..."
-                          className="w-full px-8 py-6 bg-white/5 border border-white/10 rounded-[2rem] focus:outline-none focus:border-[var(--c-6-start)]/50 focus:ring-4 focus:ring-[var(--c-6-start)]/10 transition-all text-white placeholder:text-zinc-800 font-bold text-[10px] tracking-widest uppercase resize-none"
+                          className="w-full px-8 py-6 bg-white/5 border border-white/10 rounded-[2rem] focus:outline-none focus:border-[var(--c-6-start)]/50 focus:ring-4 focus:ring-[var(--c-6-start)]/10 transition-all text-white placeholder:text-zinc-800 font-medium text-sm resize-none"
                         />
                       </div>
 

@@ -79,17 +79,41 @@ const Profile = () => {
     try {
       const fileExt = file.name.split('.').pop();
       const fileName = `${user.id}-${Math.random().toString(36).substring(2)}.${fileExt}`;
-      const filePath = `uploads/avatars/${fileName}`;
+      const filePath = `avatars/${fileName}`;
 
-      const { data, error: uploadError } = await supabase.storage
-        .from('images')
-        .upload(filePath, file);
+      // Try 'images' bucket first (common in many setups)
+      let uploadError = null;
+      try {
+        const { error } = await supabase.storage
+          .from('images')
+          .upload(filePath, file, { upsert: true });
+        
+        if (error) uploadError = error;
+      } catch (e: any) {
+        uploadError = e;
+      }
+
+      // If 'images' failed, try 'avatars' bucket
+      let finalPath = `/images/${filePath}`;
+      if (uploadError) {
+        try {
+          const { error: avatarError } = await supabase.storage
+            .from('avatars')
+            .upload(fileName, file, { upsert: true });
+          
+          if (!avatarError) {
+            finalPath = `/avatars/${fileName}`;
+            uploadError = null;
+          }
+        } catch (e: any) {
+          // Keep original error if this also fails
+        }
+      }
 
       if (uploadError) throw uploadError;
 
       // Update profile with the new avatar URL
-      // We store it as /uploads/avatars/... as per our resolveImageUrl logic
-      const avatarUrl = `/${filePath}`;
+      const avatarUrl = finalPath;
       const { error: updateError } = await supabase
         .from('profiles')
         .update({ avatar_url: avatarUrl })
@@ -368,9 +392,9 @@ const Profile = () => {
                     <button 
                       onClick={handleAvatarClick}
                       disabled={uploadingAvatar}
-                      className={`absolute bottom-0 right-0 p-3 rounded-full bg-[var(--c-6-start)] text-white shadow-xl ${!shouldReduceGfx && !uploadingAvatar && 'hover:scale-110 transition-transform'} disabled:opacity-50`}
+                      className={`absolute bottom-0 right-0 p-4 sm:p-3 rounded-full bg-[var(--c-6-start)] text-white shadow-xl ${!shouldReduceGfx && !uploadingAvatar && 'hover:scale-110 transition-transform'} disabled:opacity-50 z-20`}
                     >
-                      {uploadingAvatar ? <Loader2 className="w-4 h-4 animate-spin" /> : <Camera className="w-4 h-4" />}
+                      {uploadingAvatar ? <Loader2 className="w-5 h-5 sm:w-4 sm:h-4 animate-spin" /> : <Camera className="w-5 h-5 sm:w-4 sm:h-4" />}
                     </button>
                   </div>
 

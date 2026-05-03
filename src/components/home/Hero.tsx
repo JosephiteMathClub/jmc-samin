@@ -63,15 +63,16 @@ export const Hero: React.FC<HeroProps> = ({ home, shouldReduceGfx }) => {
               </>
             )}
 
-            <h1 className="text-[12vw] md:text-[14vw] font-bold tracking-[-0.04em] text-white font-display leading-[0.8] flex flex-col items-center select-none perspective-1000">
-              {(home?.heroTitle || "Josephite Math Club").split(' ').map((word: string, i: number, arr: string[]) => (
+            <h1 className="text-[14vw] sm:text-[12vw] md:text-[14vw] font-bold tracking-[-0.04em] text-white font-display leading-[0.85] sm:leading-[0.8] flex flex-col items-center select-none perspective-1000">
+              {(home?.heroTitle || "Josephite Math Club").split(' ').map((word: string, i: number) => (
                 <motion.span
                   key={i}
                   custom={i}
                   initial={shouldReduceGfx ? { opacity: 1 } : "hidden"}
                   animate="visible"
                   variants={wordVariants}
-                  className={`block ${i % 2 === 1 ? "blue-text skew-x-[-12deg]" : "font-black"}`}
+                  style={{ willChange: "transform, opacity" }}
+                  className={`block px-2 ${i % 2 === 1 ? "blue-text skew-x-[-12deg]" : "font-black"}`}
                 >
                   {word}
                 </motion.span>
@@ -80,7 +81,7 @@ export const Hero: React.FC<HeroProps> = ({ home, shouldReduceGfx }) => {
             
             {!shouldReduceGfx && (
               <motion.div 
-                className="absolute -top-12 left-1/2 -translate-x-[45vw] w-48 h-[1px] bg-gradient-to-r from-transparent via-[var(--c-6-start)]/50 to-transparent"
+                className="absolute -top-12 left-1/2 -translate-x-[45vw] w-[90vw] h-[1px] bg-gradient-to-r from-transparent via-[var(--c-6-start)]/50 to-transparent"
                 animate={{ scaleX: [0, 1, 0], opacity: [0, 1, 0] }}
                 transition={{ duration: 4, repeat: Infinity }}
               />
@@ -91,7 +92,7 @@ export const Hero: React.FC<HeroProps> = ({ home, shouldReduceGfx }) => {
             initial={shouldReduceGfx ? { opacity: 1 } : { opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 1, duration: 1 }}
-            className="text-lg md:text-xl text-zinc-500 max-w-2xl mx-auto mb-20 leading-relaxed font-light tracking-wide italic font-serif h-[3em] flex items-center justify-center"
+            className="text-base sm:text-lg md:text-xl text-zinc-500 max-w-2xl mx-auto mb-16 md:mb-20 leading-relaxed font-light tracking-wide italic font-serif min-h-[4.5em] sm:min-h-[3em] flex items-center justify-center px-4"
           >
             {shouldReduceGfx ? (
               <span>&quot;{home?.heroSubtitle || "Where logic meets creativity to solve the world's most beautiful problems."}&quot;</span>

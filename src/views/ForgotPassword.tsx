@@ -22,8 +22,8 @@ const ForgotPassword = () => {
     setError(null);
 
     try {
-      // Use window.location.origin to dynamically get the current URL (Netlify, Localhost, or Preview)
-      const origin = typeof window !== 'undefined' ? window.location.origin : '';
+      // Use window.location.origin to dynamically get the current URL
+      const origin = typeof window !== 'undefined' ? window.location.origin.replace(/\/$/, '') : '';
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: `${origin}/reset-password`,
       });
@@ -80,7 +80,7 @@ const ForgotPassword = () => {
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       placeholder="NAME@EXAMPLE.COM"
-                      className="w-full pl-16 pr-8 py-5 bg-white/5 border border-white/10 rounded-full focus:outline-none focus:border-amber-500/50 focus:ring-4 focus:ring-amber-500/10 transition-all text-white placeholder:text-zinc-800 font-bold text-[10px] tracking-widest uppercase"
+                      className="w-full pl-16 pr-8 py-5 bg-white/5 border border-white/10 rounded-full focus:outline-none focus:border-amber-500/50 focus:ring-4 focus:ring-amber-500/10 transition-all text-white placeholder:text-zinc-800 font-medium text-sm"
                     />
                   </div>
                 </div>

@@ -1159,5 +1159,18 @@
     "members": [],
     "subtitle": "COMMUNITY",
     "description": "The heartbeat of Josephite Math Club - our diverse and passionate community of mathematicians."
-  }
+  },
+  "articles": [
+    {
+      "id": "art-1",
+      "title": "The Beauty of Prime Numbers",
+      "slug": "beauty-of-prime-numbers",
+      "excerpt": "Exploring why prime numbers are the atoms of the mathematical universe.",
+      "content": "Prime numbers have fascinated mathematicians for millennia. They are the building blocks of integers, and their distribution remains one of the greatest mysteries in mathematics. In this article, we'll explore the Riemann Hypothesis and how primes affect modern cryptography.\n\nFrom the ancient Greeks to modern supercomputers, the hunt for larger primes continues. Why does it matter? Because our entire digital security depends on the difficulty of factoring large numbers into their prime components.",
+      "author": "Math Club Research Team",
+      "date": "20 Apr 2026",
+      "category": "Number Theory",
+      "published": true
+    }
+  ]
 }

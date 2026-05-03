@@ -79,7 +79,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [ADMIN_EMAILS]);
 
   const handleAuthChange = React.useCallback(async (user: User | null) => {
-    if (user?.id === lastUserId.current && profile && !loading) {
+    // Only proceed if there's a genuine change in user state or first load
+    if (user?.id === lastUserId.current && profile !== null) {
+      setLoading(false);
       return;
     }
     
@@ -88,21 +90,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     
     if (user) {
       const userEmail = (user.email || "").toLowerCase();
-      if (ADMIN_EMAILS.includes(userEmail)) {
-        setIsAdmin(true);
-      } else {
-        setIsAdmin(false);
-      }
+      setIsAdmin(ADMIN_EMAILS.includes(userEmail));
       
-      setLoading(true);
+      // Ensure we fetch profile but don't hold up loading if we already have a partial state
       await fetchProfile(user);
     } else {
       setProfile(null);
       setIsAdmin(false);
     }
     setLoading(false);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [fetchProfile, profile, loading]);
+  }, [fetchProfile, profile, ADMIN_EMAILS]);
 
   const refreshProfile = React.useCallback(async () => {
     if (user) {
@@ -116,45 +113,43 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return;
     }
 
+    let isMounted = true;
+
     // Get initial session
     supabase.auth.getSession().then(({ data: { session }, error }) => {
+      if (!isMounted) return;
       if (error) {
-        // We only log if it's not a standard session expiry error
         const benignErrors = ['Refresh Token Not Found', 'invalid_grant', 'session_not_found'];
         const isBenign = benignErrors.some(msg => error.message.includes(msg));
-        
-        if (!isBenign) {
-          console.error("AuthContext: getSession error:", error);
-        }
-
-        if (isBenign) {
-          // Clear stale local session immediately if refresh token is known invalid
-          supabase.auth.signOut({ scope: 'local' }).catch(e => {});
-          handleAuthChange(null);
-          return;
-        }
-      }
-      handleAuthChange(session?.user ?? null);
-    }).catch(err => {
-      // Catch exceptions as well
-      handleAuthChange(null);
-    });
-
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'SIGNED_OUT' || event === 'USER_UPDATED') {
-        handleAuthChange(session?.user ?? null);
-      } else if (event === 'TOKEN_REFRESHED') {
-        handleAuthChange(session?.user ?? null);
-      } else if (event === 'INITIAL_SESSION') {
-        // Handled by getSession above, but we'll update if needed
-        if (session?.user) handleAuthChange(session.user);
+        if (!isBenign) console.error("AuthContext: getSession error:", error);
+        handleAuthChange(null);
       } else {
         handleAuthChange(session?.user ?? null);
+      }
+    }).catch(err => {
+      if (isMounted) handleAuthChange(null);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (!isMounted) return;
+      
+      const sessionUser = session?.user ?? null;
+      console.log(`[AuthContext] Event: ${event}, User: ${sessionUser?.email || 'none'}`);
+      
+      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED' || event === 'INITIAL_SESSION') {
+        if (sessionUser) {
+          handleAuthChange(sessionUser);
+        } else if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
+          // If we had a SIGNED_IN or INITIAL_SESSION but no user, it's effectively a sign out
+          handleAuthChange(null);
+        }
+      } else if (event === 'SIGNED_OUT') {
+        handleAuthChange(null);
       }
     });
 
     return () => {
+      isMounted = false;
       subscription.unsubscribe();
     };
   }, [handleAuthChange]);

@@ -20,19 +20,43 @@ const Navbar = () => {
   const [scrollProgress, setScrollProgress] = React.useState(0);
   const pathname = usePathname();
   const { shouldReduceGfx } = usePerformance();
+  const [isInputFocused, setIsInputFocused] = React.useState(false);
+
+  React.useEffect(() => {
+    // Hide when typing on mobile
+    const handleFocus = (e: FocusEvent) => {
+      if (window.innerWidth >= 768) return; // Only on mobile
+      const target = e.target as HTMLElement;
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') {
+        setIsInputFocused(true);
+      }
+    };
+    const handleBlur = () => setIsInputFocused(false);
+
+    window.addEventListener('focusin', handleFocus);
+    window.addEventListener('focusout', handleBlur);
+    return () => {
+      window.removeEventListener('focusin', handleFocus);
+      window.removeEventListener('focusout', handleBlur);
+    };
+  }, []);
 
   React.useEffect(() => {
     let ticking = false;
     const handleScroll = () => {
       if (!ticking) {
         window.requestAnimationFrame(() => {
-          setScrolled(window.scrollY > 20);
+          const currentScroll = window.scrollY;
+          setScrolled(currentScroll > 20);
           
-          const windowHeight = document.documentElement.scrollHeight - window.innerHeight;
-          const currentProgress = windowHeight > 0 
-            ? (window.scrollY / windowHeight) * 100 
-            : 0;
-          setScrollProgress(currentProgress);
+          if (!shouldReduceGfx) {
+            const windowHeight = document.documentElement.scrollHeight - window.innerHeight;
+            if (windowHeight > 0) {
+              const currentProgress = (currentScroll / windowHeight) * 100;
+              // Only update if difference is noticeable (e.g., > 0.5%)
+              setScrollProgress(prev => Math.abs(prev - currentProgress) > 0.5 ? currentProgress : prev);
+            }
+          }
           
           ticking = false;
         });
@@ -41,7 +65,7 @@ const Navbar = () => {
     };
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
+  }, [shouldReduceGfx]);
 
   const [timeState, setTimeState] = React.useState<{ date: string, time: string } | null>(null);
 
@@ -62,6 +86,7 @@ const Navbar = () => {
   const navLinks = [
     { name: 'Home', path: '/' },
     { name: 'About', path: '/about' },
+    { name: 'Articles', path: '/articles' },
     { name: 'Events', path: '/events' },
     { name: 'Notice Board', path: '/notices' },
     { name: 'Panel', path: '/panel' },
@@ -75,8 +100,11 @@ const Navbar = () => {
   return (
     <motion.nav 
       initial={shouldReduceGfx ? { y: 0, opacity: 1 } : { y: -100, opacity: 0 }}
-      animate={{ y: 0, opacity: 1 }}
-      transition={{ duration: shouldReduceGfx ? 0.1 : 0.8, ease: [0.22, 1, 0.36, 1] }}
+      animate={{ 
+        y: isInputFocused ? -100 : 0, 
+        opacity: isInputFocused ? 0 : 1 
+      }}
+      transition={{ duration: shouldReduceGfx ? 0.1 : 0.5, ease: 'easeOut' }}
       className={`${isAdminPage ? 'relative bg-[#080808] border-b border-white/5' : 'fixed top-0 left-0 w-full z-50'} transition-all duration-500 ${
         !isAdminPage && scrolled 
           ? 'glass-nav py-3 border-b border-white/10 shadow-2xl' 
@@ -85,11 +113,9 @@ const Navbar = () => {
     >
       {/* Elegant Scroll Progress Bar */}
       {!isAdminPage && scrolled && (
-        <motion.div 
-          className="absolute bottom-0 left-0 h-[2px] bg-gradient-to-r from-[var(--c-6-start)] via-[var(--c-2-start)] to-[var(--c-6-start)] z-[60]"
-          initial={{ width: 0 }}
-          animate={{ width: `${scrollProgress}%` }}
-          transition={{ type: 'spring', damping: 20, stiffness: 100 }}
+        <div 
+          className="absolute bottom-0 left-0 h-[2px] bg-gradient-to-r from-[var(--c-6-start)] via-[var(--c-2-start)] to-[var(--c-6-start)] z-[60] transition-all duration-150 ease-out"
+          style={{ width: `${scrollProgress}%` }}
         />
       )}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -206,67 +232,97 @@ const Navbar = () => {
       </div>
 
       {/* Mobile menu */}
-            <AnimatePresence>
+      <AnimatePresence>
         {isOpen && (
-          <motion.div
-            initial={shouldReduceGfx ? { opacity: 1 } : { opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={shouldReduceGfx ? { opacity: 1 } : { opacity: 0, y: -20 }}
-            transition={{ duration: shouldReduceGfx ? 0.1 : 0.3 }}
-            className="md:hidden bg-black/90 backdrop-blur-xl border-b border-white/10"
-          >
-            <div className="px-4 pt-2 pb-6 space-y-2">
-              {navLinks.map((link) => (
-                <Link
-                  key={link.path}
-                  href={link.path}
-                  onClick={() => setIsOpen(false)}
-                  className={`block px-3 py-3 rounded-xl text-base font-medium transition-all ${
-                    pathname === link.path ? 'text-[var(--c-6-start)] bg-white/5' : 'text-zinc-300 hover:text-[var(--c-6-start)] hover:bg-white/5'
-                  }`}
-                >
-                  {link.name}
-                </Link>
-              ))}
-              {isAdmin && (
-                <Link
-                  href="/admin"
-                  onClick={() => setIsOpen(false)}
-                  className="block px-3 py-3 rounded-xl text-base font-medium text-emerald-400 hover:bg-white/5"
-                >
-                  Admin Dashboard
-                </Link>
-              )}
-              {user ? (
-                <>
-                  <Link
-                    href="/profile"
-                    onClick={() => setIsOpen(false)}
-                    className="block px-3 py-3 rounded-xl text-base font-medium text-zinc-300 hover:bg-white/5 hover:text-[var(--c-6-start)]"
+          <>
+            {/* Backdrop for mobile menu */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsOpen(false)}
+              className="md:hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-[45]"
+            />
+            
+            <motion.div
+              initial={shouldReduceGfx ? { opacity: 0 } : { opacity: 0, x: '100%' }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={shouldReduceGfx ? { opacity: 0 } : { opacity: 0, x: '100%' }}
+              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+              className="md:hidden fixed top-0 right-0 h-screen w-[80%] bg-zinc-950/95 backdrop-blur-2xl border-l border-white/10 z-[55] shadow-2xl safe-p-top"
+            >
+              <div className="flex flex-col h-full p-8 pt-24 space-y-4">
+                <div className="mono-label text-[10px] text-zinc-500 mb-6 flex items-center gap-2">
+                  <div className="w-1 h-1 rounded-full bg-[var(--c-6-start)] animate-pulse" />
+                  NAVIGATION_MENU
+                </div>
+                
+                {navLinks.map((link, index) => (
+                  <motion.div
+                    key={link.path}
+                    initial={shouldReduceGfx ? {} : { opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: index * 0.05 }}
                   >
-                    Profile
-                  </Link>
-                  <button
-                    onClick={() => {
-                      signOut();
-                      setIsOpen(false);
-                    }}
-                    className="block w-full text-left px-3 py-3 rounded-xl text-base font-medium text-red-400 hover:bg-white/5"
-                  >
-                    Logout
-                  </button>
-                </>
-              ) : (
-                <Link
-                  href="/login"
-                  onClick={() => setIsOpen(false)}
-                  className="block px-3 py-3 rounded-xl text-base font-medium text-[var(--c-6-start)] hover:bg-white/5"
-                >
-                  Login
-                </Link>
-              )}
-            </div>
-          </motion.div>
+                    <Link
+                      href={link.path}
+                      onClick={() => setIsOpen(false)}
+                      className={`flex items-center justify-between group py-4 border-b border-white/5 transition-all active:scale-95 ${
+                        pathname === link.path ? 'text-[var(--c-6-start)]' : 'text-zinc-300'
+                      }`}
+                    >
+                      <span className="text-xl font-display font-medium">{link.name}</span>
+                      <div className={`h-1.5 w-1.5 rounded-full ${pathname === link.path ? 'bg-[var(--c-6-start)] shadow-[0_0_8px_rgba(0,180,219,0.5)]' : 'bg-transparent'}`} />
+                    </Link>
+                  </motion.div>
+                ))}
+
+                <div className="pt-8 flex flex-col space-y-4 mt-auto pb-12">
+                  {isAdmin && (
+                    <Link
+                      href="/admin"
+                      onClick={() => setIsOpen(false)}
+                      className="flex items-center space-x-3 p-4 rounded-2xl bg-emerald-500/5 text-emerald-400 border border-emerald-500/10 active:scale-95 transition-transform"
+                    >
+                      <LayoutDashboard size={20} />
+                      <span className="font-medium font-display">Admin Dashboard</span>
+                    </Link>
+                  )}
+                  
+                  {user ? (
+                    <div className="grid grid-cols-2 gap-4">
+                      <Link
+                        href="/profile"
+                        onClick={() => setIsOpen(false)}
+                        className="flex flex-col items-center justify-center p-6 rounded-2xl bg-white/5 text-zinc-300 border border-white/10 active:scale-95 transition-transform"
+                      >
+                        <User size={24} className="mb-2" />
+                        <span className="text-xs mono-label">Profile</span>
+                      </Link>
+                      <button
+                        onClick={() => {
+                          signOut();
+                          setIsOpen(false);
+                        }}
+                        className="flex flex-col items-center justify-center p-6 rounded-2xl bg-red-500/5 text-red-500 border border-red-500/10 active:scale-95 transition-transform"
+                      >
+                        <LogOut size={24} className="mb-2" />
+                        <span className="text-xs mono-label">Logout</span>
+                      </button>
+                    </div>
+                  ) : (
+                    <Link
+                      href="/login"
+                      onClick={() => setIsOpen(false)}
+                      className="btn-premium-glow !w-full !p-5 !text-xs !bg-[var(--c-6-start)] !text-black text-center font-bold font-display flex items-center justify-center gap-2 active:scale-95 transition-transform"
+                    >
+                      ACCESS_TERMINAL (LOGIN)
+                    </Link>
+                  )}
+                </div>
+              </div>
+            </motion.div>
+          </>
         )}
       </AnimatePresence>
     </motion.nav>

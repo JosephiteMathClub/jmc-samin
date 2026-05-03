@@ -40,7 +40,7 @@ export const Memories: React.FC<MemoriesProps> = ({ home, gallery, shouldReduceG
               {home?.memoriesTagline || "Visual Journey"}
             </ScrollReveal>
             <ScrollReveal direction="up" distance={30} delay={0.1}>
-              <h2 className="text-7xl md:text-9xl font-bold tracking-[-0.05em] text-white font-display leading-[0.8] mb-8">
+              <h2 className="text-5xl sm:text-7xl md:text-9xl font-bold tracking-[-0.05em] text-white font-display leading-[0.8] mb-8">
                 {home?.memoriesTitle?.split(' ').map((word: string, i: number, arr: string[]) => (
                   <span key={i} className={`block ${i === arr.length - 1 ? "pink-text italic font-serif font-light lowercase" : ""}`}>
                     {word}
@@ -62,7 +62,7 @@ export const Memories: React.FC<MemoriesProps> = ({ home, gallery, shouldReduceG
         </div>
 
         <ScrollReveal direction="up" distance={50} delay={0.2} className="relative group perspective-2000">
-          <div className="aspect-[21/9] md:aspect-[21/9] h-[350px] md:h-auto rounded-[2rem] md:rounded-[3rem] overflow-hidden glass-card border-white/5 shadow-[0_0_150px_rgba(0,0,0,0.8)] h-full w-full transform group-hover:rotate-x-1 transition-transform duration-1000">
+          <div className="aspect-[4/3] sm:aspect-[16/9] md:aspect-[21/9] min-h-[300px] md:min-h-0 rounded-[2rem] md:rounded-[3rem] overflow-hidden glass-card border-white/5 shadow-[0_0_150px_rgba(0,0,0,0.8)] w-full transform group-hover:rotate-x-1 transition-transform duration-1000">
             <AnimatePresence mode="wait">
               <motion.div 
                 key={currentIndex}
@@ -84,7 +84,8 @@ export const Memories: React.FC<MemoriesProps> = ({ home, gallery, shouldReduceG
                 {!shouldReduceGfx && (
                   <motion.div 
                     className="absolute inset-x-0 h-[2px] bg-white/20 blur-sm z-30 pointer-events-none"
-                    animate={{ top: ['0%', '100%'] }}
+                    style={{ willChange: 'transform' }}
+                    animate={{ y: [0, 400] }} // Approximate height of the container
                     transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
                   />
                 )}

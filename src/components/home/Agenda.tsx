@@ -17,7 +17,7 @@ export const Agenda: React.FC<AgendaProps> = ({ home }) => {
             {home?.agendaTagline || "Our Mission"}
           </ScrollReveal>
           <ScrollReveal direction="up" distance={30} delay={0.1}>
-            <h2 className="text-7xl md:text-9xl font-bold tracking-[-0.05em] text-white font-display leading-[0.8] mb-12">
+            <h2 className="text-5xl sm:text-7xl md:text-9xl font-bold tracking-[-0.05em] text-white font-display leading-[0.8] mb-12">
               {home?.agendaTitle?.split(' ').map((word: string, i: number, arr: string[]) => (
                 <span key={i} className={`block ${i === arr.length - 1 ? "blue-text italic font-serif font-light" : ""}`}>
                   {word}
@@ -26,13 +26,13 @@ export const Agenda: React.FC<AgendaProps> = ({ home }) => {
                 <>The Club <span className="blue-text italic font-serif font-light">Agenda</span></>
               )}
             </h2>
-            <p className="text-xl md:text-2xl text-zinc-500 font-light leading-relaxed max-w-2xl tracking-tighter">
+            <p className="text-lg md:text-2xl text-zinc-500 font-light leading-relaxed max-w-2xl tracking-tighter px-2">
               {home?.agendaDescription || "We aim to bridge the gap between theoretical mathematics and practical innovation through a series of structured programs."}
             </p>
           </ScrollReveal>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-4 grid-rows-2 gap-6 h-auto md:h-[600px]">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
           {(home?.agendaItems || [
             { title: "Weekly Workshops", icon: "Zap", desc: "Interactive sessions solving competitive mathematics." },
             { title: "Monthly Competitions", icon: "Trophy", desc: "Timed challenges to test analytic speed and accuracy." },
@@ -42,7 +42,7 @@ export const Agenda: React.FC<AgendaProps> = ({ home }) => {
             const IconMap: any = { Zap, Trophy, Star, Lightbulb };
             const Icon = IconMap[item.icon] || Zap;
             const bentoClasses = [
-              "md:col-span-2 md:row-span-2 bg-[var(--c-5-start)]/10",
+              "md:col-span-2 md:row-span-2 min-h-[300px] md:min-h-0 bg-[var(--c-5-start)]/10",
               "md:col-span-2 bg-[var(--c-6-start)]/5",
               "md:col-span-1 bg-[var(--c-2-start)]/5",
               "md:col-span-1 bg-[var(--c-4-start)]/5"

@@ -213,22 +213,44 @@ const RegisterMember = () => {
 
     try {
       const extension = file.name.split('.').pop() || 'png';
-      const fileName = `members/${user?.id}-${Date.now()}.${extension}`;
+      const fileName = `${user?.id}-${Date.now()}.${extension}`;
+      const filePath = `members/${fileName}`;
 
-      const { error: uploadError } = await supabase.storage
-        .from('images')
-        .upload(fileName, file, {
-          cacheControl: '3600',
-          upsert: true
-        });
+      let uploadError = null;
+      let finalPath = '';
 
-      if (uploadError) throw uploadError;
+      // Try 'images' bucket
+      try {
+        const { error } = await supabase.storage
+          .from('images')
+          .upload(filePath, file, { upsert: true });
+        if (!error) {
+          const { data: { publicUrl } } = supabase.storage.from('images').getPublicUrl(filePath);
+          finalPath = publicUrl;
+        } else {
+          uploadError = error;
+        }
+      } catch (e) {
+        uploadError = e;
+      }
 
-      const { data: { publicUrl } } = supabase.storage
-        .from('images')
-        .getPublicUrl(fileName);
+      // Fallback to 'avatars' bucket
+      if (!finalPath) {
+        try {
+          const { error } = await supabase.storage
+            .from('avatars')
+            .upload(fileName, file, { upsert: true });
+          if (!error) {
+            const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(fileName);
+            finalPath = publicUrl;
+            uploadError = null;
+          }
+        } catch (e) {}
+      }
 
-      setPhotoUrl(publicUrl);
+      if (!finalPath && uploadError) throw uploadError;
+
+      setPhotoUrl(finalPath);
       showToast("Photo uploaded successfully!", "success");
     } catch (error: any) {
       console.error("Upload error:", error);
@@ -336,7 +358,7 @@ const RegisterMember = () => {
   }
 
   return (
-    <div className="min-h-screen bg-[#050505] pt-32 pb-24 relative overflow-hidden">
+    <div className="min-h-[100dvh] bg-[#050505] pt-32 pb-24 relative">
       {/* Background Elements */}
       {!shouldReduceGfx && (
         <>
@@ -604,7 +626,7 @@ const RegisterMember = () => {
                         value={fullName}
                         onChange={(e) => setFullName(e.target.value)}
                         placeholder="YOUR FULL NAME"
-                        className="w-full px-6 py-5 bg-white/5 border border-white/10 rounded-2xl focus:outline-none focus:border-amber-500/50 focus:ring-4 focus:ring-amber-500/10 transition-all text-white font-bold text-sm tracking-wide"
+                        className="w-full px-6 py-5 bg-white/5 border border-white/10 rounded-2xl focus:outline-none focus:border-amber-500/50 focus:ring-4 focus:ring-amber-500/10 transition-all text-white font-medium text-sm tracking-wide"
                       />
                     </div>
 
@@ -618,7 +640,7 @@ const RegisterMember = () => {
                         value={emailAddress}
                         onChange={(e) => setEmailAddress(e.target.value)}
                         placeholder="YOUR EMAIL"
-                        className="w-full px-6 py-5 bg-white/5 border border-white/10 rounded-2xl focus:outline-none focus:border-amber-500/50 transition-all text-white font-bold text-sm"
+                        className="w-full px-6 py-5 bg-white/5 border border-white/10 rounded-2xl focus:outline-none focus:border-amber-500/50 transition-all text-white font-medium text-sm"
                       />
                     </div>
 
@@ -632,7 +654,7 @@ const RegisterMember = () => {
                         value={phone}
                         onChange={(e) => setPhone(e.target.value)}
                         placeholder="01XXXXXXXXX"
-                        className="w-full px-6 py-5 bg-white/5 border border-white/10 rounded-2xl focus:outline-none focus:border-amber-500/50 transition-all text-white font-bold text-sm"
+                        className="w-full px-6 py-5 bg-white/5 border border-white/10 rounded-2xl focus:outline-none focus:border-amber-500/50 transition-all text-white font-medium text-sm"
                       />
                     </div>
 
@@ -644,7 +666,7 @@ const RegisterMember = () => {
                         required
                         value={school}
                         onChange={(e) => setSchool(e.target.value)}
-                        className="w-full px-6 py-5 bg-white/5 border border-white/10 rounded-2xl focus:outline-none focus:border-amber-500/50 transition-all text-white font-bold text-sm appearance-none"
+                        className="w-full px-6 py-5 bg-white/5 border border-white/10 rounded-2xl focus:outline-none focus:border-amber-500/50 transition-all text-white font-medium text-sm appearance-none"
                       >
                         <option value="St Joseph" className="bg-zinc-900">ST JOSEPH</option>
                       </select>
@@ -660,7 +682,7 @@ const RegisterMember = () => {
                         value={className}
                         onChange={(e) => setClassName(e.target.value)}
                         placeholder="e.g. 10"
-                        className="w-full px-6 py-5 bg-white/5 border border-white/10 rounded-2xl focus:outline-none focus:border-amber-500/50 transition-all text-white font-bold text-sm"
+                        className="w-full px-6 py-5 bg-white/5 border border-white/10 rounded-2xl focus:outline-none focus:border-amber-500/50 transition-all text-white font-medium text-sm"
                       />
                     </div>
 
@@ -675,7 +697,7 @@ const RegisterMember = () => {
                           value={section}
                           onChange={(e) => setSection(e.target.value)}
                           placeholder="e.g. A"
-                          className="w-full px-6 py-5 bg-white/5 border border-white/10 rounded-2xl focus:outline-none focus:border-amber-500/50 transition-all text-white font-bold text-sm"
+                          className="w-full px-6 py-5 bg-white/5 border border-white/10 rounded-2xl focus:outline-none focus:border-amber-500/50 transition-all text-white font-medium text-sm"
                         />
                       </div>
 
@@ -689,7 +711,7 @@ const RegisterMember = () => {
                           value={roll}
                           onChange={(e) => setRoll(e.target.value)}
                           placeholder="e.g. 42"
-                          className="w-full px-6 py-5 bg-white/5 border border-white/10 rounded-2xl focus:outline-none focus:border-amber-500/50 transition-all text-white font-bold text-sm"
+                          className="w-full px-6 py-5 bg-white/5 border border-white/10 rounded-2xl focus:outline-none focus:border-amber-500/50 transition-all text-white font-medium text-sm"
                         />
                       </div>
                     </div>

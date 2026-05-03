@@ -28,14 +28,19 @@ const QRScanner: React.FC<QRScannerProps> = ({
       try {
         const { Html5QrcodeScanner, Html5QrcodeSupportedFormats } = await import('html5-qrcode');
         
+        const isMobile = window.innerWidth < 768;
+        const boxSize = isMobile ? Math.min(window.innerWidth - 80, 250) : 250;
+        
         scanner = new Html5QrcodeScanner(
           "qr-reader",
           { 
             fps, 
-            qrbox,
+            qrbox: { width: boxSize, height: boxSize },
             formatsToSupport: [ Html5QrcodeSupportedFormats.QR_CODE ],
             rememberLastUsedCamera: true,
             aspectRatio: 1.0,
+            showTorchButtonIfSupported: true,
+            showZoomSliderIfSupported: true,
           },
           /* verbose= */ false
         );

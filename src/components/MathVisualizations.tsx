@@ -320,13 +320,15 @@ const MathVisualizations: React.FC<MathVisualizationsProps> = ({ reduced = false
       time += 0.01;
 
       drawGrid();
-      updateLorenz();
-      drawLorenz();
-      drawFibonacci();
-      drawSineWave();
-      drawGeometricPulse();
-      drawTechnicalRings();
-      drawHexStream(currentTime);
+      if (!reduced) {
+        updateLorenz();
+        drawLorenz();
+        drawFibonacci();
+        drawSineWave();
+        drawGeometricPulse();
+        drawTechnicalRings();
+        drawHexStream(currentTime);
+      }
       drawShards();
     };
 

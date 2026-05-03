@@ -83,7 +83,7 @@ const Auth = () => {
 
     try {
       if (mode === 'signup') {
-        const { error: signUpError } = await supabase.auth.signUp({
+        const { data, error: signUpError } = await supabase.auth.signUp({
           email,
           password,
           options: {
@@ -95,7 +95,14 @@ const Auth = () => {
         
         if (signUpError) throw signUpError;
 
-        showToast('Check your email for the confirmation link!', 'success');
+        if (data.session) {
+          showToast('Welcome to the Josephite Math Club!', 'success');
+          const redirect = searchParams?.get('redirect') || '/profile';
+          router.push(redirect);
+        } else {
+          showToast('Registration successful! You can now sign in.', 'success');
+          setMode('login');
+        }
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
@@ -121,7 +128,7 @@ const Auth = () => {
   };
 
   return (
-    <div className="relative min-h-screen bg-[#050505] overflow-hidden flex items-center justify-center p-4 pt-32 pb-24">
+    <div className="relative min-h-[100dvh] bg-[#050505] flex items-center justify-center p-4 pt-32 pb-24">
       {/* Background Glows */}
       <div className="atmospheric-glow w-[600px] h-[600px] bg-[var(--c-6-start)]/10 -top-48 -left-24" />
       <div className="atmospheric-glow w-[700px] h-[700px] bg-[var(--c-2-start)]/5 bottom-0 -right-24" />
@@ -171,7 +178,7 @@ const Auth = () => {
                         value={fullName}
                         onChange={(e) => setFullName(e.target.value)}
                         placeholder="JOHN DOE"
-                        className="w-full pl-16 pr-8 py-5 bg-white/5 border border-white/10 rounded-full focus:outline-none focus:border-amber-500/50 focus:ring-4 focus:ring-amber-500/10 transition-all text-white placeholder:text-zinc-800 font-bold text-[10px] tracking-widest uppercase"
+                        className="w-full pl-16 pr-8 py-5 bg-white/5 border border-white/10 rounded-full focus:outline-none focus:border-amber-500/50 focus:ring-4 focus:ring-amber-500/10 transition-all text-white placeholder:text-zinc-800 font-medium text-sm"
                       />
                     </div>
                   </motion.div>
@@ -188,7 +195,7 @@ const Auth = () => {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="NAME@EXAMPLE.COM"
-                    className="w-full pl-16 pr-8 py-5 bg-white/5 border border-white/10 rounded-full focus:outline-none focus:border-amber-500/50 focus:ring-4 focus:ring-amber-500/10 transition-all text-white placeholder:text-zinc-800 font-bold text-[10px] tracking-widest uppercase"
+                    className="w-full pl-16 pr-8 py-5 bg-white/5 border border-white/10 rounded-full focus:outline-none focus:border-amber-500/50 focus:ring-4 focus:ring-amber-500/10 transition-all text-white placeholder:text-zinc-800 font-medium text-sm"
                   />
                 </div>
               </div>
@@ -210,7 +217,7 @@ const Auth = () => {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="********"
-                    className="w-full pl-16 pr-8 py-5 bg-white/5 border border-white/10 rounded-full focus:outline-none focus:border-[var(--c-6-start)]/50 focus:ring-4 focus:ring-[var(--c-6-start)]/10 transition-all text-white placeholder:text-zinc-800 font-bold text-[10px] tracking-widest uppercase"
+                    className="w-full pl-16 pr-8 py-5 bg-white/5 border border-white/10 rounded-full focus:outline-none focus:border-[var(--c-6-start)]/50 focus:ring-4 focus:ring-[var(--c-6-start)]/10 transition-all text-white placeholder:text-zinc-800 font-medium text-sm"
                   />
                 </div>
               </div>

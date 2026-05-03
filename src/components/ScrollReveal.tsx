@@ -23,7 +23,7 @@ const ScrollReveal: React.FC<ScrollRevealProps> = ({
   duration = 0.8,
   className = ""
 }) => {
-  const { shouldReduceGfx } = usePerformance();
+  const { shouldReduceGfx, isMobile } = usePerformance();
 
   if (shouldReduceGfx) {
     return <div style={{ position: "relative", width }} className={className}>{children}</div>;
@@ -40,7 +40,15 @@ const ScrollReveal: React.FC<ScrollRevealProps> = ({
   };
 
   return (
-    <div style={{ position: "relative", width, overflow: "visible" }} className={className}>
+    <div 
+      style={{ 
+        position: "relative", 
+        width, 
+        overflow: "visible",
+        contain: "content" // Optimization: helps browser limit layout/paint
+      }} 
+      className={className}
+    >
       <motion.div
         variants={{
           hidden: getInitialProps(),
@@ -48,12 +56,20 @@ const ScrollReveal: React.FC<ScrollRevealProps> = ({
         }}
         initial="hidden"
         whileInView="visible"
-        viewport={{ once: true, margin: "-100px" }}
-        style={{ willChange: "transform, opacity" }}
+        viewport={{ 
+          once: true, 
+          margin: isMobile ? "-20px" : "-100px", // Smaller margin on mobile
+          amount: 0.1 // Trigger faster
+        }}
+        style={{ 
+          willChange: "transform, opacity",
+          backfaceVisibility: "hidden",
+          transform: "translateZ(0)" // Force GPU layer
+        }}
         transition={{ 
-          duration, 
+          duration: isMobile ? duration * 0.8 : duration, // Faster on mobile
           delay, 
-          ease: [0.22, 1, 0.36, 1] // Custom cubic-bezier for smooth reveal
+          ease: [0.22, 1, 0.36, 1]
         }}
       >
         {children}

@@ -72,25 +72,22 @@ const Home = () => {
         <div className="fixed inset-0 pointer-events-none overflow-hidden -z-10">
             <motion.div
               animate={{
-                scale: [1, 1.1, 1],
-                rotate: [0, 90, 0],
-                opacity: [0.08, 0.12, 0.08],
+                scale: [1, 1.05, 1],
+                opacity: [0.06, 0.1, 0.06],
               }}
-              transition={{ duration: 40, repeat: Infinity, ease: "linear" }}
-              className="absolute -top-[20%] -left-[10%] w-[60%] h-[60%] bg-[var(--c-6-start)]/20 blur-[120px] rounded-full"
+              transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+              className="absolute -top-[10%] -left-[10%] w-[50%] h-[50%] bg-[var(--c-6-start)]/20 blur-[100px] rounded-full will-change-transform"
             />
             <motion.div
               animate={{
-                scale: [1, 1.3, 1],
-                rotate: [0, -90, 0],
-                opacity: [0.05, 0.1, 0.05],
+                scale: [1, 1.1, 1],
+                opacity: [0.04, 0.08, 0.04],
               }}
-              transition={{ duration: 50, repeat: Infinity, ease: "linear" }}
-              className="absolute -bottom-[20%] -right-[10%] w-[70%] h-[70%] bg-[var(--c-2-start)]/15 blur-[150px] rounded-full"
+              transition={{ duration: 25, repeat: Infinity, ease: "linear" }}
+              className="absolute -bottom-[10%] -right-[10%] w-[60%] h-[60%] bg-[var(--c-2-start)]/15 blur-[120px] rounded-full will-change-transform"
             />
             
-            <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:100px_100px] [mask-image:radial-gradient(ellipse_at_center,black,transparent_80%)]" />
-            <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:20px_20px] [mask-image:radial-gradient(ellipse_at_center,black,transparent_90%)]" />
+            <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:100px_100px] [mask-image:radial-gradient(ellipse_at_center,black,transparent_80%)]" />
         </div>
       )}
 
@@ -99,7 +96,8 @@ const Home = () => {
         <div className="flex flex-col items-center gap-6 py-8 px-4 rounded-[2rem] glass border-white/5 relative group overflow-hidden">
           <motion.div 
             className="absolute inset-x-0 h-[1px] bg-[var(--c-6-start)]/50 blur-[2px] z-10"
-            animate={{ top: ['0%', '100%'] }}
+            style={{ willChange: 'transform' }}
+            animate={{ y: ['-100%', '800%'] }} // Approximate full height of its container
             transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
           />
           
@@ -107,7 +105,8 @@ const Home = () => {
             <div className="w-2 h-2 rounded-full bg-[var(--c-6-start)] shadow-[0_0_10px_rgba(255,184,0,0.8)] animate-pulse" />
             <motion.div 
               className="absolute inset-0 rounded-full border border-[var(--c-6-start)]/50"
-              animate={{ scale: [1, 2], opacity: [1, 0] }}
+              style={{ willChange: 'transform, opacity' }}
+              animate={{ scale: [1, 1.5], opacity: [1, 0] }}
               transition={{ duration: 2, repeat: Infinity }}
             />
           </div>
@@ -122,6 +121,54 @@ const Home = () => {
       </div>
 
       <Hero home={home} shouldReduceGfx={shouldReduceGfx} />
+
+      {/* Mobile-Only Interactive HUD Section */}
+      <div className="md:hidden px-4 mb-24 -mt-24 relative z-20">
+        <div className="mobile-hud-grid">
+          <motion.div 
+            whileTap={{ scale: 0.95 }}
+            className="glass-card p-4 flex flex-col items-center gap-2 border-white/10"
+          >
+            <div className="text-[8px] font-mono text-zinc-500 uppercase tracking-widest">Members</div>
+            <div className="text-2xl font-display font-black text-white">2.4k+</div>
+            <div className="w-full h-1 bg-white/5 rounded-full overflow-hidden">
+              <motion.div 
+                initial={{ width: 0 }}
+                whileInView={{ width: '75%' }}
+                className="h-full bg-[var(--c-6-start)]"
+              />
+            </div>
+          </motion.div>
+
+          <motion.div 
+            whileTap={{ scale: 0.95 }}
+            className="glass-card p-4 flex flex-col items-center gap-2 border-white/10"
+          >
+            <div className="text-[8px] font-mono text-zinc-500 uppercase tracking-widest">Events</div>
+            <div className="text-2xl font-display font-black text-white">48+</div>
+            <div className="flex gap-1">
+              {[1, 2, 3, 4, 5].map(i => (
+                <div key={i} className={`w-1.5 h-1.5 rounded-full ${i <= 4 ? 'bg-[var(--c-2-start)]' : 'bg-white/10'}`} />
+              ))}
+            </div>
+          </motion.div>
+
+          <motion.div 
+            whileTap={{ scale: 0.95 }}
+            className="glass-card p-4 flex flex-col items-center gap-2 border-white/10 col-span-2 sm:col-span-1"
+          >
+            <div className="flex justify-between w-full">
+              <div className="text-[8px] font-mono text-zinc-500 uppercase tracking-widest">System_Status</div>
+              <div className="text-[8px] font-mono text-emerald-500 animate-pulse">Running</div>
+            </div>
+            <div className="flex items-baseline gap-2">
+              <span className="text-2xl font-display font-black text-white">100%</span>
+              <span className="text-[10px] font-mono text-zinc-500 italic">stable</span>
+            </div>
+          </motion.div>
+        </div>
+      </div>
+
       <Memories home={home} gallery={gallery} shouldReduceGfx={shouldReduceGfx} />
       <Agenda home={home} />
       <Testimonials home={home} duplicatedTestimonials={duplicatedTestimonials} shouldReduceGfx={shouldReduceGfx} />

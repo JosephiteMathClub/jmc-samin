@@ -16,11 +16,22 @@ interface SplashScreenProps {
 const SplashScreen = ({ isLoaded, logoUrl, onFinish }: SplashScreenProps) => {
   const [progress, setProgress] = useState(0);
   const [isExiting, setIsExiting] = useState(false);
+  const [shouldShow, setShouldShow] = useState(true);
   const { shouldReduceGfx } = usePerformance();
+
+  useEffect(() => {
+    const hasSeen = sessionStorage.getItem('jmc-splash-seen');
+    if (hasSeen === 'true') {
+      setShouldShow(false);
+      onFinish();
+    }
+  }, [onFinish]);
 
   const resolvedLogoUrl = resolveImageUrl(logoUrl) || "/images/logo.png";
 
   useEffect(() => {
+    if (!shouldShow) return;
+
     const interval = setInterval(() => {
       setProgress(prev => {
         if (prev >= 100) {
@@ -34,17 +45,22 @@ const SplashScreen = ({ isLoaded, logoUrl, onFinish }: SplashScreenProps) => {
     }, shouldReduceGfx ? 20 : 50);
 
     return () => clearInterval(interval);
-  }, [isLoaded, shouldReduceGfx]);
+  }, [isLoaded, shouldReduceGfx, shouldShow]);
 
   useEffect(() => {
+    if (!shouldShow) return;
+
     if (progress === 100) {
       const timer = setTimeout(() => {
         setIsExiting(true);
+        sessionStorage.setItem('jmc-splash-seen', 'true');
         setTimeout(onFinish, shouldReduceGfx ? 200 : 1000);
       }, shouldReduceGfx ? 100 : 800);
       return () => clearTimeout(timer);
     }
-  }, [progress, onFinish, shouldReduceGfx]);
+  }, [progress, onFinish, shouldReduceGfx, shouldShow]);
+
+  if (!shouldShow) return null;
 
   return (
     <AnimatePresence>

@@ -555,7 +555,8 @@ export const EventParticipation = () => {
                     <Search className="w-4 h-4 text-zinc-700" />
                   </div>
                   <div className="max-h-[400px] overflow-y-auto custom-scrollbar">
-                    <table className="w-full text-left border-collapse">
+                    {/* Desktop Table View */}
+                    <table className="hidden md:table w-full text-left border-collapse">
                       <tbody className="divide-y divide-white/5">
                         {participations.length === 0 ? (
                           <tr>
@@ -585,6 +586,30 @@ export const EventParticipation = () => {
                         )}
                       </tbody>
                     </table>
+
+                    {/* Mobile Card View */}
+                    <div className="md:hidden divide-y divide-white/5">
+                      {participations.length === 0 ? (
+                        <div className="px-8 py-16 text-center text-zinc-600 italic text-sm">No entries recorded yet.</div>
+                      ) : (
+                        [...participations].reverse().map((p) => (
+                          <div key={p.id} className="flex items-center justify-between p-6">
+                            <div className="flex items-center gap-4">
+                              <div className="w-8 h-8 rounded-full bg-green-500/10 flex items-center justify-center shrink-0">
+                                <CheckCircle2 className="w-4 h-4 text-green-500" />
+                              </div>
+                              <code className="text-sm text-white font-mono">{p.member_id}</code>
+                            </div>
+                            <button 
+                              onClick={() => setDeleteId(p.id)}
+                              className="p-3 bg-red-500/5 text-red-500 rounded-xl active:bg-red-500/20"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        ))
+                      )}
+                    </div>
                   </div>
                 </div>
               </motion.div>
@@ -716,7 +741,8 @@ export const EventParticipation = () => {
 
               {/* Participant Table */}
               <div className="overflow-hidden rounded-[32px] border border-white/5 bg-white/[0.01]">
-                <table className="w-full text-left border-collapse">
+                {/* Desktop view */}
+                <table className="hidden md:table w-full text-left border-collapse">
                   <thead>
                     <tr className="border-b border-white/5 bg-white/[0.02]">
                       <th className="px-8 py-5 text-[10px] font-bold text-zinc-500 uppercase tracking-[0.2em]">Participant ID</th>
@@ -778,6 +804,56 @@ export const EventParticipation = () => {
                     )}
                   </tbody>
                 </table>
+
+                {/* Mobile view */}
+                <div className="md:hidden divide-y divide-white/5">
+                  {loading ? (
+                    [1, 2, 3].map(i => (
+                      <div key={i} className="p-6 space-y-4">
+                        <Skeleton className="h-4 w-32" />
+                        <Skeleton className="h-10 w-full rounded-xl" />
+                      </div>
+                    ))
+                  ) : filteredParticipations.length === 0 ? (
+                    <div className="px-8 py-16 text-center text-zinc-600 italic text-sm">
+                      {searchTerm ? `No participants matching "${searchTerm}"` : "No participants yet."}
+                    </div>
+                  ) : (
+                    filteredParticipations.map((p) => (
+                      <div key={p.id} className="p-6 space-y-4">
+                        <div className="flex items-center justify-between">
+                          <code className="text-xs text-white font-mono bg-white/5 px-3 py-1.5 rounded-lg border border-white/5">
+                            {p.member_id}
+                          </code>
+                          <button 
+                            onClick={() => setDeleteId(p.id)}
+                            className="p-3 bg-red-500/5 text-red-500 rounded-xl"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                        <div className="flex flex-col gap-2">
+                          <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Assign Position</span>
+                          <div className="flex items-center gap-3">
+                            <select 
+                              value={p.position || ""}
+                              onChange={(e) => updatePosition(p.id, e.target.value ? parseInt(e.target.value) : null)}
+                              className="flex-1 bg-black/40 text-amber-400 border border-white/10 rounded-xl px-4 py-3 text-[10px] font-bold uppercase tracking-wider"
+                            >
+                              <option value="" className="bg-zinc-900 text-zinc-500">No Position</option>
+                              <option value="1" className="bg-zinc-900 text-amber-500">1st (Gold)</option>
+                              <option value="2" className="bg-zinc-900 text-zinc-300">2nd (Silver)</option>
+                              <option value="3" className="bg-zinc-900 text-amber-700">3rd (Bronze)</option>
+                            </select>
+                            {p.position === 1 && <Medal className="w-5 h-5 text-amber-400" />}
+                            {p.position === 2 && <Star className="w-5 h-5 text-zinc-400" />}
+                            {p.position === 3 && <Zap className="w-5 h-5 text-amber-800" />}
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
               </div>
             </div>
 
