@@ -8,6 +8,7 @@ import { User, Shield, Star, Briefcase, Users, Award, Upload, Loader2 } from 'lu
 import Image from 'next/image';
 import ScrollReveal from '../components/ScrollReveal';
 import { Skeleton } from '../components/Skeleton';
+import MemberMarquee from '../components/shared/MemberMarquee';
 
 import { usePerformance } from '../hooks/usePerformance';
 import { resolveImageUrl } from '../lib/utils';
@@ -521,6 +522,11 @@ const Panel = () => {
             ))}
           </div>
         </section>
+
+        {/* --- MEMBER MARQUEE SECTION --- */}
+        <ScrollReveal direction="up" distance={40}>
+          <MemberMarquee />
+        </ScrollReveal>
 
       </div>
     </div>

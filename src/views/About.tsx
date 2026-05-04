@@ -173,73 +173,60 @@ const About = () => {
             </h2>
           </motion.div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
             {objectives.map((obj: any, i: number) => (
               <motion.div
                 key={i}
-                initial={shouldReduceGfx ? { opacity: 1 } : { opacity: 0, y: 50 }}
-                whileInView={{ opacity: 1, y: 0 }}
+                initial={shouldReduceGfx ? { opacity: 1 } : { opacity: 0, scale: 0.95 }}
+                whileInView={{ opacity: 1, scale: 1 }}
                 viewport={{ once: true }}
-                transition={{ delay: shouldReduceGfx ? 0 : i * 0.2, duration: shouldReduceGfx ? 0.1 : 1, ease: [0.22, 1, 0.36, 1] }}
-                className={shouldReduceGfx ? "glass-card p-12 flex flex-col items-center text-center h-full" : "moving-border-container"}
+                transition={{ delay: shouldReduceGfx ? 0 : i * 0.1, duration: 0.6 }}
+                className="group relative bg-[#0a0a0a] border border-white/5 p-10 flex flex-col items-start text-left overflow-hidden transition-all duration-500 hover:border-[var(--c-6-start)]/30 hover:bg-white/[0.01]"
               >
-                {shouldReduceGfx ? (
-                  <>
-                    <div className={`mb-10 p-6 rounded-3xl bg-white/5 ${obj.color}`}>
-                      {obj.icon}
-                    </div>
-                    <h3 className="text-3xl font-bold text-white mb-8 font-display tracking-tight border-b border-white/5 pb-6 w-full">
-                      {obj.title}
-                    </h3>
-                    <p className="text-zinc-400 text-base leading-relaxed font-light tracking-tight">
-                      {obj.description}
-                    </p>
-                  </>
-                ) : (
-                  <div className="moving-border-content p-12 flex flex-col items-center text-center group relative overflow-hidden h-full">
-                    <div className="absolute inset-0 bg-gradient-to-b from-white/[0.02] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
-                    
-                    <div className={`mb-10 p-6 rounded-3xl bg-white/5 ${obj.color} group-hover:scale-110 group-hover:rotate-3 transition-all duration-700 shadow-2xl`}>
-                      {obj.icon}
-                    </div>
-                    
-                    <h3 className="text-3xl font-bold text-white mb-8 font-display tracking-tight border-b border-white/5 pb-6 w-full group-hover:text-[var(--c-6-start)] transition-colors duration-500">
-                      {obj.title}
-                    </h3>
-                    
-                    <p className="text-zinc-400 text-base leading-relaxed font-light tracking-tight">
-                      {obj.description}
-                    </p>
-                  </div>
-                )}
+                {/* ID Label */}
+                <span className="font-mono text-[9px] text-zinc-600 uppercase tracking-[0.3em] mb-8">Objective_0{i+1}</span>
+                
+                {/* Icon with background glow */}
+                <div className={`relative mb-8 p-4 rounded-xl bg-white/5 ${obj.color} group-hover:scale-110 transition-transform duration-500`}>
+                  {obj.icon}
+                  {!shouldReduceGfx && (
+                    <div className="absolute inset-0 bg-white/10 blur-xl opacity-0 group-hover:opacity-100 transition-opacity" />
+                  )}
+                </div>
+
+                <h3 className="text-2xl font-display font-medium text-white mb-6 group-hover:text-[var(--c-6-start)] transition-colors">
+                  {obj.title}
+                </h3>
+                
+                <p className="text-zinc-500 text-sm leading-relaxed font-light tracking-tight flex-grow">
+                  {obj.description}
+                </p>
+
+                {/* Decorative corner */}
+                <div className="absolute top-0 right-0 w-8 h-8 pointer-events-none">
+                  <div className="absolute top-4 right-4 w-1 h-1 bg-white/10 rounded-full" />
+                </div>
               </motion.div>
             ))}
           </div>
         </section>
 
         {/* Vision in 4 Steps Section */}
-        <section className="py-24 relative overflow-hidden">
-          <div className="text-center mb-20">
-            <ScrollReveal direction="up" distance={20} className="inline-block px-3 py-1 mb-4 rounded-full bg-[var(--c-5-start)]/10 text-[var(--c-5-start)] text-[10px] font-bold tracking-[0.3em] uppercase border border-[var(--c-5-start)]/20">
-              {aboutContent.pathTagline || "The Path Forward"}
+        <section className="py-24 relative">
+          <div className="text-center mb-24">
+            <ScrollReveal direction="up" distance={20} className="inline-block mb-6">
+              <span className="font-mono text-[10px] text-[var(--c-5-start)] uppercase tracking-[0.4em] px-4 py-1 rounded-full border border-[var(--c-5-start)]/20 bg-[var(--c-5-start)]/5">
+                {aboutContent.pathTagline || "The Path Forward"}
+              </span>
             </ScrollReveal>
             <ScrollReveal direction="up" distance={30} delay={0.1}>
-              <h2 className="text-6xl md:text-8xl font-bold tracking-tighter text-white font-display">
-                {aboutContent.visionStepsTitle?.split(' ').map((word: string, i: number, arr: string[]) => (
-                  <span key={i} className={i === arr.length - 1 ? "blue-text" : "mr-4"}>
-                    {word}
-                  </span>
-                )) || (
-                  <>Vision in <span className="blue-text">4 Steps</span></>
-                )}
+              <h2 className="text-6xl md:text-8xl font-display font-medium tracking-tight text-white">
+                Vision in <span className="text-[var(--c-6-start)]">4 Phases</span>
               </h2>
             </ScrollReveal>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 relative">
-            {/* Connecting Line (Desktop) */}
-            <div className="hidden lg:block absolute top-1/2 left-0 w-full h-px bg-gradient-to-r from-transparent via-[var(--c-5-start)]/20 to-transparent -translate-y-1/2 z-0" />
-            
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 border border-white/5 bg-[#080808]">
             {(visionSteps).map((step: any, i: number) => {
               const IconMap: any = { Target, Zap, Rocket, Globe };
               const Icon = IconMap[step.icon] || Zap;
@@ -247,20 +234,29 @@ const About = () => {
                 <ScrollReveal 
                   key={i} 
                   direction="up" 
-                  distance={40} 
-                  delay={shouldReduceGfx ? 0 : i * 0.2}
-                  className="relative z-10"
+                  distance={0}
+                  className={`relative p-12 border-white/5 ${i < 3 ? 'lg:border-r' : ''} ${i % 2 === 0 ? 'md:border-r lg:border-r-0' : ''} group overflow-hidden`}
                 >
-                  <div className={`glass-card p-10 border-white/5 h-full flex flex-col items-center text-center ${!shouldReduceGfx && 'hover:border-[var(--c-5-start)]/30 transition-all group'}`}>
-                    <div className={`w-20 h-20 rounded-2xl ${step.color} flex items-center justify-center mb-8 shadow-2xl ${!shouldReduceGfx && 'group-hover:scale-110 group-hover:rotate-6 transition-transform duration-500'}`}>
-                      <Icon className="w-10 h-10 text-white" />
+                  {/* Phase ID */}
+                  <div className="flex justify-between items-start mb-12">
+                    <span className="font-mono text-[40px] font-black text-white/5 leading-none transition-colors group-hover:text-[var(--c-6-start)]/10">0{i + 1}</span>
+                    <div className={`p-3 rounded-lg ${step.color} bg-opacity-20 flex items-center justify-center`}>
+                      <Icon className="w-5 h-5 text-white" />
                     </div>
-                    <div className="absolute -top-4 -left-4 w-12 h-12 rounded-full bg-zinc-900 border border-white/10 flex items-center justify-center text-[var(--c-5-start)] font-black text-xl font-display">
-                      0{i + 1}
-                    </div>
-                    <h3 className="text-2xl font-bold text-white mb-4 font-display uppercase tracking-wider">{step.title}</h3>
-                    <p className="text-zinc-400 text-sm leading-relaxed font-light">{step.desc}</p>
                   </div>
+
+                  <h3 className="text-2xl font-display font-medium text-white mb-6 uppercase tracking-wider">{step.title}</h3>
+                  <p className="text-zinc-500 text-sm leading-relaxed font-light mb-8">{step.desc}</p>
+
+                  <div className="mt-auto pt-8 flex items-center gap-3">
+                    <div className="h-[2px] w-8 bg-[var(--c-6-start)]/30" />
+                    <span className="font-mono text-[9px] text-zinc-600 uppercase tracking-widest">Active_Phase</span>
+                  </div>
+
+                  {/* Hover Scanner */}
+                  {!shouldReduceGfx && (
+                    <div className="absolute inset-0 bg-gradient-to-b from-[var(--c-6-start)]/5 to-transparent translate-y-full group-hover:translate-y-0 transition-transform duration-1000 ease-in-out pointer-events-none" />
+                  )}
                 </ScrollReveal>
               );
             })}
