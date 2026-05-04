@@ -147,59 +147,68 @@ const Notices = () => {
                     animate={shouldReduceGfx ? { opacity: 1 } : { opacity: 1, y: 0 }}
                     exit={shouldReduceGfx ? { opacity: 0 } : { opacity: 0, scale: 0.95 }}
                     transition={{ duration: 0.4, delay: shouldReduceGfx ? 0 : i * 0.05 }}
+                    className="group"
                   >
-                    <div className={`group relative p-8 md:p-10 rounded-[2.5rem] bg-white/[0.02] border border-white/5 ${!shouldReduceGfx && 'hover:border-[var(--c-6-start)]/30 hover:bg-white/[0.04] transition-all duration-500'} overflow-hidden ${notice.isPinned ? 'border-[var(--c-6-start)]/20 bg-[var(--c-6-start)]/[0.02]' : ''}`}>
-                      {notice.isPinned && (
-                        <div className="absolute top-8 right-8 flex items-center gap-2">
-                          <span className="text-[8px] font-bold text-[var(--c-6-start)] uppercase tracking-[0.2em]">Pinned Notice</span>
-                          <Pin className="w-4 h-4 text-[var(--c-6-start)] fill-[var(--c-6-start)]" />
-                        </div>
-                      )}
-                      <div className="flex flex-col md:flex-row md:items-start gap-8 md:gap-12 relative z-10">
-                        <div className={`flex-shrink-0 flex flex-col items-center justify-center w-20 h-20 md:w-24 md:h-24 rounded-3xl bg-[var(--c-6-start)]/10 text-[var(--c-6-start)] border border-[var(--c-6-start)]/20 ${!shouldReduceGfx && 'group-hover:scale-105 group-hover:bg-[var(--c-6-start)]/20 transition-all duration-500'}`}>
-                          <Calendar className="w-6 h-6 md:w-8 md:h-8 mb-1 md:mb-2" />
-                          <div className="text-[8px] md:text-[10px] font-bold uppercase tracking-[0.2em]">{notice.date?.split(' ')[0]}</div>
-                        </div>
-                        <div className="flex-grow">
-                          <div className="flex flex-wrap items-center gap-4 mb-6">
-                            <span className={`px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest border flex items-center gap-2 ${
-                              notice.tag === 'important' ? 'bg-red-500/10 text-red-500 border-red-500/20' :
-                              notice.tag === 'urgent' ? 'bg-orange-500/10 text-orange-500 border-orange-500/20' :
-                              notice.tag === 'success' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' :
-                              'bg-blue-500/10 text-blue-500 border-blue-500/20'
-                            }`}>
-                              {notice.tag === 'important' && <AlertTriangle className="w-3 h-3" />}
-                              {notice.tag === 'success' && <CheckCircle className="w-3 h-3" />}
-                              {notice.tag || notice.type || 'General'}
-                            </span>
-                            <span className="text-[10px] text-zinc-600 font-bold uppercase tracking-widest flex items-center gap-2">
-                              <Clock className="w-3 h-3" />
-                              {notice.date}
+                    <div className={`relative flex flex-col md:flex-row border-t border-white/10 ${i === filteredNotices.length - 1 ? 'border-b' : ''} bg-[#080808] transition-all duration-500 overflow-hidden`}>
+                      
+                      {/* Technical Meta Column */}
+                      <div className="w-full md:w-64 p-8 flex flex-col justify-between border-r border-white/10 bg-white/[0.01]">
+                        <div className="flex flex-col gap-1">
+                          <span className="font-mono text-[9px] uppercase tracking-[0.3em] text-zinc-600 mb-2">Notice ID: {notice.id?.slice(-8) || `NTC-${i+100}`}</span>
+                          <div className="flex items-center gap-3">
+                            <div className={`w-1.5 h-1.5 rounded-full ${
+                              notice.tag === 'important' ? 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.6)]' :
+                              notice.tag === 'urgent' ? 'bg-orange-500 shadow-[0_0_8px_rgba(249,115,22,0.6)]' :
+                              notice.tag === 'success' ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)]' :
+                              'bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.6)]'
+                            } animate-pulse`} />
+                            <span className="font-mono text-[10px] uppercase font-bold text-white tracking-widest">
+                              {notice.tag || notice.type || 'SYSTEM'}
                             </span>
                           </div>
-                          <h3 className="text-2xl md:text-4xl font-display font-bold mb-6 group-hover:text-[var(--c-6-start)] transition-colors leading-tight">{notice.title}</h3>
-                          <p className="text-lg md:text-xl text-zinc-500 leading-relaxed mb-10 whitespace-pre-line font-light">
+                        </div>
+
+                        <div className="mt-12 md:mt-0">
+                          <span className="font-mono text-[10px] text-zinc-500 uppercase tracking-widest">{notice.date}</span>
+                        </div>
+                      </div>
+
+                      {/* Main content area */}
+                      <div className="flex-grow p-8 md:p-12 relative group-hover:bg-white/[0.01] transition-colors duration-500">
+                        {notice.isPinned && (
+                          <div className="absolute top-8 right-12 flex items-center gap-3">
+                            <span className="font-mono text-[9px] font-bold text-[var(--c-6-start)] uppercase tracking-[0.3em]">PRIORITY_LOCK</span>
+                            <Pin className="w-3.5 h-3.5 text-[var(--c-6-start)] fill-[var(--c-6-start)]" />
+                          </div>
+                        )}
+
+                        <div className="max-w-4xl">
+                          <h3 className="text-2xl md:text-4xl font-display font-medium tracking-tight mb-8 group-hover:text-[var(--c-6-start)] transition-colors duration-500">
+                            {notice.title}
+                          </h3>
+                          <div className="text-zinc-500 text-lg md:text-xl leading-relaxed font-light mb-10 whitespace-pre-line">
                             {notice.content}
-                          </p>
+                          </div>
+
                           {notice.link && (
                             <a 
                               href={notice.link} 
                               target="_blank" 
                               rel="noopener noreferrer"
-                              className="inline-flex items-center gap-4 text-[var(--c-6-start)] font-bold uppercase tracking-widest text-xs hover:gap-6 transition-all duration-500 group/link"
+                              className="group/link inline-flex items-center gap-4 py-4 px-8 rounded-full border border-white/10 hover:border-[var(--c-6-start)]/30 hover:bg-[var(--c-6-start)]/5 transition-all duration-500"
                             >
-                              <span className="relative">
-                                {notice.linkText || 'View Details'}
-                                <span className="absolute -bottom-1 left-0 w-0 h-px bg-[var(--c-6-start)] group-hover/link:w-full transition-all duration-500" />
+                              <span className="font-mono text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-400 group-hover/link:text-[var(--c-6-start)]">
+                                {notice.linkText || 'Execute_Module'}
                               </span>
-                              <ArrowRight className="w-5 h-5 group-hover/link:translate-x-2 transition-transform" />
+                              <ArrowRight className="w-4 h-4 text-zinc-600 group-hover/link:text-[var(--c-6-start)] group-hover/link:translate-x-1 transition-all" />
                             </a>
                           )}
                         </div>
                       </div>
-                      {/* Subtle Background Accent */}
+
+                      {/* Subtle scanner decoration */}
                       {!shouldReduceGfx && (
-                        <div className="absolute -bottom-12 -right-12 w-64 h-64 bg-[var(--c-6-start)]/5 blur-3xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none" />
+                        <div className="absolute inset-y-0 right-0 w-[1px] bg-gradient-to-b from-transparent via-[var(--c-6-start)]/20 to-transparent group-hover:via-[var(--c-6-start)]/40 transition-all duration-700" />
                       )}
                     </div>
                   </motion.div>

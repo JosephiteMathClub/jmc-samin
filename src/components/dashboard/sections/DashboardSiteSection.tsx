@@ -73,6 +73,20 @@ const DashboardSiteSectionComponent: React.FC<DashboardSiteSectionProps> = ({
         </div>
         
         <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="flex items-center gap-4 p-5 rounded-2xl bg-blue-500/5 border border-blue-500/10">
+            <div className="flex-1">
+              <h4 className="text-sm font-bold text-white uppercase tracking-tight">Show Announcements</h4>
+              <p className="text-[10px] text-zinc-500 font-medium">Toggle the scrolling announcement marquee on the home page.</p>
+            </div>
+            <input 
+              type="checkbox" 
+              id="showAnnouncements"
+              checked={data?.showAnnouncements ?? true} 
+              onChange={(e) => updateField('showAnnouncements', e.target.checked)}
+              className="w-6 h-6 rounded-lg border-white/10 bg-white/5 text-blue-500 focus:ring-blue-500 transition-all cursor-pointer"
+            />
+          </div>
+
           <div className="flex items-center gap-4 p-5 rounded-2xl bg-amber-500/5 border border-amber-500/10">
             <div className="flex-1">
               <h4 className="text-sm font-bold text-white uppercase tracking-tight">Event Mode</h4>
@@ -101,6 +115,18 @@ const DashboardSiteSectionComponent: React.FC<DashboardSiteSectionProps> = ({
             />
           </div>
         </div>
+
+        {data?.showAnnouncements !== false && (
+          <div className="mt-6">
+            <DashboardFormField 
+              label="Marquee Announcements (One per line)" 
+              type="textarea"
+              value={Array.isArray(data?.announcements) ? data.announcements.join('\n') : ''} 
+              onChange={(val) => updateField('announcements', val.split('\n').filter((s: string) => s.trim()))} 
+              description="These announcements will scroll across the top of the site."
+            />
+          </div>
+        )}
 
         {data?.maintenanceMode && (
           <div className="mt-4">

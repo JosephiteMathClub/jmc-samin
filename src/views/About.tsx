@@ -59,20 +59,16 @@ const About = () => {
 
   if (loading) return <AboutSkeleton />;
 
-  const aboutContent = content.about || {
-    title: "What is JMC?",
-    description: "The Josephite Math Club is dedicated to cultivating a passion for mathematics. Our mission is to provide a supportive environment for students to explore mathematical concepts, participate in competitions, and engage in math-related events. Join us to experience the world of mathematics in a whole new way!",
-    mission: ""
-  };
-
-  const stats = aboutContent.stats || [
+  const aboutContent = content.about || {};
+  
+  const stats = aboutContent.stats && aboutContent.stats.length > 0 ? aboutContent.stats : [
     { number: "10+", label: "Years of Excellence" },
     { number: "100+", label: "Workshops Conducted" },
     { number: "6", label: "National Festivals" },
     { number: "20k+", label: "Students Impacted" },
   ];
 
-  const objectives = (aboutContent.objectives || [
+  const objectives = (aboutContent.objectives && aboutContent.objectives.length > 0 ? aboutContent.objectives : [
     {
       title: "Problem Solving",
       description: "Develop your math skills through challenging problems and real-world applications. Build critical thinking and problem-solving abilities.",
@@ -102,6 +98,13 @@ const About = () => {
     const Icon = IconMap[obj.icon] || Calculator;
     return { ...obj, icon: <Icon className="w-8 h-8" /> };
   });
+
+  const visionSteps = (aboutContent.visionSteps && aboutContent.visionSteps.length > 0 ? aboutContent.visionSteps : [
+    { title: "Discovery", desc: "Identifying mathematical potential in every student.", icon: "Target", color: "bg-gradient-to-br from-[var(--c-4-start)] to-[var(--c-4-end)]" },
+    { title: "Nurturing", desc: "Providing the resources and mentorship to grow.", icon: "Zap", color: "bg-gradient-to-br from-[var(--c-5-start)] to-[var(--c-5-end)]" },
+    { title: "Excellence", desc: "Achieving mastery through practice and competition.", icon: "Rocket", color: "bg-gradient-to-br from-[var(--c-2-start)] to-[var(--c-2-end)]" },
+    { title: "Impact", desc: "Applying math to solve real-world global problems.", icon: "Globe", color: "bg-gradient-to-br from-[var(--c-3-start)] to-[var(--c-3-end)]" }
+  ]);
 
   return (
     <div className="min-h-screen relative py-24 overflow-hidden">
@@ -237,12 +240,7 @@ const About = () => {
             {/* Connecting Line (Desktop) */}
             <div className="hidden lg:block absolute top-1/2 left-0 w-full h-px bg-gradient-to-r from-transparent via-[var(--c-5-start)]/20 to-transparent -translate-y-1/2 z-0" />
             
-            {(aboutContent.visionSteps || [
-              { title: "Discovery", desc: "Identifying mathematical potential in every student.", icon: "Target", color: "bg-gradient-to-br from-[var(--c-4-start)] to-[var(--c-4-end)]" },
-              { title: "Nurturing", desc: "Providing the resources and mentorship to grow.", icon: "Zap", color: "bg-gradient-to-br from-[var(--c-5-start)] to-[var(--c-5-end)]" },
-              { title: "Excellence", desc: "Achieving mastery through practice and competition.", icon: "Rocket", color: "bg-gradient-to-br from-[var(--c-2-start)] to-[var(--c-2-end)]" },
-              { title: "Impact", desc: "Applying math to solve real-world global problems.", icon: "Globe", color: "bg-gradient-to-br from-[var(--c-3-start)] to-[var(--c-3-end)]" }
-            ]).map((step: any, i: number) => {
+            {(visionSteps).map((step: any, i: number) => {
               const IconMap: any = { Target, Zap, Rocket, Globe };
               const Icon = IconMap[step.icon] || Zap;
               return (

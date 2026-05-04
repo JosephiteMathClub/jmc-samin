@@ -162,64 +162,90 @@ const Events = () => {
                       className="group relative h-full"
                     >
                       {!shouldReduceGfx && <div className="absolute -inset-2 bg-gradient-to-br from-[var(--c-6-start)]/10 to-transparent opacity-0 group-hover:opacity-100 blur-xl transition-opacity duration-700" />}
-                      <div className={`relative glass-card h-full flex flex-col overflow-hidden ${!shouldReduceGfx && 'hover:bg-white/[0.04] transition-all duration-500'}`}>
-                        <div className="relative aspect-[16/10] overflow-hidden">
+                      <div className={`relative h-full flex flex-col bg-[#0a0a0a] rounded-[2rem] border border-white/5 overflow-hidden transition-all duration-700 ${!shouldReduceGfx && 'hover:border-[var(--c-6-start)]/30 group-hover:-translate-y-2'}`}>
+                        {/* Image Section with Glass Cover */}
+                        <div className="relative aspect-[16/11] overflow-hidden">
                           <Image 
                             src={resolveImageUrl(event.imageUrl) || `https://picsum.photos/seed/event-${i}/800/600`} 
                             alt={event.title} 
                             fill
                             priority={i < 3}
-                            className={`w-full h-full object-cover ${!shouldReduceGfx && 'group-hover:scale-110 transition-transform duration-1000'} opacity-60 group-hover:opacity-100`}
+                            className={`w-full h-full object-cover transition-all duration-1000 ${!shouldReduceGfx ? 'group-hover:scale-110 group-hover:rotate-1' : ''} opacity-40 group-hover:opacity-60`}
                           />
-                          <div className="absolute top-6 left-6 flex flex-col gap-2">
-                            <div className="px-4 py-2 rounded-full bg-black/50 backdrop-blur-md border border-white/10 text-[10px] font-bold uppercase tracking-widest text-[var(--c-6-start)]">
-                              {event.category || 'Event'}
+                          
+                          {/* Top Meta */}
+                          <div className="absolute top-6 left-6 right-6 flex justify-between items-start z-20">
+                            <div className="flex flex-col gap-2">
+                              <span className="font-mono text-[9px] uppercase tracking-[0.3em] text-[var(--c-6-start)] bg-black/40 backdrop-blur-md px-3 py-1 rounded-sm border border-white/10">
+                                {event.category || 'REGISTRY'}
+                              </span>
+                              {isLive && (
+                                <div className="flex items-center gap-2 text-red-500 font-mono text-[8px] uppercase tracking-widest bg-red-500/10 backdrop-blur-md px-3 py-1 rounded-sm border border-red-500/20">
+                                  <div className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
+                                  Live_Stream
+                                </div>
+                              )}
                             </div>
-                            {isLive ? (
-                              <div className="px-4 py-1.5 rounded-full bg-red-500 text-white text-[8px] font-bold uppercase tracking-widest flex items-center gap-2 animate-pulse">
-                                <div className="w-1.5 h-1.5 rounded-full bg-white" />
-                                Live Now
-                              </div>
-                            ) : isPast ? (
-                              <div className="px-4 py-1.5 rounded-full bg-zinc-800 text-zinc-500 text-[8px] font-bold uppercase tracking-widest border border-white/5">
-                                Past Event
-                              </div>
-                            ) : (
-                              <div className="px-4 py-1.5 rounded-full bg-[var(--c-6-start)]/20 text-[var(--c-6-start)] text-[8px] font-bold uppercase tracking-widest border border-[var(--c-6-start)]/30">
-                                Upcoming
-                              </div>
-                            )}
                           </div>
+
+                          {/* Gradient Overlay */}
+                          <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a] via-transparent to-transparent z-10" />
                         </div>
-                        <div className="p-8 lg:p-10 flex-grow flex flex-col">
-                          <h3 className="text-2xl md:text-3xl font-display font-bold mb-6 group-hover:text-[var(--c-6-start)] transition-colors leading-tight">{event.title}</h3>
-                          <p className="text-zinc-500 leading-relaxed mb-10 flex-grow font-light text-sm md:text-base">
+
+                        {/* Content Section */}
+                        <div className="relative p-10 flex-grow flex flex-col z-20 -mt-20">
+                          {/* Date Anchor */}
+                          <div className="mb-8">
+                            <div className="inline-block p-px bg-gradient-to-br from-white/20 to-transparent rounded-2xl">
+                              <div className="bg-[#121212] px-6 py-4 rounded-2xl flex items-center gap-6">
+                                <div className="flex flex-col items-center">
+                                  <span className="text-3xl font-display font-bold text-white leading-none">{event.date?.split(' ')[0]}</span>
+                                  <span className="text-[10px] uppercase font-mono tracking-tighter text-zinc-500">{event.date?.split(' ')[1]}</span>
+                                </div>
+                                <div className="w-px h-10 bg-white/10" />
+                                <div className="flex flex-col gap-1">
+                                  <div className="flex items-center gap-2 text-[10px] font-mono text-zinc-400 uppercase tracking-widest">
+                                    <Clock className="w-3 h-3 text-[var(--c-6-start)]" />
+                                    {event.time}
+                                  </div>
+                                  <div className="flex items-center gap-2 text-[10px] font-mono text-zinc-400 uppercase tracking-widest">
+                                    <MapPin className="w-3 h-3 text-[var(--c-6-start)]" />
+                                    {event.location}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+
+                          <h3 className="text-2xl md:text-3xl font-display font-bold mb-6 text-white group-hover:text-[var(--c-6-start)] transition-colors duration-500 leading-tight">
+                            {event.title}
+                          </h3>
+                          
+                          <p className="text-zinc-500 text-sm md:text-base leading-relaxed mb-10 line-clamp-3 font-light">
                             {event.description}
                           </p>
-                          <div className="space-y-4 mb-10 p-6 rounded-2xl bg-white/[0.02] border border-white/5">
-                            <div className="flex items-center gap-4 text-[10px] font-bold uppercase tracking-widest text-zinc-400">
-                              <Calendar className="w-4 h-4 text-[var(--c-6-start)]" />
-                              {event.date}
-                            </div>
-                            <div className="flex items-center gap-4 text-[10px] font-bold uppercase tracking-widest text-zinc-400">
-                              <Clock className="w-4 h-4 text-[var(--c-6-start)]" />
-                              {event.time}
-                            </div>
-                            <div className="flex items-center gap-4 text-[10px] font-bold uppercase tracking-widest text-zinc-400">
-                              <MapPin className="w-4 h-4 text-[var(--c-6-start)]" />
-                              {event.location}
-                            </div>
+
+                          <div className="mt-auto pt-8 border-t border-white/5">
+                            <a 
+                              href={event.registrationLink || '#'}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className={`group/btn w-full flex items-center justify-between px-8 py-5 rounded-xl border border-white/10 transition-all duration-500 ${
+                                isPast ? 'opacity-30 pointer-events-none' : 'hover:bg-white hover:text-black hover:border-white'
+                              }`}
+                            >
+                              <span className="font-mono text-[10px] font-bold uppercase tracking-[0.2em]">
+                                {isPast ? 'Archives_Closed' : (event.buttonText || 'Secure_Seat')}
+                              </span>
+                              {!isPast && <ArrowRight className="w-4 h-4 group-hover/btn:translate-x-2 transition-transform" />}
+                            </a>
                           </div>
-                          <a 
-                            href={event.registrationLink || '#'}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className={`w-full btn-premium-glow group/btn ${isPast ? 'opacity-50 grayscale pointer-events-none' : ''}`}
-                          >
-                            {isPast ? 'Event Ended' : (event.buttonText || 'Register Now')}
-                            {!isPast && <ArrowRight className="w-4 h-4 group-hover/btn:translate-x-2 transition-transform" />}
-                          </a>
                         </div>
+
+                        {/* Interactive Glow */}
+                        {!shouldReduceGfx && (
+                          <div className="absolute -inset-24 bg-[var(--c-6-start)]/5 blur-[100px] opacity-0 group-hover:opacity-100 transition-opacity duration-1000 pointer-events-none" />
+                        )}
                       </div>
                     </motion.div>
                   );

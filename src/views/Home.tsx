@@ -44,7 +44,30 @@ const Home = () => {
   const { home } = content;
   const { shouldReduceGfx } = usePerformance();
 
-  const testimonials = useMemo(() => home?.testimonials || [], [home?.testimonials]);
+  const testimonials = useMemo(() => {
+    const list = home?.testimonials || [];
+    if (list.length > 0) return list;
+    return [
+      {
+        name: "Dr. S.M. Abu Saim",
+        role: "Moderator",
+        message: "JMC has been a beacon of mathematical exploration for years. It's heartening to see students push their boundaries through logic and creativity.",
+        imageUrl: ""
+      },
+      {
+        name: "Samin Yasar",
+        role: "President",
+        message: "The club is not just about solving equations; it's about building a community that thinks differently and solves real-world challenges.",
+        imageUrl: ""
+      },
+      {
+        name: "Zidan Al-Zayed",
+        role: "General Secretary",
+        message: "Being part of JMC has shaped how I view complexity. It's a sanctuary for those who find beauty in the language of the universe.",
+        imageUrl: ""
+      }
+    ];
+  }, [home?.testimonials]);
   const duplicatedTestimonials = useMemo(() => {
     return [...testimonials, ...testimonials];
   }, [testimonials]);

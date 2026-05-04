@@ -173,7 +173,27 @@ const Panel = () => {
 
   const panel = content.panel;
 
-  const activePanelData = React.useMemo(() => panel?.executive?.[activeTab] || {}, [panel, activeTab]);
+  const moderators = React.useMemo(() => {
+    const list = panel?.moderators || [];
+    if (list.length > 0) return list;
+    return [{ name: "Dr. S.M. Abu Saim", role: "Chief Moderator", imageUrl: "" }];
+  }, [panel?.moderators]);
+
+  const activePanelData = React.useMemo(() => {
+    const data = panel?.executive?.[activeTab] || {};
+    // Ensure critical roles have at least a placeholder or default if everything is empty
+    if (activeTab === 'current' && (!data.president || data.president.length === 0) && (!data.generalSecretary || data.generalSecretary.length === 0)) {
+        return {
+            president: [{ name: "Samin Yasar", role: "President", imageUrl: "" }],
+            generalSecretary: [{ name: "Zidan Al-Zayed", role: "General Secretary", imageUrl: "" }],
+            deputyPresidents: [],
+            vicePresidents: [],
+            departments: [],
+            secretaries: { asstGeneralSecretary: [], jointSecretary: [], organizingSecretary: [], correspondingSecretary: [] }
+        };
+    }
+    return data;
+  }, [panel, activeTab]);
 
   const handleMemberUpdate = React.useCallback(async (jsonPath: string, value: any) => {
     try {
@@ -208,7 +228,7 @@ const Panel = () => {
             }}
             className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8"
           >
-            {panel.moderators?.map((m: any, i: number) => (
+            {moderators?.map((m: any, i: number) => (
               <motion.div
                 key={i}
                 variants={{

@@ -29,7 +29,13 @@ const DEFAULT_CONTENT = {
     logoUrl: "",
     eventMode: false,
     maintenanceMode: false,
-    maintenanceMessage: "The site is currently under maintenance"
+    maintenanceMessage: "The site is currently under maintenance",
+    announcements: [
+      "Welcome to Josephite Math Club!",
+      "New event starting soon - Register now!",
+      "Check out our latest articles in the library."
+    ],
+    showAnnouncements: true
   },
   home: {
     heroTagline: "Est. 2015 * Excellence in Mathematics",
@@ -57,7 +63,43 @@ const DEFAULT_CONTENT = {
       { title: "Research Projects", icon: "Lightbulb" }
     ],
     gallery: [],
-    testimonials: []
+    testimonials: [
+      {
+        id: "root-home-testimonials-0-j5tehjir4",
+        name: "Anthony Prince Costa",
+        role: "Chief Moderator",
+        message: "As Chief Moderator, I take pride in guiding the Math Club, which reflects the spirit of our department. Our mission is to create a community where mathematics is not just about formulas but about critical thinking, curiosity, and teamwork. This club allows students to go beyond textbooks and experience the true beauty of numbers and logic.",
+        imageUrl: "/images/members/anthony.png"
+      },
+      {
+        id: "root-home-testimonials-1-er0ttx1ep",
+        name: "Intesher Alam Manam",
+        role: "Club President",
+        message: "As the President of the Math Club, I feel honored to lead such a vibrant community. My vision is to make this club a hub for discovery, learning, and collaboration. Whether it's competitions, workshops, or friendly discussions, we want every member to feel inspired and motivated to see math not as pressure, but as passion.",
+        imageUrl: "/images/members/panel_26/intesher_alam_manam.png"
+      },
+      {
+        id: "root-home-testimonials-2-j621yhizn",
+        name: "Shoumik Saha Raj",
+        role: "General Secretary",
+        message: "As General Secretary, my role is to keep our Math Club organized, active, and welcoming for everyone. I work to ensure smooth coordination of events, competitions, and activities so that each member has the chance to participate and grow. Together, we are creating a community where learning mathematics is not only meaningful but also enjoyable.",
+        imageUrl: "/images/members/panel_26/shoumik_saha-raj.png"
+      },
+      {
+        id: "root-home-testimonials-3-gd5aotk2o",
+        name: "Monwar Rafat",
+        role: "Deputy President",
+        message: "Serving as Deputy President, I work alongside our president and members to ensure that the Math Club continues to grow with new initiatives. We aim to make mathematics a source of joy, exploration, and innovation for every student, giving them opportunities to learn and lead with confidence.",
+        imageUrl: "/images/members/panel_26/monwar_rafat.png"
+      },
+      {
+        id: "root-home-testimonials-4-2xng7rc2p",
+        name: "Arefin Anwar",
+        role: "Vice President",
+        message: "As Vice President, I believe the true strength of our Math Club lies in teamwork and inclusiveness. We are building a community where students not only sharpen their problem-solving skills but also learn to innovate, collaborate, and enjoy mathematics as a lifelong journey of discovery.",
+        imageUrl: "/images/members/panel_26/arefin_anwar.png"
+      }
+    ]
   },
   about: {
     title: "ABOUT US",
@@ -70,32 +112,54 @@ const DEFAULT_CONTENT = {
       { label: "Awards Won", value: "50+" }
     ],
     objectives: [
-      "Promote mathematical thinking and problem-solving skills.",
-      "Organize competitions and workshops at various levels.",
-      "Create a collaborative environment for math enthusiasts.",
-      "Bridge the gap between academic math and real-world applications."
+      { title: "Mathematical Thinking", description: "Promote deep mathematical thinking and intuitive problem-solving skills.", icon: "Calculator", color: "text-purple-400" },
+      { title: "Olympiad Spirit", description: "Organize competitions and workshops to prepare students for national and international stages.", icon: "Trophy", color: "text-amber-400" },
+      { title: "Collaborative Growth", description: "Create a supportive and collaborative environment for math enthusiasts to thrive.", icon: "Heart", color: "text-rose-400" },
+      { title: "Practical Math", description: "Bridge the gap between academic mathematics and its impactful real-world applications.", icon: "Lightbulb", color: "text-emerald-400" }
     ],
     visionSteps: [
-      { title: "Foundation", description: "Building a strong community of math enthusiasts." },
-      { title: "Innovation", description: "Exploring new ways to teach and learn mathematics." },
-      { title: "Excellence", description: "Achieving top results in national and international competitions." }
+      { title: "Discovery", desc: "Identifying mathematical potential in every student.", icon: "Target", color: "bg-gradient-to-br from-[var(--c-4-start)] to-[var(--c-4-end)]" },
+      { title: "Nurturing", desc: "Providing the resources and mentorship to grow.", icon: "Zap", color: "bg-gradient-to-br from-[var(--c-5-start)] to-[var(--c-5-end)]" },
+      { title: "Excellence", desc: "Achieving mastery through practice and competition.", icon: "Rocket", color: "bg-gradient-to-br from-[var(--c-2-start)] to-[var(--c-2-end)]" },
+      { title: "Impact", desc: "Applying math to solve real-world global problems.", icon: "Globe", color: "bg-gradient-to-br from-[var(--c-3-start)] to-[var(--c-3-end)]" }
     ]
   },
   panel: {
     title: "OUR PANEL",
     subtitle: "LEADERSHIP",
     description: "Meet the dedicated individuals who lead the Josephite Math Club towards its goals of excellence and innovation.",
-    committees: {
+    moderatorsTitle: "Moderators",
+    moderators: [
+      { name: "Anthony Prince Costa", role: "Chief Moderator", imageUrl: "/images/members/anthony.png" }
+    ],
+    executiveTitle: "Executive Committee",
+    executiveSubtitle: "The Core Leadership Team",
+    executive: {
       current: {
-        president: [],
-        vicePresidents: [],
-        generalSecretary: [],
-        secretaries: { asstGeneralSecretary: [], jointSecretary: [], organizingSecretary: [], correspondingSecretary: [] },
-        departments: []
+        president: [{ name: "Intesher Alam Manam", role: "President", imageUrl: "/images/members/panel_26/intesher_alam_manam.png" }],
+        deputyPresidents: [{ name: "Monwar Rafat", role: "Deputy President", imageUrl: "/images/members/panel_26/monwar_rafat.png" }],
+        generalSecretary: [{ name: "Shoumik Saha Raj", role: "General Secretary", imageUrl: "/images/members/panel_26/shoumik_saha-raj.png" }],
+        vicePresidents: [{ name: "Arefin Anwar", role: "Vice President", imageUrl: "/images/members/panel_26/arefin_anwar.png" }],
+        departments: [
+          { dept: "Internal Affairs", name: "Utkorsho Mistry Shouvik", imageUrl: "/images/members/panel_26/utkorsho_mistry_shouvik.png" },
+          { dept: "External Affairs", name: "Mahatab Hossain Zihan", imageUrl: "/images/members/panel_26/mahatab_hossain_zihan.png" },
+          { dept: "Photography", name: "Shirsha Roy", imageUrl: "/images/members/panel_26/shirsha_roy.png" },
+          { dept: "Events", name: "Ahnaf Abeed", imageUrl: "/images/members/panel_26/ahnaf_abeed.png" },
+          { dept: "Writings", name: "Shafayet Azmayeen", imageUrl: "/images/members/panel_26/shafayet_azmayeen.png" },
+          { dept: "Equity", name: "Hosain Istiyake Antor", imageUrl: "/images/members/panel_26/hosain_istiyake_antor.png" },
+          { dept: "Decoration", name: "Mahi Bareed Noor", imageUrl: "/images/members/panel_26/mahi_bareed_noor.png" }
+        ],
+        secretaries: { 
+          asstGeneralSecretary: [], 
+          jointSecretary: [], 
+          organizingSecretary: [], 
+          correspondingSecretary: [] 
+        }
       },
       recent: {
         president: [],
         generalSecretary: [],
+        deputyPresidents: [],
         vicePresidents: [],
         departments: [],
         secretaries: { asstGeneralSecretary: [], jointSecretary: [], organizingSecretary: [], correspondingSecretary: [] }
@@ -103,6 +167,7 @@ const DEFAULT_CONTENT = {
       former: {
         president: [],
         generalSecretary: [],
+        deputyPresidents: [],
         vicePresidents: [],
         departments: [],
         secretaries: { asstGeneralSecretary: [], jointSecretary: [], organizingSecretary: [], correspondingSecretary: [] }

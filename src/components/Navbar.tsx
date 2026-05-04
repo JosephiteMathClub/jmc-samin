@@ -94,6 +94,8 @@ const Navbar = () => {
 
   const logoUrl = content?.site?.logoUrl;
   const clubName = content?.site?.clubName || 'Josephite Math';
+  const announcements = content?.site?.announcements || [];
+  const showAnnouncements = content?.site?.showAnnouncements ?? true;
 
   const isAdminPage = pathname?.startsWith('/admin');
 
@@ -111,6 +113,25 @@ const Navbar = () => {
           : !isAdminPage ? 'bg-transparent py-4 border-b border-transparent' : 'py-4'
       }`}
     >
+      {/* Announcement Marquee */}
+      {!isAdminPage && showAnnouncements && announcements.length > 0 && (
+        <div className="w-full bg-[var(--c-6-start)]/10 border-b border-white/5 py-1.5 relative overflow-hidden group">
+          <div className="absolute inset-y-0 left-0 w-20 bg-gradient-to-r from-[#050505] to-transparent z-10" />
+          <div className="absolute inset-y-0 right-0 w-20 bg-gradient-to-l from-[#050505] to-transparent z-10" />
+          
+          <div className={`flex whitespace-nowrap ${!shouldReduceGfx ? 'animate-marquee' : 'overflow-x-auto'}`}>
+            {[...announcements, ...announcements, ...announcements, ...announcements].map((text, i) => (
+              <div key={i} className="inline-flex items-center mx-12">
+                <span className="w-1 h-1 rounded-full bg-[var(--c-6-start)] mr-4 shadow-[0_0_8px_rgba(255,184,0,0.8)]" />
+                <span className="text-[9px] font-mono font-bold tracking-[0.2em] text-white/60 uppercase">
+                  {text}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Elegant Scroll Progress Bar */}
       {!isAdminPage && scrolled && (
         <div 
