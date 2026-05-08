@@ -32,19 +32,25 @@ export function usePerformance() {
       const memory = (navigator as any).deviceMemory || 4;
       const connection = (navigator as any).connection;
       const isSlowNet = connection && (connection.saveData || /2g|3g/.test(connection.effectiveType));
+      const width = window.innerWidth;
+      const isSmallScreen = width < 768;
       
       // Determine level
       let level: 'high' | 'medium' | 'low' = 'high';
 
       if (isMobileDevice) {
-        if (cores <= 4 || memory <= 2 || isSlowNet) {
+        // Even high spec mobiles can struggle with battery/heat if animations are too heavy
+        // or if the screen resolution is too low to make them look good.
+        if (cores <= 4 || memory <= 2 || isSlowNet || width < 480) {
           level = 'low';
-        } else if (cores <= 6 || memory <= 4) {
+        } else if (cores <= 6 || memory <= 4 || isSmallScreen) {
           level = 'medium';
         }
       } else {
         if (cores <= 2 || memory <= 2) {
           level = 'low';
+        } else if (cores <= 4 || memory <= 4) {
+          level = 'medium';
         }
       }
 
@@ -87,6 +93,12 @@ export function usePerformance() {
     prefersReducedMotion,
     manualOverride,
     toggleOverride,
-    shouldReduceGfx: manualOverride !== null ? manualOverride : (isLowPower || prefersReducedMotion || performanceLevel === 'low')
+    shouldReduceGfx: manualOverride !== null ? manualOverride : (isLowPower || prefersReducedMotion || performanceLevel === 'low'),
+    // Aggressive limiter: stop background formulas unless on high-spec PC or high-spec Mobile
+    shouldStopFormulas: manualOverride !== null ? manualOverride : (
+      isMobile 
+        ? performanceLevel !== 'high' || prefersReducedMotion 
+        : performanceLevel === 'low' || prefersReducedMotion
+    )
   };
 }

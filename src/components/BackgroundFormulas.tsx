@@ -153,6 +153,8 @@ const BackgroundFormulas: React.FC<BackgroundFormulasProps> = ({ reduced = false
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
+    if (reduced) return;
+
     const canvas = canvasRef.current;
     if (!canvas) return;
 
@@ -163,8 +165,7 @@ const BackgroundFormulas: React.FC<BackgroundFormulasProps> = ({ reduced = false
     let formulaObjects: Formula[] = [];
     let cachedFontFamily = 'var(--font-handwritten)';
     let lastTime = 0;
-    const isMobile = reduced || /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-
+    
     const updateFont = () => {
       // Direct use of Caveat if standard check fails
       cachedFontFamily = 'Caveat, "Architects Daughter", cursive';
@@ -178,11 +179,11 @@ const BackgroundFormulas: React.FC<BackgroundFormulasProps> = ({ reduced = false
       updateFont();
       
       // Create a pool of formulas
-      const count = reduced ? 15 : 30;
+      const count = 30; // Standard count
       formulaObjects = Array.from({ length: count }).map(() => new Formula(window.innerWidth, window.innerHeight, ctx, cachedFontFamily));
       
       // Pre-spawn some formulas
-      const initialSpawnCount = reduced ? 2 : 5;
+      const initialSpawnCount = 5;
       for (let i = 0; i < initialSpawnCount; i++) {
         const f = formulaObjects[i];
         f.state = 'visible';
@@ -231,6 +232,8 @@ const BackgroundFormulas: React.FC<BackgroundFormulasProps> = ({ reduced = false
       cancelAnimationFrame(animationFrameId);
     };
   }, [reduced]);
+
+  if (reduced) return null;
 
   return (
     <canvas

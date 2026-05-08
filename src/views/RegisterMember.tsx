@@ -420,55 +420,79 @@ const RegisterMember = () => {
                     <div className="p-8 rounded-3xl bg-white/5 border border-white/10 space-y-4">
                       <p className="text-[10px] font-bold text-zinc-300 uppercase tracking-[0.2em] text-center">Account Verification</p>
                       <h4 className="text-sm font-bold text-white text-center">Does the user have an existing account on this website?</h4>
-                      <div className="flex gap-4 justify-center pt-2">
+                      <div className="flex flex-col sm:flex-row gap-4 justify-center pt-2">
                         <button 
                           onClick={() => setHasAccount(true)}
-                          className={`flex-1 px-8 py-4 rounded-xl border text-xs font-bold uppercase tracking-widest transition-all ${hasAccount === true ? 'bg-white/10 border-amber-500/50 text-white shadow-lg' : 'border-white/5 text-zinc-500 hover:border-white/20'}`}
+                          className={`flex-1 px-8 py-4 rounded-xl border text-xs font-bold uppercase tracking-widest transition-all ${hasAccount === true ? 'bg-white/10 border-amber-500/50 text-white shadow-lg shadow-amber-500/10' : 'border-white/5 text-zinc-500 hover:border-white/20'}`}
                         >
                           Yes, Link Existing
+                        </button>
+                        <button 
+                          onClick={() => setHasAccount(false)}
+                          className={`flex-1 px-8 py-4 rounded-xl border text-xs font-bold uppercase tracking-widest transition-all ${hasAccount === false ? 'bg-white/10 border-amber-500/50 text-white shadow-lg shadow-amber-500/10' : 'border-white/5 text-zinc-500 hover:border-white/20'}`}
+                        >
+                          No, they don't have
                         </button>
                       </div>
                     </div>
 
                     {hasAccount === true && (
-                      <div className="space-y-4">
-                        <div className="flex gap-4">
-                          <input 
-                            type="email"
-                            placeholder="Enter user's account email"
-                            value={searchEmail}
-                            onChange={(e) => setSearchEmail(e.target.value)}
-                            className="flex-1 px-6 py-4 bg-white/5 border border-white/10 rounded-2xl focus:outline-none focus:border-amber-500/50 text-white font-bold text-sm"
-                          />
-                          <button 
-                            onClick={handleSearchUser}
-                            disabled={searching}
-                            className="px-8 py-4 bg-white/10 border border-white/10 rounded-2xl text-white font-bold text-xs uppercase tracking-widest hover:bg-white/20 transition-all disabled:opacity-50"
-                          >
-                            {searching ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Search'}
-                          </button>
-                        </div>
-                        {foundUserId && (
-                          <div className="flex flex-col gap-2">
-                             <div className="p-4 rounded-2xl bg-green-500/10 border border-green-500/20 text-green-500 text-[10px] font-bold uppercase tracking-widest flex items-center justify-between">
-                              <div className="flex items-center gap-2">
-                                <CheckCircle2 className="w-4 h-4" />
-                                Linked to: {fullName} ({emailAddress})
-                              </div>
-                              <button 
-                                onClick={() => {
-                                  setFoundUserId(null);
-                                  setHasAccount(null);
-                                  setSearchEmail('');
-                                  setFullName('');
-                                  setEmailAddress('');
-                                }}
-                                className="px-3 py-1 bg-white/10 hover:bg-white/20 rounded-lg text-white transition-all underline decoration-white/20 underline-offset-2"
-                              >
-                                Change
-                              </button>
-                            </div>
+                      <div className="space-y-6">
+                        {!foundUserId ? (
+                          <div className="flex gap-4">
+                            <input 
+                              type="email"
+                              placeholder="Enter user's account email"
+                              value={searchEmail}
+                              onChange={(e) => setSearchEmail(e.target.value)}
+                              className="flex-1 px-6 py-4 bg-white/5 border border-white/10 rounded-2xl focus:outline-none focus:border-amber-500/50 text-white font-bold text-sm"
+                            />
+                            <button 
+                              onClick={handleSearchUser}
+                              disabled={searching}
+                              className="px-8 py-4 bg-white/10 border border-white/10 rounded-2xl text-white font-bold text-xs uppercase tracking-widest hover:bg-white/20 transition-all disabled:opacity-50"
+                            >
+                              {searching ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Search'}
+                            </button>
                           </div>
+                        ) : (
+                          <motion.div 
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            className="p-6 rounded-3xl bg-white/[0.03] border border-white/10 flex items-center gap-6"
+                          >
+                            <div className="relative w-16 h-16 md:w-20 md:h-20 rounded-2xl overflow-hidden bg-zinc-900 border border-white/10 shrink-0">
+                              <Image 
+                                src={resolveImageUrl(existingProfile?.avatar_url) || `https://api.dicebear.com/7.x/initials/svg?seed=${existingProfile?.full_name || 'User'}`} 
+                                alt={existingProfile?.full_name || 'User'}
+                                fill
+                                className="object-cover"
+                                referrerPolicy="no-referrer"
+                              />
+                            </div>
+                            <div className="flex-grow min-w-0">
+                              <div className="text-zinc-500 text-[8px] md:text-[9px] font-mono tracking-[0.2em] uppercase mb-1 flex items-center gap-2">
+                                <CheckCircle2 className="w-3 h-3 text-green-500" />
+                                Authenticated_Record
+                              </div>
+                              <h4 className="text-lg md:text-xl font-display font-medium text-white mb-1 truncate">{existingProfile?.full_name}</h4>
+                              <p className="text-zinc-500 text-xs truncate">{existingProfile?.email}</p>
+                            </div>
+                            <button 
+                              onClick={() => {
+                                setFoundUserId(null);
+                                setHasAccount(null);
+                                setExistingProfile(null);
+                                setSearchEmail('');
+                                setFullName('');
+                                setEmailAddress('');
+                              }}
+                              className="p-3 rounded-xl bg-white/5 hover:bg-red-500/10 text-zinc-500 hover:text-red-500 transition-all border border-transparent hover:border-red-500/20"
+                              title="Change User"
+                            >
+                              <Edit3 className="w-5 h-5" />
+                            </button>
+                          </motion.div>
                         )}
                       </div>
                     )}
@@ -600,7 +624,7 @@ const RegisterMember = () => {
                   )}
                 </div>
               </div>
-            ) : (registerFor === 'self') || (registerFor === 'other' && hasAccount !== null) ? (
+            ) : (registerFor === 'self') || (registerFor === 'other' && (hasAccount === false || (hasAccount === true && foundUserId))) ? (
               <div className="p-8 md:p-12 rounded-[40px] bg-white/[0.03] border border-white/10 backdrop-blur-xl">
                 <form onSubmit={handleRegisterMember} className="space-y-10">
                   {/* Photo Upload Section */}

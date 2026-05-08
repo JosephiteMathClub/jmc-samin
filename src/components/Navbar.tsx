@@ -115,20 +115,34 @@ const Navbar = () => {
     >
       {/* Announcement Marquee */}
       {!isAdminPage && showAnnouncements && announcements.length > 0 && (
-        <div className="w-full bg-[var(--c-6-start)]/10 border-b border-white/5 py-1.5 relative overflow-hidden group">
-          <div className="absolute inset-y-0 left-0 w-20 bg-gradient-to-r from-[#050505] to-transparent z-10" />
-          <div className="absolute inset-y-0 right-0 w-20 bg-gradient-to-l from-[#050505] to-transparent z-10" />
+        <div className="w-full bg-[var(--c-6-start)]/10 border-b border-white/5 py-2 md:py-3 relative overflow-hidden group">
+          <div className="absolute inset-y-0 left-0 w-20 bg-gradient-to-r from-[#050505] to-transparent z-10 hidden md:block" />
+          <div className="absolute inset-y-0 right-0 w-20 bg-gradient-to-l from-[#050505] to-transparent z-10 hidden md:block" />
           
-          <div className={`flex whitespace-nowrap ${!shouldReduceGfx ? 'animate-marquee' : 'overflow-x-auto'}`}>
+          <motion.div 
+            animate={!shouldReduceGfx ? {
+              x: ["0%", "-25%"],
+            } : {}}
+            transition={!shouldReduceGfx ? {
+              x: {
+                repeat: Infinity,
+                repeatType: "loop",
+                duration: 20 + announcements.length * 4,
+                ease: "linear",
+              },
+            } : {}}
+            className="flex whitespace-nowrap"
+          >
             {[...announcements, ...announcements, ...announcements, ...announcements].map((text, i) => (
-              <div key={i} className="inline-flex items-center mx-12">
-                <span className="w-1 h-1 rounded-full bg-[var(--c-6-start)] mr-4 shadow-[0_0_8px_rgba(255,184,0,0.8)]" />
-                <span className="text-[9px] font-mono font-bold tracking-[0.2em] text-white/60 uppercase">
+              <div key={i} className="inline-flex items-center mx-4 md:mx-12 shrink-0">
+                <span className="w-1 h-1 rounded-full bg-[var(--c-6-start)] mr-3 md:mr-4 shadow-[0_0_8px_rgba(255,184,0,0.8)]" />
+                <span className="text-[10px] md:text-sm font-mono font-bold tracking-[0.15em] md:tracking-[0.2em] text-white/80 uppercase">
                   {text}
                 </span>
+                <span className="ml-4 md:ml-12 text-white/20 select-none">{"//"}</span>
               </div>
             ))}
-          </div>
+          </motion.div>
         </div>
       )}
 

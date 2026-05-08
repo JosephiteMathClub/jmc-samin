@@ -213,11 +213,20 @@
 
   .glass-card {
     @apply relative overflow-hidden rounded-[2rem] border border-white/5 bg-[#0a0a0c]/80 backdrop-blur-2xl transition-all duration-700;
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+    box-shadow: none; /* No shadow on mobile */
+  }
+
+  @media (min-width: 768px) {
+    .glass-card {
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+    }
   }
 
   .glass-card:hover {
-    @apply border-white/15 -translate-y-2 shadow-[0_40px_80px_-15px_rgba(0,0,0,0.8)];
+    @apply border-white/15 -translate-y-2;
+    @media (min-width: 768px) {
+      box-shadow: 0 40px 80px -15px rgba(0, 0, 0, 0.8);
+    }
   }
 
   .glass-card::before {

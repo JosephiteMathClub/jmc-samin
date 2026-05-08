@@ -117,18 +117,18 @@ const About = () => {
             viewport={{ once: true }}
             transition={{ duration: shouldReduceGfx ? 0.1 : 1, ease: [0.22, 1, 0.36, 1] }}
           >
-            <h2 className="text-5xl md:text-8xl font-bold text-white mb-16 font-display tracking-tighter leading-none">
+            <h2 className="text-4xl md:text-8xl font-bold text-white mb-8 md:mb-16 font-display tracking-tighter leading-[1.1] md:leading-none">
               {(aboutContent.title || "What is JMC?").split(' ').map((word: string, i: number) => (
-                <span key={i} className={i === 2 ? "pink-text mr-6" : "mr-6"}>{word}</span>
+                <span key={i} className={i === 2 ? "pink-text mr-3 md:mr-6" : "mr-3 md:mr-6"}>{word}</span>
               ))}
             </h2>
             
-            <div className="text-zinc-400 max-w-5xl mx-auto text-xl md:text-3xl leading-relaxed mb-24 font-light tracking-tight min-h-[120px] px-4">
+            <div className="text-zinc-400 max-w-5xl mx-auto text-lg md:text-3xl leading-relaxed mb-16 md:mb-24 font-light tracking-tight min-h-[100px] md:min-h-[120px] px-4">
               <Typewriter text={aboutContent.description} />
             </div>
           </motion.div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-8 px-4 sm:px-0">
             {stats.map((stat: any, i: number) => (
               <motion.div
                 key={i}
@@ -136,13 +136,13 @@ const About = () => {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ delay: shouldReduceGfx ? 0 : i * 0.15, duration: shouldReduceGfx ? 0.1 : 0.8, ease: "easeOut" }}
-                className={`glass-card p-12 flex flex-col items-center justify-center border-white/5 ${!shouldReduceGfx && 'hover:border-[var(--c-2-start)]/30 transition-all group relative overflow-hidden'}`}
+                className={`glass-card p-6 md:p-12 flex flex-col items-center justify-center border-white/5 ${!shouldReduceGfx && 'hover:border-[var(--c-2-start)]/30 transition-all group relative overflow-hidden'}`}
               >
                 {!shouldReduceGfx && <div className="absolute inset-0 bg-gradient-to-br from-[var(--c-2-start)]/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700" />}
-                <span className={`text-6xl font-bold text-white mb-6 font-display tracking-tighter ${!shouldReduceGfx && 'group-hover:scale-110 transition-transform duration-700'}`}>
+                <span className={`text-3xl md:text-6xl font-bold text-white mb-2 md:mb-6 font-display tracking-tighter ${!shouldReduceGfx && 'group-hover:scale-110 transition-transform duration-700'}`}>
                   {stat.number}
                 </span>
-                <span className="text-[var(--c-2-start)]/60 text-xs font-black uppercase tracking-[0.3em] text-center">
+                <span className="text-[var(--c-2-start)]/60 text-[8px] md:text-xs font-black uppercase tracking-[0.2em] md:tracking-[0.3em] text-center">
                   {stat.label}
                 </span>
               </motion.div>
@@ -151,25 +151,23 @@ const About = () => {
         </section>
 
         {/* Our Objectives Section */}
-        <section className="text-center mb-48">
+        <section className="text-center mb-32 md:mb-48">
           <motion.div
             initial={shouldReduceGfx ? { opacity: 1 } : { opacity: 0, y: 30 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: shouldReduceGfx ? 0.1 : 0.8 }}
-            className="mb-24"
+            className="mb-16 md:mb-24 px-4"
           >
             <div className="inline-block px-3 py-1 mb-6 rounded-full bg-[var(--c-6-start)]/10 text-[var(--c-6-start)] text-[10px] font-bold tracking-[0.3em] uppercase border border-[var(--c-6-start)]/20">
               {aboutContent.visionTagline || "Our Vision"}
             </div>
-            <h2 className="text-5xl md:text-8xl font-bold text-white font-display tracking-tighter leading-none">
-              {aboutContent.objectivesTitle?.split(' ').map((word: string, i: number, arr: string[]) => (
-                <span key={i} className={i === arr.length - 1 ? "blue-text" : "mr-4"}>
+            <h2 className="text-4xl md:text-8xl font-bold text-white font-display tracking-tighter leading-tight md:leading-none">
+              {(aboutContent.objectivesTitle || "Our Objectives").split(' ').map((word: string, i: number, arr: string[]) => (
+                <span key={i} className={i === arr.length - 1 ? "blue-text" : "mr-3 md:mr-4"}>
                   {word}
                 </span>
-              )) || (
-                <>Our <span className="blue-text">Objectives</span></>
-              )}
+              ))}
             </h2>
           </motion.div>
 
@@ -235,7 +233,7 @@ const About = () => {
                   key={i} 
                   direction="up" 
                   distance={0}
-                  className={`relative p-12 border-white/5 ${i < 3 ? 'lg:border-r' : ''} ${i % 2 === 0 ? 'md:border-r lg:border-r-0' : ''} group overflow-hidden`}
+                  className={`relative p-8 md:p-12 border-white/5 ${i < 3 ? 'lg:border-r border-b lg:border-b-0' : 'border-b lg:border-b-0'} ${i % 2 === 0 ? 'md:border-r' : 'md:border-r-0 lg:border-r'} group overflow-hidden`}
                 >
                   {/* Phase ID */}
                   <div className="flex justify-between items-start mb-12">

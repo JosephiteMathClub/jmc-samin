@@ -209,17 +209,17 @@ const AdminDashboard = () => {
         if (!createRes.ok) {
           throw new Error(createData.error || 'Failed to create user account');
         }
-        userId = createData.user.id;
+        userId = createData.userId || createData.user?.id;
         showToast("User account created!", "success");
       } else if (memberData.hasAccount && memberData.email) {
         // If user has an account, find their ID by email
         const { data: userData, error: userError } = await supabase
           .from('profiles')
           .select('id')
-          .eq('email', memberData.email)
+          .eq('email', memberData.email.toLowerCase().trim())
           .single();
         
-        if (userError) {
+        if (userError || !userData) {
           throw new Error("Could not find an existing account with that email. Please ensure the user has signed up first.");
         }
         userId = userData.id;

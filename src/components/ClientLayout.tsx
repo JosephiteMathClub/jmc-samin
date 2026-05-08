@@ -22,7 +22,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   const { isAdmin } = useAuth();
   const pathname = usePathname();
   const [splashFinished, setSplashFinished] = useState(false);
-  const { shouldReduceGfx } = usePerformance();
+  const { shouldReduceGfx, shouldStopFormulas } = usePerformance();
 
   // Allow access to login and password reset pages even in maintenance mode
   const isAuthPage = pathname?.startsWith('/login') || 
@@ -75,7 +75,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
             {/* Background Components - Rendered above the base gradients but behind content */}
             <StarField reduced={shouldReduceGfx} />
             <MathVisualizations reduced={shouldReduceGfx} />
-            <BackgroundFormulas reduced={shouldReduceGfx} />
+            <BackgroundFormulas reduced={shouldStopFormulas} />
             
             {/* Sci-fi Scanning Grid (Subtle) */}
             <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.02] mix-blend-overlay" />

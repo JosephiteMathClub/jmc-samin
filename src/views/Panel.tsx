@@ -208,8 +208,8 @@ const Panel = () => {
   if (!panel) return null;
 
   return (
-    <div className="min-h-screen py-16 md:py-32 px-4 sm:px-8 bg-[#050505]">
-      <div className="max-w-screen-2xl mx-auto space-y-20 md:space-y-32">
+    <div className="min-h-screen py-24 md:py-32 px-4 sm:px-8 bg-[#050505] overflow-hidden">
+      <div className="max-w-screen-2xl mx-auto space-y-16 md:space-y-32">
         
         {/* --- MODERATORS SECTION --- */}
         <section>
@@ -227,7 +227,7 @@ const Panel = () => {
                 }
               }
             }}
-            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8"
+            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-8"
           >
             {moderators?.map((m: any, i: number) => (
               <motion.div
@@ -249,18 +249,18 @@ const Panel = () => {
         </section>
 
         {/* --- EXECUTIVE COMMITTEE SECTION --- */}
-        <section className="space-y-20">
+          <section className="space-y-12 md:space-y-20">
           <SectionHeading subtitle={panel.executiveSubtitle || "The Core Leadership"}>{panel.executiveTitle || "Executive Committee"}</SectionHeading>
           
           {/* Tabs */}
-          <ScrollReveal direction="up" distance={shouldReduceGfx ? 10 : 20} className="flex justify-center gap-4 mb-16">
+          <ScrollReveal direction="up" distance={shouldReduceGfx ? 10 : 20} className="flex justify-center gap-2 md:gap-4 mb-10 md:mb-16">
             {['current', 'recent', 'former'].map((tab) => (
               <motion.button
                 key={tab}
                 whileHover={shouldReduceGfx ? {} : { scale: 1.05, y: -2 }}
                 whileTap={shouldReduceGfx ? {} : { scale: 0.95 }}
                 onClick={() => setActiveTab(tab)}
-                className={`px-8 py-3 rounded-xl font-bold uppercase tracking-widest transition-all duration-300 relative overflow-hidden group/tab ${
+                className={`px-4 md:px-8 py-2 md:py-3 rounded-lg md:rounded-xl text-[10px] md:text-sm font-bold uppercase tracking-widest transition-all duration-300 relative overflow-hidden group/tab ${
                   activeTab === tab
                     ? 'text-white bg-gradient-to-b from-[#00B4DB] to-[#162E65] shadow-lg shadow-[#00B4DB]/20 border border-white/10'
                     : 'bg-white/5 text-zinc-500 hover:bg-white/10 hover:text-white border border-white/5'
@@ -376,13 +376,13 @@ const Panel = () => {
       </section>
 
         {/* --- DEPARTMENT LEADERSHIP SECTION --- */}
-        <section className="space-y-12">
+        <section className="space-y-8 md:space-y-12">
           <SectionHeading>{panel.departmentsTitle || "Department Leadership"}</SectionHeading>
           
-          <ScrollReveal direction="up" distance={40} className="glass-card p-1 border-[var(--c-6-start)]/20 overflow-hidden">
-            <div className="bg-[var(--c-6-start)]/10 p-6 flex items-center gap-4 border-b border-[var(--c-6-start)]/20">
+          <ScrollReveal direction="up" distance={40} className="glass-card p-1 border-[var(--c-6-start)]/20 overflow-hidden mx-4 md:mx-0">
+            <div className="bg-[var(--c-6-start)]/10 p-4 md:p-6 flex items-center gap-4 border-b border-[var(--c-6-start)]/20">
               {shouldReduceGfx ? (
-                <Users className="w-6 h-6 text-[var(--c-6-start)]" />
+                <Users className="w-5 h-5 md:w-6 md:h-6 text-[var(--c-6-start)]" />
               ) : (
                 <motion.div
                   animate={{ 
@@ -395,13 +395,13 @@ const Panel = () => {
                     ease: "easeInOut" 
                   }}
                 >
-                  <Users className="w-6 h-6 text-[var(--c-6-start)]" />
+                  <Users className="w-5 h-5 md:w-6 md:h-6 text-[var(--c-6-start)]" />
                 </motion.div>
               )}
-              <h3 className="text-xl font-bold text-white font-display uppercase tracking-widest">{panel.departmentsSubtitle || "Department Heads"}</h3>
+              <h3 className="text-sm md:text-xl font-bold text-white font-display uppercase tracking-widest">{panel.departmentsSubtitle || "Department Heads"}</h3>
             </div>
             
-            <div className="p-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 bg-black/40">
+            <div className="p-4 md:p-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 bg-black/40">
               {activePanelData.departments?.map((d: any, i: number) => (
                 <div key={i} className="glass-card p-6 border-white/5 flex flex-col items-center text-center group hover:bg-white/5 transition-all relative">
                   <p className="text-[var(--c-6-start)] font-bold text-xs mb-2 uppercase tracking-tighter">{d.dept}</p>
