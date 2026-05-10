@@ -5,9 +5,10 @@ import Link from "next/link";
 import Image from "next/image";
 import { useContent } from "@/context/ContentContext";
 import ContactModal from "@/components/ContactModal";
-
+import { motion } from "framer-motion";
+import { ChevronUp, Radio, Mail, ShieldCheck } from "lucide-react";
+import { FacebookIcon, InstagramIcon, GithubIcon } from "@/components/SocialIcons";
 import { usePerformance } from "@/hooks/usePerformance";
-
 import { resolveImageUrl } from "@/lib/utils";
 
 const Footer = () => {
@@ -17,110 +18,167 @@ const Footer = () => {
   const clubName = content?.site?.clubName || 'Josephite Math Club';
   const logoUrl = resolveImageUrl(content?.site?.logoUrl) || "/images/logo.png";
 
+  const scrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   return (
-    <footer className="bg-[#050505] text-zinc-400 py-20 border-t border-white/5 relative z-10 overflow-hidden">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-16 mb-16">
-          {/* Brand Section */}
-          <div className="md:col-span-5 space-y-8">
-            <div className="flex items-center space-x-4 px-6 py-4 hud-bracket hud-bracket-tl hud-bracket-br bg-white/[0.02]">
-              <div className="h-10 w-24 relative">
+    <footer className="bg-[#050505] text-zinc-500 py-32 border-t border-white/5 relative z-10 overflow-hidden">
+      {/* Background HUD Decor */}
+      <div className="absolute bottom-0 right-0 w-[40vw] h-[40vw] bg-[var(--c-6-start)]/5 blur-[120px] rounded-full pointer-events-none" />
+
+      <div className="max-w-7xl mx-auto px-6 lg:px-10">
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-16 lg:gap-24 mb-24">
+          
+          {/* Brand/Core Section */}
+          <div className="md:col-span-4 space-y-10">
+            <Link href="/" className="flex items-center gap-5 group">
+              <div className="relative w-14 h-14 transition-all duration-700 group-hover:scale-110">
+                <div className="absolute inset-0 bg-[var(--c-6-start)]/20 blur-xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity" />
                 <Image 
                   src={logoUrl} 
                   alt="JMC Logo" 
                   fill
-                  className="object-contain filter grayscale invert opacity-80"
+                  className="object-contain relative z-10"
                 />
               </div>
-              <div className="font-display font-bold leading-tight text-white">
-                <div className="text-xl tracking-tighter uppercase">{clubName}</div>
-                <div className="mono-label text-[7px] text-zinc-600 mt-1">VER_PROTO.2.4.9 // AUTH_REQUIRED</div>
+              <div className="flex flex-col gap-0.5">
+                <span className="text-2xl font-display font-black tracking-tighter text-white uppercase">{clubName}</span>
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-[var(--c-6-start)] animate-pulse" />
+                  <span className="text-[9px] font-mono font-black text-zinc-500 tracking-[0.4em]">SYS_ACTIVE_PRO</span>
+                </div>
               </div>
-            </div>
-            <p className="text-sm max-w-xs leading-relaxed opacity-60">
-              Nurturing logical thinking and mathematical curiosity at St. Joseph Higher Secondary School. Connecting the dots between theory and reality.
+            </Link>
+            
+            <p className="text-sm font-medium leading-relaxed max-w-sm">
+              Cultivating the next generation of logical thinkers and mathematical visionaries. Breaking boundaries through the language of the universe.
             </p>
+
+            <div className="pt-4 flex items-center gap-6">
+               {[
+                 { icon: FacebookIcon, href: content?.contact?.socials?.facebook },
+                 { icon: InstagramIcon, href: content?.contact?.socials?.instagram },
+                 { icon: GithubIcon, href: "#" },
+               ].map((social, i) => social.href && (
+                 <Link key={i} href={social.href} target="_blank" className="p-3 rounded-full glass border-white/5 text-zinc-500 hover:text-white transition-all hover:scale-110">
+                    <social.icon className="w-4 h-4" />
+                 </Link>
+               ))}
+            </div>
           </div>
 
-          {/* Quick Links */}
-          <div className="md:col-span-2 space-y-6">
-            <h4 className="mono-label text-white">Navigation</h4>
+          {/* Navigation Matrix */}
+          <div className="md:col-span-2 space-y-8">
+            <h4 className="text-[10px] font-mono font-black text-white uppercase tracking-[0.4em] mb-10 flex items-center gap-2">
+               <div className="w-1 h-[10px] bg-[var(--c-6-start)]" />
+               Index
+            </h4>
             <ul className="space-y-4">
-              <li><Link href="/" className="text-xs hover:text-[var(--c-6-start)] transition-colors mono-label opacity-70 hover:opacity-100">Home</Link></li>
-              <li><Link href="/about" className="text-xs hover:text-[var(--c-6-start)] transition-colors mono-label opacity-70 hover:opacity-100">About</Link></li>
-              <li><Link href="/panel" className="text-xs hover:text-[var(--c-6-start)] transition-colors mono-label opacity-70 hover:opacity-100">Panel</Link></li>
+              {['Home', 'About', 'Panel', 'Events'].map((link) => (
+                <li key={link}>
+                  <Link 
+                    href={`/${link === 'Home' ? '' : link.toLowerCase()}`} 
+                    className="text-xs font-mono font-black uppercase tracking-[0.2em] text-zinc-500 hover:text-[var(--c-6-start)] transition-all flex items-center gap-3 group"
+                  >
+                    <span className="w-0 h-[1px] bg-[var(--c-6-start)] transition-all group-hover:w-4" />
+                    {link}
+                  </Link>
+                </li>
+              ))}
             </ul>
           </div>
 
-          {/* More Links */}
-          <div className="md:col-span-2 space-y-6">
-            <h4 className="mono-label text-white">Explore</h4>
+          <div className="md:col-span-2 space-y-8">
+            <h4 className="text-[10px] font-mono font-black text-white uppercase tracking-[0.4em] mb-10 flex items-center gap-2">
+               <div className="w-1 h-[10px] bg-[var(--c-6-start)]" />
+               Operations
+            </h4>
             <ul className="space-y-4">
-              <li><Link href="/#memories" className="text-xs hover:text-[var(--c-6-start)] transition-colors mono-label opacity-70 hover:opacity-100">Gallery</Link></li>
+              {['Notices', 'Articles', 'Gallery'].map((link) => (
+                <li key={link}>
+                  <Link 
+                    href={`/${link.toLowerCase()}`} 
+                    className="text-xs font-mono font-black uppercase tracking-[0.2em] text-zinc-500 hover:text-[var(--c-6-start)] transition-all flex items-center gap-3 group"
+                  >
+                    <span className="w-0 h-[1px] bg-[var(--c-6-start)] transition-all group-hover:w-4" />
+                    {link}
+                  </Link>
+                </li>
+              ))}
               <li>
-                <button 
-                  onClick={() => setIsContactOpen(true)}
-                  className="text-xs hover:text-[var(--c-6-start)] transition-colors mono-label opacity-70 hover:opacity-100 text-left"
-                >
+                <button onClick={() => setIsContactOpen(true)} className="text-xs font-mono font-black uppercase tracking-[0.2em] text-zinc-500 hover:text-[var(--c-6-start)] transition-all flex items-center gap-3 group">
+                  <span className="w-0 h-[1px] bg-[var(--c-6-start)] transition-all group-hover:w-4" />
                   Contact
                 </button>
               </li>
             </ul>
           </div>
 
-          {/* Newsletter */}
-          <div className="md:col-span-3 space-y-6">
-            <div className="p-6 rounded-2xl border border-white/5 bg-white/[0.01] relative overflow-hidden group">
-              <div className="absolute top-0 right-0 p-2 opacity-20">
-                <div className="w-1 h-1 bg-[var(--c-6-start)]" />
-              </div>
-              <h4 className="mono-label text-white mb-4">Transmission</h4>
-              <p className="text-[10px] text-zinc-500 mb-6 leading-relaxed">Join our secure data stream for mathematical challenges and updates.</p>
-              <div className="flex flex-col space-y-3">
-                <input 
-                  type="email" 
-                  placeholder="ID@DOMAIN.XYZ" 
-                  className="bg-black/40 border border-white/10 rounded-lg px-4 py-3 text-[10px] font-mono focus:outline-none focus:ring-1 focus:ring-[var(--c-6-start)] transition-all placeholder:text-zinc-700 uppercase"
-                />
-                <button className="btn-metallic-blue !py-3 !rounded-lg !text-[8px] !px-0">
-                  Initialize Sync
-                </button>
-              </div>
-            </div>
-            
-            {/* Social Links */}
-            <div className="flex items-center gap-4 pt-4 px-2">
-              {content?.contact?.socials?.facebook && (
-                <Link href={content.contact.socials.facebook} target="_blank" rel="noopener noreferrer" className="text-zinc-500 hover:text-[var(--c-6-start)] transition-colors">
-                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
-                </Link>
-              )}
-              <div className="h-4 w-px bg-white/10 mx-1" />
-              {content?.contact?.socials?.instagram && (
-                <Link href={content.contact.socials.instagram} target="_blank" rel="noopener noreferrer" className="text-zinc-500 hover:text-[var(--c-6-start)] transition-colors">
-                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>
-                </Link>
-              )}
+          {/* Integration Sector */}
+          <div className="md:col-span-4 space-y-10">
+            <div className="p-10 rounded-[2.5rem] glass border-white/5 relative overflow-hidden group">
+               <div className="absolute top-0 right-0 p-5 opacity-20">
+                  <Radio className="w-6 h-6 text-[var(--c-6-start)] animate-pulse" />
+               </div>
+               
+               <h4 className="text-sm font-display font-black text-white uppercase tracking-widest mb-4">Transmission_Secure</h4>
+               <p className="text-[10px] font-mono font-bold text-zinc-500 mb-8 leading-relaxed tracking-wider uppercase">Join the neural network for exclusive mathematical insights.</p>
+               
+               <div className="flex flex-col gap-4">
+                  <div className="relative">
+                    <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-700" />
+                    <input 
+                      type="email" 
+                      placeholder="ENTER_IDENTITY_KEY" 
+                      className="w-full bg-black/40 border border-white/10 rounded-2xl pl-12 pr-4 py-4 text-[10px] font-mono font-black text-white focus:outline-none focus:border-[var(--c-6-start)]/50 transition-all placeholder:text-zinc-800"
+                    />
+                  </div>
+                  <button className="w-full py-4 bg-white text-black text-[10px] font-mono font-black uppercase tracking-[0.4em] rounded-2xl hover:bg-[var(--c-6-start)] hover:text-white transition-all shadow-[0_0_30px_rgba(255,255,255,0.05)]">
+                    Sync_Access
+                  </button>
+               </div>
             </div>
           </div>
         </div>
 
-        {/* Bottom Metadata */}
-        <div className="pt-12 border-t border-white/5 flex flex-col items-center gap-6 relative">
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-[1px] bg-gradient-to-r from-transparent via-[var(--c-6-start)] to-transparent opacity-50" />
-          <div className="grid grid-cols-3 gap-12 text-[7px] mono-label text-zinc-700 opacity-50">
-            <div className="flex flex-col items-center">
-              <span>REGION_LOCK: OFF</span>
-              <span>ENC: AES-256</span>
-            </div>
-            <div className="flex flex-col items-center text-[9px] text-zinc-500 font-bold tracking-[0.4em]">
-              (C) JMC 2025 // PROTOCOL_V3
-            </div>
-            <div className="flex flex-col items-center">
-              <span>LAT_SYNC: 99.8%</span>
-              <span>UPTIME: 14:24:59:02</span>
-            </div>
-          </div>
+        {/* Technical Footer Metadata */}
+        <div className="pt-16 border-t border-white/5 relative flex flex-col md:flex-row justify-between items-center gap-10">
+           <div className="flex items-center gap-10 opacity-30">
+              <div className="flex flex-col gap-1">
+                 <span className="text-[8px] font-mono font-black text-zinc-500 uppercase tracking-widest">Protocol</span>
+                 <span className="text-[10px] font-mono font-black text-white uppercase tracking-widest">S_01_GLOBAL</span>
+              </div>
+              <div className="w-[1px] h-8 bg-white/10" />
+              <div className="flex flex-col gap-1">
+                 <span className="text-[8px] font-mono font-black text-zinc-500 uppercase tracking-widest">Encoding</span>
+                 <span className="text-[10px] font-mono font-black text-white uppercase tracking-widest">AES_256_PRO</span>
+              </div>
+           </div>
+
+           <div className="text-center group cursor-default">
+              <div className="text-[10px] font-mono font-black text-white uppercase tracking-[0.8em] mb-2 px-10 relative">
+                 (C) {new Date().getFullYear()} JMC_MAINFRAME
+                 <div className="absolute top-1/2 left-0 w-8 h-[1px] bg-white/10" />
+                 <div className="absolute top-1/2 right-0 w-8 h-[1px] bg-white/10" />
+              </div>
+              <div className="flex items-center justify-center gap-3">
+                 <ShieldCheck className="w-3 h-3 text-[var(--c-6-start)]" />
+                 <span className="text-[8px] font-mono font-black text-zinc-600 uppercase tracking-[0.2em]">Verified Secure Transmission System v4.2.0</span>
+              </div>
+           </div>
+
+           <motion.button 
+            whileHover={{ y: -5 }}
+            whileTap={{ scale: 0.9 }}
+            onClick={scrollToTop}
+            className="p-5 rounded-2xl glass border-white/10 text-white group relative"
+           >
+              <ChevronUp className="w-6 h-6 group-hover:text-[var(--c-6-start)] transition-colors" />
+              <div className="absolute inset-x-0 bottom-1 flex justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                 <div className="w-1 h-1 rounded-full bg-[var(--c-6-start)] shadow-[0_0_10px_rgba(0,180,219,1)]" />
+              </div>
+           </motion.button>
         </div>
       </div>
 

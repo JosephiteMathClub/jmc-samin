@@ -3,7 +3,9 @@ import "./globals.css";
 import { AuthProvider } from "@/context/AuthContext";
 import { ContentProvider } from "@/context/ContentContext";
 import { ToastProvider } from "@/context/ToastContext";
+import { TechSupportProvider } from "@/context/TechSupportContext";
 import ClientLayout from "@/components/ClientLayout";
+import { SmoothScroll } from "@/components/SmoothScroll";
 import React from "react";
 
 const inter = Inter({
@@ -63,9 +65,13 @@ export default function RootLayout({
       >
         <AuthProvider>
           <ToastProvider>
-            <ContentProvider>
-              <ClientLayout>{children}</ClientLayout>
-            </ContentProvider>
+            <TechSupportProvider>
+              <ContentProvider>
+                <SmoothScroll>
+                  <ClientLayout>{children}</ClientLayout>
+                </SmoothScroll>
+              </ContentProvider>
+            </TechSupportProvider>
           </ToastProvider>
         </AuthProvider>
       </body>

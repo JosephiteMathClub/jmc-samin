@@ -14,6 +14,17 @@ CREATE TABLE IF NOT EXISTS public.profiles (
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
+-- Ensure email column exists in profiles
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='profiles' AND column_name='email') THEN
+        ALTER TABLE public.profiles ADD COLUMN email TEXT;
+    END IF;
+END $$;
+
+-- Indices for profiles
+CREATE INDEX IF NOT EXISTS idx_profiles_email ON public.profiles(email);
+
 -- Create the site_content table
 CREATE TABLE IF NOT EXISTS public.site_content (
   id TEXT PRIMARY KEY,
@@ -23,10 +34,9 @@ CREATE TABLE IF NOT EXISTS public.site_content (
 
 -- Create the member table
 CREATE TABLE IF NOT EXISTS public.member (
-  id UUID PRIMARY KEY,
+  id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   full_name TEXT,
   email TEXT,
-  email_address TEXT,
   phone TEXT,
   school TEXT,
   class TEXT,
@@ -41,6 +51,18 @@ CREATE TABLE IF NOT EXISTS public.member (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
+
+-- Ensure email_address and other columns exist in member
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='member' AND column_name='email_address') THEN
+        ALTER TABLE public.member ADD COLUMN email_address TEXT;
+    END IF;
+END $$;
+
+-- Add email index for member table
+CREATE INDEX IF NOT EXISTS idx_member_email ON public.member(email);
+CREATE INDEX IF NOT EXISTS idx_member_verified ON public.member(verified);
 
 -- Create the event_participation table
 CREATE TABLE IF NOT EXISTS public.event_participation (
@@ -85,13 +107,29 @@ BEGIN
   RETURN (
     EXISTS (
       SELECT 1 FROM public.profiles 
-      WHERE id = auth.uid() AND role = 'admin'
+      WHERE id = auth.uid() AND (role = 'admin' OR role = 'super_admin')
     )
     OR (
       auth.jwt() ->> 'email' IN (
-        'l47idkpro@gmail.com',
-        'jarysucksatgames@gmail.com', -- Added your current email for immediate admin access
-        'admin@example.com'
+        'l47idkpro@gmail.com'
+      )
+    )
+  );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Create is_super_admin helper function
+CREATE OR REPLACE FUNCTION public.is_super_admin()
+RETURNS boolean AS $$
+BEGIN
+  RETURN (
+    EXISTS (
+      SELECT 1 FROM public.profiles 
+      WHERE id = auth.uid() AND role = 'super_admin'
+    )
+    OR (
+      auth.jwt() ->> 'email' IN (
+        'l47idkpro@gmail.com'
       )
     )
   );
@@ -134,8 +172,48 @@ CREATE TRIGGER on_participation_updated
   BEFORE UPDATE ON public.event_participation
   FOR EACH ROW EXECUTE FUNCTION handle_updated_at();
 
+-- Function to handle new user signup
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS TRIGGER AS $$
+BEGIN
+  INSERT INTO public.profiles (id, full_name, email, role)
+  VALUES (
+    NEW.id, 
+    COALESCE(NEW.raw_user_meta_data ->> 'full_name', NEW.email),
+    NEW.email,
+    CASE 
+      WHEN NEW.email = 'l47idkpro@gmail.com' THEN 'admin'
+      ELSE 'member'
+    END
+  );
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
+
+-- Trigger to call handle_new_user on signup
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+CREATE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+
 -- ==========================================
--- 5. Create Policies
+-- 5. Backfill Existing Users
+-- ==========================================
+-- Sync existing auth users who don't have a profile yet
+INSERT INTO public.profiles (id, full_name, email, role)
+SELECT 
+  id, 
+  COALESCE(raw_user_meta_data ->> 'full_name', email),
+  email,
+  CASE 
+    WHEN email = 'l47idkpro@gmail.com' THEN 'admin'
+    ELSE 'member'
+  END
+FROM auth.users
+ON CONFLICT (id) DO NOTHING;
+
+-- ==========================================
+-- 6. Create Policies
 -- ==========================================
 
 -- --- Policies for site_content ---
@@ -181,7 +259,75 @@ DROP POLICY IF EXISTS "Admin manage participation" ON public.event_participation
 CREATE POLICY "Admin manage participation" ON public.event_participation FOR ALL TO authenticated USING (public.is_admin());
 
 -- ==========================================
--- 6. Performance & Indexes
+-- 6. Storage Setup
+-- ==========================================
+-- Create the 'images' and 'avatars' buckets if they don't exist
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('images', 'images', true), ('avatars', 'avatars', true)
+ON CONFLICT (id) DO NOTHING;
+
+-- Storage policies for 'images' and 'avatars' buckets
+DROP POLICY IF EXISTS "Allow public to view images" ON storage.objects;
+CREATE POLICY "Allow public to view images" ON storage.objects FOR SELECT USING (bucket_id IN ('images', 'avatars'));
+
+DROP POLICY IF EXISTS "Allow authenticated to upload images" ON storage.objects;
+CREATE POLICY "Allow authenticated to upload images" ON storage.objects FOR INSERT TO authenticated WITH CHECK (bucket_id IN ('images', 'avatars'));
+
+DROP POLICY IF EXISTS "Allow authenticated to update images" ON storage.objects;
+CREATE POLICY "Allow authenticated to update images" ON storage.objects FOR UPDATE TO authenticated USING (bucket_id IN ('images', 'avatars'));
+
+DROP POLICY IF EXISTS "Allow admins to delete images" ON storage.objects;
+CREATE POLICY "Allow admins to delete images" ON storage.objects FOR DELETE TO authenticated USING (bucket_id IN ('images', 'avatars') AND public.is_admin());
+
+-- ==========================================
+-- 7. Performance & Indexes
 -- ==========================================
 CREATE INDEX IF NOT EXISTS idx_participation_member_id ON public.event_participation(member_id);
 CREATE INDEX IF NOT EXISTS idx_participation_event_cat ON public.event_participation(event_name, category);
+
+-- ==========================================
+-- 8. Support Tickets
+-- ==========================================
+-- Create the support_tickets table
+CREATE TABLE IF NOT EXISTS public.support_tickets (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+    user_email TEXT,
+    user_name TEXT,
+    subject TEXT DEFAULT 'Technical Problem',
+    message TEXT NOT NULL,
+    error_context JSONB DEFAULT NULL,
+    status TEXT DEFAULT 'open', -- open, in_progress, resolved, closed
+    admin_reply TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Index for support_tickets
+CREATE INDEX IF NOT EXISTS idx_support_tickets_user_id ON public.support_tickets(user_id);
+CREATE INDEX IF NOT EXISTS idx_support_tickets_status ON public.support_tickets(status);
+
+-- Enable RLS
+ALTER TABLE public.support_tickets ENABLE ROW LEVEL SECURITY;
+
+-- Trigger for support_tickets updated_at
+DROP TRIGGER IF EXISTS on_support_tickets_updated ON public.support_tickets;
+CREATE TRIGGER on_support_tickets_updated
+  BEFORE UPDATE ON public.support_tickets
+  FOR EACH ROW EXECUTE FUNCTION handle_updated_at();
+
+-- Policies for support_tickets
+DROP POLICY IF EXISTS "Users can view own tickets" ON public.support_tickets;
+CREATE POLICY "Users can view own tickets" ON public.support_tickets 
+  FOR SELECT TO authenticated 
+  USING (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "Users can create own tickets" ON public.support_tickets;
+CREATE POLICY "Users can create own tickets" ON public.support_tickets 
+  FOR INSERT TO authenticated 
+  WITH CHECK (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "Admins can manage all tickets" ON public.support_tickets;
+CREATE POLICY "Super Admins can manage all tickets" ON public.support_tickets 
+  FOR ALL TO authenticated 
+  USING (public.is_super_admin());

@@ -99,19 +99,29 @@ export const BatchMemberUpload: React.FC<BatchMemberUploadProps> = ({
             continue;
           }
 
+        try {
+          // 1. Check if user already exists in profiles
+          // We search by ID if we could, but here we only have email.
+          // If the email column is missing from profiles, this will fail.
+          // We'll wrap it in a try-catch specifically for this.
+          let profile = null;
           try {
-            // 1. Check if user already exists in profiles
-            const { data: profile } = await supabase
+            const { data } = await supabase
               .from('profiles')
               .select('id')
-              .eq('email', email.toLowerCase().trim())
-              .single();
+              .filter('email', 'eq', email.toLowerCase().trim())
+              .maybeSingle();
+            profile = data;
+          } catch (e) {
+            console.warn("Profiles table might be missing 'email' column, falling back to non-linked account creation.");
+          }
 
-            if (profile) {
+          if (profile) {
               logs.push(`Row ${rowNum}: Existing account found for ${email}. Updating member info.`);
               await addMember({
                 full_name: fullName,
                 email: email.toLowerCase().trim(),
+                phone: phone,
                 class: classVal,
                 section: sectionVal,
                 roll: rollVal,
@@ -240,17 +250,24 @@ export const BatchMemberUpload: React.FC<BatchMemberUploadProps> = ({
         }
 
         try {
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('id')
-            .eq('email', email.toLowerCase().trim())
-            .single();
+          let profile = null;
+          try {
+            const { data } = await supabase
+              .from('profiles')
+              .select('id')
+              .filter('email', 'eq', email.toLowerCase().trim())
+              .maybeSingle();
+            profile = data;
+          } catch (e) {
+            console.warn("Profiles table might be missing 'email' column, falling back to non-linked account creation.");
+          }
 
           if (profile) {
             logs.push(`Row ${rowNum}: Existing account found for ${email}. Updating member info.`);
             await addMember({
               full_name: fullName,
               email: email.toLowerCase().trim(),
+              phone: phone,
               class: classVal,
               section: sectionVal,
               roll: rollVal,

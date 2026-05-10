@@ -25,6 +25,7 @@ interface DashboardLayoutProps {
   saveSuccess: boolean;
   isSupabaseConfigured: boolean;
   logoUrl?: string;
+  isSuperAdmin?: boolean;
   tabs: { id: string; label: string; icon: LucideIcon }[];
   children: React.ReactNode;
 }
@@ -38,6 +39,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
   saveSuccess, 
   isSupabaseConfigured,
   logoUrl,
+  isSuperAdmin,
   tabs,
   children
 }) => {
@@ -65,8 +67,11 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
         fixed inset-y-0 left-0 z-[70] w-72 lg:w-80 border-r border-white/5 bg-[#080808] flex flex-col transition-transform duration-500 lg:translate-x-0 lg:sticky lg:top-0 lg:h-screen
         ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}
       `}>
-        <div className="p-6 lg:p-8 border-b border-white/5 flex items-center justify-between">
-          <div className="flex items-center gap-4">
+        <div className="p-6 lg:p-8 border-b border-white/5 flex items-center justify-between relative overflow-hidden group">
+          {!shouldReduceGfx && (
+            <div className="absolute inset-0 bg-gradient-to-r from-amber-500/0 via-amber-500/5 to-amber-500/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
+          )}
+          <div className="flex items-center gap-4 relative z-10">
             <div className="w-20 lg:w-24 h-10 relative">
               <Image 
                 src={resolveImageUrl(logoUrl) || "/images/logo.png"} 
@@ -77,8 +82,13 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
               />
             </div>
             <div>
-              <h2 className="text-base lg:text-lg font-bold text-white font-display tracking-tight">JMC Admin</h2>
-              <p className="text-[9px] lg:text-[10px] text-zinc-500 font-bold uppercase tracking-[0.2em]">Control Center</p>
+              <h2 className="text-base lg:text-lg font-bold text-white font-display tracking-tight">
+                {isSuperAdmin ? "JMC Root" : "JMC Admin"}
+              </h2>
+              <p className="text-[9px] lg:text-[10px] text-zinc-500 font-bold uppercase tracking-[0.2em] flex items-center gap-2">
+                <span className={`w-1 h-1 rounded-full ${isSuperAdmin ? 'bg-purple-500 shadow-[0_0_8px_rgba(168,85,247,0.8)]' : 'bg-amber-500'} animate-pulse`} />
+                {isSuperAdmin ? "Root Access" : "Control Center"}
+              </p>
             </div>
           </div>
           <button 
@@ -89,12 +99,15 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
           </button>
         </div>
 
-        <div className="flex-1 p-6 overflow-y-auto space-y-8 custom-scrollbar">
+        <div className="flex-1 p-6 overflow-y-auto space-y-8 custom-scrollbar relative">
+          {/* Subtle noise pattern for background */}
+          {!shouldReduceGfx && <div className="absolute inset-0 opacity-[0.02] pointer-events-none bg-[url('https://grainy-gradients.vercel.app/noise.svg')]" />}
+          
           {!isSupabaseConfigured && (
             <motion.div 
               initial={shouldReduceGfx ? { opacity: 0 } : { opacity: 0, scale: 0.95 }}
               animate={shouldReduceGfx ? { opacity: 1 } : { opacity: 1, scale: 1 }}
-              className="p-5 bg-amber-500/5 border border-amber-500/10 rounded-3xl text-amber-500 text-[11px] leading-relaxed shadow-inner"
+              className="p-5 bg-amber-500/5 border border-amber-500/10 rounded-3xl text-amber-500 text-[11px] leading-relaxed shadow-inner relative z-10"
             >
               <div className="flex items-center gap-2 font-bold mb-2 uppercase tracking-widest">
                 <ShieldAlert className="w-4 h-4" />
@@ -104,23 +117,28 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
             </motion.div>
           )}
 
-          <div>
-            <h3 className="text-[10px] font-bold text-zinc-600 uppercase tracking-[0.3em] mb-6 px-4">Management</h3>
-            <nav className="space-y-2">
+          <div className="relative z-10">
+            <div className="flex items-center justify-between mb-6 px-4">
+              <h3 className="text-[10px] font-bold text-zinc-600 uppercase tracking-[0.3em]">Management</h3>
+              <div className="flex gap-1">
+                {[1, 2, 3].map(i => <div key={i} className="w-1 h-1 bg-zinc-800 rounded-full" />)}
+              </div>
+            </div>
+            <nav className="space-y-1">
               {tabs.map((tab) => (
                 <button
                   key={tab.id}
                   onClick={() => onTabChange(tab.id)}
-                  className={`w-full group flex items-center justify-between px-5 py-4 rounded-2xl transition-all duration-500 relative overflow-hidden ${
+                  className={`w-full group flex items-center justify-between px-5 py-3.5 rounded-2xl transition-all duration-500 relative overflow-hidden ${
                     activeTab === tab.id 
-                      ? 'bg-amber-500 text-black shadow-2xl shadow-amber-500/20 translate-x-1' 
-                      : 'text-zinc-500 hover:bg-white/5 hover:text-zinc-200'
+                      ? 'text-black translate-x-1' 
+                      : 'text-zinc-500 hover:bg-white/[0.02] hover:text-zinc-200'
                   }`}
                 >
                   {activeTab === tab.id && !shouldReduceGfx && (
                     <motion.div 
                       layoutId="activeTab"
-                      className="absolute inset-0 bg-amber-500 z-0"
+                      className="absolute inset-0 bg-amber-500 z-0 shadow-2xl shadow-amber-500/50"
                       transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
                     />
                   )}
@@ -128,33 +146,50 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
                     <div className="absolute inset-0 bg-amber-500 z-0" />
                   )}
                   <div className="flex items-center gap-4 relative z-10">
-                    <tab.icon className={`w-5 h-5 transition-colors duration-300 ${activeTab === tab.id ? 'text-black' : 'text-zinc-600 group-hover:text-amber-500'}`} />
-                    <span className="text-sm font-bold tracking-tight">{tab.label}</span>
+                    <tab.icon className={`w-4 h-4 transition-colors duration-300 ${activeTab === tab.id ? 'text-black' : 'text-zinc-600 group-hover:text-amber-500'}`} />
+                    <span className="text-xs font-bold tracking-tight uppercase group-hover:tracking-widest transition-all duration-500">{tab.label}</span>
                   </div>
-                  {activeTab === tab.id && <ChevronRight className="w-4 h-4 relative z-10" />}
+                  {activeTab === tab.id && <div className="w-1 h-1 bg-black rounded-full relative z-10" />}
                 </button>
               ))}
             </nav>
           </div>
         </div>
 
-        <div className="p-6 border-t border-white/5 space-y-4">
-          <div className="flex items-center gap-4 p-4 bg-white/[0.03] rounded-3xl border border-white/5 group hover:border-white/10 transition-colors">
-            <div className="w-10 h-10 rounded-full bg-zinc-900 flex items-center justify-center text-zinc-600 border border-white/5 group-hover:text-amber-500 transition-colors">
+        <div className="p-6 border-t border-white/5 space-y-4 relative z-10 bg-[#080808]">
+          <div className="flex items-center justify-between px-2 mb-2">
+            <div className="flex gap-1.5">
+              <div className="w-1.5 h-1.5 rounded-full bg-red-500/40" />
+              <div className="w-1.5 h-1.5 rounded-full bg-amber-500/40" />
+              <div className="w-1.5 h-1.5 rounded-full bg-emerald-500/40" />
+            </div>
+            <span className="text-[8px] font-mono text-zinc-600 tracking-tighter">V4.0.2_STABLE</span>
+          </div>
+          <div className={`flex items-center gap-4 p-4 rounded-3xl border transition-colors ${
+            isSuperAdmin ? 'bg-purple-500/5 border-purple-500/10 group hover:border-purple-500/20' : 'bg-white/[0.03] border-white/5 group hover:border-white/10'
+          }`}>
+            <div className={`w-10 h-10 rounded-full flex items-center justify-center border transition-colors ${
+              isSuperAdmin ? 'bg-zinc-900 text-purple-500 border-purple-500/20' : 'bg-zinc-900 text-zinc-600 border-white/5 group-hover:text-amber-500'
+            }`}>
               <Shield className="w-5 h-5" />
             </div>
             <div className="min-w-0">
-              <p className="text-xs font-bold text-white truncate">Administrator</p>
-              <p className="text-[10px] text-zinc-600 font-medium truncate uppercase tracking-widest">System Active</p>
+              <p className="text-xs font-bold text-white truncate">
+                {isSuperAdmin ? "Master_Root" : "Administrator"}
+              </p>
+              <p className="text-[10px] text-zinc-600 font-medium truncate uppercase tracking-widest flex items-center gap-1.5">
+                <span className={`w-1 h-1 rounded-full animate-pulse ${isSuperAdmin ? 'bg-purple-500' : 'bg-emerald-500'}`} />
+                {isSuperAdmin ? 'Kernel_Verified' : 'Identity_Verified'}
+              </p>
             </div>
           </div>
           
           <button 
             onClick={() => router.push('/')}
-            className="w-full flex items-center justify-center gap-2 px-4 py-3 text-zinc-500 hover:text-white transition-colors text-xs font-bold uppercase tracking-widest"
+            className="w-full flex items-center justify-center gap-2 px-4 py-3 text-zinc-600 hover:text-white transition-colors text-[10px] font-bold uppercase tracking-widest border border-transparent hover:border-white/5 rounded-2xl"
           >
-            <LogOut className="w-4 h-4" />
-            Exit Dashboard
+            <LogOut className="w-3.5 h-3.5" />
+            Terminal_Exit
           </button>
         </div>
       </div>

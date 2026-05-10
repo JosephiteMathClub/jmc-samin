@@ -2,12 +2,13 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User } from '@supabase/supabase-js';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
-import { DEFAULT_ADMINS } from '../lib/constants';
+import { DEFAULT_ADMINS, SUPER_ADMIN_EMAILS } from '../lib/constants';
 
 interface AuthContextType {
   user: User | null;
   loading: boolean;
   isAdmin: boolean;
+  isSuperAdmin: boolean;
   profile: any | null;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
@@ -17,6 +18,7 @@ const AuthContext = createContext<AuthContextType>({
   user: null,
   loading: true,
   isAdmin: false,
+  isSuperAdmin: false,
   profile: null,
   signOut: async () => {},
   refreshProfile: async () => {},
@@ -26,15 +28,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<any | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
 
   const lastUserId = React.useRef<string | null>(null);
+
+  const SUPER_ADMIN_EMAILS_LIST = React.useMemo(() => {
+    const superAdminEmailsEnv = process.env.NEXT_PUBLIC_SUPER_ADMIN_EMAILS;
+    return Array.from(new Set([
+      ...(superAdminEmailsEnv ? superAdminEmailsEnv.split(',') : []),
+      ...SUPER_ADMIN_EMAILS
+    ])).map(e => e.trim().toLowerCase()).filter(Boolean);
+  }, []);
 
   const ADMIN_EMAILS = React.useMemo(() => {
     const adminEmailsEnv = process.env.NEXT_PUBLIC_ADMIN_EMAILS;
     return Array.from(new Set([
       ...(adminEmailsEnv ? adminEmailsEnv.split(',') : []),
-      ...DEFAULT_ADMINS
+      ...DEFAULT_ADMINS,
+      ...SUPER_ADMIN_EMAILS
     ])).map(e => e.trim().toLowerCase()).filter(Boolean);
   }, []);
 
@@ -53,30 +65,36 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           ...data,
           full_name: data.full_name || currentUser.user_metadata?.full_name || currentUser.user_metadata?.name || ""
         });
-        setIsAdmin(data.role === 'admin' || ADMIN_EMAILS.includes(userEmail));
+        setIsAdmin(data.role === 'admin' || data.role === 'super_admin' || ADMIN_EMAILS.includes(userEmail));
+        setIsSuperAdmin(data.role === 'super_admin' || SUPER_ADMIN_EMAILS_LIST.includes(userEmail));
       } else {
+        const isSuper = SUPER_ADMIN_EMAILS_LIST.includes(userEmail);
         setProfile({ 
           email: currentUser.email, 
           full_name: currentUser.user_metadata?.full_name || currentUser.user_metadata?.name || "",
-          role: ADMIN_EMAILS.includes(userEmail) ? 'admin' : 'member' 
+          role: isSuper ? 'super_admin' : (ADMIN_EMAILS.includes(userEmail) ? 'admin' : 'member') 
         });
-        setIsAdmin(ADMIN_EMAILS.includes(userEmail));
+        setIsAdmin(ADMIN_EMAILS.includes(userEmail) || isSuper);
+        setIsSuperAdmin(isSuper);
       }
     } catch (err) {
       console.error("AuthContext: Profile fetch exception:", err);
-      if (ADMIN_EMAILS.includes(userEmail)) {
+      const isSuper = SUPER_ADMIN_EMAILS_LIST.includes(userEmail);
+      if (ADMIN_EMAILS.includes(userEmail) || isSuper) {
         setIsAdmin(true);
+        setIsSuperAdmin(isSuper);
         setProfile({ 
-          role: 'admin', 
+          role: isSuper ? 'super_admin' : 'admin', 
           email: currentUser.email,
           full_name: currentUser.user_metadata?.full_name || currentUser.user_metadata?.name || ""
         });
       } else {
         setProfile(null);
         setIsAdmin(false);
+        setIsSuperAdmin(false);
       }
     }
-  }, [ADMIN_EMAILS]);
+  }, [ADMIN_EMAILS, SUPER_ADMIN_EMAILS_LIST]);
 
   const handleAuthChange = React.useCallback(async (user: User | null) => {
     // Only proceed if there's a genuine change in user state or first load
@@ -90,16 +108,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     
     if (user) {
       const userEmail = (user.email || "").toLowerCase();
-      setIsAdmin(ADMIN_EMAILS.includes(userEmail));
+      const isSuper = SUPER_ADMIN_EMAILS_LIST.includes(userEmail);
+      setIsAdmin(ADMIN_EMAILS.includes(userEmail) || isSuper);
+      setIsSuperAdmin(isSuper);
       
       // Ensure we fetch profile but don't hold up loading if we already have a partial state
       await fetchProfile(user);
     } else {
       setProfile(null);
       setIsAdmin(false);
+      setIsSuperAdmin(false);
     }
     setLoading(false);
-  }, [fetchProfile, profile, ADMIN_EMAILS]);
+  }, [fetchProfile, profile, ADMIN_EMAILS, SUPER_ADMIN_EMAILS_LIST]);
 
   const refreshProfile = React.useCallback(async () => {
     if (user) {
@@ -133,19 +154,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (!isMounted) return;
       
-      const sessionUser = session?.user ?? null;
-      console.log(`[AuthContext] Event: ${event}, User: ${sessionUser?.email || 'none'}`);
-      
-      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED' || event === 'INITIAL_SESSION') {
-        if (sessionUser) {
-          handleAuthChange(sessionUser);
-        } else if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
-          // If we had a SIGNED_IN or INITIAL_SESSION but no user, it's effectively a sign out
-          handleAuthChange(null);
-        }
-      } else if (event === 'SIGNED_OUT') {
+    const sessionUser = session?.user ?? null;
+    console.log(`[AuthContext] Event: ${event}, User: ${sessionUser?.email || 'none'}`);
+    
+    if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED' || event === 'INITIAL_SESSION') {
+      if (sessionUser) {
+        handleAuthChange(sessionUser);
+      } else if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
         handleAuthChange(null);
       }
+    } else if (event === 'SIGNED_OUT') {
+      handleAuthChange(null);
+    }
     });
 
     return () => {
@@ -159,16 +179,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setUser(null);
     setProfile(null);
     setIsAdmin(false);
+    setIsSuperAdmin(false);
   };
 
   const value = React.useMemo(() => ({ 
     user, 
     loading, 
-    isAdmin, 
+    isAdmin,
+    isSuperAdmin,
     profile, 
     signOut, 
     refreshProfile 
-  }), [user, loading, isAdmin, profile, refreshProfile]);
+  }), [user, loading, isAdmin, isSuperAdmin, profile, refreshProfile]);
 
   return (
     <AuthContext.Provider value={value}>

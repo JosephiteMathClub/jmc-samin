@@ -93,15 +93,14 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: createError.message }, { status: 500 });
     }
 
-    // 3. Create profile for the new user
+    // 3. Create profile for the new user (or update if trigger already ran)
     const { error: profileError } = await supabaseAdmin
       .from('profiles')
-      .insert({
+      .upsert({
         id: newUser.user.id,
-        email: email,
         full_name: fullName,
         role: 'member'
-      });
+      }, { onConflict: 'id' });
 
     if (profileError) {
       console.error('Error creating profile:', profileError);

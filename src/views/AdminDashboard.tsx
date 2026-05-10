@@ -12,6 +12,7 @@ import {
   Trash2, 
   FileText,
   ShieldAlert,
+  Shield,
   Award,
   Trophy,
   BookOpen,
@@ -27,7 +28,9 @@ import { DashboardFormField } from '../components/dashboard/DashboardFormField';
 import { DashboardButton } from '../components/dashboard/DashboardButton';
 import { DashboardFileUpload } from '../components/dashboard/DashboardFileUpload';
 import { EventParticipation } from '../components/dashboard/EventParticipation';
-import { UserManagement } from '../components/dashboard/UserManagement';
+import { SuperAdminPanel } from '../components/dashboard/SuperAdminPanel';
+import { SupportManagement } from '../components/dashboard/SupportManagement';
+import { deleteFileFromStorage } from '../lib/storage';
 
 import dynamic from 'next/dynamic';
 
@@ -72,12 +75,19 @@ const AdminSkeleton = () => (
 
 const AdminDashboard = () => {
   const { content, loading: contentLoading, saveAllContent, seedDatabase } = useContent();
-  const { user, isAdmin, loading: authLoading } = useAuth();
+  const { user, isAdmin, isSuperAdmin, loading: authLoading } = useAuth();
   const { showToast } = useToast();
   const router = useRouter();
   const { shouldReduceGfx } = usePerformance();
   
-  const [activeTab, setActiveTab] = useState('home');
+  const [activeTab, setActiveTab] = useState('events');
+
+  useEffect(() => {
+    if (!authLoading && isSuperAdmin && activeTab === 'events') {
+       setActiveTab('home');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authLoading, isSuperAdmin]);
   const [localContent, setLocalContent] = useState<any>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'success' | 'error'>('idle');
@@ -166,6 +176,11 @@ const AdminDashboard = () => {
       
       if (error) throw error;
       
+      // Also delete their photo from storage if they have one
+      if (member.photo_url) {
+        await deleteFileFromStorage(member.photo_url);
+      }
+      
       setMembers(prev => prev.filter(m => m.id !== member.id));
       showToast(`Member ${member.full_name} removed from database`, "success");
     } catch (err: any) {
@@ -213,14 +228,23 @@ const AdminDashboard = () => {
         showToast("User account created!", "success");
       } else if (memberData.hasAccount && memberData.email) {
         // If user has an account, find their ID by email
-        const { data: userData, error: userError } = await supabase
-          .from('profiles')
-          .select('id')
-          .eq('email', memberData.email.toLowerCase().trim())
-          .single();
+        // Gracefully handle missing email column in profiles
+        let userData = null;
+        try {
+          const { data, error: userError } = await supabase
+            .from('profiles')
+            .select('id')
+            .eq('email', memberData.email.toLowerCase().trim())
+            .maybeSingle();
+          
+          if (userError) throw userError;
+          userData = data;
+        } catch (e) {
+          console.error("Error fetching user from profiles by email:", e);
+        }
         
-        if (userError || !userData) {
-          throw new Error("Could not find an existing account with that email. Please ensure the user has signed up first.");
+        if (!userData) {
+          throw new Error("Could not find an existing account with that email in our profiles database. Please ensure the user has signed up first.");
         }
         userId = userData.id;
       }
@@ -308,6 +332,21 @@ const AdminDashboard = () => {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    // Check if we are replacing an existing file
+    let oldUrl: string | null = null;
+    if (path) {
+      setLocalContent((prev: any) => {
+        let current = prev;
+        for (let key of path) {
+          current = current?.[key];
+        }
+        if (typeof current === 'string' && current.startsWith('http')) {
+          oldUrl = current;
+        }
+        return prev;
+      });
+    }
+
     // Check file size (limit to 10MB for safety)
     const MAX_SIZE = 10 * 1024 * 1024;
     if (file.size > MAX_SIZE) {
@@ -347,6 +386,12 @@ const AdminDashboard = () => {
       if (callback) {
         callback(publicUrl);
       }
+      
+      // Cleanup old file if it was replaced
+      if (oldUrl) {
+        await deleteFileFromStorage(oldUrl);
+      }
+
       showToast("File uploaded successfully!", "success");
     } catch (error: any) {
       const errorMessage = error.message || error.error_description || "Unknown error";
@@ -484,9 +529,88 @@ const AdminDashboard = () => {
     setConfirmDelete({ section, field, index, isOpen: true });
   };
 
-  const executeDelete = () => {
+  const executeDelete = async () => {
     const { section, field, index, path } = confirmDelete;
     
+    // Find the item to be deleted to check for images and DB references
+    let itemToDelete: any = null;
+    let fullList: any[] = [];
+    
+    if (path) {
+      let current = localContent;
+      for (let key of path) {
+        current = current?.[key];
+      }
+      fullList = current || [];
+      itemToDelete = fullList?.[index];
+    } else {
+      fullList = localContent?.[section]?.[field] || [];
+      itemToDelete = fullList?.[index];
+    }
+
+    if (!itemToDelete) return;
+
+    // 1. Storage Deletion
+    const storageUrls = [];
+    if (itemToDelete.image_url) storageUrls.push(itemToDelete.image_url);
+    if (itemToDelete.imageUrl) storageUrls.push(itemToDelete.imageUrl);
+    if (itemToDelete.photo_url) storageUrls.push(itemToDelete.photo_url);
+    if (itemToDelete.avatar_url) storageUrls.push(itemToDelete.avatar_url);
+    
+    for (const url of storageUrls) {
+      try {
+        await deleteFileFromStorage(url);
+      } catch (err) {
+        console.warn("Storage deletion failed:", err);
+      }
+    }
+
+    // 2. Database Deletion Sync (requested by user)
+    // If we're deleting from panel, member_list, or events, check for DB counterparts
+    if (isSupabaseConfigured) {
+      try {
+        // If it's a member (has member_id or specific email)
+        const identifier = itemToDelete.member_id || itemToDelete.email || itemToDelete.email_address;
+        if (identifier) {
+          // Attempt to find by member_id first
+          const { data: memberRecord } = await supabase
+            .from('member')
+            .select('id, member_id')
+            .or(`member_id.eq.${identifier},email.eq.${identifier},email_address.eq.${identifier}`)
+            .maybeSingle();
+
+          if (memberRecord) {
+            // Delete from member table
+            await supabase.from('member').delete().eq('id', memberRecord.id);
+            // Delete participation
+            if (memberRecord.member_id) {
+              await supabase.from('event_participation').delete().eq('member_id', memberRecord.member_id);
+            }
+          }
+        }
+
+        // If it's an event (has title and is in events section)
+        if (section === 'events' || field === 'events') {
+          const eventTitle = itemToDelete.title;
+          if (eventTitle) {
+            // Delete all participation records for this event
+            await supabase
+              .from('event_participation')
+              .delete()
+              .eq('event_name', eventTitle);
+          }
+        }
+
+        // If it's an event participation item
+        if (section === 'participation' || field === 'participation') {
+           // We don't usually delete participation from JSON because it's DB-first
+        }
+      } catch (err) {
+        console.warn("Database sync deletion failed:", err);
+      }
+    }
+
+    // 3. State update
     if (path) {
       setLocalContent((prev: any) => produce(prev, (draft: any) => {
         let current = draft;
@@ -566,17 +690,20 @@ const AdminDashboard = () => {
   };
 
   const tabs = [
-    { id: 'home', label: 'Home', icon: LayoutDashboard },
-    { id: 'participation', label: 'Participation', icon: Trophy },
-    { id: 'about', label: 'About', icon: FileText },
     { id: 'events', label: 'Events', icon: Calendar },
     { id: 'notices', label: 'Notices', icon: Bell },
-    { id: 'panel', label: 'Panel', icon: Users },
-    { id: 'gallery', label: 'Gallery', icon: LayoutDashboard },
+    { id: 'participation', label: 'Participation', icon: Trophy },
     { id: 'articles', label: 'Articles', icon: BookOpen },
     { id: 'members', label: 'Members', icon: Award },
-    { id: 'access', label: 'Access Control', icon: ShieldAlert },
-    { id: 'site', label: 'Site Config', icon: Settings },
+    { id: 'gallery', label: 'Gallery', icon: LayoutDashboard },
+    ...(isSuperAdmin ? [
+      { id: 'home', label: 'Home', icon: LayoutDashboard },
+      { id: 'about', label: 'About', icon: FileText },
+      { id: 'panel', label: 'Panel', icon: Users },
+      { id: 'support', label: 'Support', icon: ShieldAlert },
+      { id: 'super_admin', label: 'Super Admin', icon: Shield },
+      { id: 'site', label: 'Site Config', icon: Settings },
+    ] : [])
   ];
 
   return (
@@ -589,6 +716,7 @@ const AdminDashboard = () => {
       saveSuccess={saveStatus === 'success'}
       isSupabaseConfigured={isSupabaseConfigured}
       logoUrl={localContent?.site?.logoUrl}
+      isSuperAdmin={isSuperAdmin}
       tabs={tabs}
     >
       <AnimatePresence mode="wait">
@@ -698,15 +826,27 @@ const AdminDashboard = () => {
           />
         )}
 
-        {activeTab === 'access' && (
+        {activeTab === 'support' && (
           <motion.div
-            key="access"
+            key="support"
             initial={shouldReduceGfx ? { opacity: 0 } : { opacity: 0, x: 20 }}
             animate={shouldReduceGfx ? { opacity: 1 } : { opacity: 1, x: 0 }}
             exit={shouldReduceGfx ? { opacity: 0 } : { opacity: 0, x: -20 }}
             className="space-y-8"
           >
-            <UserManagement />
+            <SupportManagement />
+          </motion.div>
+        )}
+
+        {activeTab === 'super_admin' && (
+          <motion.div
+            key="super_admin"
+            initial={shouldReduceGfx ? { opacity: 0 } : { opacity: 0, x: 20 }}
+            animate={shouldReduceGfx ? { opacity: 1 } : { opacity: 1, x: 0 }}
+            exit={shouldReduceGfx ? { opacity: 0 } : { opacity: 0, x: -20 }}
+            className="space-y-8"
+          >
+            <SuperAdminPanel />
           </motion.div>
         )}
 

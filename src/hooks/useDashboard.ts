@@ -35,7 +35,7 @@ export const useDashboard = () => {
               });
               return newItem;
             } else if (typeof item === 'string' && prefix.includes('gallery')) {
-              return { id: `gallery-${i}-${Math.random().toString(36).substr(2, 9)}`, url: item };
+              return { id: `gallery-${i}-${Math.random().toString(36).substr(2, 9)}`, url: item, title: 'Imported Image', category: 'EVENT', description: '' };
             }
             return item;
           });
@@ -78,11 +78,7 @@ export const useDashboard = () => {
     setSaveSuccess(false);
     try {
       const dataToSave = produce(localContent, (draft: any) => {
-        if (draft.gallery && Array.isArray(draft.gallery.images)) {
-          draft.gallery.images = draft.gallery.images.map((item: any) => 
-            (item && typeof item === 'object' && 'url' in item) ? item.url : item
-          );
-        }
+        // Note: gallery arrays are now arrays of objects natively, so we don't strip them to strings.
       });
 
       await saveAllContent(dataToSave);
@@ -175,7 +171,7 @@ export const useDashboard = () => {
               });
               return newItem;
             } else if (typeof item === 'string' && prefix.includes('gallery')) {
-              return { id: `gallery-${i}-${Math.random().toString(36).substr(2, 9)}`, url: item };
+              return { id: `gallery-${i}-${Math.random().toString(36).substr(2, 9)}`, url: item, title: 'Imported Image', category: 'EVENT', description: '' };
             }
             return item;
           });

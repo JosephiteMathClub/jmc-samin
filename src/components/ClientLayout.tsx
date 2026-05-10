@@ -14,8 +14,8 @@ import FloatingSidebar from "@/components/FloatingSidebar";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import Footer from "@/components/Footer";
 import MaintenanceView from "@/components/MaintenanceView";
+import { SupportTrigger } from "@/components/SupportTrigger";
 import { usePerformance } from "@/hooks/usePerformance";
-import { PerformanceControl } from "@/components/PerformanceControl";
 
 export default function ClientLayout({ children }: { children: React.ReactNode }) {
   const { loading, content } = useContent();
@@ -83,13 +83,13 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
 
           <Navbar />
           <FloatingSidebar />
-          <PerformanceControl />
           <main className="flex-grow relative z-10">
             <ErrorBoundary>
               {children}
             </ErrorBoundary>
           </main>
           
+          <SupportTrigger />
           <Footer />
         </motion.div>
       )}

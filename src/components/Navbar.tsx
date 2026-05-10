@@ -1,31 +1,34 @@
 "use client";
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '../context/AuthContext';
 import { useContent } from '../context/ContentContext';
-import { Menu, X, User, LogOut, LayoutDashboard } from 'lucide-react';
-import { supabase } from '../lib/supabase';
+import { Menu, X, User, LogOut, LayoutDashboard, Globe, Cpu, Radio } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { resolveImageUrl } from '../lib/utils';
-
 import { usePerformance } from '../hooks/usePerformance';
+import gsap from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
+
+gsap.registerPlugin(ScrollTrigger);
 
 const Navbar = () => {
   const { user, isAdmin, signOut } = useAuth();
   const { content } = useContent();
-  const [isOpen, setIsOpen] = React.useState(false);
-  const [scrolled, setScrolled] = React.useState(false);
-  const [scrollProgress, setScrollProgress] = React.useState(0);
+  const [isOpen, setIsOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
   const pathname = usePathname();
   const { shouldReduceGfx } = usePerformance();
-  const [isInputFocused, setIsInputFocused] = React.useState(false);
+  const [isInputFocused, setIsInputFocused] = useState(false);
+  const progressRef = useRef<HTMLDivElement>(null);
+  const navRef = useRef<HTMLDivElement>(null);
 
-  React.useEffect(() => {
+  useEffect(() => {
     // Hide when typing on mobile
     const handleFocus = (e: FocusEvent) => {
-      if (window.innerWidth >= 768) return; // Only on mobile
+      if (window.innerWidth >= 768) return;
       const target = e.target as HTMLElement;
       if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') {
         setIsInputFocused(true);
@@ -41,54 +44,40 @@ const Navbar = () => {
     };
   }, []);
 
-  React.useEffect(() => {
-    let ticking = false;
+  useEffect(() => {
     const handleScroll = () => {
-      if (!ticking) {
-        window.requestAnimationFrame(() => {
-          const currentScroll = window.scrollY;
-          setScrolled(currentScroll > 20);
-          
-          if (!shouldReduceGfx) {
-            const windowHeight = document.documentElement.scrollHeight - window.innerHeight;
-            if (windowHeight > 0) {
-              const currentProgress = (currentScroll / windowHeight) * 100;
-              // Only update if difference is noticeable (e.g., > 0.5%)
-              setScrollProgress(prev => Math.abs(prev - currentProgress) > 0.5 ? currentProgress : prev);
-            }
-          }
-          
-          ticking = false;
-        });
-        ticking = true;
-      }
+      setScrolled(window.scrollY > 50);
     };
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, [shouldReduceGfx]);
 
-  const [timeState, setTimeState] = React.useState<{ date: string, time: string } | null>(null);
+    window.addEventListener('scroll', handleScroll);
 
-  React.useEffect(() => {
-    const updateTime = () => {
-      const now = new Date();
-      setTimeState({
-        date: now.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).toUpperCase(),
-        time: now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0')
+    // GSAP Scroll Progress
+    if (progressRef.current && !shouldReduceGfx) {
+      gsap.to(progressRef.current, {
+        scaleX: 1,
+        ease: "none",
+        scrollTrigger: {
+          trigger: "body",
+          start: "top top",
+          end: "bottom bottom",
+          scrub: 0.3,
+        }
       });
+    }
+
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      ScrollTrigger.getAll().forEach(t => t.kill());
     };
-    
-    updateTime();
-    const interval = setInterval(updateTime, 60000); // Update every minute
-    return () => clearInterval(interval);
-  }, []);
+  }, [shouldReduceGfx]);
 
   const navLinks = [
     { name: 'Home', path: '/' },
     { name: 'About', path: '/about' },
     { name: 'Articles', path: '/articles' },
     { name: 'Events', path: '/events' },
-    { name: 'Notice Board', path: '/notices' },
+    { name: 'Notices', path: '/notices' },
+    { name: 'Gallery', path: '/gallery' },
     { name: 'Panel', path: '/panel' },
   ];
 
@@ -96,268 +85,195 @@ const Navbar = () => {
   const clubName = content?.site?.clubName || 'Josephite Math';
   const announcements = content?.site?.announcements || [];
   const showAnnouncements = content?.site?.showAnnouncements ?? true;
-
   const isAdminPage = pathname?.startsWith('/admin');
 
   return (
     <motion.nav 
-      initial={shouldReduceGfx ? { y: 0, opacity: 1 } : { y: -100, opacity: 0 }}
+      ref={navRef}
+      initial={{ y: -100, opacity: 0 }}
       animate={{ 
         y: isInputFocused ? -100 : 0, 
         opacity: isInputFocused ? 0 : 1 
       }}
-      transition={{ duration: shouldReduceGfx ? 0.1 : 0.5, ease: 'easeOut' }}
-      className={`${isAdminPage ? 'relative bg-[#080808] border-b border-white/5' : 'fixed top-0 left-0 w-full z-50'} transition-all duration-500 ${
+      transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+      className={`${isAdminPage ? 'relative bg-[#080808] border-b border-white/5' : 'fixed top-0 left-0 w-full z-50'} transition-all duration-700 ${
         !isAdminPage && scrolled 
           ? 'glass-nav py-3 border-b border-white/10 shadow-2xl' 
-          : !isAdminPage ? 'bg-transparent py-4 border-b border-transparent' : 'py-4'
+          : !isAdminPage ? 'bg-transparent py-6 border-b border-transparent' : 'py-4'
       }`}
     >
-      {/* Announcement Marquee */}
-      {!isAdminPage && showAnnouncements && announcements.length > 0 && (
-        <div className="w-full bg-[var(--c-6-start)]/10 border-b border-white/5 py-2 md:py-3 relative overflow-hidden group">
-          <div className="absolute inset-y-0 left-0 w-20 bg-gradient-to-r from-[#050505] to-transparent z-10 hidden md:block" />
-          <div className="absolute inset-y-0 right-0 w-20 bg-gradient-to-l from-[#050505] to-transparent z-10 hidden md:block" />
-          
-          <motion.div 
-            animate={!shouldReduceGfx ? {
-              x: ["0%", "-25%"],
-            } : {}}
-            transition={!shouldReduceGfx ? {
-              x: {
-                repeat: Infinity,
-                repeatType: "loop",
-                duration: 20 + announcements.length * 4,
-                ease: "linear",
-              },
-            } : {}}
-            className="flex whitespace-nowrap"
+      {/* Scroll Progress Bar */}
+      {!isAdminPage && (
+        <div className="absolute bottom-0 left-0 w-full h-[1px] bg-white/5 pointer-events-none">
+          <div 
+            ref={progressRef}
+            className="h-full bg-gradient-to-r from-transparent via-[var(--c-6-start)] to-transparent origin-left scale-x-0 blur-[1px]"
+          />
+        </div>
+      )}
+
+      {/* Announcement Marquee System */}
+      {!isAdminPage && showAnnouncements && announcements.length > 0 && !scrolled && (
+        <div className="w-full bg-white/[0.02] border-b border-white/5 py-3 relative overflow-hidden hidden md:block">
+           <motion.div 
+            animate={{ x: ["0%", "-50%"] }}
+            transition={{ repeat: Infinity, duration: 30, ease: "linear" }}
+            className="flex whitespace-nowrap gap-12"
           >
-            {[...announcements, ...announcements, ...announcements, ...announcements].map((text, i) => (
-              <div key={i} className="inline-flex items-center mx-4 md:mx-12 shrink-0">
-                <span className="w-1 h-1 rounded-full bg-[var(--c-6-start)] mr-3 md:mr-4 shadow-[0_0_8px_rgba(255,184,0,0.8)]" />
-                <span className="text-[10px] md:text-sm font-mono font-bold tracking-[0.15em] md:tracking-[0.2em] text-white/80 uppercase">
-                  {text}
-                </span>
-                <span className="ml-4 md:ml-12 text-white/20 select-none">{"//"}</span>
+            {[...announcements, ...announcements].map((text, i) => (
+              <div key={i} className="flex items-center gap-4 px-6 border-r border-white/10">
+                <Radio className="w-3 h-3 text-[var(--c-6-start)] animate-pulse" />
+                <span className="text-[9px] font-mono font-black text-white/50 uppercase tracking-[0.3em]">{text}</span>
               </div>
             ))}
           </motion.div>
         </div>
       )}
 
-      {/* Elegant Scroll Progress Bar */}
-      {!isAdminPage && scrolled && (
-        <div 
-          className="absolute bottom-0 left-0 h-[2px] bg-gradient-to-r from-[var(--c-6-start)] via-[var(--c-2-start)] to-[var(--c-6-start)] z-[60] transition-all duration-150 ease-out"
-          style={{ width: `${scrollProgress}%` }}
-        />
-      )}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className={`flex justify-between transition-all duration-500 ${scrolled ? 'h-16' : 'h-24'}`}>
+      <div className="max-w-7xl mx-auto px-6 lg:px-10">
+        <div className={`flex justify-between items-center transition-all duration-700 ${scrolled ? 'h-16' : 'h-24'}`}>
           <div className="flex items-center">
-            <Link href="/" className="flex items-center space-x-4 group relative px-4 py-2 hud-bracket hud-bracket-tl hud-bracket-br">
-              <div className={`h-10 w-10 relative ${!shouldReduceGfx && 'group-hover:scale-110 transition-transform duration-500'}`}>
+            <Link href="/" className="flex items-center gap-5 group relative">
+              <div className="relative w-12 h-12 transition-transform duration-700 group-hover:scale-110">
+                <div className="absolute inset-0 bg-[var(--c-6-start)]/20 blur-xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity" />
                 <Image 
                   src={resolveImageUrl(logoUrl) || "/images/logo.png"} 
                   alt="JMC Logo" 
                   fill
                   priority
-                  className="object-contain"
+                  className="object-contain relative z-10"
                 />
               </div>
-              <div className="flex flex-col">
-                <span className={`text-md font-display font-bold tracking-tight text-white ${!shouldReduceGfx && 'group-hover:text-[var(--c-6-start)] transition-colors duration-500'}`}>{clubName}</span>
-                <div className="flex items-center space-x-2">
-                  <span className="mono-label text-zinc-500">{content?.site?.established || 'EST. 2015'}</span>
-                  <span className="w-1 h-1 rounded-full bg-[var(--c-6-start)] animate-pulse" />
+              <div className="flex flex-col gap-0.5">
+                <span className="text-xl font-display font-black tracking-tighter text-white uppercase">{clubName}</span>
+                <div className="flex items-center gap-2">
+                  <div className="h-[1px] w-4 bg-[var(--c-6-start)] shadow-[0_0_8px_rgba(0,180,219,1)]" />
+                  <span className="text-[8px] font-mono font-black text-zinc-500 tracking-[0.4em]">INIT_S_01_OK</span>
                 </div>
               </div>
             </Link>
           </div>
 
-          {/* Desktop Status Monitor */}
-          {!isAdminPage && (
-            <div className="hidden lg:flex items-center justify-center flex-1 mx-8 pointer-events-none opacity-40">
-              <div className="flex space-x-8 mono-label text-[8px] text-zinc-500">
-                <div className="flex flex-col items-center">
-                  <span>LAT: 23.8103° N</span>
-                  <span className="glow-text-cyan">LON: 90.4125° E</span>
-                </div>
-                <div className="h-4 w-px bg-white/10 self-center" />
-                <div className="flex flex-col items-center">
-                  <span>SYS_READY</span>
-                  <span className="glow-text-cyan">CORE: [STABLE]</span>
-                </div>
-                <div className="h-4 w-px bg-white/10 self-center" />
-                <div className="flex flex-col items-center">
-                  <span>{timeState?.date || 'SYS_CALIBRATING'}</span>
-                  <span className="glow-text-cyan">UTC: {timeState?.time || '--:--'}</span>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Desktop Links */}
-          <div className="hidden md:flex items-center space-x-8">
+          {/* Desktop Navigation */}
+          <div className="hidden md:flex items-center gap-10">
             {navLinks.map((link) => (
               <Link
                 key={link.path}
                 href={link.path}
-                className={`mono-label transition-all duration-500 hover:text-[var(--c-6-start)] relative group py-2 ${
-                  pathname === link.path ? 'text-[var(--c-6-start)]' : 'text-zinc-500'
+                className={`text-[10px] font-mono font-black uppercase tracking-[0.25em] transition-all duration-500 relative group px-2 py-1 ${
+                  pathname === link.path ? 'text-[var(--c-6-start)]' : 'text-zinc-500 hover:text-white'
                 }`}
               >
                 {link.name}
                 {pathname === link.path && (
                   <motion.div 
-                    layoutId="nav-underline"
-                    className="absolute -bottom-1 left-0 w-full h-[1px] bg-[var(--c-6-start)] shadow-[0_0_8px_rgba(0,180,219,0.5)]"
+                    layoutId="nav_underline_pro"
+                    className="absolute -bottom-1 left-0 w-full h-[1px] bg-[var(--c-6-start)] shadow-[0_0_10px_rgba(0,180,219,0.5)]"
                   />
                 )}
-                <span className="absolute -top-1 -right-1 w-0.5 h-0.5 bg-[var(--c-6-start)] opacity-0 group-hover:opacity-100 transition-opacity" />
+                {/* HUD Corners for hover */}
+                <span className="absolute top-0 left-0 w-1 h-1 border-t border-l border-[var(--c-6-start)] opacity-0 group-hover:opacity-100 transition-opacity" />
+                <span className="absolute bottom-0 right-0 w-1 h-1 border-b border-r border-[var(--c-6-start)] opacity-0 group-hover:opacity-100 transition-opacity" />
               </Link>
             ))}
-            {isAdmin && (
-              <Link
-                href="/admin"
-                className="flex items-center space-x-1 text-sm font-medium text-emerald-400 hover:text-emerald-300"
-              >
-                <LayoutDashboard className="h-4 w-4" />
-                <span>Admin</span>
-              </Link>
-            )}
+            
             {user ? (
-              <div className="flex items-center space-x-4">
-                <motion.div whileTap={shouldReduceGfx ? {} : { scale: 0.9 }}>
-                  <Link href="/profile" className="text-zinc-400 hover:text-[var(--c-6-start)]">
-                    <User className="h-5 w-5" />
-                  </Link>
-                </motion.div>
-                <motion.button
-                  whileTap={shouldReduceGfx ? {} : { scale: 0.9 }}
-                  onClick={signOut}
-                  className="text-zinc-400 hover:text-red-400 transition-colors"
-                >
-                  <LogOut className="h-5 w-5" />
-                </motion.button>
+               <div className="flex items-center gap-6 pl-6 border-l border-white/10">
+                <Link href="/profile" className="p-2.5 rounded-xl glass border-white/5 text-zinc-500 hover:text-[var(--c-6-start)] transition-all">
+                  <User className="h-4 w-4" />
+                </Link>
+                <div className="h-6 w-px bg-white/5" />
+                <button onClick={signOut} className="p-2.5 rounded-xl glass border-white/5 text-zinc-500 hover:text-red-500 transition-all">
+                  <LogOut className="h-4 w-4" />
+                </button>
               </div>
             ) : (
-              <motion.div whileTap={shouldReduceGfx ? {} : { scale: 0.95 }}>
-                <Link
-                  href="/login"
-                  className="btn-premium-glow !px-6 !py-2 !text-[8px]"
-                >
-                  Login
-                </Link>
-              </motion.div>
+              <Link
+                href="/login"
+                className="px-8 py-2.5 bg-white text-black text-[10px] font-mono font-black uppercase tracking-[0.2em] rounded-full hover:scale-105 active:scale-95 transition-all shadow-[0_0_30px_rgba(255,255,255,0.2)]"
+              >
+                Access_Term
+              </Link>
             )}
           </div>
 
-          {/* Mobile menu button */}
-          <div className="md:hidden flex items-center">
+          {/* Mobile Toggle */}
+          <div className="md:hidden">
             <button
               onClick={() => setIsOpen(!isOpen)}
-              className="text-zinc-400 hover:text-white focus:outline-none"
+              className="p-3 rounded-2xl glass border-white/10 text-white transition-all active:scale-90"
             >
-              {isOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+              {isOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
             </button>
           </div>
         </div>
       </div>
 
-      {/* Mobile menu */}
+      {/* Mobile Drawer */}
       <AnimatePresence>
         {isOpen && (
-          <>
-            {/* Backdrop for mobile menu */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setIsOpen(false)}
-              className="md:hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-[45]"
-            />
-            
-            <motion.div
-              initial={shouldReduceGfx ? { opacity: 0 } : { opacity: 0, x: '100%' }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={shouldReduceGfx ? { opacity: 0 } : { opacity: 0, x: '100%' }}
-              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className="md:hidden fixed top-0 right-0 h-screen w-[80%] bg-zinc-950/95 backdrop-blur-2xl border-l border-white/10 z-[55] shadow-2xl safe-p-top"
-            >
-              <div className="flex flex-col h-full p-8 pt-24 space-y-4">
-                <div className="mono-label text-[10px] text-zinc-500 mb-6 flex items-center gap-2">
-                  <div className="w-1 h-1 rounded-full bg-[var(--c-6-start)] animate-pulse" />
-                  NAVIGATION_MENU
-                </div>
-                
-                {navLinks.map((link, index) => (
-                  <motion.div
-                    key={link.path}
-                    initial={shouldReduceGfx ? {} : { opacity: 0, x: 20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: index * 0.05 }}
-                  >
-                    <Link
-                      href={link.path}
-                      onClick={() => setIsOpen(false)}
-                      className={`flex items-center justify-between group py-4 border-b border-white/5 transition-all active:scale-95 ${
-                        pathname === link.path ? 'text-[var(--c-6-start)]' : 'text-zinc-300'
-                      }`}
-                    >
-                      <span className="text-xl font-display font-medium">{link.name}</span>
-                      <div className={`h-1.5 w-1.5 rounded-full ${pathname === link.path ? 'bg-[var(--c-6-start)] shadow-[0_0_8px_rgba(0,180,219,0.5)]' : 'bg-transparent'}`} />
-                    </Link>
-                  </motion.div>
-                ))}
+          <motion.div
+            initial={{ opacity: 0, x: '100%' }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: '100%' }}
+            transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+            className="md:hidden fixed inset-0 z-[60] bg-black/95 backdrop-blur-3xl overflow-hidden"
+          >
+            <div className="absolute top-8 right-8">
+               <button onClick={() => setIsOpen(false)} className="p-4 rounded-full glass border-white/10 text-white">
+                 <X className="w-8 h-8" />
+               </button>
+            </div>
 
-                <div className="pt-8 flex flex-col space-y-4 mt-auto pb-12">
-                  {isAdmin && (
-                    <Link
-                      href="/admin"
-                      onClick={() => setIsOpen(false)}
-                      className="flex items-center space-x-3 p-4 rounded-2xl bg-emerald-500/5 text-emerald-400 border border-emerald-500/10 active:scale-95 transition-transform"
-                    >
-                      <LayoutDashboard size={20} />
-                      <span className="font-medium font-display">Admin Dashboard</span>
-                    </Link>
-                  )}
-                  
-                  {user ? (
-                    <div className="grid grid-cols-2 gap-4">
-                      <Link
-                        href="/profile"
-                        onClick={() => setIsOpen(false)}
-                        className="flex flex-col items-center justify-center p-6 rounded-2xl bg-white/5 text-zinc-300 border border-white/10 active:scale-95 transition-transform"
-                      >
-                        <User size={24} className="mb-2" />
-                        <span className="text-xs mono-label">Profile</span>
-                      </Link>
-                      <button
-                        onClick={() => {
-                          signOut();
-                          setIsOpen(false);
-                        }}
-                        className="flex flex-col items-center justify-center p-6 rounded-2xl bg-red-500/5 text-red-500 border border-red-500/10 active:scale-95 transition-transform"
-                      >
-                        <LogOut size={24} className="mb-2" />
-                        <span className="text-xs mono-label">Logout</span>
-                      </button>
-                    </div>
-                  ) : (
-                    <Link
-                      href="/login"
-                      onClick={() => setIsOpen(false)}
-                      className="btn-premium-glow !w-full !p-5 !text-xs !bg-[var(--c-6-start)] !text-black text-center font-bold font-display flex items-center justify-center gap-2 active:scale-95 transition-transform"
-                    >
-                      ACCESS_TERMINAL (LOGIN)
-                    </Link>
-                  )}
-                </div>
+            <div className="flex flex-col h-full px-6 pt-32 pb-6 space-y-6 overflow-y-auto">
+              <div className="flex flex-col gap-2 mb-6">
+                <div className="h-1 w-12 bg-[var(--c-6-start)]" />
+                <div className="text-[10px] font-mono font-black text-zinc-500 tracking-[0.5em] uppercase">Navigation_Index</div>
               </div>
-            </motion.div>
-          </>
+              
+              {navLinks.map((link, i) => (
+                <motion.div
+                  key={link.path}
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: i * 0.1 }}
+                >
+                  <Link
+                    href={link.path}
+                    onClick={() => setIsOpen(false)}
+                    className={`text-3xl font-display font-black uppercase tracking-tighter transition-all block ${
+                      pathname === link.path ? 'text-[var(--c-6-start)]' : 'text-zinc-700 hover:text-white'
+                    }`}
+                  >
+                    {link.name}
+                  </Link>
+                </motion.div>
+              ))}
+
+              <div className="pt-12 mt-auto space-y-6">
+                {user ? (
+                   <div className="grid grid-cols-2 gap-4">
+                    <Link href="/profile" onClick={() => setIsOpen(false)} className="p-6 rounded-3xl glass border-white/10 flex flex-col gap-4">
+                      <User className="w-8 h-8 text-[var(--c-6-start)]" />
+                      <span className="text-[10px] font-mono font-black text-white uppercase tracking-widest">Dashboard</span>
+                    </Link>
+                    <button onClick={signOut} className="p-6 rounded-3xl glass border-white/10 flex flex-col gap-4">
+                      <LogOut className="w-8 h-8 text-red-500" />
+                      <span className="text-[10px] font-mono font-black text-white uppercase tracking-widest">Disconnect</span>
+                    </button>
+                   </div>
+                ) : (
+                  <Link
+                    href="/login"
+                    onClick={() => setIsOpen(false)}
+                    className="block w-full py-8 bg-white text-black rounded-[2rem] text-center text-xs font-mono font-black uppercase tracking-[0.4em] shadow-[0_0_50px_rgba(255,255,255,0.1)]"
+                  >
+                    Authorize_System
+                  </Link>
+                )}
+              </div>
+            </div>
+          </motion.div>
         )}
       </AnimatePresence>
     </motion.nav>

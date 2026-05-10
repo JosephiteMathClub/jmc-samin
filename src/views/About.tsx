@@ -200,6 +200,30 @@ const About = () => {
                   {obj.description}
                 </p>
 
+                {/* Moving Glow Effect */}
+                {!shouldReduceGfx && (
+                  <div className="absolute inset-0 pointer-events-none overflow-hidden">
+                    <motion.div
+                      animate={{
+                        x: ["-100%", "100%"],
+                        y: ["-100%", "100%"],
+                      }}
+                      transition={{
+                        duration: 5,
+                        repeat: Infinity,
+                        ease: "linear",
+                      }}
+                      className="absolute w-full h-full bg-[radial-gradient(circle_at_center,var(--c-6-start)_0%,transparent_70%)] opacity-0 group-hover:opacity-[0.07] blur-[120px]"
+                    />
+                    <motion.div
+                      initial={{ left: "-100%" }}
+                      whileHover={{ left: "200%" }}
+                      transition={{ duration: 1.5, ease: "easeInOut", repeat: Infinity, repeatDelay: 1 }}
+                      className="absolute top-0 bottom-0 w-[1px] bg-gradient-to-b from-transparent via-[var(--c-6-start)]/50 to-transparent blur-[2px]"
+                    />
+                  </div>
+                )}
+
                 {/* Decorative corner */}
                 <div className="absolute top-0 right-0 w-8 h-8 pointer-events-none">
                   <div className="absolute top-4 right-4 w-1 h-1 bg-white/10 rounded-full" />

@@ -16,6 +16,7 @@ import { DashboardSection } from './DashboardSection';
 import { DashboardButton } from './DashboardButton';
 import { DashboardFormField } from './DashboardFormField';
 import { usePerformance } from '../../hooks/usePerformance';
+import { useAuth } from '../../context/AuthContext';
 
 import { Skeleton } from '../Skeleton';
 
@@ -23,15 +24,16 @@ export const UserManagement = () => {
   const [users, setUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const { showToast } = useToast();
+  const { isSuperAdmin } = useAuth();
   const [manualUid, setManualUid] = useState('');
   const [promoting, setPromoting] = useState(false);
   const [updatingUser, setUpdatingUser] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [syncing, setSyncing] = useState(false);
   const { shouldReduceGfx } = usePerformance();
 
   const fetchUsers = async () => {
     if (!isSupabaseConfigured) return;
-    setLoading(false);
     setLoading(true);
     try {
       const { data, error } = await supabase
@@ -47,12 +49,32 @@ export const UserManagement = () => {
     }
   };
 
+  const syncProfiles = async () => {
+    setSyncing(true);
+    try {
+      const res = await fetch('/api/admin/sync-profiles', { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Sync failed');
+      
+      showToast(data.message, 'success');
+      fetchUsers();
+    } catch (err: any) {
+      showToast(err.message, 'error');
+    } finally {
+      setSyncing(false);
+    }
+  };
+
   useEffect(() => {
     fetchUsers();
   }, []);
 
   const toggleAdmin = async (userId: string, currentRole: string) => {
     if (!isSupabaseConfigured) return;
+    if (!isSuperAdmin) {
+      showToast("Only Super Admins can modify permissions.", 'error');
+      return;
+    }
     const newRole = currentRole === 'admin' ? 'member' : 'admin';
     setUpdatingUser(userId);
     try {
@@ -74,6 +96,10 @@ export const UserManagement = () => {
 
   const handlePromoteByUid = async () => {
     if (!manualUid.trim() || !isSupabaseConfigured) return;
+    if (!isSuperAdmin) {
+      showToast("Only Super Admins can promote users.", 'error');
+      return;
+    }
     setPromoting(true);
     try {
       const { data, error } = await supabase
@@ -115,29 +141,36 @@ export const UserManagement = () => {
     <div className="space-y-12">
       <DashboardSection 
         title="Promote User" 
-        description="Manually promote a user to administrator by their unique User ID (UID)."
+        description={isSuperAdmin ? "Manually promote a user to administrator by their unique User ID (UID)." : "Administrative promotion is restricted to Super Admins."}
         icon={UserPlus}
       >
-        <div className="flex flex-col md:flex-row gap-4 items-end">
-          <div className="flex-1">
-            <DashboardFormField label="User UID" description="Paste the user's Supabase UID here">
-              <input
-                type="text"
-                value={manualUid}
-                onChange={(e) => setManualUid(e.target.value)}
-                placeholder="e.g. 550e8400-e29b-41d4-a716-446655440000"
-                className="w-full px-5 py-3.5 bg-black/20 border border-white/10 rounded-2xl text-white outline-none focus:border-amber-500/50 transition-all font-mono text-sm"
-              />
-            </DashboardFormField>
+        {isSuperAdmin ? (
+          <div className="flex flex-col md:flex-row gap-4 items-end">
+            <div className="flex-1">
+              <DashboardFormField label="User UID" description="Paste the user's Supabase UID here">
+                <input
+                  type="text"
+                  value={manualUid}
+                  onChange={(e) => setManualUid(e.target.value)}
+                  placeholder="e.g. 550e8400-e29b-41d4-a716-446655440000"
+                  className="w-full px-5 py-3.5 bg-black/20 border border-white/10 rounded-2xl text-white outline-none focus:border-amber-500/50 transition-all font-mono text-sm"
+                />
+              </DashboardFormField>
+            </div>
+            <DashboardButton 
+              onClick={handlePromoteByUid}
+              label={promoting ? "Promoting..." : "Promote to Admin"}
+              disabled={promoting || !manualUid.trim()}
+              icon={promoting ? Loader2 : Shield}
+              className="h-[54px]"
+            />
           </div>
-          <DashboardButton 
-            onClick={handlePromoteByUid}
-            label={promoting ? "Promoting..." : "Promote to Admin"}
-            disabled={promoting || !manualUid.trim()}
-            icon={promoting ? Loader2 : Shield}
-            className="h-[54px]"
-          />
-        </div>
+        ) : (
+          <div className="p-8 bg-zinc-900/50 border border-white/5 rounded-[2rem] text-center space-y-4">
+             <ShieldAlert className="w-10 h-10 text-zinc-700 mx-auto" />
+             <p className="text-xs text-zinc-500 font-medium">Position management restricted to Kernel level users.</p>
+          </div>
+        )}
       </DashboardSection>
 
       <DashboardSection 
@@ -145,15 +178,25 @@ export const UserManagement = () => {
         description="Manage permissions and roles for all registered users."
         icon={UserCheck}
         actions={
-          <div className="relative">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
-            <input
-              type="text"
-              placeholder="Search users..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-11 pr-6 py-2.5 bg-white/5 border border-white/5 rounded-xl text-xs text-white outline-none focus:border-amber-500/30 transition-all w-64"
+          <div className="flex items-center gap-4">
+            <DashboardButton 
+              label={syncing ? "Syncing..." : "Sync Profiles"}
+              onClick={syncProfiles}
+              disabled={syncing}
+              variant="secondary"
+              icon={syncing ? Loader2 : UserCheck}
+              className="h-10 text-[10px]"
             />
+            <div className="relative">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
+              <input
+                type="text"
+                placeholder="Search users..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-11 pr-6 py-2.5 bg-white/5 border border-white/5 rounded-xl text-xs text-white outline-none focus:border-amber-500/30 transition-all w-64"
+              />
+            </div>
           </div>
         }
       >
@@ -212,23 +255,27 @@ export const UserManagement = () => {
                         </span>
                       </td>
                       <td className="px-8 py-6 text-right">
-                        <button
-                          onClick={() => toggleAdmin(user.id, user.role)}
-                          disabled={updatingUser === user.id}
-                          className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all ${
-                            user.role === 'admin'
-                              ? 'bg-red-500/10 text-red-500 hover:bg-red-500/20 border border-red-500/10'
-                              : 'bg-amber-500/10 text-amber-500 hover:bg-amber-500/20 border border-amber-500/10'
-                          }`}
-                        >
-                          {updatingUser === user.id ? (
-                            <Loader2 className={`w-3 h-3 ${shouldReduceGfx ? '' : 'animate-spin'}`} />
-                          ) : user.role === 'admin' ? (
-                            'Revoke Admin'
-                          ) : (
-                            'Make Admin'
-                          )}
-                        </button>
+                        {isSuperAdmin ? (
+                          <button
+                            onClick={() => toggleAdmin(user.id, user.role)}
+                            disabled={updatingUser === user.id}
+                            className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all ${
+                              user.role === 'admin'
+                                ? 'bg-red-500/10 text-red-500 hover:bg-red-500/20 border border-red-500/10'
+                                : 'bg-amber-500/10 text-amber-500 hover:bg-amber-500/20 border border-amber-500/10'
+                            }`}
+                          >
+                            {updatingUser === user.id ? (
+                              <Loader2 className={`w-3 h-3 ${shouldReduceGfx ? '' : 'animate-spin'}`} />
+                            ) : user.role === 'admin' ? (
+                              'Revoke Admin'
+                            ) : (
+                              'Make Admin'
+                            )}
+                          </button>
+                        ) : (
+                          <span className="text-[9px] text-zinc-700 font-bold uppercase">View Only</span>
+                        )}
                       </td>
                     </tr>
                   ))

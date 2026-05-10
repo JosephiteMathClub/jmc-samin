@@ -1,17 +1,24 @@
 import { createBrowserClient } from '@supabase/ssr';
 
-let supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://placeholder-project.supabase.co";
+let supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
+
+if (!supabaseUrl || supabaseUrl.includes('placeholder')) {
+  if (typeof window !== 'undefined') {
+    console.warn("⚠️ Supabase URL is missing or using placeholder. Local development requires a valid .env.local file.");
+  }
+}
+
 if (supabaseUrl && !supabaseUrl.startsWith('http')) {
   supabaseUrl = `https://${supabaseUrl}`;
 }
 supabaseUrl = supabaseUrl.replace(/\/$/, '').replace(/\/rest\/v1$/, '');
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "placeholder-key";
 
-export const isSupabaseConfigured = Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
+export const isSupabaseConfigured = Boolean(supabaseUrl && supabaseAnonKey && !supabaseUrl.includes('placeholder'));
 
 export const supabase = createBrowserClient(
-  supabaseUrl,
-  supabaseAnonKey,
+  supabaseUrl || "https://placeholder-project.supabase.co",
+  supabaseAnonKey || "placeholder-key",
   {
     cookieOptions: {
       sameSite: 'none',

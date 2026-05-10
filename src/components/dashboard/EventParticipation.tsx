@@ -28,6 +28,7 @@ import {
 import { supabase, isSupabaseConfigured } from '../../lib/supabase';
 import { useToast } from '../../context/ToastContext';
 import { useContent } from '../../context/ContentContext';
+import { DEFAULT_CONTENT } from '../../data/default-content';
 import { DashboardSection } from './DashboardSection';
 import { DashboardButton } from './DashboardButton';
 import { DashboardFormField } from './DashboardFormField';
@@ -65,12 +66,13 @@ export const EventParticipation = () => {
   // Stats
   const [stats, setStats] = useState({ total: 0, distinctUsers: 0 });
 
-  // Load events from content
+  // Load events from content with fallback
   useEffect(() => {
-    if (content?.events?.events) {
-      setEvents(content.events.events);
-      if (content.events.events.length > 0 && !activeEvent) {
-        setActiveEvent(content.events.events[0].title);
+    const rawEvents = content?.events?.events || DEFAULT_CONTENT.events?.events || [];
+    if (rawEvents.length > 0) {
+      setEvents(rawEvents);
+      if (rawEvents.length > 0 && (!activeEvent || !rawEvents.find((e: any) => e.title === activeEvent))) {
+        setActiveEvent(rawEvents[0].title);
       }
     }
   }, [content, activeEvent]);
@@ -350,7 +352,13 @@ export const EventParticipation = () => {
                     <h3 className="text-lg font-bold text-white uppercase tracking-wider">Step 1: Select Event</h3>
                   </div>
                   <div className="grid grid-cols-1 gap-2 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
-                    {events.map((ev) => (
+                    {events.length === 0 ? (
+                      <div className="p-8 rounded-2x border border-dashed border-white/10 text-center">
+                         <p className="text-[10px] text-zinc-600 font-bold uppercase tracking-widest leading-relaxed">
+                          No events found. Add them in the Events tab.
+                        </p>
+                      </div>
+                    ) : events.map((ev) => (
                       <button
                         key={ev.title}
                         onClick={() => setActiveEvent(ev.title)}
@@ -626,7 +634,14 @@ export const EventParticipation = () => {
           {/* Events Sidebar */}
           <div className="lg:w-72 flex flex-col gap-2">
             <h4 className="text-[10px] font-bold text-zinc-500 uppercase tracking-[0.2em] mb-4 border-b border-white/5 pb-4">Select Event</h4>
-            {events.map((ev) => (
+            {events.length === 0 ? (
+              <div className="p-8 rounded-2xl bg-white/5 border border-dashed border-white/10 text-center space-y-4">
+                <Calendar className="w-8 h-8 text-zinc-700 mx-auto" />
+                <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest leading-relaxed">
+                  No events found. Go to the "Events" tab to add club events first.
+                </p>
+              </div>
+            ) : events.map((ev) => (
               <button
                 key={ev.title}
                 onClick={() => setActiveEvent(ev.title)}
