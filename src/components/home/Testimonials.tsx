@@ -30,7 +30,7 @@ export const Testimonials: React.FC<TestimonialsProps> = ({ home, duplicatedTest
   }, [home?.testimonials, duplicatedTestimonials]);
 
   return (
-    <section id="testimonials" className="py-32 relative overflow-hidden bg-[#050505]">
+    <section id="testimonials" className="py-32 relative overflow-hidden bg-transparent">
       {/* Background Ambience */}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full pointer-events-none opacity-20">
          <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_center,var(--c-6-start)_0%,transparent_70%)] blur-[120px]" />
@@ -49,16 +49,8 @@ export const Testimonials: React.FC<TestimonialsProps> = ({ home, duplicatedTest
         </Reveal>
       </div>
 
-      {/* Organic Scrolling Carousel */}
-      <div className="relative z-10 w-full flex items-center justify-center -rotate-2">
+      <div className="relative z-10 w-full py-12">
         <OrganicCarousel reviews={reviews} />
-      </div>
-      
-      {/* Reverse Layer for variety */}
-      <div className="relative z-10 w-full flex items-center justify-center rotate-1 mt-6 opacity-80 scale-95">
-        <div className="w-full">
-           <OrganicCarousel reviews={reviews.slice().reverse()} reverse />
-        </div>
       </div>
 
       {/* Trust Badges / Stats Footer */}

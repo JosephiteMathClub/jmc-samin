@@ -18,16 +18,15 @@ export function resolveImageUrl(url: string | undefined): string {
   if (url.startsWith('http')) return url;
   
   // Only resolve to Supabase for /uploads/ or if explicitly requested
-  // Static assets in /images/ should generally be served locally from the public folder
   if (url.startsWith('/uploads/')) {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     if (supabaseUrl) {
       const path = url.startsWith('/') ? url.substring(1) : url;
-      return `${supabaseUrl}/storage/v1/object/public/images/${path}`;
+      // encodeURI handles spaces in the path making it a valid URL
+      return encodeURI(`${supabaseUrl}/storage/v1/object/public/images/${path}`);
     }
   }
   
-  // For local images, we return the path as is. 
-  // Next.js will serve these from the public folder.
-  return url;
+  // For local images, encode the URI to handle spaces in filenames
+  return encodeURI(url);
 }

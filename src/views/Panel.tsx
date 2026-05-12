@@ -99,7 +99,7 @@ const Flashcard = React.memo(({ role, name, imageUrl, icon: Icon = User, onUploa
       whileHover={shouldReduceGfx ? {} : { y: -12, scale: 1.02 }}
       className={`relative rounded-[2.5rem] overflow-hidden glass border-white/[0.05] group flex flex-col transition-all duration-700 hover:border-white/20 shadow-2xl ${isBig ? 'max-w-xl mx-auto' : ''}`}
     >
-      <div className="aspect-[4/5] relative overflow-hidden bg-zinc-900/50" style={{ transform: "translateZ(50px)" }}>
+      <div className="aspect-[4/5] relative overflow-hidden bg-zinc-900/50">
         <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent z-10" />
         
         {imageUrl ? (
@@ -107,23 +107,15 @@ const Flashcard = React.memo(({ role, name, imageUrl, icon: Icon = User, onUploa
             src={resolveImageUrl(imageUrl)} 
             alt={name || 'Member'} 
             fill 
-            className="object-cover object-center transition-transform duration-1000 group-hover:scale-110"
-            sizes={isBig ? "600px" : "400px"}
+            className="object-cover object-[center_top] transition-transform duration-700 group-hover:scale-105"
+            sizes="(max-width: 768px) 100vw, 400px"
             referrerPolicy="no-referrer"
           />
         ) : (
           <div className="absolute inset-0 flex items-center justify-center text-white/5">
-            <Icon className={isBig ? "w-48 h-48" : "w-32 h-32"} />
+            <Icon className="w-32 h-32" />
           </div>
         )}
-        
-        {/* Profile Tag */}
-        <div className="absolute top-6 left-6 z-20">
-          <div className="px-3 py-1 rounded-full bg-black/40 backdrop-blur-xl border border-white/10 flex items-center gap-2">
-            <div className="w-1.5 h-1.5 rounded-full bg-[var(--c-6-start)] animate-pulse shadow-[0_0_8px_rgba(0,180,219,0.8)]" />
-            <span className="text-[8px] font-mono font-bold text-white tracking-[0.2em]">0{Math.floor(Math.random() * 9)} {"//"} AUTH_OK</span>
-          </div>
-        </div>
 
         {isAdmin && (
           <div 
@@ -131,7 +123,7 @@ const Flashcard = React.memo(({ role, name, imageUrl, icon: Icon = User, onUploa
             className="absolute inset-0 bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer z-30 backdrop-blur-sm"
           >
             {uploading ? (
-              <Loader2 className="w-8 h-8 text-[var(--c-6-start)] animate-spin" />
+              <Loader2 className="w-8 h-8 text-white animate-spin" />
             ) : (
               <div className="flex flex-col items-center gap-3">
                 <Upload className="w-8 h-8 text-white" />
@@ -151,28 +143,16 @@ const Flashcard = React.memo(({ role, name, imageUrl, icon: Icon = User, onUploa
         )}
       </div>
 
-      <div className="p-8 relative bg-black/40 backdrop-blur-3xl flex-1 flex flex-col justify-center border-t border-white/5">
-        <div className="absolute -top-10 right-8 z-20">
-          <div className="w-16 h-16 rounded-2xl bg-white/5 backdrop-blur-xl border border-white/10 flex items-center justify-center hud-bracket hud-bracket-tl hud-bracket-br">
-            <Icon className={`w-8 h-8 ${isBig ? 'text-[var(--c-6-start)]' : 'text-white/60'}`} />
-          </div>
-        </div>
-        
-        <div className="relative z-10">
-          <p className={`font-bold text-white font-display tracking-tight leading-tight mb-2 group-hover:text-[var(--c-6-start)] transition-colors duration-500 ${isBig ? 'text-4xl' : 'text-2xl'}`}>
+      <div className="p-8 relative bg-black/40 backdrop-blur-xl flex-1 flex flex-col justify-center border-t border-white/5">
+        <div className="relative z-10 text-center">
+          <p className="font-bold text-white text-2xl tracking-tight leading-tight mb-2 group-hover:text-emerald-400 transition-colors duration-500">
             {name || 'New Member'}
           </p>
-          <div className="flex items-center gap-3 overflow-hidden">
-             <div className="h-[1px] w-4 bg-[var(--c-5-start)]" />
-             <p className={`text-[var(--c-5-start)] uppercase tracking-[0.3em] font-black font-mono ${isBig ? 'text-[10px]' : 'text-[8px]'}`}>
-              {role || 'Member'}
-            </p>
-          </div>
+          <p className="text-zinc-400 uppercase tracking-widest font-semibold text-[10px]">
+             {role || 'Member'}
+          </p>
         </div>
       </div>
-
-      {/* Decorative HUD lines */}
-      <div className="absolute bottom-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-white/10 to-transparent" />
     </motion.div>
   );
 });
@@ -257,7 +237,9 @@ const PanelView = () => {
         {/* --- EXECUTIVE COMMITTEE SECTION --- */}
         <section className="space-y-24">
           <div>
-            <SectionHeader subtitle="LEADERSHIP_HIERARCHY">{panel.executiveTitle || "Executive Committee"}</SectionHeader>
+            <SectionHeader subtitle="Explore the dedicated committee members who drive the Josephite Math Club forward, year after year.">
+              Meet the JMC Team
+            </SectionHeader>
             
             {/* Premium Tab Controller */}
             <div className="flex justify-center mb-24">
@@ -293,49 +275,33 @@ const PanelView = () => {
               transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
               className="space-y-32"
             >
-              {/* President Row */}
+              {/* Core Leadership Row */}
               <div className="space-y-12">
-                <SubHeader>PRESIDENCY</SubHeader>
-                <div className="max-w-xl mx-auto">
+                <SubHeader>CORE LEADERSHIP</SubHeader>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
                   {activePanelData.president?.map((p: any, i: number) => (
                     <Flashcard 
-                      key={i} 
+                      key={`pres-${i}`} 
                       {...p} 
                       icon={Star} 
-                      isBig 
                       isAdmin={isAdmin}
                       onUpload={(url: string) => handleMemberUpdate(`panel.executive.${activeTab}.president.${i}.imageUrl`, url)}
                     />
                   ))}
-                </div>
-              </div>
-
-              {/* DP Row */}
-              <div className="space-y-12">
-                <SubHeader>DEPUTY_PRESIDENTS</SubHeader>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
                   {activePanelData.deputyPresidents?.map((p: any, i: number) => (
                     <Flashcard 
-                      key={i} 
+                      key={`dp-${i}`} 
                       {...p} 
                       icon={Award} 
                       isAdmin={isAdmin}
                       onUpload={(url: string) => handleMemberUpdate(`panel.executive.${activeTab}.deputyPresidents.${i}.imageUrl`, url)}
                     />
                   ))}
-                </div>
-              </div>
-
-              {/* GS Row */}
-              <div className="space-y-12">
-                <SubHeader>CENTRAL_OPERATIONS</SubHeader>
-                <div className="max-w-xl mx-auto">
                   {activePanelData.generalSecretary?.map((p: any, i: number) => (
                     <Flashcard 
-                      key={i} 
+                      key={`gs-${i}`} 
                       {...p} 
                       icon={Briefcase} 
-                      isBig 
                       isAdmin={isAdmin}
                       onUpload={(url: string) => handleMemberUpdate(`panel.executive.${activeTab}.generalSecretary.${i}.imageUrl`, url)}
                     />
@@ -345,7 +311,7 @@ const PanelView = () => {
 
               {/* VP Grid */}
               <div className="space-y-12">
-                <SubHeader>EXECUTIVE_COLLECTIVE</SubHeader>
+                <SubHeader>VICE PRESIDENT</SubHeader>
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-8">
                   {activePanelData.vicePresidents?.map((p: any, i: number) => (
                     <Flashcard 
@@ -357,6 +323,94 @@ const PanelView = () => {
                   ))}
                 </div>
               </div>
+
+              {/* Secretaries Grid */}
+              {activePanelData.secretaries && (
+                 <div className="space-y-16">
+                   {activePanelData.secretaries.jointSecretary && activePanelData.secretaries.jointSecretary.length > 0 && (
+                     <div className="space-y-12">
+                       <SubHeader>JOINT SECRETARY</SubHeader>
+                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+                         {activePanelData.secretaries.jointSecretary.map((p: any, i: number) => (
+                           <Flashcard 
+                             key={`js-${i}`}
+                             {...p} 
+                             role="Joint Secretary"
+                             isAdmin={isAdmin}
+                             onUpload={(url: string) => handleMemberUpdate(`panel.executive.${activeTab}.secretaries.jointSecretary.${i}.imageUrl`, url)}
+                           />
+                         ))}
+                       </div>
+                     </div>
+                   )}
+                   {activePanelData.secretaries.organizingSecretary && activePanelData.secretaries.organizingSecretary.length > 0 && (
+                     <div className="space-y-12">
+                       <SubHeader>ORGANIZING SECRETARY</SubHeader>
+                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+                         {activePanelData.secretaries.organizingSecretary.map((p: any, i: number) => (
+                           <Flashcard 
+                             key={`os-${i}`}
+                             {...p} 
+                             role="Organizing Secretary"
+                             isAdmin={isAdmin}
+                             onUpload={(url: string) => handleMemberUpdate(`panel.executive.${activeTab}.secretaries.organizingSecretary.${i}.imageUrl`, url)}
+                           />
+                         ))}
+                       </div>
+                     </div>
+                   )}
+                   {activePanelData.secretaries.asstGeneralSecretary && activePanelData.secretaries.asstGeneralSecretary.length > 0 && (
+                     <div className="space-y-12">
+                       <SubHeader>ASSISTANT GENERAL SECRETARY</SubHeader>
+                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+                         {activePanelData.secretaries.asstGeneralSecretary.map((p: any, i: number) => (
+                           <Flashcard 
+                             key={`ags-${i}`}
+                             {...p} 
+                             role="Assistant General Secretary"
+                             isAdmin={isAdmin}
+                             onUpload={(url: string) => handleMemberUpdate(`panel.executive.${activeTab}.secretaries.asstGeneralSecretary.${i}.imageUrl`, url)}
+                           />
+                         ))}
+                       </div>
+                     </div>
+                   )}
+                   {activePanelData.secretaries.correspondingSecretary && activePanelData.secretaries.correspondingSecretary.length > 0 && (
+                     <div className="space-y-12">
+                       <SubHeader>CORRESPONDING SECRETARY</SubHeader>
+                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+                         {activePanelData.secretaries.correspondingSecretary.map((p: any, i: number) => (
+                           <Flashcard 
+                             key={`cs-${i}`}
+                             {...p} 
+                             role="Corresponding Secretary"
+                             isAdmin={isAdmin}
+                             onUpload={(url: string) => handleMemberUpdate(`panel.executive.${activeTab}.secretaries.correspondingSecretary.${i}.imageUrl`, url)}
+                           />
+                         ))}
+                       </div>
+                     </div>
+                   )}
+                 </div>
+              )}
+
+              {/* Departments Grid */}
+              {activePanelData.departments && activePanelData.departments.length > 0 && (
+                 <div className="space-y-12">
+                   <SubHeader>HEAD OF DEPARTMENTS</SubHeader>
+                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-8">
+                     {activePanelData.departments.map((p: any, i: number) => (
+                       <Flashcard 
+                         key={i}
+                         {...p} 
+                         role={p.dept ? `Head of ${p.dept}` : p.role}
+                         isAdmin={isAdmin}
+                         onUpload={(url: string) => handleMemberUpdate(`panel.executive.${activeTab}.departments.${i}.imageUrl`, url)}
+                       />
+                     ))}
+                   </div>
+                 </div>
+              )}
             </motion.div>
           </AnimatePresence>
         </section>

@@ -25,14 +25,17 @@ export function usePerformance() {
       
       let level: 'high' | 'medium' | 'low' = 'high';
 
-      if (cores <= 4 || memory <= 4 || isSlowNet) {
-        level = 'low';
-      } else if (cores <= 6 || memory <= 6) {
-        level = 'medium';
+      if (isMobileDevice) {
+        if (cores <= 4 || memory <= 4 || isSlowNet) {
+          level = 'low';
+        } else if (cores <= 6 || memory <= 6) {
+          level = 'medium';
+        }
       }
 
       setPerformanceLevel(level);
-      setIsLowPower(level === 'low');
+      // Only reduce graphics for low-end mobiles, or if they prefer reduced motion
+      setIsLowPower(isMobileDevice && level === 'low');
     };
 
     checkPerformance();
@@ -52,7 +55,7 @@ export function usePerformance() {
     manualOverride: null, // Removed manual override to force detection
     toggleOverride,
     shouldReduceGfx,
-    shouldStopFormulas: shouldReduceGfx
+    shouldStopFormulas: false // Always show formulas as requested
   };
 }
 

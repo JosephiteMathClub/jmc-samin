@@ -154,18 +154,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (!isMounted) return;
       
-    const sessionUser = session?.user ?? null;
-    console.log(`[AuthContext] Event: ${event}, User: ${sessionUser?.email || 'none'}`);
-    
-    if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED' || event === 'INITIAL_SESSION') {
-      if (sessionUser) {
-        handleAuthChange(sessionUser);
-      } else if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
+      const sessionUser = session?.user ?? null;
+      console.log(`[AuthContext] Event: ${event}, User: ${sessionUser?.email || 'none'}`);
+      
+      if (event === 'PASSWORD_RECOVERY') {
+        // If the user lands here via a recovery link but on the wrong path, redirect them
+        if (typeof window !== 'undefined' && !window.location.pathname.includes('/reset-password')) {
+          window.location.href = '/reset-password';
+          return;
+        }
+      } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED' || event === 'INITIAL_SESSION') {
+        if (sessionUser) {
+          handleAuthChange(sessionUser);
+        } else if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
+          handleAuthChange(null);
+        }
+      } else if (event === 'SIGNED_OUT') {
         handleAuthChange(null);
       }
-    } else if (event === 'SIGNED_OUT') {
-      handleAuthChange(null);
-    }
     });
 
     return () => {

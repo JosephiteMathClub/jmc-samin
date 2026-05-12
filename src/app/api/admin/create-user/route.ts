@@ -74,8 +74,23 @@ export async function POST(req: Request) {
     ])).map(e => e.trim().toLowerCase()).filter(Boolean);
 
     const userEmail = (user.email || "").toLowerCase();
-    if (!ADMIN_EMAILS.includes(userEmail)) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    
+    let isDbAdmin = false;
+    try {
+      const { data: userProfile } = await supabaseAdmin
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .maybeSingle();
+      if (userProfile && (userProfile.role === 'admin' || userProfile.role === 'super_admin')) {
+        isDbAdmin = true;
+      }
+    } catch (e) {
+      console.error("Error checking db admin status:", e);
+    }
+    
+    if (!ADMIN_EMAILS.includes(userEmail) && !isDbAdmin) {
+      return NextResponse.json({ error: 'Forbidden: Admin access required' }, { status: 403 });
     }
 
     // 2. Create the new user

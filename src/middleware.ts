@@ -78,7 +78,25 @@ export async function middleware(request: NextRequest) {
       const envAdmins = adminEmailsEnv.split(',').map(e => e.trim()).filter(Boolean);
       const allAdmins = [...envAdmins, ...DEFAULT_ADMINS.map(e => e.toLowerCase()), 'l47idkpro@gmail.com'];
       
-      if (!allAdmins.includes(user.email?.toLowerCase() || "")) {
+      const userEmail = user.email?.toLowerCase() || "";
+      let isDbAdmin = false;
+      
+      // Check database profile for admin role
+      try {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', user.id)
+          .maybeSingle();
+          
+        if (profile && (profile.role === 'admin' || profile.role === 'super_admin')) {
+          isDbAdmin = true;
+        }
+      } catch (e) {
+        console.error("Middleware profile fetch error:", e);
+      }
+      
+      if (!allAdmins.includes(userEmail) && !isDbAdmin) {
         const homeResponse = NextResponse.redirect(new URL('/', request.url));
         supabaseResponse.cookies.getAll().forEach((cookie) => {
           homeResponse.cookies.set(cookie.name, cookie.value, {

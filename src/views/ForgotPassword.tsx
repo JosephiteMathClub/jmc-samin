@@ -120,6 +120,9 @@ const ForgotPassword = () => {
                   We&apos;ve sent a password reset link to <span className="text-white font-bold">{email}</span>. 
                   Please check your email and follow the instructions to reset your password.
                 </p>
+                <div className="text-[10px] text-amber-500/80 uppercase tracking-widest p-4 bg-amber-500/10 border border-amber-500/20 rounded-2xl text-left">
+                  <span className="font-bold">Note: </span> If clicking the link fails to load or directs you to the wrong site, please make sure your Supabase Project's "Site URL" and "Redirect URLs" under Authentication &gt; URL Configuration are updated to include this site&apos;s preview URL.
+                </div>
                 <Link 
                   href="/login"
                   className="inline-block text-[10px] font-bold uppercase tracking-[0.2em] text-amber-500 hover:text-amber-400 transition-colors underline underline-offset-8 decoration-2"

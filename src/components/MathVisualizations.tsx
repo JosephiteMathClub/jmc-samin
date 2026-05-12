@@ -9,6 +9,8 @@ const MathVisualizations: React.FC<MathVisualizationsProps> = ({ reduced = false
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
+    // Removed early return to ensure canvas is initialized
+
     const canvas = canvasRef.current;
     if (!canvas) return;
 
@@ -320,15 +322,15 @@ const MathVisualizations: React.FC<MathVisualizationsProps> = ({ reduced = false
       time += 0.01;
 
       drawGrid();
-      if (!reduced) {
-        updateLorenz();
-        drawLorenz();
-        drawFibonacci();
-        drawSineWave();
-        drawGeometricPulse();
-        drawTechnicalRings();
-        drawHexStream(currentTime);
-      }
+      
+      updateLorenz();
+      drawLorenz();
+      drawFibonacci();
+      drawSineWave();
+      drawGeometricPulse();
+      drawTechnicalRings();
+      drawHexStream(currentTime);
+      
       drawShards();
     };
 
@@ -339,6 +341,8 @@ const MathVisualizations: React.FC<MathVisualizationsProps> = ({ reduced = false
       cancelAnimationFrame(animationFrameId);
     };
   }, [reduced]);
+
+  // Removed early return null
 
   return (
     <canvas

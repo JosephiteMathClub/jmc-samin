@@ -1,12 +1,11 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useContent } from "@/context/ContentContext";
 import { useAuth } from "@/context/AuthContext";
 import Navbar from "@/components/Navbar";
-import BackgroundFormulas from "@/components/BackgroundFormulas";
 import MathVisualizations from "@/components/MathVisualizations";
 import StarField from "@/components/StarField";
 import SplashScreen from "@/components/SplashScreen";
@@ -21,8 +20,10 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   const { loading, content } = useContent();
   const { isAdmin } = useAuth();
   const pathname = usePathname();
+  const router = useRouter();
   const [splashFinished, setSplashFinished] = useState(false);
   const { shouldReduceGfx, shouldStopFormulas } = usePerformance();
+  const restoredRef = useRef(false);
 
   // Allow access to login and password reset pages even in maintenance mode
   const isAuthPage = pathname?.startsWith('/login') || 
@@ -30,6 +31,60 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                      pathname?.startsWith('/reset-password');
 
   const isMaintenance = content?.site?.maintenanceMode && !isAdmin && !isAuthPage;
+
+  // Restore path if PWA was killed by OS (e.g., during file picking)
+  useEffect(() => {
+    if (typeof window !== 'undefined' && !restoredRef.current) {
+      restoredRef.current = true;
+      try {
+        const savedPath = localStorage.getItem('jmc_last_path');
+        const savedTime = localStorage.getItem('jmc_last_path_time');
+        
+        if (savedPath && savedTime) {
+          const timeDiff = Date.now() - parseInt(savedTime, 10);
+          // Only restore if less than 2 hours have passed
+          // AND only if they are landing on the root page (to allow deep links like /reset-password to work)
+          if (timeDiff < 2 * 60 * 60 * 1000 && window.location.pathname === '/') {
+            // Prevent redirect loops
+            localStorage.removeItem('jmc_last_path');
+            localStorage.removeItem('jmc_last_path_time');
+            // Check if saved path wasn't root before pushing
+            const savedPathname = savedPath.split('?')[0].split('#')[0];
+            if (savedPathname !== '/') {
+              router.push(savedPath);
+            }
+          }
+        }
+      } catch (e) {
+        console.error("Failed to restore path", e);
+      }
+    }
+  }, [router]);
+
+  // Keep track of the current path for crash recovery
+  useEffect(() => {
+    if (typeof window !== 'undefined' && pathname && splashFinished) {
+      try {
+        localStorage.setItem('jmc_last_path', window.location.pathname + window.location.search);
+        localStorage.setItem('jmc_last_path_time', Date.now().toString());
+      } catch (e) {
+        // Ignore quota or access errors
+      }
+    }
+  }, [pathname, splashFinished]);
+
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden' && pathname) {
+        try {
+          localStorage.setItem('jmc_last_path', window.location.pathname + window.location.search);
+          localStorage.setItem('jmc_last_path_time', Date.now().toString());
+        } catch (e) {}
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [pathname]);
 
   return (
     <AnimatePresence mode="wait">
@@ -52,14 +107,10 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
           initial={shouldReduceGfx ? { opacity: 1 } : { opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: shouldReduceGfx ? 0.3 : 1 }}
-          className="min-h-screen flex flex-col relative overflow-hidden"
+          className="min-h-screen flex flex-col relative overflow-hidden bg-[#020202]"
         >
-          {/* Global Scanline Overlay */}
-          {!shouldReduceGfx && <div className="scanline fixed inset-0 z-50 pointer-events-none opacity-[0.01]" />}
-
           {/* Atmospheric Background */}
-          <div className="fixed inset-0 pointer-events-none -z-10">
-            <div className="noise absolute inset-0 opacity-[0.015]" />
+          <div className="fixed inset-0 pointer-events-none -z-10 bg-gradient-to-b from-transparent via-[#050505]/50 to-[#000000]">
             {!shouldReduceGfx && (
               <>
                 <motion.div 
@@ -67,18 +118,12 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                   animate={{ opacity: [0.3, 0.6, 0.3], scale: [1, 1.1, 1] }}
                   transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
                 />
-                <div className="absolute inset-0 bg-[linear-gradient(to_bottom,transparent,rgba(0,0,0,0.4),transparent)] opacity-20" />
-                <div className="absolute inset-0 bg-gradient-to-b from-amber-500/5 via-transparent to-indigo-500/10" />
               </>
             )}
             
             {/* Background Components - Rendered above the base gradients but behind content */}
             <StarField reduced={shouldReduceGfx} />
             <MathVisualizations reduced={shouldReduceGfx} />
-            <BackgroundFormulas reduced={shouldStopFormulas} />
-            
-            {/* Sci-fi Scanning Grid (Subtle) */}
-            <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.02] mix-blend-overlay" />
           </div>
 
           <Navbar />

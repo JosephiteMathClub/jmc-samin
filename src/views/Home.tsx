@@ -21,7 +21,7 @@ const Testimonials = dynamic(() => import('../components/home/Testimonials').the
 });
 
 const HomeSkeleton = () => (
-  <div className="min-h-screen bg-[#050505] pt-32">
+  <div className="min-h-screen bg-transparent pt-32">
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <div className="mb-32">
         <Skeleton className="h-4 w-32 mb-8 rounded-full" />
@@ -80,7 +80,7 @@ const Home = () => {
   if (loading) return <HomeSkeleton />;
 
   return (
-    <div className="relative min-h-screen selection:bg-[var(--c-6-start)]/30 selection:text-white bg-[#050505]">
+    <div className="relative min-h-screen selection:bg-[var(--c-6-start)]/30 selection:text-white">
       {/* Immersive Background Grid System */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden -z-10">
           <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:100px_100px] [mask-image:radial-gradient(ellipse_at_center,black,transparent_80%)] opacity-30" />

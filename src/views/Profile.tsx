@@ -365,6 +365,7 @@ const Profile = () => {
                           src={resolveImageUrl(profile.avatar_url)} 
                           alt={profile.full_name || "User Avatar"} 
                           fill
+                          sizes="(max-width: 768px) 256px, 256px"
                           className="object-cover" 
                           referrerPolicy="no-referrer" 
                         />

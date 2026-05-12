@@ -60,7 +60,21 @@ export async function POST(req: Request) {
       ...DEFAULT_ADMINS
     ])).map(e => e.trim().toLowerCase()).filter(Boolean);
 
-    if (!ADMIN_EMAILS.includes(user.email?.toLowerCase() || '')) {
+    let isDbAdmin = false;
+    try {
+      const { data: userProfile } = await supabaseAdmin
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .maybeSingle();
+      if (userProfile && (userProfile.role === 'admin' || userProfile.role === 'super_admin')) {
+        isDbAdmin = true;
+      }
+    } catch (e) {
+      console.error("Error checking db admin status:", e);
+    }
+
+    if (!ADMIN_EMAILS.includes(user.email?.toLowerCase() || '') && !isDbAdmin) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 

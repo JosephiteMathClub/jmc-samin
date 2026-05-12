@@ -4,28 +4,19 @@ import Image, { ImageProps } from 'next/image';
 import { cn } from '@/lib/utils';
 import { Skeleton } from './Skeleton';
 
-interface OptimizedImageProps extends Omit<ImageProps, 'onLoad' | 'onError'> {
-  /** Optional fallback component if image fails */
-  fallback?: React.ReactNode;
+interface OptimizedImageProps extends ImageProps {
   /** Custom wrapper class */
   wrapperClassName?: string;
 }
 
 /**
- * A wrapper for Next.js Image with built-in:
- * - Lazy loading optimizations
- * - Blur placeholder system
- * - Skeleton loader for initial state
- * - Failed state handling
- * - Automatic decoding="async"
- * - High-performance decoding for large files
+ * A wrapper for Next.js Image
  */
 export const OptimizedImage: React.FC<OptimizedImageProps> = ({
   src,
   alt,
   className,
   wrapperClassName,
-  fallback,
   width,
   height,
   fill,
@@ -33,35 +24,20 @@ export const OptimizedImage: React.FC<OptimizedImageProps> = ({
   priority,
   ...props
 }) => {
-  const [isLoaded, setIsLoaded] = useState(false);
-  const [hasError, setHasError] = useState(false);
-
   // Skip rendering if source is empty
-  if (!src && !fallback) return null;
-
-  if (hasError && fallback) {
-    return <div className={wrapperClassName}>{fallback}</div>;
-  }
+  if (!src) return null;
 
   return (
     <div className={cn(
-      "relative overflow-hidden bg-white/5",
+      "relative overflow-hidden bg-white/5 flex items-center justify-center",
       wrapperClassName,
       fill ? "h-full w-full" : ""
     )}>
-      {/* Skeleton / Initial loading state */}
-      {!isLoaded && !hasError && (
-        <div className="absolute inset-0 z-10">
-          <Skeleton className="h-full w-full opacity-30" />
-        </div>
-      )}
-
       <Image
         src={src}
         alt={alt}
         className={cn(
-          "transition-all duration-700 ease-in-out will-change-[transform,opacity,filter]",
-          isLoaded ? "opacity-100 scale-100" : "opacity-0 scale-105 blur-lg",
+          "transition-all duration-700 ease-in-out object-cover object-center",
           className
         )}
         width={width}
@@ -69,11 +45,10 @@ export const OptimizedImage: React.FC<OptimizedImageProps> = ({
         fill={fill}
         priority={priority}
         sizes={sizes}
-        onLoad={() => setIsLoaded(true)}
-        onError={() => setHasError(true)}
         decoding="async"
         loading={priority ? undefined : "lazy"}
         fetchPriority={priority ? "high" : "auto"}
+        referrerPolicy="no-referrer"
         {...props}
       />
     </div>
