@@ -281,7 +281,7 @@ const Profile = () => {
 
   if (authLoading || !user) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#080808]">
+      <div className="min-h-screen flex items-center justify-center bg-transparent">
         <Loader2 className="w-10 h-10 text-[var(--c-6-start)] animate-spin" />
       </div>
     );
@@ -420,7 +420,13 @@ const Profile = () => {
                       </button>
                     )}
                       <button 
-                        onClick={() => setShowQrModal(true)}
+                        onClick={() => {
+                          if (isMember) {
+                            setShowQrModal(true);
+                          } else {
+                            showToast('Please register yourself as a member first.', 'error');
+                          }
+                        }}
                         className="w-full py-4 rounded-2xl bg-[var(--c-6-start)]/10 border border-[var(--c-6-start)]/20 text-[var(--c-6-start)] font-bold hover:bg-[var(--c-6-start)]/20 transition-all flex items-center justify-center gap-2 group/id"
                       >
                         <QrCode className="w-4 h-4 group-hover/id:rotate-12 transition-transform" />

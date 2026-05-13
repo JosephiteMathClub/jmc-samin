@@ -53,7 +53,7 @@ import { Skeleton } from '../components/Skeleton';
 import { usePerformance } from '../hooks/usePerformance';
 
 const AdminSkeleton = () => (
-  <div className="min-h-screen bg-[#080808] flex flex-col lg:flex-row">
+  <div className="min-h-screen bg-transparent flex flex-col lg:flex-row">
     <div className="w-full lg:w-64 border-b lg:border-b-0 lg:border-r border-white/5 p-6 space-y-4">
       {[1, 2, 3].map((i) => (
         <Skeleton key={i} className="h-12 w-full rounded-xl" />
@@ -429,7 +429,7 @@ const AdminDashboard = () => {
 
   if (!isAdmin) {
     return (
-      <div className="min-h-screen bg-[#050505] flex items-center justify-center p-4">
+      <div className="min-h-screen bg-transparent flex items-center justify-center p-4">
         <div className="atmospheric-glow w-[600px] h-[600px] bg-red-500/5 -top-48 -left-24" />
         <motion.div 
           initial={{ opacity: 0, scale: 0.9 }}

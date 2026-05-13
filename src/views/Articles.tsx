@@ -32,7 +32,7 @@ const ArticlesView = () => {
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: index * 0.1 }}
-              className="group relative flex flex-col bg-[#050505] border border-white/5 overflow-hidden transition-all duration-500 hover:border-white/20"
+              className="group relative flex flex-col bg-transparent border border-white/5 overflow-hidden transition-all duration-500 hover:border-white/20"
             >
               {/* Background Label Accent */}
               <div className="absolute top-0 right-0 p-8 overflow-hidden pointer-events-none">

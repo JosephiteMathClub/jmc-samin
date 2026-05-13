@@ -1,365 +1,396 @@
 "use client";
 import React, { useEffect, useRef } from 'react';
+import * as THREE from 'three';
 
 interface StarFieldProps {
   reduced?: boolean;
 }
 
 const StarField: React.FC<StarFieldProps> = ({ reduced = false }) => {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
+    if (!containerRef.current) {
+      console.warn('[StarField] Container ref is null');
+      return;
+    }
+    
+    console.log('[StarField] Starting initialization');
+    
+    // --- Setup ---
+    const width = window.innerWidth;
+    const height = window.innerHeight;
+    
+    const scene = new THREE.Scene();
+    scene.fog = new THREE.FogExp2(0x020205, 0.0008);
+    
+    const camera = new THREE.PerspectiveCamera(60, width / height, 1, 4000);
+    camera.position.z = 1000;
+    
+    const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true, powerPreference: "high-performance" });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setSize(width, height, true);
+    renderer.setClearColor(0x000000, 0);
+    renderer.domElement.style.position = 'absolute';
+    renderer.domElement.style.top = '0';
+    renderer.domElement.style.left = '0';
+    renderer.domElement.style.width = '100%';
+    renderer.domElement.style.height = '100%';
+    renderer.domElement.style.display = 'block';
+    renderer.domElement.style.pointerEvents = 'none';
+    renderer.domElement.style.zIndex = '0';
+    containerRef.current.appendChild(renderer.domElement);
+    console.log('[StarField] Canvas appended:', {
+      canvasSize: `${renderer.domElement.width}x${renderer.domElement.height}`,
+      domSize: `${containerRef.current.clientWidth}x${containerRef.current.clientHeight}`
+    });
+    
+    // --- Textures ---
+    const parseTexture = () => {
+       const canvas = document.createElement("canvas");
+       canvas.width = 128; canvas.height = 128;
+       const ctx = canvas.getContext("2d")!;
+       const grad = ctx.createRadialGradient(64, 64, 0, 64, 64, 64);
+       grad.addColorStop(0, "rgba(255,255,255,1)");
+       grad.addColorStop(0.3, "rgba(220,220,220,0.8)");
+       grad.addColorStop(0.7, "rgba(200,200,200,0.3)");
+       grad.addColorStop(1, "rgba(0,0,0,0)");
+       ctx.fillStyle = grad;
+       ctx.fillRect(0,0,128,128);
+       return new THREE.CanvasTexture(canvas);
+    };
+    const circleTexture = parseTexture();
 
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
+    // --- Neural Network Nodes & Connections ---
+    const nodeCount = reduced ? 150 : 400;
+    const positions = new Float32Array(nodeCount * 3);
+    const originalPositions = new Float32Array(nodeCount * 3);
+    const velocities = new Float32Array(nodeCount * 3);
+    const phases = new Float32Array(nodeCount);
+    const colors = new Float32Array(nodeCount * 3);
+    const scales = new Float32Array(nodeCount);
 
-    let animationFrameId: number;
-    let particles: Particle[] = [];
-    let lastTime = 0;
-    const mouse = { x: -1000, y: -1000 };
-    const isMobile = reduced || /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-
-    const mathFormulas = [
-      '∫ x² dx',
-      'd/dx(sin x)',
-      'E = mc²',
-      '∇·E = ρ/ε₀',
-      'ψ(x,t)',
-      'F = ma',
-      'e^(iπ) + 1 = 0',
-      '∇ × B = μ₀J + μ₀ε₀(∂E/∂t)',
-      'iℏ(∂ψ/∂t) = Ĥψ',
-      'lim(n→∞) (1+1/n)ⁿ = e',
-      'A = πr²',
-      'pV = nRT',
-      'c² = a² + b²',
-      'ΔxΔp ≥ ℏ/2',
-      '∑ n⁻² = π²/6',
-      'φ = (1 + √5) / 2',
-      '∇²φ = 0'
+    const colorChoices = [
+        new THREE.Color(0xffffff), // White
+        new THREE.Color(0xe0e0e0)  // Light gray
     ];
+    
+    for(let i=0; i<nodeCount; i++) {
+        // Distribute in a focused sphere with some periphery
+        const u = Math.random();
+        const v = Math.random();
+        const theta = u * 2.0 * Math.PI;
+        const phi = Math.acos(2.0 * v - 1.0);
+        const r = Math.random() < 0.7 ? Math.cbrt(Math.random()) * 800 : Math.cbrt(Math.random()) * 1400 + 200;
 
-    class Formula {
-      x: number;
-      y: number;
-      text: string;
-      opacity: number;
-      maxOpacity: number;
-      life: number;
-      maxLife: number;
-      angle: number;
-      rotationSpeed: number;
-      vx: number;
-      vy: number;
-      fontSize: number;
+        const x = r * Math.sin(phi) * Math.cos(theta);
+        const y = r * Math.sin(phi) * Math.sin(theta);
+        const z = r * Math.cos(phi) * 0.7;
+        
+        positions[i*3] = x;
+        positions[i*3+1] = y;
+        positions[i*3+2] = z;
+        
+        originalPositions[i*3] = x;
+        originalPositions[i*3+1] = y;
+        originalPositions[i*3+2] = z;
+        
+        velocities[i*3] = (Math.random() - 0.5) * 0.8;
+        velocities[i*3+1] = (Math.random() - 0.5) * 0.8;
+        velocities[i*3+2] = (Math.random() - 0.5) * 0.8;
+        
+        phases[i] = Math.random() * Math.PI * 2;
+        
+        const c = colorChoices[Math.floor(Math.random() * colorChoices.length)];
+        // Bright white, minimal variation
+        const intensity = 0.9 + Math.random() * 0.2;
+        colors[i*3] = c.r * intensity;
+        colors[i*3+1] = c.g * intensity;
+        colors[i*3+2] = c.b * intensity;
 
-      constructor(width: number, height: number) {
-        this.text = mathFormulas[Math.floor(Math.random() * mathFormulas.length)];
-        this.x = Math.random() * width;
-        this.y = Math.random() * height;
-        this.opacity = 0;
-        this.maxOpacity = Math.random() * 0.2 + 0.15; // 0.15 to 0.35 opacity
-        this.maxLife = Math.random() * 600 + 400; // frames
-        this.life = 0;
-        this.angle = (Math.random() - 0.5) * 0.4;
-        this.rotationSpeed = (Math.random() - 0.5) * 0.001;
-        this.vx = (Math.random() - 0.5) * 0.2;
-        this.vy = (Math.random() - 0.5) * 0.2 - 0.1; // drift mostly upwards
-        this.fontSize = Math.random() * 14 + 18; // slightly larger
-      }
-
-      update() {
-        this.life++;
-        this.x += this.vx;
-        this.y += this.vy;
-        this.angle += this.rotationSpeed;
-
-        if (this.life < 60) {
-          this.opacity = (this.life / 60) * this.maxOpacity;
-        } else if (this.life > this.maxLife - 60) {
-          this.opacity = Math.max(0, ((this.maxLife - this.life) / 60) * this.maxOpacity);
-        } else {
-          this.opacity = this.maxOpacity;
-        }
-      }
-
-      draw() {
-        if (!ctx) return;
-        ctx.save();
-        ctx.translate(this.x, this.y);
-        ctx.rotate(this.angle);
-        ctx.fillStyle = `rgba(255, 255, 255, ${this.opacity})`;
-        ctx.font = `italic ${this.fontSize}px "Caveat", "Chalkboard SE", "Comic Sans MS", cursive, serif`; 
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.shadowColor = `rgba(255, 255, 255, ${this.opacity})`;
-        ctx.shadowBlur = 8;
-        ctx.fillText(this.text, 0, 0);
-        ctx.restore();
-      }
+        scales[i] = Math.random() > 0.85 ? 3.5 : Math.random() * 2.5 + 1.2;
     }
+    
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+    
+    const pointsMaterial = new THREE.PointsMaterial({
+        size: 3,
+        map: circleTexture,
+        transparent: true,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false,
+        vertexColors: true,
+        opacity: 0.95,
+        sizeAttenuation: true
+    });
+    
+    const points = new THREE.Points(geometry, pointsMaterial);
+    scene.add(points);
+    
+    // Lines
+    const lineMaterial = new THREE.LineBasicMaterial({
+        vertexColors: true,
+        transparent: true,
+        opacity: 0.35,
+        linewidth: 0.5,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false
+    });
+    const lineGeometry = new THREE.BufferGeometry();
+    const maxLines = nodeCount * 30; // Estimate 30 connections per node max
+    const linePositions = new Float32Array(maxLines * 6); 
+    const lineColors = new Float32Array(maxLines * 6);
+    lineGeometry.setAttribute('position', new THREE.BufferAttribute(linePositions, 3));
+    lineGeometry.setAttribute('color', new THREE.BufferAttribute(lineColors, 3));
+    const lines = new THREE.LineSegments(lineGeometry, lineMaterial);
+    scene.add(lines);
 
-    class Particle {
-      x: number;
-      y: number;
-      size: number;
-      baseX: number;
-      baseY: number;
-      density: number;
-      color: string;
-      angle: number;
-      velocity: number;
-      twinkleSpeed: number;
-      twinkleOpacity: number;
-
-      constructor(x: number, y: number) {
-        this.x = x;
-        this.y = y;
-        this.size = Math.random() * 1.5 + 0.5;
-        this.baseX = this.x;
-        this.baseY = this.y;
-        this.density = (Math.random() * 30) + 1;
-        this.angle = Math.random() * Math.PI * 2;
-        this.velocity = Math.random() * 0.2 + 0.05;
-        this.twinkleSpeed = Math.random() * 0.02 + 0.005;
-        this.twinkleOpacity = Math.random();
-        
-        const isGold = Math.random() > 0.7;
-        this.color = isGold ? '245, 158, 11' : '255, 255, 255';
-      }
-
-      draw() {
-        if (!ctx) return;
-        this.twinkleOpacity += this.twinkleSpeed;
-        const opacity = (Math.sin(this.twinkleOpacity) + 1) / 2 * 0.4 + 0.05; // Slightly dimmer
-        
-        ctx.fillStyle = `rgba(${this.color}, ${opacity})`;
-        ctx.beginPath();
-        // Use rect instead of arc for performance if tiny
-        if (this.size < 1) {
-          ctx.fillRect(this.x, this.y, this.size, this.size);
-        } else {
-          ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
-          ctx.fill();
-        }
-      }
-
-      update(width: number, height: number) {
-        // Subtle floating movement
-        this.baseX += Math.cos(this.angle) * this.velocity;
-        this.baseY += Math.sin(this.angle) * this.velocity;
-        
-        // Wrap around screen
-        if (this.baseX < 0) this.baseX = width;
-        if (this.baseX > width) this.baseX = 0;
-        if (this.baseY < 0) this.baseY = height;
-        if (this.baseY > height) this.baseY = 0;
-
-        let dx = mouse.x - this.x;
-        let dy = mouse.y - this.y;
-        let distance = Math.sqrt(dx * dx + dy * dy);
-        
-        if (distance < 150) {
-          let forceDirectionX = dx / distance;
-          let forceDirectionY = dy / distance;
-          let maxDistance = 150;
-          let force = (maxDistance - distance) / maxDistance;
-          let directionX = forceDirectionX * force * this.density;
-          let directionY = forceDirectionY * force * this.density;
-          this.x -= directionX;
-          this.y -= directionY;
-        } else {
-          if (this.x !== this.baseX) {
-            this.x -= (this.x - this.baseX) / 15;
-          }
-          if (this.y !== this.baseY) {
-            this.y -= (this.y - this.baseY) / 15;
-          }
-        }
-      }
+    // --- Floating Geometry Fragments ---
+    const fragments = new THREE.Group();
+    for(let i=0; i < (reduced ? 0 : 0); i++) {
+        const geom = Math.random() > 0.5 ? new THREE.TetrahedronGeometry(Math.random()*40 + 10) : new THREE.OctahedronGeometry(Math.random()*30 + 10);
+        const mat = new THREE.MeshBasicMaterial({ 
+            color: colorChoices[Math.floor(Math.random()*colorChoices.length)], 
+            wireframe: true, 
+            transparent: true, 
+            opacity: 0.05, 
+            blending: THREE.AdditiveBlending 
+        });
+        const mesh = new THREE.Mesh(geom, mat);
+        mesh.position.set((Math.random()-0.5)*3000, (Math.random()-0.5)*2000, (Math.random()-0.5)*2000);
+        mesh.rotation.set(Math.random()*Math.PI, Math.random()*Math.PI, Math.random()*Math.PI);
+        mesh.userData = {
+            rx: (Math.random()-0.5)*0.01,
+            ry: (Math.random()-0.5)*0.01,
+            vz: (Math.random()-0.5)*2
+        };
+        fragments.add(mesh);
     }
+    scene.add(fragments);
+    
+    // --- Interaction ---
+    const mouse = new THREE.Vector2(-9999, -9999);
+    const targetMouse = new THREE.Vector2(-9999, -9999);
+    const raycaster = new THREE.Raycaster();
+    const plane = new THREE.Plane(new THREE.Vector3(0,0,1), 0);
+    const mousePos3D = new THREE.Vector3(-9999, -9999, 0);
+    const smoothMouse = new THREE.Vector3(-9999, -9999, 0);
+    
+    let shockwaves: { center: THREE.Vector3, time: number, maxRadius: number }[] = [];
 
-    class Comet {
-      x: number;
-      y: number;
-      length: number;
-      speed: number;
-      opacity: number;
-      active: boolean;
-
-      constructor(width: number, height: number) {
-        this.x = Math.random() * width;
-        this.y = Math.random() * height;
-        this.length = Math.random() * 80 + 50;
-        this.speed = Math.random() * 15 + 10;
-        this.opacity = 0;
-        this.active = false;
-      }
-
-      reset(width: number) {
-        this.x = Math.random() * width + width * 0.5;
-        this.y = Math.random() * -100;
-        this.length = Math.random() * 80 + 50;
-        this.speed = Math.random() * 15 + 10;
-        this.opacity = 0;
-        this.active = true;
-      }
-
-      update(width: number, height: number) {
-        if (!this.active) {
-          if (Math.random() < 0.005) this.reset(width);
-          return;
-        }
-
-        this.x -= this.speed;
-        this.y += this.speed;
-        this.opacity = Math.min(1, this.opacity + 0.1);
-
-        if (this.x < -this.length || this.y > height + this.length) {
-          this.active = false;
-        }
-      }
-
-      draw() {
-        if (!this.active || !ctx) return;
-        ctx.save();
-        ctx.strokeStyle = `rgba(255, 255, 255, ${this.opacity * 0.4})`;
-        ctx.lineWidth = 1.5; 
-        ctx.lineCap = 'round';
-        ctx.beginPath();
-        ctx.moveTo(this.x, this.y);
-        ctx.lineTo(this.x + this.length, this.y - this.length);
-        ctx.stroke();
-
-        ctx.fillStyle = `rgba(255, 255, 255, ${this.opacity})`;
-        ctx.beginPath();
-        ctx.arc(this.x, this.y, 1.5, 0, Math.PI * 2);
-        ctx.fill();
-
-        // Sparkle trailing
-        if (!reduced) {
-          for (let i = 0; i < 6; i++) {
-            const offsetX = Math.random() * this.length;
-            const offsetY = -offsetX + (Math.random() - 0.5) * 6; // random spread around the line
-            ctx.fillStyle = `rgba(255, 255, 255, ${this.opacity * Math.random() * 0.6})`;
-            ctx.beginPath();
-            ctx.arc(this.x + offsetX, this.y + offsetY, Math.random() * 1.5, 0, Math.PI * 2);
-            ctx.fill();
-          }
-        }
-
-        ctx.restore();
-      }
-    }
-
-    let comets: Comet[] = [];
-    let formulas: Formula[] = [];
-    let parallaxX = 0;
-    let parallaxY = 0;
-
-    const init = () => {
-      particles = [];
-      const divisor = reduced ? 80000 : 30000;
-      const numberOfParticles = (window.innerWidth * window.innerHeight) / divisor;
-      for (let i = 0; i < numberOfParticles; i++) {
-        let x = Math.random() * window.innerWidth;
-        let y = Math.random() * window.innerHeight;
-        particles.push(new Particle(x, y));
-      }
-      
-      comets = Array.from({ length: 4 }).map(() => new Comet(window.innerWidth, window.innerHeight));
-      
-      formulas = [];
-      const numFormulas = reduced ? 3 : 8;
-      for (let i = 0; i < numFormulas; i++) {
-        formulas.push(new Formula(window.innerWidth, window.innerHeight));
-        // randomize life so they don't all spawn fade together
-        formulas[i].life = Math.random() * formulas[i].maxLife;
-      }
+    const onMouseMove = (e: MouseEvent) => {
+        targetMouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+        targetMouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
     };
-
-    const handleResize = () => {
-      const dpr = window.devicePixelRatio || 1;
-      canvas.width = window.innerWidth * dpr;
-      canvas.height = window.innerHeight * dpr;
-      ctx.scale(dpr, dpr);
-      init();
-    };
-
-    const handleMouseMove = (e: MouseEvent) => {
-      mouse.x = e.clientX;
-      mouse.y = e.clientY;
-    };
-
-    window.addEventListener('resize', handleResize);
-    window.addEventListener('mousemove', handleMouseMove);
-    handleResize();
-
-    const animate = (currentTime: number) => {
-      animationFrameId = requestAnimationFrame(animate);
-      
-      const deltaTime = currentTime - lastTime;
-      // Allow standard 60fps, skip only if it's absurdly fast to prevent bugs, or just don't throttle
-      if (deltaTime < 10) return;
-      lastTime = currentTime;
-
-      // Update Parallax
-      let targetParallaxX = 0;
-      let targetParallaxY = 0;
-      if (mouse.x !== -1000) {
-        targetParallaxX = (window.innerWidth / 2 - mouse.x) * 0.02;
-        targetParallaxY = (window.innerHeight / 2 - mouse.y) * 0.02;
-      }
-      parallaxX += (targetParallaxX - parallaxX) * 0.05;
-      parallaxY += (targetParallaxY - parallaxY) * 0.05;
-
-      // Clear physical buffer reliably
-      ctx.save();
-      ctx.setTransform(1, 0, 0, 1, 0, 0);
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.restore();
-      
-      ctx.save();
-      ctx.translate(parallaxX, parallaxY);
-
-      for (let i = 0; i < particles.length; i++) {
-        particles[i].draw();
-        particles[i].update(window.innerWidth, window.innerHeight);
-      }
-      
-      for (let i = 0; i < formulas.length; i++) {
-        formulas[i].update();
-        formulas[i].draw();
-        if (formulas[i].life > formulas[i].maxLife) {
-          formulas[i] = new Formula(window.innerWidth, window.innerHeight);
+    
+    const onClick = () => {
+        if(smoothMouse.z !== -9999) {
+            shockwaves.push({ center: smoothMouse.clone(), time: 0, maxRadius: 400 });
+            renderer.setClearColor(0x0a0a0a, 0.15);
         }
-      }
-
-      if (!reduced) {
-        for (let i = 0; i < comets.length; i++) {
-          comets[i].update(window.innerWidth, window.innerHeight);
-          comets[i].draw();
-        }
-      }
-      
-      ctx.restore();
     };
+    
+    window.addEventListener('mousemove', onMouseMove, { passive: true });
+    window.addEventListener('click', onClick);
+    window.addEventListener('touchstart', (e) => {
+        if(e.touches.length > 0) {
+            targetMouse.x = (e.touches[0].clientX / window.innerWidth) * 2 - 1;
+            targetMouse.y = -(e.touches[0].clientY / window.innerHeight) * 2 + 1;
+        }
+    }, { passive: true });
+    
+    const onResize = () => {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+    };
+    window.addEventListener('resize', onResize);
+    
+    let time = 0;
+    let animationFrame: number;
+    const connectionDistSq = reduced ? 15000 : 22000;
+    
+    const animate = () => {
+        animationFrame = requestAnimationFrame(animate);
+        time += 0.005;
+        
+        mouse.lerp(targetMouse, 0.05);
+        if(targetMouse.x !== -9999) {
+            raycaster.setFromCamera(mouse, camera);
+            raycaster.ray.intersectPlane(plane, mousePos3D);
+            if(smoothMouse.z === -9999) smoothMouse.copy(mousePos3D);
+            smoothMouse.lerp(mousePos3D, 0.1);
+        }
 
-    animationFrameId = requestAnimationFrame(animate);
+        // Recover clear color slowly
+        const currentAlpha = renderer.getClearAlpha();
+        if(currentAlpha > 0.01) {
+            const newAlpha = currentAlpha * 0.95;
+            renderer.setClearColor(0x1a2b4c, newAlpha);
+        } else {
+            renderer.setClearColor(0x000000, 0);
+        }
+        
+        for(let i=shockwaves.length-1; i>=0; i--) {
+            shockwaves[i].time += 25;
+            if(shockwaves[i].time > shockwaves[i].maxRadius) {
+                shockwaves.splice(i, 1);
+            }
+        }
+        
+        let lineIndex = 0;
+        let colorIndex = 0;
+        const posAttr = geometry.attributes.position;
+        const colAttr = geometry.attributes.color;
+        const lPosAttr = lineGeometry.attributes.position;
+        const lColAttr = lineGeometry.attributes.color;
+        
+        // Parallax camera - subtle
+        camera.position.x += (mouse.x * 100 - camera.position.x) * 0.01;
+        camera.position.y += (mouse.y * 100 - camera.position.y) * 0.01;
+        camera.lookAt(scene.position);
+        fragments.rotation.y = time * 0.5;
+        fragments.rotation.x = Math.sin(time) * 0.2;
+        
+        for(let i=0; i<nodeCount; i++) {
+            let px = originalPositions[i*3];
+            let py = originalPositions[i*3+1];
+            let pz = originalPositions[i*3+2];
+            
+            // Base drift - very subtle
+            px += Math.sin(time * 0.8 + phases[i]) * 15;
+            py += Math.cos(time * 0.6 + phases[i]) * 15;
+            pz += Math.sin(time * 0.5 + phases[i]) * 12;
+            
+            // Mouse repel / attract - subtle
+            if(smoothMouse.z !== -9999) {
+                const dx = px - smoothMouse.x;
+                const dy = py - smoothMouse.y;
+                const distSq = dx*dx + dy*dy;
+                if(distSq < 150000) {
+                    const force = (150000 - distSq) / 150000;
+                    px -= dx * force * 0.15;
+                    py -= dy * force * 0.15;
+                    pz += force * 80;
+                }
+            }
+            
+            // Shockwaves
+            shockwaves.forEach(sw => {
+                const dx = px - sw.center.x;
+                const dy = py - sw.center.y;
+                const dz = pz - sw.center.z;
+                const dist = Math.sqrt(dx*dx + dy*dy + dz*dz);
+                const waveDist = Math.abs(dist - sw.time);
+                if(waveDist < 60) {
+                    const force = (60 - waveDist)/60;
+                    px += (dx/dist) * force * 40;
+                    py += (dy/dist) * force * 40;
+                    pz += (dz/dist) * force * 40;
+                }
+            });
+            
+            posAttr.setXYZ(i, px, py, pz);
+            
+            // Connections
+            for(let j=i+1; j<nodeCount; j++) {
+                // Only consider nodes relative to each other's base distance to save CPU
+                const bx = originalPositions[i*3] - originalPositions[j*3];
+                const by = originalPositions[i*3+1] - originalPositions[j*3+1];
+                const bz = originalPositions[i*3+2] - originalPositions[j*3+2];
+                if(bx*bx + by*by + bz*bz > connectionDistSq * 3) continue;
 
+                const px2 = originalPositions[j*3] + Math.sin(time * 0.8 + phases[j])*15;
+                const py2 = originalPositions[j*3+1] + Math.cos(time * 0.6 + phases[j])*15;
+                const pz2 = originalPositions[j*3+2] + Math.sin(time * 0.5 + phases[j])*12;
+                
+                // Actual current distance
+                let cx2 = px2; let cy2 = py2; let cz2 = pz2;
+                
+                // apply mouse and shockwave roughly to j to find real dist
+                if(smoothMouse.z !== -9999) {
+                    const mdx = cx2 - smoothMouse.x, mdy = cy2 - smoothMouse.y;
+                    const mds = mdx*mdx + mdy*mdy;
+                    if(mds < 150000) {
+                        const mfr = (150000 - mds) / 150000;
+                        cx2 -= mdx * mfr * 0.15; cy2 -= mdy * mfr * 0.15; cz2 += mfr * 80;
+                    }
+                }
+                shockwaves.forEach(sw => {
+                    const dx = cx2 - sw.center.x, dy = cy2 - sw.center.y, dz = cz2 - sw.center.z;
+                    const dist = Math.sqrt(dx*dx + dy*dy + dz*dz);
+                    const wd = Math.abs(dist - sw.time);
+                    if(wd < 60) {
+                        const fr = (60 - wd)/60;
+                        cx2 += (dx/dist)*fr*40; cy2 += (dy/dist)*fr*40; cz2 += (dz/dist)*fr*40;
+                    }
+                });
+
+                const dxx = px - cx2, dyy = py - cy2, dzz = pz - cz2;
+                const distSq = dxx*dxx + dyy*dyy + dzz*dzz;
+                
+                if(distSq < connectionDistSq && lineIndex < maxLines * 2) {
+                    lPosAttr.setXYZ(lineIndex, px, py, pz);
+                    lColAttr.setXYZ(lineIndex, colAttr.getX(i), colAttr.getY(i), colAttr.getZ(i));
+                    lineIndex++;
+                    
+                    lPosAttr.setXYZ(lineIndex, cx2, cy2, cz2);
+                    lColAttr.setXYZ(lineIndex, colAttr.getX(j), colAttr.getY(j), colAttr.getZ(j));
+                    lineIndex++;
+                }
+            }
+        }
+        posAttr.needsUpdate = true;
+        lPosAttr.needsUpdate = true;
+        lColAttr.needsUpdate = true;
+        lineGeometry.setDrawRange(0, lineIndex);
+        
+        // Fragments
+        fragments.children.forEach(c => {
+            c.rotation.x += c.userData.rx;
+            c.rotation.y += c.userData.ry;
+            c.position.z += c.userData.vz;
+            if(c.position.z > 1000) c.position.z = -2000;
+            if(c.position.z < -2000) c.position.z = 1000;
+        });
+        
+        renderer.render(scene, camera);
+    };
+    
+    animate();
+    
     return () => {
-      window.removeEventListener('resize', handleResize);
-      window.removeEventListener('mousemove', handleMouseMove);
-      cancelAnimationFrame(animationFrameId);
+        window.removeEventListener('mousemove', onMouseMove);
+        window.removeEventListener('click', onClick);
+        window.removeEventListener('resize', onResize);
+        cancelAnimationFrame(animationFrame);
+        renderer.dispose();
+        geometry.dispose();
+        lineGeometry.dispose();
+        pointsMaterial.dispose();
+        lineMaterial.dispose();
+        circleTexture.dispose();
+        if(containerRef.current?.contains(renderer.domElement)) {
+            containerRef.current.removeChild(renderer.domElement);
+        }
     };
   }, [reduced]);
 
   return (
-    <canvas
-      ref={canvasRef}
-      className="absolute inset-0 pointer-events-none z-0"
+    <div 
+      ref={containerRef} 
+      className="fixed inset-0 top-0 left-0" 
+      style={{ 
+        position: 'fixed',
+        pointerEvents: 'none',
+        zIndex: 0,
+        width: '100%',
+        height: '100%',
+        overflow: 'hidden',
+        display: 'block'
+      }} 
     />
   );
 };

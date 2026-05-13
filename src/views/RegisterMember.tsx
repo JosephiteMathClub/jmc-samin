@@ -351,14 +351,14 @@ const RegisterMember = () => {
 
   if (authLoading || checkingMember || contentLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#080808]">
+      <div className="min-h-screen flex items-center justify-center bg-transparent">
         <Loader2 className="w-10 h-10 text-amber-500 animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-[100dvh] bg-[#050505] pt-32 pb-24 relative">
+    <div className="min-h-[100dvh] bg-transparent pt-32 pb-24 relative">
       {/* Background Elements */}
       {!shouldReduceGfx && (
         <>

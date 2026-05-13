@@ -20,6 +20,14 @@ export const supabase = createBrowserClient(
   supabaseUrl || "https://placeholder-project.supabase.co",
   supabaseAnonKey || "placeholder-key",
   {
+    global: {
+      fetch: (url, options) => {
+        return fetch(url, {
+          ...options,
+          cache: 'no-store'
+        });
+      }
+    },
     cookieOptions: {
       sameSite: 'none',
       secure: true,

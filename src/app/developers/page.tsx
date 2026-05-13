@@ -78,7 +78,7 @@ export default function DevelopersPage() {
   const y = useTransform(scrollYProgress, [0, 1], [0, -200]);
 
   return (
-    <div className="min-h-screen bg-[#050505] selection:bg-amber-500/30">
+    <div className="min-h-screen bg-transparent selection:bg-amber-500/30">
       
       {/* Cinematic Hero */}
       <section className="relative h-[90vh] flex flex-col items-center justify-center overflow-hidden">

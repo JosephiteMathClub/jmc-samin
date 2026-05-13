@@ -6,7 +6,6 @@ import { usePathname, useRouter } from "next/navigation";
 import { useContent } from "@/context/ContentContext";
 import { useAuth } from "@/context/AuthContext";
 import Navbar from "@/components/Navbar";
-import MathVisualizations from "@/components/MathVisualizations";
 import StarField from "@/components/StarField";
 import SplashScreen from "@/components/SplashScreen";
 import FloatingSidebar from "@/components/FloatingSidebar";
@@ -102,41 +101,30 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
           logoUrl={content?.site?.logoUrl}
         />
       ) : (
-        <motion.div
-          key="content"
-          initial={shouldReduceGfx ? { opacity: 1 } : { opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: shouldReduceGfx ? 0.3 : 1 }}
-          className="min-h-screen flex flex-col relative overflow-hidden bg-[#020202]"
-        >
+        <>
           {/* Atmospheric Background */}
-          <div className="fixed inset-0 pointer-events-none -z-10 bg-gradient-to-b from-transparent via-[#050505]/50 to-[#000000]">
-            {!shouldReduceGfx && (
-              <>
-                <motion.div 
-                  className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(245,158,11,0.03),transparent_70%)]"
-                  animate={{ opacity: [0.3, 0.6, 0.3], scale: [1, 1.1, 1] }}
-                  transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
-                />
-              </>
-            )}
-            
-            {/* Background Components - Rendered above the base gradients but behind content */}
-            <StarField reduced={shouldReduceGfx} />
-            <MathVisualizations reduced={shouldReduceGfx} />
-          </div>
-
-          <Navbar />
-          <FloatingSidebar />
-          <main className="flex-grow relative z-10">
+          <StarField reduced={shouldReduceGfx} />
+          
+          <motion.div
+            key="content"
+            initial={shouldReduceGfx ? { opacity: 1 } : { opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: shouldReduceGfx ? 0.3 : 1 }}
+            className="min-h-screen flex flex-col relative overflow-hidden bg-transparent"
+            style={{ position: 'relative', zIndex: 1 }}
+          >
+            <Navbar />
+            <FloatingSidebar />
+            <main className="flex-grow relative z-10">
             <ErrorBoundary>
               {children}
             </ErrorBoundary>
-          </main>
-          
-          <SupportTrigger />
-          <Footer />
-        </motion.div>
+            </main>
+            
+            <SupportTrigger />
+            <Footer />
+          </motion.div>
+        </>
       )}
     </AnimatePresence>
   );

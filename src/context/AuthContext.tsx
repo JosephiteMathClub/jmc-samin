@@ -32,6 +32,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
 
   const lastUserId = React.useRef<string | null>(null);
+  const hasProfile = React.useRef<boolean>(false);
 
   const SUPER_ADMIN_EMAILS_LIST = React.useMemo(() => {
     const superAdminEmailsEnv = process.env.NEXT_PUBLIC_SUPER_ADMIN_EMAILS;
@@ -98,7 +99,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const handleAuthChange = React.useCallback(async (user: User | null) => {
     // Only proceed if there's a genuine change in user state or first load
-    if (user?.id === lastUserId.current && profile !== null) {
+    if (user?.id === lastUserId.current && hasProfile.current) {
       setLoading(false);
       return;
     }
@@ -114,13 +115,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       // Ensure we fetch profile but don't hold up loading if we already have a partial state
       await fetchProfile(user);
+      hasProfile.current = true;
     } else {
       setProfile(null);
       setIsAdmin(false);
       setIsSuperAdmin(false);
+      hasProfile.current = false;
     }
     setLoading(false);
-  }, [fetchProfile, profile, ADMIN_EMAILS, SUPER_ADMIN_EMAILS_LIST]);
+  }, [fetchProfile, ADMIN_EMAILS, SUPER_ADMIN_EMAILS_LIST]);
 
   const refreshProfile = React.useCallback(async () => {
     if (user) {

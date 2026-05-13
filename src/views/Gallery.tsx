@@ -33,7 +33,7 @@ export const GalleryView = () => {
     : [];
 
   return (
-    <div className="min-h-screen bg-[#050505] text-zinc-100 selection:bg-amber-500/30">
+    <div className="min-h-screen bg-transparent text-zinc-100 selection:bg-amber-500/30">
       <Navbar />
       
       <main className="pt-32 pb-20 relative">

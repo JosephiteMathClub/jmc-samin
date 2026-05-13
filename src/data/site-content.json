@@ -86,7 +86,9 @@
     "logoUrl": "/images/logo.png",
     "clubName": "Josephite Math Club",
     "established": "EST. 2015",
+    "announcements": [],
     "maintenanceMode": false,
+    "showAnnouncements": false,
     "maintenanceMessage": "The site is currently under maintenance"
   },
   "about": {
@@ -1148,7 +1150,7 @@
       "published": true
     }
   ],
-  "lastUpdated": "2026-05-11T05:33:13.967Z",
+  "lastUpdated": "2026-05-13T13:05:57.493Z",
   "_instruction": "Update 'lastUpdated' whenever you manually edit this file to ensure changes take precedence over the admin panel.",
   "gallery_page": {
     "images": [

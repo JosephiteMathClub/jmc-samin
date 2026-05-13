@@ -14,7 +14,7 @@ const MaintenanceView: React.FC<MaintenanceViewProps> = ({
   logoUrl 
 }) => {
   return (
-    <div className="min-h-screen bg-[#050505] flex items-center justify-center p-4 relative overflow-hidden">
+    <div className="min-h-screen bg-transparent flex items-center justify-center p-4 relative overflow-hidden">
       {/* Atmospheric Background */}
       <div className="fixed inset-0 pointer-events-none">
         <div className="absolute inset-0 bg-gradient-to-b from-red-500/5 via-transparent to-amber-500/5" />

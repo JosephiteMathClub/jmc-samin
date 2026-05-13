@@ -54,7 +54,7 @@ const Contact = () => {
   ];
 
   return (
-    <div className="relative min-h-screen bg-[#050505] overflow-hidden">
+    <div className="relative min-h-screen bg-transparent overflow-hidden">
       {/* Background Glows */}
       {!shouldReduceGfx && (
         <>

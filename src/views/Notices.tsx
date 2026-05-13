@@ -9,7 +9,7 @@ import { Skeleton } from '../components/Skeleton';
 import { usePerformance } from '../hooks/usePerformance';
 
 const NoticesSkeleton = () => (
-  <div className="min-h-screen bg-[#050505] pt-40">
+  <div className="min-h-screen bg-transparent pt-40">
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <div className="mb-24">
         <Skeleton className="h-4 w-32 mb-8" />
@@ -149,7 +149,7 @@ const Notices = () => {
                     transition={{ duration: 0.4, delay: shouldReduceGfx ? 0 : i * 0.05 }}
                     className="group"
                   >
-                    <div className={`relative flex flex-col md:flex-row border-t border-white/10 ${i === filteredNotices.length - 1 ? 'border-b' : ''} bg-[#080808] transition-all duration-500 overflow-hidden`}>
+                    <div className={`relative flex flex-col md:flex-row border-t border-white/10 ${i === filteredNotices.length - 1 ? 'border-b' : ''} bg-transparent transition-all duration-500 overflow-hidden`}>
                       
                       {/* Technical Meta Column */}
                       <div className="w-full md:w-64 p-8 flex flex-col justify-between border-r border-white/10 bg-white/[0.01]">

@@ -10,7 +10,7 @@ import { Skeleton } from '../components/Skeleton';
 import { usePerformance } from '../hooks/usePerformance';
 
 const AboutSkeleton = () => (
-  <div className="min-h-screen bg-[#050505] pt-32">
+  <div className="min-h-screen bg-transparent pt-32">
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <div className="text-center mb-32">
         <Skeleton className="h-24 w-3/4 mx-auto mb-12" />
@@ -248,7 +248,7 @@ const About = () => {
             </ScrollReveal>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 border border-white/5 bg-[#080808]">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 border border-white/5 bg-transparent">
             {(visionSteps).map((step: any, i: number) => {
               const IconMap: any = { Target, Zap, Rocket, Globe };
               const Icon = IconMap[step.icon] || Zap;

@@ -66,7 +66,7 @@ const ResetPassword = () => {
   };
 
   return (
-    <div className="relative min-h-screen bg-[#050505] overflow-hidden flex items-center justify-center p-4 pt-32 pb-24">
+    <div className="relative min-h-screen bg-transparent overflow-hidden flex items-center justify-center p-4 pt-32 pb-24">
       {/* Background Glows */}
       <div className="atmospheric-glow w-[600px] h-[600px] bg-amber-500/10 -top-48 -left-24" />
       <div className="atmospheric-glow w-[700px] h-[700px] bg-indigo-500/5 bottom-0 -right-24" />

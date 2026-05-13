@@ -48,7 +48,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
   const [isSidebarOpen, setIsSidebarOpen] = React.useState(false);
 
   return (
-    <div className="flex min-h-screen bg-[#050505] selection:bg-amber-500/30 selection:text-amber-200 overflow-x-hidden">
+    <div className="flex min-h-screen bg-transparent selection:bg-amber-500/30 selection:text-amber-200 overflow-x-hidden">
       {/* Mobile Sidebar Overlay */}
       <AnimatePresence>
         {isSidebarOpen && (

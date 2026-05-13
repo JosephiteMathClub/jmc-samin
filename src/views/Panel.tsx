@@ -14,7 +14,7 @@ import { usePerformance } from '../hooks/usePerformance';
 import { resolveImageUrl } from '../lib/utils';
 
 const PanelSkeleton = () => (
-  <div className="min-h-screen bg-[#050505] pt-32">
+  <div className="min-h-screen bg-transparent pt-32">
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-32">
       <div className="text-center">
         <Skeleton className="h-16 w-64 mx-auto mb-16" />
@@ -158,6 +158,65 @@ const Flashcard = React.memo(({ role, name, imageUrl, icon: Icon = User, onUploa
 });
 
 Flashcard.displayName = 'Flashcard';
+
+const ExecutiveRow = React.memo(({ role, name, imageUrl, icon: Icon = User, onUpload, isAdmin }: any) => {
+  const [uploading, setUploading] = React.useState(false);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const { showToast } = useToast();
+
+  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!isAdmin) return;
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const res = await fetch('/api/upload', { method: 'POST', body: formData });
+      if (!res.ok) throw new Error('Upload failed');
+      const data = await res.json();
+      if (onUpload) await onUpload(data.url);
+      showToast('Image updated successfully', 'success');
+    } catch (err) {
+      console.error('Upload error:', err);
+      showToast('Failed to upload image', 'error');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  return (
+    <div className="flex items-center gap-6 p-4 rounded-[2rem] bg-white/[0.02] border border-white/[0.05] hover:bg-white/[0.04] transition-colors relative overflow-hidden group">
+      <div className="relative w-16 h-16 sm:w-20 sm:h-20 rounded-full overflow-hidden flex-shrink-0 bg-zinc-900 border border-white/10">
+        {imageUrl ? (
+          <Image src={resolveImageUrl(imageUrl)} alt={name || 'Member'} fill className="object-cover object-[center_top]" sizes="80px" />
+        ) : (
+          <div className="absolute inset-0 flex items-center justify-center text-white/20">
+            <Icon className="w-8 h-8" />
+          </div>
+        )}
+        {isAdmin && (
+          <div 
+            onClick={() => fileInputRef.current?.click()}
+            className="absolute inset-0 bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer z-10"
+          >
+            {uploading ? <Loader2 className="w-5 h-5 text-white animate-spin" /> : <Upload className="w-5 h-5 text-white" />}
+          </div>
+        )}
+      </div>
+
+      <div className="flex-grow pr-4">
+        <h4 className="text-base sm:text-lg font-bold text-white tracking-tight">{name || 'New Member'}</h4>
+        <p className="text-[10px] sm:text-xs font-mono text-[var(--c-6-start)] tracking-[0.2em] uppercase mt-1 opacity-80">{role || 'Member'}</p>
+      </div>
+
+      {isAdmin && (
+        <input type="file" ref={fileInputRef} onChange={handleUpload} className="hidden" accept=".jpg,.jpeg,.png" />
+      )}
+    </div>
+  );
+});
+ExecutiveRow.displayName = 'ExecutiveRow';
 
 const SectionHeader = ({ children, subtitle }: any) => {
   return (
@@ -312,9 +371,9 @@ const PanelView = () => {
               {/* VP Grid */}
               <div className="space-y-12">
                 <SubHeader>VICE PRESIDENT</SubHeader>
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-8">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                   {activePanelData.vicePresidents?.map((p: any, i: number) => (
-                    <Flashcard 
+                    <ExecutiveRow 
                       key={i}
                       {...p} 
                       isAdmin={isAdmin}
@@ -328,11 +387,11 @@ const PanelView = () => {
               {activePanelData.secretaries && (
                  <div className="space-y-16">
                    {activePanelData.secretaries.jointSecretary && activePanelData.secretaries.jointSecretary.length > 0 && (
-                     <div className="space-y-12">
+                     <div className="space-y-8">
                        <SubHeader>JOINT SECRETARY</SubHeader>
-                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                          {activePanelData.secretaries.jointSecretary.map((p: any, i: number) => (
-                           <Flashcard 
+                           <ExecutiveRow 
                              key={`js-${i}`}
                              {...p} 
                              role="Joint Secretary"
@@ -344,11 +403,11 @@ const PanelView = () => {
                      </div>
                    )}
                    {activePanelData.secretaries.organizingSecretary && activePanelData.secretaries.organizingSecretary.length > 0 && (
-                     <div className="space-y-12">
+                     <div className="space-y-8">
                        <SubHeader>ORGANIZING SECRETARY</SubHeader>
-                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                          {activePanelData.secretaries.organizingSecretary.map((p: any, i: number) => (
-                           <Flashcard 
+                           <ExecutiveRow 
                              key={`os-${i}`}
                              {...p} 
                              role="Organizing Secretary"
@@ -360,11 +419,11 @@ const PanelView = () => {
                      </div>
                    )}
                    {activePanelData.secretaries.asstGeneralSecretary && activePanelData.secretaries.asstGeneralSecretary.length > 0 && (
-                     <div className="space-y-12">
+                     <div className="space-y-8">
                        <SubHeader>ASSISTANT GENERAL SECRETARY</SubHeader>
-                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                          {activePanelData.secretaries.asstGeneralSecretary.map((p: any, i: number) => (
-                           <Flashcard 
+                           <ExecutiveRow 
                              key={`ags-${i}`}
                              {...p} 
                              role="Assistant General Secretary"
@@ -376,11 +435,11 @@ const PanelView = () => {
                      </div>
                    )}
                    {activePanelData.secretaries.correspondingSecretary && activePanelData.secretaries.correspondingSecretary.length > 0 && (
-                     <div className="space-y-12">
+                     <div className="space-y-8">
                        <SubHeader>CORRESPONDING SECRETARY</SubHeader>
-                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                          {activePanelData.secretaries.correspondingSecretary.map((p: any, i: number) => (
-                           <Flashcard 
+                           <ExecutiveRow 
                              key={`cs-${i}`}
                              {...p} 
                              role="Corresponding Secretary"
@@ -396,11 +455,11 @@ const PanelView = () => {
 
               {/* Departments Grid */}
               {activePanelData.departments && activePanelData.departments.length > 0 && (
-                 <div className="space-y-12">
+                 <div className="space-y-8">
                    <SubHeader>HEAD OF DEPARTMENTS</SubHeader>
-                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-8">
+                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                      {activePanelData.departments.map((p: any, i: number) => (
-                       <Flashcard 
+                       <ExecutiveRow 
                          key={i}
                          {...p} 
                          role={p.dept ? `Head of ${p.dept}` : p.role}
