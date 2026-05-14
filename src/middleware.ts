@@ -91,13 +91,24 @@ export async function middleware(request: NextRequest) {
       
       // Check database profile for admin role
       try {
-        const { data: profile } = await supabase
+        const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+        let adminClient = supabase;
+        if (serviceRoleKey) {
+          adminClient = createServerClient(supabaseUrl, serviceRoleKey, {
+            cookies: {
+              getAll() { return request.cookies.getAll(); },
+              setAll() { } // Read-only in middleware
+            }
+          });
+        }
+        
+        const { data: profile } = await adminClient
           .from('profiles')
           .select('role')
           .eq('id', user.id)
           .maybeSingle();
           
-        if (profile && (profile.role === 'admin' || profile.role === 'super_admin')) {
+        if (profile && (profile.role?.trim().toLowerCase() === 'admin' || profile.role?.trim().toLowerCase() === 'super_admin')) {
           isDbAdmin = true;
         }
       } catch (e) {

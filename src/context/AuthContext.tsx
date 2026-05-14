@@ -55,19 +55,45 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const userEmail = (currentUser.email || "").toLowerCase();
     
     try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('id, full_name, role, avatar_url')
-        .eq('id', currentUser.id)
-        .maybeSingle();
+      let data = null;
+      let error = null;
+      
+      try {
+        const response = await fetch('/api/auth/me', { cache: 'no-store' });
+        if (response.ok) {
+          const resJson = await response.json();
+          data = resJson.profile;
+        } else {
+          // Fallback to client if API fails
+          const { data: fallbackData, error: fallbackError } = await supabase
+            .from('profiles')
+            .select('id, full_name, role, avatar_url')
+            .eq('id', currentUser.id)
+            .maybeSingle();
+          data = fallbackData;
+          error = fallbackError;
+        }
+      } catch (e) {
+        const { data: fallbackData, error: fallbackError } = await supabase
+          .from('profiles')
+          .select('id, full_name, role, avatar_url')
+          .eq('id', currentUser.id)
+          .maybeSingle();
+        data = fallbackData;
+        error = fallbackError;
+      }
       
       if (data && !error) {
         setProfile({
           ...data,
           full_name: data.full_name || currentUser.user_metadata?.full_name || currentUser.user_metadata?.name || ""
         });
-        setIsAdmin(data.role === 'admin' || data.role === 'super_admin' || ADMIN_EMAILS.includes(userEmail));
-        setIsSuperAdmin(data.role === 'super_admin' || SUPER_ADMIN_EMAILS_LIST.includes(userEmail));
+        const role = data.role ? data.role.toString().trim().toLowerCase() : '';
+        const isAdminVal = role === 'admin' || role === 'super_admin' || ADMIN_EMAILS.includes(userEmail);
+        const isSuperAdminVal = role === 'super_admin' || SUPER_ADMIN_EMAILS_LIST.includes(userEmail);
+        setIsAdmin(isAdminVal);
+        setIsSuperAdmin(isSuperAdminVal);
+        console.log("AuthContext: role=", role, "isAdmin=", isAdminVal);
       } else {
         const isSuper = SUPER_ADMIN_EMAILS_LIST.includes(userEmail);
         setProfile({ 
@@ -129,6 +155,39 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (user) {
       await fetchProfile(user);
     }
+  }, [user, fetchProfile]);
+
+  // Subscribe to real-time profile changes
+  useEffect(() => {
+    if (!isSupabaseConfigured || !user) return;
+
+    let isMounted = true;
+
+    // Use the new Supabase realtime API
+    const channel = supabase
+      .channel(`profile-${user.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'profiles',
+          filter: `id=eq.${user.id}`
+        },
+        (payload: any) => {
+          if (!isMounted) return;
+          console.log('[AuthContext] Profile update detected via realtime:', payload);
+          if (user) {
+            fetchProfile(user);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      isMounted = false;
+      channel.unsubscribe();
+    };
   }, [user, fetchProfile]);
 
   useEffect(() => {

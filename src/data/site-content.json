@@ -1,4 +1,6 @@
 {
+  "lastUpdated": "2026-04-15T08:38:40.793Z",
+  "_instruction": "Update 'lastUpdated' whenever you manually edit this file to ensure changes take precedence over the admin panel.",
   "home": {
     "gallery": [
       "/images/gallery/gallery1.jpg",
@@ -86,9 +88,7 @@
     "logoUrl": "/images/logo.png",
     "clubName": "Josephite Math Club",
     "established": "EST. 2015",
-    "announcements": [],
-    "maintenanceMode": false,
-    "showAnnouncements": false,
+    "maintenanceMode": true,
     "maintenanceMessage": "The site is currently under maintenance"
   },
   "about": {
@@ -1003,6 +1003,96 @@
             "name": "Emmanuel Gosal",
             "role": "Vice President",
             "imageUrl": "/images/members/panel_26/emmanuel_gosal.png"
+          },
+          {
+            "id": "root-panel-executive-current-vicePresidents-10-new",
+            "name": "Sanchalon Minhaz",
+            "role": "Vice President",
+            "imageUrl": "/images/members/panel_26/Sanchalon minhaz.png"
+          },
+          {
+            "id": "root-panel-executive-current-vicePresidents-11-new",
+            "name": "Ajmol Fahim",
+            "role": "Vice President",
+            "imageUrl": "/images/members/panel_26/ajmol fahim.png"
+          },
+          {
+            "id": "root-panel-executive-current-vicePresidents-12-new",
+            "name": "Arefin Alam Tanjim",
+            "role": "Vice President",
+            "imageUrl": "/images/members/panel_26/arefin alam tanjim.png"
+          },
+          {
+            "id": "root-panel-executive-current-vicePresidents-13-new",
+            "name": "Kazi Nafisul Bashar",
+            "role": "Vice President",
+            "imageUrl": "/images/members/panel_26/kazi nafisul bashar.png"
+          },
+          {
+            "id": "root-panel-executive-current-vicePresidents-14-new",
+            "name": "Nazmus Sakib",
+            "role": "Vice President",
+            "imageUrl": "/images/members/panel_26/nazmus sakib.png"
+          },
+          {
+            "id": "root-panel-executive-current-vicePresidents-15-new",
+            "name": "Raghib As",
+            "role": "Vice President",
+            "imageUrl": "/images/members/panel_26/raghib as.png"
+          },
+          {
+            "id": "root-panel-executive-current-vicePresidents-16-new",
+            "name": "Raiyan Rhytm",
+            "role": "Vice President",
+            "imageUrl": "/images/members/panel_26/raiyan rhytm.png"
+          },
+          {
+            "id": "root-panel-executive-current-vicePresidents-17-new",
+            "name": "S M Abir",
+            "role": "Vice President",
+            "imageUrl": "/images/members/panel_26/s m abir.png"
+          },
+          {
+            "id": "root-panel-executive-current-vicePresidents-18-new",
+            "name": "Saqeef Mihran Sabir",
+            "role": "Vice President",
+            "imageUrl": "/images/members/panel_26/saqeef mihran sabir.png"
+          },
+          {
+            "id": "root-panel-executive-current-vicePresidents-19-new",
+            "name": "Shougoto Shaha",
+            "role": "Vice President",
+            "imageUrl": "/images/members/panel_26/shougoto shaha.png"
+          },
+          {
+            "id": "root-panel-executive-current-vicePresidents-20-new",
+            "name": "Tahmid Muhsin Taqi",
+            "role": "Vice President",
+            "imageUrl": "/images/members/panel_26/tahmid muhsin taqi.png"
+          },
+          {
+            "id": "root-panel-executive-current-vicePresidents-21-new",
+            "name": "Tasdid Alam Ratul",
+            "role": "Vice President",
+            "imageUrl": "/images/members/panel_26/tasdid alam ratul.png"
+          },
+          {
+            "id": "root-panel-executive-current-vicePresidents-22-new",
+            "name": "Tawsif Mahmud",
+            "role": "Vice President",
+            "imageUrl": "/images/members/panel_26/tawsif mahmud.png"
+          },
+          {
+            "id": "root-panel-executive-current-vicePresidents-23-new",
+            "name": "Touhidur Rahman",
+            "role": "Vice President",
+            "imageUrl": "/images/members/panel_26/touhidur rahman.png"
+          },
+          {
+            "id": "root-panel-executive-current-vicePresidents-24-new",
+            "name": "Zulkarnain Zaman Aarosh",
+            "role": "Vice President",
+            "imageUrl": "/images/members/panel_26/zulkarnain zaman aarosh.png"
           }
         ],
         "deputyPresidents": [
@@ -1090,15 +1180,6 @@
     ],
     "description": "Join us for a series of challenging competitions, insightful workshops, and engaging seminars designed to push your mathematical boundaries."
   },
-  "contact": {
-    "email": "N/A",
-    "phone": "N/A",
-    "socials": {
-      "facebook": "https://www.facebook.com/2015JMC/",
-      "instagram": "https://www.instagram.com/jmc_.official/"
-    },
-    "location": "St. Joseph Higher Secondary School"
-  },
   "gallery": {
     "images": [
       "/images/gallery/gallery1.jpg",
@@ -1137,30 +1218,37 @@
     ],
     "description": "Stay updated with the latest announcements, results, and important information from the Josephite Math Club."
   },
-  "articles": [
-    {
-      "id": "art-1",
-      "date": "20 Apr 2026",
-      "slug": "beauty-of-prime-numbers",
-      "title": "The Beauty of Prime Numbers",
-      "author": "Math Club Research Team",
-      "content": "Prime numbers have fascinated mathematicians for millennia. They are the building blocks of integers, and their distribution remains one of the greatest mysteries in mathematics. In this article, we'll explore the Riemann Hypothesis and how primes affect modern cryptography.\n\nFrom the ancient Greeks to modern supercomputers, the hunt for larger primes continues. Why does it matter? Because our entire digital security depends on the difficulty of factoring large numbers into their prime components.",
-      "excerpt": "Exploring why prime numbers are the atoms of the mathematical universe.",
-      "category": "Number Theory",
-      "published": true
-    }
-  ],
-  "lastUpdated": "2026-05-13T13:05:57.493Z",
-  "_instruction": "Update 'lastUpdated' whenever you manually edit this file to ensure changes take precedence over the admin panel.",
+  "contact": {
+    "email": "N/A",
+    "phone": "N/A",
+    "socials": {
+      "facebook": "https://www.facebook.com/2015JMC/",
+      "instagram": "https://www.instagram.com/jmc_.official/"
+    },
+    "location": "St. Joseph Higher Secondary School"
+  },
+  "registration": {
+    "fee": "200 BDT",
+    "bkashNumber": "01712345678",
+    "declaration": "I am willing to join the Josephite Math Club, I promise to perform my duties with honesty, respect the club values, and work for its development",
+    "registrationOpen": true,
+    "registrationClosedMessage": "Registration for the current intra-events is currently closed. Please stay tuned for future updates.",
+    "instructions": [
+      "Go to your bKash app or dial *247#",
+      "Select \"Send Money\" and enter the number above",
+      "Enter the registration fee amount",
+      "Copy the Transaction ID (TrxID) and enter it below"
+    ],
+    "cashInstructions": "Please pay your registration fee to the club treasurer."
+  },
   "gallery_page": {
     "images": [
-      {
-        "id": "gallery-new-1778477562551",
-        "url": "https://ikciatrploqznijspyuk.supabase.co/storage/v1/object/public/images/1778477585229-m4vvg216a.jpg",
-        "title": "",
-        "category": "EVENT",
-        "description": ""
-      }
+      "/images/gallery/gallery1.jpg",
+      "/images/gallery/gallery2.jpg",
+      "/images/gallery/gallery3.jpg",
+      "/images/gallery/gallery4.jpg",
+      "/images/gallery/gallery5.jpg",
+      "/images/gallery/gallery6.jpg"
     ]
   },
   "members_list": {
@@ -1169,18 +1257,17 @@
     "subtitle": "COMMUNITY",
     "description": "The heartbeat of Josephite Math Club - our diverse and passionate community of mathematicians."
   },
-  "registration": {
-    "fee": "200 BDT",
-    "bkashNumber": "01712345678",
-    "declaration": "I am willing to join the Josephite Math Club, I promise to perform my duties with honesty, respect the club values, and work for its development",
-    "instructions": [
-      "Go to your bKash app or dial *247#",
-      "Select \"Send Money\" and enter the number above",
-      "Enter the registration fee amount",
-      "Copy the Transaction ID (TrxID) and enter it below"
-    ],
-    "cashInstructions": "Please pay your registration fee to the club treasurer.",
-    "registrationOpen": false,
-    "registrationClosedMessage": "Registration for the current intra-events is currently closed. Please stay tuned for future updates."
-  }
+  "articles": [
+    {
+      "id": "art-1",
+      "title": "The Beauty of Prime Numbers",
+      "slug": "beauty-of-prime-numbers",
+      "excerpt": "Exploring why prime numbers are the atoms of the mathematical universe.",
+      "content": "Prime numbers have fascinated mathematicians for millennia. They are the building blocks of integers, and their distribution remains one of the greatest mysteries in mathematics. In this article, we'll explore the Riemann Hypothesis and how primes affect modern cryptography.\n\nFrom the ancient Greeks to modern supercomputers, the hunt for larger primes continues. Why does it matter? Because our entire digital security depends on the difficulty of factoring large numbers into their prime components.",
+      "author": "Math Club Research Team",
+      "date": "20 Apr 2026",
+      "category": "Number Theory",
+      "published": true
+    }
+  ]
 }

@@ -16,51 +16,64 @@ interface SplashScreenProps {
 const SplashScreen = ({ isLoaded, logoUrl, onFinish }: SplashScreenProps) => {
   const [progress, setProgress] = useState(0);
   const [isExiting, setIsExiting] = useState(false);
-  const [shouldShow, setShouldShow] = useState(true);
   const { shouldReduceGfx } = usePerformance();
-
-  useEffect(() => {
-    const hasSeen = sessionStorage.getItem('jmc-splash-seen');
-    if (hasSeen === 'true') {
-      setShouldShow(false);
-      onFinish();
-    }
-  }, [onFinish]);
 
   const resolvedLogoUrl = resolveImageUrl(logoUrl) || "/images/logo.png";
 
-  useEffect(() => {
-    if (!shouldShow) return;
+  const loadingPhases = [
+    "Initializing mathematical sanctuary...",
+    "Connecting to database...",
+    "Loading member configurations...",
+    "Preparing quantum calculations...",
+    "Welcome to the Sanctuary"
+  ];
 
+  const getStatusText = (prog: number) => {
+    if (prog < 25) return loadingPhases[0];
+    if (prog < 50) return loadingPhases[1];
+    if (prog < 75) return loadingPhases[2];
+    if (prog < 95) return loadingPhases[3];
+    return loadingPhases[4];
+  };
+
+  useEffect(() => {
     const interval = setInterval(() => {
       setProgress(prev => {
         if (prev >= 100) {
           clearInterval(interval);
           return 100;
         }
-        // Faster progress when loaded or on low-end device
-        const step = (isLoaded || shouldReduceGfx) ? 10 : 2;
+        
+        let step = 1;
+        
+        if (prev < 40) {
+          step = Math.random() > 0.5 ? 2 : 1; // Faster initially
+        } else if (prev < 80) {
+          step = 1; // Slower in middle
+        } else if (prev < 95) {
+          // Pause at 95% until loaded
+          step = isLoaded ? 1 : 0;
+        } else {
+          // Final stretch
+          step = isLoaded ? 2 : 0;
+        }
+        
         return Math.min(100, prev + step);
       });
-    }, shouldReduceGfx ? 20 : 50);
+    }, 40);
 
     return () => clearInterval(interval);
-  }, [isLoaded, shouldReduceGfx, shouldShow]);
+  }, [isLoaded]);
 
   useEffect(() => {
-    if (!shouldShow) return;
-
     if (progress === 100) {
       const timer = setTimeout(() => {
         setIsExiting(true);
-        sessionStorage.setItem('jmc-splash-seen', 'true');
         setTimeout(onFinish, shouldReduceGfx ? 200 : 1000);
       }, shouldReduceGfx ? 100 : 800);
       return () => clearTimeout(timer);
     }
-  }, [progress, onFinish, shouldReduceGfx, shouldShow]);
-
-  if (!shouldShow) return null;
+  }, [progress, onFinish, shouldReduceGfx]);
 
   return (
     <AnimatePresence>
@@ -115,9 +128,9 @@ const SplashScreen = ({ isLoaded, logoUrl, onFinish }: SplashScreenProps) => {
                 <motion.p 
                   initial={shouldReduceGfx ? { opacity: 1 } : { opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="text-[10px] font-bold uppercase tracking-[0.4em] text-amber-500/60"
+                  className="text-[10px] font-bold uppercase tracking-[0.2em] text-amber-500/60"
                 >
-                  {progress < 100 ? "Initializing mathematical sanctuary..." : "Welcome to the Sanctuary"}
+                  {getStatusText(progress)}
                 </motion.p>
                 <span className="text-xs font-mono text-amber-500/80">{progress}%</span>
               </div>

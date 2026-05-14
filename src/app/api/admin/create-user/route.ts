@@ -82,7 +82,7 @@ export async function POST(req: Request) {
         .select('role')
         .eq('id', user.id)
         .maybeSingle();
-      if (userProfile && (userProfile.role === 'admin' || userProfile.role === 'super_admin')) {
+      if (userProfile && (userProfile.role?.trim().toLowerCase() === 'admin' || userProfile.role?.trim().toLowerCase() === 'super_admin')) {
         isDbAdmin = true;
       }
     } catch (e) {

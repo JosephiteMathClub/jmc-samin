@@ -101,30 +101,30 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
           logoUrl={content?.site?.logoUrl}
         />
       ) : (
-        <>
+        <motion.div
+          key="content"
+          initial={shouldReduceGfx ? { opacity: 1 } : { opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: shouldReduceGfx ? 0.3 : 1 }}
+          className="min-h-screen flex flex-col relative overflow-hidden bg-transparent"
+        >
           {/* Atmospheric Background */}
-          <StarField reduced={shouldReduceGfx} />
-          
-          <motion.div
-            key="content"
-            initial={shouldReduceGfx ? { opacity: 1 } : { opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: shouldReduceGfx ? 0.3 : 1 }}
-            className="min-h-screen flex flex-col relative overflow-hidden bg-transparent"
-            style={{ position: 'relative', zIndex: 1 }}
-          >
-            <Navbar />
-            <FloatingSidebar />
-            <main className="flex-grow relative z-10">
+          <div className="fixed inset-0 pointer-events-none -z-10">
+            {/* Background Components - Rendered above the base gradients but behind content */}
+            <StarField reduced={shouldReduceGfx} />
+          </div>
+
+          <Navbar />
+          <FloatingSidebar />
+          <main className="flex-grow relative z-10">
             <ErrorBoundary>
               {children}
             </ErrorBoundary>
-            </main>
-            
-            <SupportTrigger />
-            <Footer />
-          </motion.div>
-        </>
+          </main>
+          
+          <SupportTrigger />
+          <Footer />
+        </motion.div>
       )}
     </AnimatePresence>
   );
