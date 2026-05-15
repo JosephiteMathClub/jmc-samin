@@ -71,7 +71,21 @@ const ArticleDetailView = () => {
           </div>
 
           <div className="prose prose-invert prose-zinc max-w-none">
-            {article.content ? (
+            {article.pdfUrl ? (
+              <div className="bg-white/5 border border-white/10 rounded-3xl p-8 md:p-12 text-center flex flex-col items-center">
+                <BookOpen className="w-16 h-16 text-[var(--c-6-start)] mb-6" />
+                <h3 className="text-2xl font-display text-white mb-4">Interactive PDF Document</h3>
+                <p className="text-zinc-400 mb-8 max-w-md mx-auto">This article is available as a full-format PDF document.</p>
+                <a 
+                  href={article.pdfUrl} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="px-8 py-4 bg-[var(--c-6-start)] text-black font-bold uppercase tracking-widest text-xs rounded-full hover:bg-[var(--c-6-end)] transition-colors shadow-lg shadow-[var(--c-6-start)]/20"
+                >
+                  Open PDF in New Tab
+                </a>
+              </div>
+            ) : article.content ? (
               <div className="text-zinc-300 leading-relaxed text-lg space-y-6">
                 {article.content.split('\n').map((para: string, i: number) => (
                   <p key={i}>{para}</p>

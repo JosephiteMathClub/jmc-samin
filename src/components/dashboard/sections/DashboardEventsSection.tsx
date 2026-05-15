@@ -2,6 +2,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Calendar, Trash2, Plus } from 'lucide-react';
+import { useAuth } from '../../../context/AuthContext';
 import { DashboardSection } from '../DashboardSection';
 import { DashboardFormField } from '../DashboardFormField';
 import { DashboardFileUpload } from '../DashboardFileUpload';
@@ -27,6 +28,8 @@ const DashboardEventsSectionComponent: React.FC<DashboardEventsSectionProps> = (
   handleFileUpload,
   shouldReduceGfx
 }) => {
+  const { isSuperAdmin } = useAuth();
+  
   return (
     <motion.div
       initial={shouldReduceGfx ? { opacity: 0 } : { opacity: 0, x: 20 }}
@@ -113,6 +116,16 @@ const DashboardEventsSectionComponent: React.FC<DashboardEventsSectionProps> = (
                 <DashboardFormField label="Time" value={e.time} onChange={(val) => updateListItem('events', i, { time: val })} />
                 <DashboardFormField label="Location" value={e.location} onChange={(val) => updateListItem('events', i, { location: val })} />
               </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <DashboardFormField label="Is Team Event" type="select" value={e.isTeamEvent ? 'yes' : 'no'} onChange={(val) => updateListItem('events', i, { isTeamEvent: val === 'yes' })} options={[{value: 'no', label: 'No (Individual)'}, {value: 'yes', label: 'Yes (Team)'}]} />
+                {e.isTeamEvent && (
+                  <DashboardFormField label="Team Size" type="number" 
+                    value={e.teamSize || 1} 
+                    onChange={(val) => isSuperAdmin ? updateListItem('events', i, { teamSize: parseInt(val) || 1 }) : null} 
+                    description={isSuperAdmin ? "Super Admins can edit this" : "Only Super Admins can update team size"}
+                  />
+                )}
+              </div>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <DashboardFormField label="Button Text" value={e.buttonText} onChange={(val) => updateListItem('events', i, { buttonText: val })} />
                 <DashboardFormField label="Registration Link" value={e.registrationLink} onChange={(val) => updateListItem('events', i, { registrationLink: val })} />
@@ -138,7 +151,7 @@ const DashboardEventsSectionComponent: React.FC<DashboardEventsSectionProps> = (
             </div>
           ))}
           <button 
-            onClick={() => addListItem('events', { title: 'New Event', category: 'Competition', description: '', date: '', time: '', location: '', imageUrl: '', buttonText: 'Register Now', registrationLink: '', tag: 'general' })}
+            onClick={() => addListItem('events', { title: 'New Event', category: 'Competition', description: '', date: '', time: '', location: '', imageUrl: '', buttonText: 'Register Now', registrationLink: '', tag: 'general', isTeamEvent: false, teamSize: 3 })}
             className="w-full py-4 border-2 border-dashed border-white/10 rounded-2xl text-zinc-500 hover:text-amber-500 hover:border-amber-500/50 transition-all flex items-center justify-center gap-2 font-bold"
           >
             <Plus className="w-5 h-5" /> Add New Event

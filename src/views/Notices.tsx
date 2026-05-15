@@ -1,10 +1,11 @@
 "use client";
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Bell, Calendar, Pin, ArrowRight, Search, Filter, Info, AlertTriangle, CheckCircle, Sparkles, Clock } from 'lucide-react';
+import { Bell, Calendar, Pin, ArrowRight, Search, Filter, Info, AlertTriangle, CheckCircle, Sparkles, Clock, FileText } from 'lucide-react';
 import { useContent } from '../context/ContentContext';
 import ScrollReveal from '../components/ScrollReveal';
 import { Skeleton } from '../components/Skeleton';
+import Image from 'next/image';
 
 import { usePerformance } from '../hooks/usePerformance';
 
@@ -186,23 +187,46 @@ const Notices = () => {
                           <h3 className="text-2xl md:text-4xl font-display font-medium tracking-tight mb-8 group-hover:text-[var(--c-6-start)] transition-colors duration-500">
                             {notice.title}
                           </h3>
+                          
+                          {notice.imageUrl && (
+                            <div className="mb-8 rounded-3xl overflow-hidden border border-white/10 relative w-full h-[400px]">
+                              <Image src={notice.imageUrl} alt={notice.title} fill className="object-cover" referrerPolicy="no-referrer" />
+                            </div>
+                          )}
+
                           <div className="text-zinc-500 text-lg md:text-xl leading-relaxed font-light mb-10 whitespace-pre-line">
                             {notice.content}
                           </div>
 
-                          {notice.link && (
-                            <a 
-                              href={notice.link} 
-                              target="_blank" 
-                              rel="noopener noreferrer"
-                              className="group/link inline-flex items-center gap-4 py-4 px-8 rounded-full border border-white/10 hover:border-[var(--c-6-start)]/30 hover:bg-[var(--c-6-start)]/5 transition-all duration-500"
-                            >
-                              <span className="font-mono text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-400 group-hover/link:text-[var(--c-6-start)]">
-                                {notice.linkText || 'Execute_Module'}
-                              </span>
-                              <ArrowRight className="w-4 h-4 text-zinc-600 group-hover/link:text-[var(--c-6-start)] group-hover/link:translate-x-1 transition-all" />
-                            </a>
-                          )}
+                          <div className="flex flex-wrap items-center gap-4">
+                            {notice.link && (
+                              <a 
+                                href={notice.link} 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                className="group/link inline-flex items-center gap-4 py-4 px-8 rounded-full border border-white/10 hover:border-[var(--c-6-start)]/30 hover:bg-[var(--c-6-start)]/5 transition-all duration-500"
+                              >
+                                <span className="font-mono text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-400 group-hover/link:text-[var(--c-6-start)]">
+                                  {notice.linkText || 'Execute_Module'}
+                                </span>
+                                <ArrowRight className="w-4 h-4 text-zinc-600 group-hover/link:text-[var(--c-6-start)] group-hover/link:translate-x-1 transition-all" />
+                              </a>
+                            )}
+
+                            {notice.pdfUrl && (
+                              <a 
+                                href={notice.pdfUrl} 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                className="group/pdf inline-flex items-center gap-4 py-4 px-8 rounded-full bg-red-500/10 border border-red-500/20 hover:border-red-500/40 hover:bg-red-500/20 transition-all duration-500"
+                              >
+                                <span className="font-mono text-[10px] font-bold uppercase tracking-[0.2em] text-red-400 group-hover/pdf:text-red-300">
+                                  View Attached PDF
+                                </span>
+                                <FileText className="w-4 h-4 text-red-500 group-hover/pdf:text-red-400 transition-all" />
+                              </a>
+                            )}
+                          </div>
                         </div>
                       </div>
 

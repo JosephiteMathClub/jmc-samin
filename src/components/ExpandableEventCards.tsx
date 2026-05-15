@@ -25,8 +25,10 @@ export function ExpandableEventCards({ events, shouldReduceGfx }: { events: any[
 
     if (active && typeof active === "object") {
       document.body.style.overflow = "hidden";
+      document.body.classList.add("overflow-hidden");
     } else {
       document.body.style.overflow = "auto";
+      document.body.classList.remove("overflow-hidden");
     }
 
     window.addEventListener("keydown", onKeyDown);
@@ -68,7 +70,7 @@ export function ExpandableEventCards({ events, shouldReduceGfx }: { events: any[
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0, transition: { duration: 0.05 } }}
-                  className="flex absolute top-4 right-4 items-center justify-center bg-black/50 backdrop-blur-md rounded-full h-8 w-8 border border-white/20 text-white hover:bg-white/10 transition-colors"
+                  className="flex absolute top-4 right-4 z-50 items-center justify-center bg-black/50 backdrop-blur-md rounded-full h-8 w-8 border border-white/20 text-white hover:bg-white/10 transition-colors"
                   onClick={() => setActive(null)}
                 >
                   <CloseIcon />
@@ -106,7 +108,7 @@ export function ExpandableEventCards({ events, shouldReduceGfx }: { events: any[
                     {active.buttonText || 'Secure Seat'}
                   </motion.a>
                 </div>
-                <div className="p-6 relative flex-1 overflow-y-auto">
+                <div className="p-6 md:p-10 relative flex-1 overflow-y-auto overscroll-contain bg-[#0a0a0a]">
                   <motion.div
                     layout
                     initial={{ opacity: 0 }}

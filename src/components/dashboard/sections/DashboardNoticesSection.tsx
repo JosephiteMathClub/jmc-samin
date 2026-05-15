@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { Bell, Trash2, Plus, Info, AlertTriangle, CheckCircle, Star } from 'lucide-react';
 import { DashboardSection } from '../DashboardSection';
 import { DashboardFormField } from '../DashboardFormField';
+import { DashboardFileUpload } from '../DashboardFileUpload';
 
 interface DashboardNoticesSectionProps {
   data: any;
@@ -12,6 +13,8 @@ interface DashboardNoticesSectionProps {
   addListItem: (field: string, newItem: any) => void;
   removeListItem: (field: string, index: number) => void;
   shouldReduceGfx: boolean;
+  uploading?: string | null;
+  handleFileUpload?: (e: React.ChangeEvent<HTMLInputElement>, path?: (string | number)[], callback?: (url: string) => void) => void;
 }
 
 const DashboardNoticesSectionComponent: React.FC<DashboardNoticesSectionProps> = ({
@@ -20,7 +23,9 @@ const DashboardNoticesSectionComponent: React.FC<DashboardNoticesSectionProps> =
   updateListItem,
   addListItem,
   removeListItem,
-  shouldReduceGfx
+  shouldReduceGfx,
+  uploading,
+  handleFileUpload
 }) => {
   return (
     <motion.div
@@ -132,10 +137,33 @@ const DashboardNoticesSectionComponent: React.FC<DashboardNoticesSectionProps> =
                 />
                 <label htmlFor={`pin-${i}`} className="text-sm font-bold text-zinc-400">Pin to top</label>
               </div>
+              
+              {handleFileUpload && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                  <DashboardFileUpload 
+                    label="Notice Image"
+                    value={n.imageUrl || ''}
+                    uploading={uploading === `notices-notices-${i}-image`}
+                    onUpload={(ev) => handleFileUpload(ev, ['notices', 'notices', i, 'image'], (url) => updateListItem('notices', i, { imageUrl: url }))}
+                    onDelete={() => updateListItem('notices', i, { imageUrl: '' })}
+                    onChange={(_, val) => updateListItem('notices', i, { imageUrl: val })}
+                    accept=".jpg,.jpeg,.png,.webp"
+                  />
+                  <DashboardFileUpload 
+                    label="Notice PDF Attachment"
+                    value={n.pdfUrl || ''}
+                    uploading={uploading === `notices-notices-${i}-pdf`}
+                    onUpload={(ev) => handleFileUpload(ev, ['notices', 'notices', i, 'pdf'], (url) => updateListItem('notices', i, { pdfUrl: url }))}
+                    onDelete={() => updateListItem('notices', i, { pdfUrl: '' })}
+                    onChange={(_, val) => updateListItem('notices', i, { pdfUrl: val })}
+                    accept=".pdf"
+                  />
+                </div>
+              )}
             </div>
           ))}
           <button 
-            onClick={() => addListItem('notices', { title: 'New Notice', type: 'General', content: '', date: new Date().toLocaleDateString(), isPinned: false, link: '', linkText: 'View Details', tag: 'general' })}
+            onClick={() => addListItem('notices', { title: 'New Notice', type: 'General', content: '', date: new Date().toLocaleDateString(), isPinned: false, link: '', linkText: 'View Details', tag: 'general', imageUrl: '', pdfUrl: '' })}
             className="w-full py-4 border-2 border-dashed border-white/10 rounded-2xl text-zinc-500 hover:text-amber-500 hover:border-amber-500/50 transition-all flex items-center justify-center gap-2 font-bold"
           >
             <Plus className="w-5 h-5" /> Add New Notice

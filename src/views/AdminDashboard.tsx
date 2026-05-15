@@ -297,6 +297,14 @@ const AdminDashboard = () => {
       
       setMembers(prev => [data, ...prev]);
       showToast("Member registered and verified successfully!", "success");
+
+      // Send welcome email asynchronously without blocking the registration flow
+      fetch('/api/admin/bulk-welcome-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ members: [{ email: data.email_address || data.email, fullName: data.full_name, memberId: data.member_id }] })
+      }).catch(err => console.error('Failed to dispatch welcome email:', err));
+
       return data;
     } catch (err: any) {
       console.error('Error adding member:', err);
@@ -777,6 +785,8 @@ const AdminDashboard = () => {
             addListItem={(field, newItem) => addListItem('notices', field, newItem)}
             removeListItem={(field, index) => removeListItem('notices', field, index)}
             shouldReduceGfx={shouldReduceGfx}
+            uploading={uploading}
+            handleFileUpload={handleFileUpload}
           />
         )}
 
@@ -807,7 +817,10 @@ const AdminDashboard = () => {
         )}
 
         {activeTab === 'articles' && (
-          <DashboardArticlesSection />
+          <DashboardArticlesSection 
+            uploading={uploading}
+            handleFileUpload={handleFileUpload}
+          />
         )}
 
         {activeTab === 'members' && (

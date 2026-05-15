@@ -66,6 +66,13 @@ export const EventParticipation = () => {
   // Stats
   const [stats, setStats] = useState({ total: 0, distinctUsers: 0 });
 
+  // Team states
+  const activeEventData = events.find(e => e.title === activeEvent);
+  const isTeamEvent = activeEventData?.isTeamEvent || false;
+  const teamSize = activeEventData?.teamSize || 1;
+  const [teamMemberInputs, setTeamMemberInputs] = useState<string[]>(Array(10).fill(''));
+  const [scannedTeam, setScannedTeam] = useState<string[]>([]);
+  
   // Load events from content with fallback
   useEffect(() => {
     const rawEvents = content?.events?.events || DEFAULT_CONTENT.events?.events || [];
@@ -171,9 +178,30 @@ export const EventParticipation = () => {
 
   const handleAddParticipant = async () => {
     setAddingMember(true);
-    const success = await addParticipantByMemberId(memberIdInput);
-    if (success) {
-      setMemberIdInput('');
+    if (isTeamEvent) {
+      const memberIds = teamMemberInputs.slice(0, teamSize).map(s => s.trim().toUpperCase()).filter(Boolean);
+      if (memberIds.length < teamSize) {
+        showToast(`Please enter all ${teamSize} member IDs for the team.`, 'error');
+        setAddingMember(false);
+        return;
+      }
+      
+      let successCount = 0;
+      for (const mId of memberIds) {
+         const success = await addParticipantByMemberId(mId);
+         if (success) successCount++;
+      }
+      if (successCount === teamSize) {
+         setTeamMemberInputs(Array(10).fill(''));
+         showToast(`Successfully registered team!`, 'success');
+      } else {
+         showToast(`Registered ${successCount} out of ${teamSize}.`, 'info');
+      }
+    } else {
+      const success = await addParticipantByMemberId(memberIdInput);
+      if (success) {
+        setMemberIdInput('');
+      }
     }
     setAddingMember(false);
   };
@@ -252,8 +280,33 @@ export const EventParticipation = () => {
     
     scannedCooldownRef.current[scannedId] = now;
     setLastScannedId(scannedId);
-    setIsScanning(true);
     
+    if (isTeamEvent) {
+      if (scannedTeam.includes(scannedId)) {
+        showToast("Already scanned this member for current team", "info");
+        return;
+      }
+      const newTeam = [...scannedTeam, scannedId];
+      if (newTeam.length === teamSize) {
+        setIsScanning(true);
+        let successCount = 0;
+        for (const mId of newTeam) {
+          const success = await addParticipantByMemberId(mId);
+          if (success) successCount++;
+        }
+        setIsScanning(false);
+        setScannedTeam([]);
+        if (successCount === teamSize) {
+          showToast(`Full team of ${teamSize} added!`, "success");
+        }
+      } else {
+        setScannedTeam(newTeam);
+        showToast(`Scanned Team Member ${newTeam.length} of ${teamSize}`, "info");
+      }
+      return;
+    }
+
+    setIsScanning(true);
     try {
       await addParticipantByMemberId(scannedId);
     } finally {
@@ -312,6 +365,36 @@ export const EventParticipation = () => {
       third: participations.find(p => p.position === 3)
     };
   }, [participations]);
+
+  const [isAnnouncing, setIsAnnouncing] = useState(false);
+  
+  const announceResults = async () => {
+    if (!activeEvent || !activeCategory) return;
+    setIsAnnouncing(true);
+    showToast("Starting to send requirement emails...", "info");
+    
+    try {
+      const res = await fetch('/api/admin/announce-results', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ eventName: activeEvent, category: activeCategory })
+      });
+      const data = await res.json();
+      
+      if (res.ok) {
+        showToast(data.message || `Successfully sent ${data.sentCount} emails!`, "success");
+        if (data.errors && data.errors.length > 0) {
+          console.error("Email errors:", data.errors);
+        }
+      } else {
+        throw new Error(data.error || "Failed to announce results");
+      }
+    } catch (err: any) {
+      showToast(err.message, "error");
+    } finally {
+      setIsAnnouncing(false);
+    }
+  };
 
   return (
     <div className="space-y-12">
@@ -508,30 +591,56 @@ export const EventParticipation = () => {
                 </div>
 
                 {viewMode === 'manual' && (
-                  <div className="glass-card p-8 flex flex-col md:flex-row gap-4 items-end">
+                  <div className="glass-card p-8 flex flex-col gap-4">
                     <div className="flex-1">
-                      <DashboardFormField label="Member Unique ID" description="Type ID and press Add">
-                        <div className="relative">
-                          <UserPlus className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-600" />
-                          <input
-                            type="text"
-                            value={memberIdInput}
-                            onChange={(e) => setMemberIdInput(e.target.value.toUpperCase())}
-                            onKeyDown={(e) => e.key === 'Enter' && handleAddParticipant()}
-                            placeholder="JMC-123456"
-                            autoFocus
-                            className="w-full pl-12 pr-6 py-4 bg-black/40 border border-white/10 rounded-2xl text-white outline-none focus:border-amber-500/50 transition-all font-mono"
-                          />
+                      {isTeamEvent ? (
+                        <div className="space-y-4">
+                          <h4 className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Enter Team Members ({teamSize})</h4>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                             {Array.from({ length: teamSize }).map((_, i) => (
+                               <div key={i} className="relative">
+                                 <UserPlus className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-600" />
+                                 <input
+                                   type="text"
+                                   value={teamMemberInputs[i] || ''}
+                                   onChange={(e) => {
+                                      const newInputs = [...teamMemberInputs];
+                                      newInputs[i] = e.target.value.toUpperCase();
+                                      setTeamMemberInputs(newInputs);
+                                   }}
+                                   placeholder={`JMC-XXXXXX (Member ${i + 1})`}
+                                   className="w-full pl-12 pr-6 py-4 bg-black/40 border border-white/10 rounded-2xl text-white outline-none focus:border-amber-500/50 transition-all font-mono text-sm"
+                                 />
+                               </div>
+                             ))}
+                          </div>
                         </div>
-                      </DashboardFormField>
+                      ) : (
+                        <DashboardFormField label="Member Unique ID" description="Type ID and press Add">
+                          <div className="relative">
+                            <UserPlus className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-600" />
+                            <input
+                              type="text"
+                              value={memberIdInput}
+                              onChange={(e) => setMemberIdInput(e.target.value.toUpperCase())}
+                              onKeyDown={(e) => e.key === 'Enter' && handleAddParticipant()}
+                              placeholder="JMC-123456"
+                              autoFocus
+                              className="w-full pl-12 pr-6 py-4 bg-black/40 border border-white/10 rounded-2xl text-white outline-none focus:border-amber-500/50 transition-all font-mono"
+                            />
+                          </div>
+                        </DashboardFormField>
+                      )}
                     </div>
-                    <DashboardButton 
-                      onClick={handleAddParticipant}
-                      label={addingMember ? "Adding..." : "Add Member"}
-                      disabled={addingMember || !memberIdInput.trim()}
-                      icon={addingMember ? Loader2 : Plus}
-                      className="h-[60px]"
-                    />
+                    <div className="self-end mt-4">
+                      <DashboardButton 
+                        onClick={handleAddParticipant}
+                        label={addingMember ? "Adding..." : (isTeamEvent ? "Add Team" : "Add Member")}
+                        disabled={addingMember || (isTeamEvent ? (teamMemberInputs.slice(0, teamSize).filter(Boolean).length < teamSize) : !memberIdInput.trim())}
+                        icon={addingMember ? Loader2 : Plus}
+                        className="h-[60px] px-12"
+                      />
+                    </div>
                   </div>
                 )}
 
@@ -543,7 +652,13 @@ export const EventParticipation = () => {
                     </div>
                     <div className="space-y-2">
                       <h4 className="text-xl font-bold text-white uppercase tracking-tight">QR Scanner Active</h4>
-                      <p className="text-zinc-500 text-xs max-w-xs mx-auto">The scanner is running in the background. Position member IDs in front of the camera.</p>
+                      {isTeamEvent ? (
+                        <p className="text-zinc-500 text-xs max-w-xs mx-auto">
+                          Team mode: Scanned <span className="text-white font-bold">{scannedTeam.length}</span> out of <span className="text-white font-bold">{teamSize}</span> members.
+                        </p>
+                      ) : (
+                        <p className="text-zinc-500 text-xs max-w-xs mx-auto">The scanner is running in the background. Position member IDs in front of the camera.</p>
+                      )}
                     </div>
                     <div className="flex justify-center gap-4 pt-4">
                       <button 
@@ -697,24 +812,48 @@ export const EventParticipation = () => {
             {/* Add Participant Input */}
             <div className="flex flex-col md:flex-row gap-4 items-end">
               <div className="flex-1">
-                <DashboardFormField label="Member Unique ID" description="Enter the JMC-XXXXXX code to add a participant">
-                  <div className="relative">
-                    <UserPlus className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-600" />
-                    <input
-                      type="text"
-                      value={memberIdInput}
-                      onChange={(e) => setMemberIdInput(e.target.value.toUpperCase())}
-                      placeholder="JMC-123456"
-                      className="w-full pl-12 pr-6 py-3.5 bg-black/40 border border-white/10 rounded-2xl text-white outline-none focus:border-amber-500/50 transition-all font-mono"
-                    />
+                {isTeamEvent ? (
+                  <div className="space-y-4 p-6 rounded-3xl bg-black/20 border border-white/5">
+                    <h4 className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Team Registration ({teamSize} Members)</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {Array.from({ length: teamSize }).map((_, i) => (
+                        <div key={i} className="relative">
+                          <UserPlus className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-600" />
+                          <input
+                            type="text"
+                            value={teamMemberInputs[i] || ''}
+                            onChange={(e) => {
+                              const newInputs = [...teamMemberInputs];
+                              newInputs[i] = e.target.value.toUpperCase();
+                              setTeamMemberInputs(newInputs);
+                            }}
+                            placeholder={`JMC-XXXXXX M${i + 1}`}
+                            className="w-full pl-9 pr-4 py-3 bg-black/40 border border-white/10 rounded-xl text-white text-xs outline-none focus:border-amber-500/50 transition-all font-mono"
+                          />
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                </DashboardFormField>
+                ) : (
+                  <DashboardFormField label="Member Unique ID" description="Enter the JMC-XXXXXX code to add a participant">
+                    <div className="relative">
+                      <UserPlus className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-600" />
+                      <input
+                        type="text"
+                        value={memberIdInput}
+                        onChange={(e) => setMemberIdInput(e.target.value.toUpperCase())}
+                        placeholder="JMC-123456"
+                        className="w-full pl-12 pr-6 py-3.5 bg-black/40 border border-white/10 rounded-2xl text-white outline-none focus:border-amber-500/50 transition-all font-mono"
+                      />
+                    </div>
+                  </DashboardFormField>
+                )}
               </div>
-              <div className="flex gap-2 h-[54px]">
+              <div className={`flex gap-2 ${isTeamEvent ? 'self-end h-[48px]' : 'h-[54px]'}`}>
                 <DashboardButton 
                   onClick={handleAddParticipant}
-                  label={addingMember ? "Adding..." : "Add Participant"}
-                  disabled={addingMember || !memberIdInput.trim() || !activeEvent}
+                  label={addingMember ? "Adding..." : (isTeamEvent ? "Add Team" : "Add")}
+                  disabled={addingMember || !activeEvent || (isTeamEvent ? (teamMemberInputs.slice(0, teamSize).filter(Boolean).length < teamSize) : !memberIdInput.trim())}
                   icon={addingMember ? Loader2 : Plus}
                   className="flex-1"
                 />
@@ -874,14 +1013,26 @@ export const EventParticipation = () => {
 
             {/* Leaderboard Summary Visual */}
             <div className="p-8 rounded-[40px] bg-gradient-to-br from-amber-500/10 via-amber-500/5 to-transparent border border-amber-500/10">
-              <div className="flex items-center gap-4 mb-8">
-                <div className="p-3 bg-amber-500 rounded-2xl shadow-[0_0_20px_rgba(245,158,11,0.3)]">
-                  <Medal className="w-6 h-6 text-black" />
+              <div className="flex items-center justify-between mb-8">
+                <div className="flex items-center gap-4">
+                  <div className="p-3 bg-amber-500 rounded-2xl shadow-[0_0_20px_rgba(245,158,11,0.3)]">
+                    <Medal className="w-6 h-6 text-black" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-black text-white uppercase tracking-wider">Current Leaderboard</h3>
+                    <p className="text-xs text-zinc-500 font-medium">{activeEvent} - {activeCategory}</p>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="text-xl font-black text-white uppercase tracking-wider">Current Leaderboard</h3>
-                  <p className="text-xs text-zinc-500 font-medium">{activeEvent} - {activeCategory}</p>
-                </div>
+                {activeEvent && activeCategory && (
+                  <button 
+                    onClick={announceResults}
+                    disabled={isAnnouncing}
+                    className="px-6 py-3 rounded-2xl bg-amber-500 text-black font-bold text-xs uppercase tracking-widest hover:bg-amber-400 transition-all flex items-center gap-2 disabled:opacity-50"
+                  >
+                    {isAnnouncing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Award className="w-4 h-4" />}
+                    {isAnnouncing ? 'Announcing...' : 'Announce Results'}
+                  </button>
+                )}
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

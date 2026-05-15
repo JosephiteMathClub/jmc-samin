@@ -63,16 +63,16 @@ const Events = () => {
   ];
 
   return (
-    <div className="relative min-h-screen bg-[#050505] overflow-hidden">
+    <div className="relative min-h-screen bg-[#020202] overflow-hidden">
       {/* Background Glows */}
       {!shouldReduceGfx && (
         <>
-          <div className="atmospheric-glow w-[500px] h-[500px] bg-[var(--c-6-start)]/5 -top-48 -right-24" />
-          <div className="atmospheric-glow w-[600px] h-[600px] bg-[var(--c-2-start)]/5 bottom-0 -left-24" />
+          <div className="atmospheric-glow w-[500px] h-[500px] bg-[var(--c-6-start)]/5 -top-48 -right-24 opacity-50" />
+          <div className="atmospheric-glow w-[600px] h-[600px] bg-[var(--c-2-start)]/5 bottom-0 -left-24 opacity-50" />
         </>
       )}
 
-      <div className="pt-40 pb-32 relative z-10">
+      <div className="pt-40 pb-32 relative">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           
           {/* Header Section */}

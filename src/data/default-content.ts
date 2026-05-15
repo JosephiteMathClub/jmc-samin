@@ -163,27 +163,152 @@ export const DEFAULT_CONTENT = {
     subtitle: "UPCOMING EVENTS",
     description: "Join us for a series of challenging competitions, insightful workshops, and engaging seminars designed to push your mathematical boundaries.",
     events: [
-      {
-        id: "sample-event-1",
-        title: "Intra Math Olympiad 2024",
-        date: "15 May 2024",
-        time: "10:00 AM",
-        location: "St Joseph Auditorim",
-        category: "Competition",
-        description: "Annual internal math competition for selecting the best mathematicians of the club.",
-        registrationLink: "#"
-      },
-      {
-        id: "sample-event-2",
-        title: "Math Research Workshop",
-        date: "22 June 2024",
-        time: "02:30 PM",
-        location: "Physics Lab",
-        category: "Workshop",
-        description: "A workshop focused on modern research methodologies in theoretical mathematics.",
-        registrationLink: "#"
-      }
-    ]
+        {
+          "id": "event-solo-1",
+          "title": "Math Olympiad",
+          "date": "TBA",
+          "time": "TBA",
+          "location": "TBA",
+          "category": "Competition",
+          "description": "Participate in the exciting Math Olympiad competition.",
+          "registrationLink": "#",
+          "isTeamEvent": false
+        },
+        {
+          "id": "event-solo-2",
+          "title": "IQ",
+          "date": "TBA",
+          "time": "TBA",
+          "location": "TBA",
+          "category": "Competition",
+          "description": "Participate in the exciting IQ competition.",
+          "registrationLink": "#",
+          "isTeamEvent": false
+        },
+        {
+          "id": "event-solo-3",
+          "title": "Probability Pressure",
+          "date": "TBA",
+          "time": "TBA",
+          "location": "TBA",
+          "category": "Competition",
+          "description": "Participate in the exciting Probability Pressure competition.",
+          "registrationLink": "#",
+          "isTeamEvent": false
+        },
+        {
+          "id": "event-solo-4",
+          "title": "Code Break",
+          "date": "TBA",
+          "time": "TBA",
+          "location": "TBA",
+          "category": "Competition",
+          "description": "Participate in the exciting Code Break competition.",
+          "registrationLink": "#",
+          "isTeamEvent": false
+        },
+        {
+          "id": "event-solo-5",
+          "title": "Human Calculator",
+          "date": "TBA",
+          "time": "TBA",
+          "location": "TBA",
+          "category": "Competition",
+          "description": "Participate in the exciting Human Calculator competition.",
+          "registrationLink": "#",
+          "isTeamEvent": false
+        },
+        {
+          "id": "event-solo-6",
+          "title": "Calc Bee",
+          "date": "TBA",
+          "time": "TBA",
+          "location": "TBA",
+          "category": "Competition",
+          "description": "Participate in the exciting Calc Bee competition.",
+          "registrationLink": "#",
+          "isTeamEvent": false
+        },
+        {
+          "id": "event-solo-7",
+          "title": "Geo Dash",
+          "date": "TBA",
+          "time": "TBA",
+          "location": "TBA",
+          "category": "Competition",
+          "description": "Participate in the exciting Geo Dash competition.",
+          "registrationLink": "#",
+          "isTeamEvent": false
+        },
+        {
+          "id": "event-solo-8",
+          "title": "Rubik's Cube",
+          "date": "TBA",
+          "time": "TBA",
+          "location": "TBA",
+          "category": "Competition",
+          "description": "Participate in the exciting Rubik's Cube competition.",
+          "registrationLink": "#",
+          "isTeamEvent": false
+        },
+        {
+          "id": "event-solo-9",
+          "title": "Sudoku",
+          "date": "TBA",
+          "time": "TBA",
+          "location": "TBA",
+          "category": "Competition",
+          "description": "Participate in the exciting Sudoku competition.",
+          "registrationLink": "#",
+          "isTeamEvent": false
+        },
+        {
+          "id": "event-solo-10",
+          "title": "Cryptomania",
+          "date": "TBA",
+          "time": "TBA",
+          "location": "TBA",
+          "category": "Competition",
+          "description": "Participate in the exciting Cryptomania competition.",
+          "registrationLink": "#",
+          "isTeamEvent": false
+        },
+        {
+          "id": "event-solo-11",
+          "title": "Principia",
+          "date": "TBA",
+          "time": "TBA",
+          "location": "TBA",
+          "category": "Competition",
+          "description": "Participate in the exciting Principia competition.",
+          "registrationLink": "#",
+          "isTeamEvent": false
+        },
+        {
+          "id": "event-team-12",
+          "title": "Escape Room",
+          "date": "TBA",
+          "time": "TBA",
+          "location": "TBA",
+          "category": "Competition",
+          "description": "A thrilling team event (Escape Room) where logic and teamwork matter.",
+          "registrationLink": "#",
+          "isTeamEvent": true,
+          "teamSize": 3
+        },
+        {
+          "id": "event-team-13",
+          "title": "Math Relay",
+          "date": "TBA",
+          "time": "TBA",
+          "location": "TBA",
+          "category": "Competition",
+          "description": "A thrilling team event (Math Relay) where logic and teamwork matter.",
+          "registrationLink": "#",
+          "isTeamEvent": true,
+          "teamSize": 3
+        }
+      ]
   },
   members_list: {
     title: "OUR MEMBERS",

@@ -13,7 +13,8 @@ import {
   Camera,
   CheckCircle2,
   XCircle,
-  FileSpreadsheet
+  FileSpreadsheet,
+  Mail
 } from 'lucide-react';
 import { DashboardSection } from '../DashboardSection';
 import { DashboardButton } from '../DashboardButton';
@@ -89,6 +90,35 @@ const DashboardMemberManagementSectionComponent: React.FC<DashboardMemberManagem
       // Error handled by addMember toast
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const [sendingEmailId, setSendingEmailId] = useState<string | null>(null);
+
+  const handleResendWelcomeEmail = async (member: any) => {
+    setSendingEmailId(member.id);
+    try {
+      const email = member.email_address || member.email;
+      if (!email) throw new Error("No email address found for this member.");
+      
+      showToast('Sending welcome email...', 'info');
+      const res = await fetch('/api/admin/bulk-welcome-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ members: [{ email, fullName: member.full_name, memberId: member.member_id }] })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to send welcome email.");
+      
+      if (data.errors && data.errors.length > 0) {
+        throw new Error(data.errors[0]);
+      }
+      
+      showToast('Welcome email sent successfully!', 'success');
+    } catch (err: any) {
+      showToast(err.message, 'error');
+    } finally {
+      setSendingEmailId(null);
     }
   };
 
@@ -456,6 +486,14 @@ const DashboardMemberManagementSectionComponent: React.FC<DashboardMemberManagem
                               {m.verified === 'yes' ? 'Unverify' : 'Verify'}
                             </button>
                             <button
+                              onClick={() => handleResendWelcomeEmail(m)}
+                              disabled={sendingEmailId === m.id}
+                              className="p-1.5 bg-amber-500/10 text-amber-500 rounded-lg hover:bg-amber-500/20 transition-all opacity-40 hover:opacity-100 disabled:opacity-50"
+                              title="Resend Welcome Email"
+                            >
+                              {sendingEmailId === m.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Mail className="w-4 h-4" />}
+                            </button>
+                            <button
                               onClick={() => setMemberToDelete(m)}
                               className="p-1.5 bg-red-500/10 text-red-500 rounded-lg hover:bg-red-500/20 transition-all opacity-40 hover:opacity-100"
                               title="Delete Member From Database"
@@ -538,6 +576,14 @@ const DashboardMemberManagementSectionComponent: React.FC<DashboardMemberManagem
                             }`}
                           >
                             {m.verified === 'yes' ? 'Unverify' : 'Verify'}
+                          </button>
+                          <button
+                            onClick={() => handleResendWelcomeEmail(m)}
+                            disabled={sendingEmailId === m.id}
+                            className="p-1.5 bg-amber-500/10 text-amber-500 rounded-lg hover:bg-amber-500/20 transition-all opacity-80 disabled:opacity-50"
+                            title="Resend Welcome Email"
+                          >
+                            {sendingEmailId === m.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Mail className="w-4 h-4" />}
                           </button>
                           <button
                             onClick={() => setMemberToDelete(m)}
