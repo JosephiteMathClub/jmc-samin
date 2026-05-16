@@ -101,6 +101,96 @@ const AdminDashboard = () => {
   const [memberError, setMemberError] = useState<string | null>(null);
   const [isDeletingMember, setIsDeletingMember] = useState(false);
 
+  const updateField = useCallback((section: string, field: string, value: any) => {
+    setLocalContent((prev: any) => ({
+      ...prev,
+      [section]: {
+        ...prev[section],
+        [field]: value
+      }
+    }));
+  }, []);
+
+  const updateNestedField = useCallback((section: string, subSection: string, field: string, value: any) => {
+    setLocalContent((prev: any) => ({
+      ...prev,
+      [section]: {
+        ...prev[section],
+        [subSection]: {
+          ...prev[section][subSection],
+          [field]: value
+        }
+      }
+    }));
+  }, []);
+
+  const addListItem = useCallback((section: string, field: string, newItem: any) => {
+    setLocalContent((prev: any) => {
+      const sectionData = prev[section] || {};
+      const currentList = sectionData[field] || [];
+      return {
+        ...prev,
+        [section]: {
+          ...sectionData,
+          [field]: [...currentList, newItem]
+        }
+      };
+    });
+  }, []);
+
+  const removeListItem = useCallback((section: string, field: string, index: number) => {
+    setConfirmDelete({ section, field, index, isOpen: true });
+  }, []);
+
+  const updateListItem = useCallback((section: string, field: string, index: number, value: any) => {
+    setLocalContent((prev: any) => {
+      const sectionData = prev[section] || {};
+      const currentList = [...(sectionData[field] || [])];
+      if (currentList[index]) {
+        currentList[index] = { ...currentList[index], ...value };
+      }
+      return {
+        ...prev,
+        [section]: {
+          ...sectionData,
+          [field]: currentList
+        }
+      };
+    });
+  }, []);
+
+  const updateDeepListItem = useCallback((path: string[], index: number, value: any) => {
+    setLocalContent((prev: any) => produce(prev, (draft: any) => {
+      let current = draft;
+      for (let i = 0; i < path.length; i++) {
+        if (!current[path[i]]) current[path[i]] = {};
+        current = current[path[i]];
+      }
+      if (Array.isArray(current)) {
+        current[index] = { ...current[index], ...value };
+      }
+    }));
+  }, []);
+
+  const addDeepListItem = useCallback((path: string[], newItem: any) => {
+    setLocalContent((prev: any) => produce(prev, (draft: any) => {
+      let current = draft;
+      for (let i = 0; i < path.length; i++) {
+        if (i === path.length - 1) {
+          if (!Array.isArray(current[path[i]])) current[path[i]] = [];
+          current[path[i]].push(newItem);
+        } else {
+          if (!current[path[i]]) current[path[i]] = {};
+          current = current[path[i]];
+        }
+      }
+    }));
+  }, []);
+
+  const removeDeepListItem = useCallback((path: string[], index: number) => {
+    setConfirmDelete({ path, index, section: '', field: '', isOpen: true });
+  }, []);
+
   const fetchMembers = useCallback(async () => {
     setLoadingMembers(true);
     setMemberError(null);
@@ -420,8 +510,8 @@ const AdminDashboard = () => {
       router.push('/login?redirect=/admin');
       return;
     }
-    if (!authLoading && !isAdmin) {
-      // We'll show an access denied message instead of immediate redirect to help debugging
+    if (!authLoading && !isAdmin && user) {
+       // Regular users get filtered by the component render logic below
     }
   }, [isAdmin, authLoading, user, router]);
 
@@ -494,47 +584,6 @@ const AdminDashboard = () => {
     } finally {
       setIsSaving(false);
     }
-  };
-
-  const updateField = (section: string, field: string, value: any) => {
-    setLocalContent((prev: any) => ({
-      ...prev,
-      [section]: {
-        ...prev[section],
-        [field]: value
-      }
-    }));
-  };
-
-  const updateNestedField = (section: string, subSection: string, field: string, value: any) => {
-    setLocalContent((prev: any) => ({
-      ...prev,
-      [section]: {
-        ...prev[section],
-        [subSection]: {
-          ...prev[section][subSection],
-          [field]: value
-        }
-      }
-    }));
-  };
-
-  const addListItem = (section: string, field: string, newItem: any) => {
-    setLocalContent((prev: any) => {
-      const sectionData = prev[section] || {};
-      const currentList = sectionData[field] || [];
-      return {
-        ...prev,
-        [section]: {
-          ...sectionData,
-          [field]: [...currentList, newItem]
-        }
-      };
-    });
-  };
-
-  const removeListItem = (section: string, field: string, index: number) => {
-    setConfirmDelete({ section, field, index, isOpen: true });
   };
 
   const executeDelete = async () => {
@@ -646,55 +695,6 @@ const AdminDashboard = () => {
         };
       });
     }
-  };
-
-  const updateListItem = (section: string, field: string, index: number, value: any) => {
-    setLocalContent((prev: any) => {
-      const sectionData = prev[section] || {};
-      const currentList = [...(sectionData[field] || [])];
-      if (currentList[index]) {
-        currentList[index] = { ...currentList[index], ...value };
-      }
-      return {
-        ...prev,
-        [section]: {
-          ...sectionData,
-          [field]: currentList
-        }
-      };
-    });
-  };
-
-  const updateDeepListItem = (path: string[], index: number, value: any) => {
-    setLocalContent((prev: any) => produce(prev, (draft: any) => {
-      let current = draft;
-      for (let i = 0; i < path.length; i++) {
-        if (!current[path[i]]) current[path[i]] = {};
-        current = current[path[i]];
-      }
-      if (Array.isArray(current)) {
-        current[index] = { ...current[index], ...value };
-      }
-    }));
-  };
-
-  const addDeepListItem = (path: string[], newItem: any) => {
-    setLocalContent((prev: any) => produce(prev, (draft: any) => {
-      let current = draft;
-      for (let i = 0; i < path.length; i++) {
-        if (i === path.length - 1) {
-          if (!Array.isArray(current[path[i]])) current[path[i]] = [];
-          current[path[i]].push(newItem);
-        } else {
-          if (!current[path[i]]) current[path[i]] = {};
-          current = current[path[i]];
-        }
-      }
-    }));
-  };
-
-  const removeDeepListItem = (path: string[], index: number) => {
-    setConfirmDelete({ path, index, section: '', field: '', isOpen: true });
   };
 
   const tabs = [

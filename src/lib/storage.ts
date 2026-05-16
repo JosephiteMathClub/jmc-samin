@@ -20,8 +20,6 @@ export async function deleteFileFromStorage(url: string | null | undefined, buck
       
     if (error) {
       console.error(`Storage cleanup error for ${filePath}:`, error);
-    } else {
-      console.log(`Successfully deleted ${filePath} from storage.`);
     }
   } catch (err) {
     console.error("Storage cleanup exception:", err);

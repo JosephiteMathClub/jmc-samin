@@ -5,7 +5,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useOutsideClick } from "@/hooks/use-outside-click";
 import Image from "next/image";
 import { resolveImageUrl } from "@/lib/utils";
-import { Clock, MapPin, ArrowRight } from "lucide-react";
+import { Clock, MapPin, ArrowRight, X } from "lucide-react";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
@@ -45,39 +45,41 @@ export function ExpandableEventCards({ events, shouldReduceGfx }: { events: any[
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/60 backdrop-blur-sm h-full w-full z-[100]"
+            className="fixed inset-0 bg-black/80 backdrop-blur-md h-full w-full z-[999]"
           />
         )}
       </AnimatePresence>
       <AnimatePresence>
         {active && typeof active === "object" ? (
-          <div className="fixed inset-0 grid place-items-center z-[101] p-4 sm:p-0">
+          <div className="fixed inset-0 grid place-items-center z-[1000] p-4 sm:p-0 overflow-y-auto pt-24 pb-12">
             <motion.div
               layoutId={`card-${active.title}-${id}`}
               ref={ref}
-              className="w-full max-w-[600px] h-full md:h-fit md:max-h-[90%] flex flex-col bg-[#0a0a0a] border border-white/10 sm:rounded-3xl overflow-hidden"
+              className="w-full max-w-[700px] h-fit flex flex-col bg-[#050505] border border-white/10 rounded-[2.5rem] overflow-hidden shadow-2xl relative"
             >
-              <motion.div layoutId={`image-${active.title}-${id}`} className="relative h-64 sm:h-80 w-full shrink-0">
+              <motion.button
+                key={`button-${active.title}-${id}`}
+                layout
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0, transition: { duration: 0.05 } }}
+                className="flex absolute top-6 right-6 z-[1110] items-center justify-center bg-white/10 backdrop-blur-3xl rounded-full h-12 w-12 border border-white/20 text-white hover:bg-white/20 transition-all shadow-2xl group"
+                onClick={() => setActive(null)}
+              >
+                <X className="w-6 h-6 group-hover:scale-110 transition-transform" />
+              </motion.button>
+              
+              <motion.div layoutId={`image-${active.title}-${id}`} className="relative h-72 sm:h-96 w-full shrink-0">
                 <Image
                   fill
-                  src={resolveImageUrl(active.imageUrl) || `https://picsum.photos/seed/event-${active.id}/800/600`}
+                  src={resolveImageUrl(active.imageUrl) || `https://picsum.photos/seed/event-${active.id}/1200/800`}
                   alt={active.title}
-                  className="w-full h-full object-cover object-top"
+                  className="w-full h-full object-cover"
                 />
-                <motion.button
-                  key={`button-${active.title}-${id}`}
-                  layout
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0, transition: { duration: 0.05 } }}
-                  className="flex absolute top-4 right-4 z-50 items-center justify-center bg-black/50 backdrop-blur-md rounded-full h-8 w-8 border border-white/20 text-white hover:bg-white/10 transition-colors"
-                  onClick={() => setActive(null)}
-                >
-                  <CloseIcon />
-                </motion.button>
+                <div className="absolute inset-0 bg-gradient-to-t from-[#050505] via-transparent to-transparent" />
               </motion.div>
 
-              <div className="flex flex-col flex-1 overflow-hidden">
+              <div className="flex flex-col flex-1">
                 <div className="flex flex-col sm:flex-row justify-between items-start gap-4 p-6 shrink-0 border-b border-white/5">
                   <div>
                     <motion.h3
@@ -108,7 +110,10 @@ export function ExpandableEventCards({ events, shouldReduceGfx }: { events: any[
                     {active.buttonText || 'Secure Seat'}
                   </motion.a>
                 </div>
-                <div className="p-6 md:p-10 relative flex-1 overflow-y-auto overscroll-contain bg-[#0a0a0a]">
+                <div 
+                  className="p-6 md:p-10 relative flex-1 overflow-y-auto overscroll-contain bg-[#0a0a0a]"
+                  data-lenis-prevent
+                >
                   <motion.div
                     layout
                     initial={{ opacity: 0 }}

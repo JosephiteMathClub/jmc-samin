@@ -64,7 +64,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
 
       {/* Sidebar */}
       <div className={`
-        fixed inset-y-0 left-0 z-[70] w-72 lg:w-80 border-r border-white/5 bg-[#080808] flex flex-col transition-transform duration-500 lg:translate-x-0 lg:sticky lg:top-0 lg:h-screen
+        fixed inset-y-0 left-0 z-[70] w-72 lg:w-80 border-r border-white/5 bg-[#080808] flex flex-col transition-transform duration-500 lg:translate-x-0 lg:h-screen
         ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}
       `}>
         <div className="p-6 lg:p-8 border-b border-white/5 flex items-center justify-between relative overflow-hidden group">
@@ -195,7 +195,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
       </div>
 
       {/* Main Content Area */}
-      <div className="flex-1 bg-[#050505] relative min-w-0">
+      <div className="flex-1 bg-[#050505] relative min-w-0 lg:pl-80">
         {/* Top Header Bar */}
         <div className="sticky top-0 z-40 w-full bg-[#050505]/80 backdrop-blur-2xl border-b border-white/5 px-4 lg:px-12 py-4 lg:py-6">
           <div className="max-w-6xl mx-auto flex justify-between items-center gap-4">

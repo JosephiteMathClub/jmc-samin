@@ -90,11 +90,14 @@ export async function POST(req: Request) {
       }
 
       try {
-        await sendEmail({
+        const result = await sendEmail({
           to: memberInfo.email,
           subject,
           html: htmlContent
         });
+        if (!result.success) {
+          throw result.error || new Error('Failed to send email via SMTP provider.');
+        }
         sentCount++;
       } catch (e: any) {
         errors.push(`Failed to send to ${memberInfo.email}: ${e.message}`);

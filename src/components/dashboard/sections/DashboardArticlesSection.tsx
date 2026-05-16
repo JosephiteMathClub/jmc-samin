@@ -66,96 +66,100 @@ const DashboardArticlesSection: React.FC<DashboardArticlesSectionProps> = ({ upl
               <div className="flex-1 space-y-4">
                 {isEditing === article.id ? (
                   <div className="space-y-6 pr-12">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Title</label>
-                        <input 
-                          type="text" 
-                          value={article.title}
-                          onChange={(e) => handleUpdateArticle(article.id, { title: e.target.value })}
-                          className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[var(--c-6-start)] transition-colors"
-                          placeholder="Article Title"
-                        />
+                    <div className="flex flex-col lg:flex-row gap-8 items-start relative">
+                      <div className="w-full lg:w-80 lg:sticky lg:top-8 z-20 space-y-4">
+                        {handleFileUpload && (
+                          <>
+                            <DashboardFileUpload 
+                              label="Cover Image"
+                              value={article.imageUrl || ''}
+                              uploading={uploading === `articles-image-${index}`}
+                              onUpload={(ev) => handleFileUpload(ev, ['articles', 'image', index], (url) => handleUpdateArticle(article.id, { imageUrl: url }))}
+                              onDelete={() => handleUpdateArticle(article.id, { imageUrl: '' })}
+                              onChange={(_, val) => handleUpdateArticle(article.id, { imageUrl: val })}
+                              accept=".jpg,.jpeg,.png,.webp"
+                            />
+                            <DashboardFileUpload 
+                              label="PDF Document"
+                              description="Upload a PDF file to allow reading the article natively."
+                              value={article.pdfUrl || ''}
+                              uploading={uploading === `articles-pdf-${index}`}
+                              onUpload={(ev) => handleFileUpload(ev, ['articles', 'pdf', index], (url) => handleUpdateArticle(article.id, { pdfUrl: url }))}
+                              onDelete={() => handleUpdateArticle(article.id, { pdfUrl: '' })}
+                              onChange={(_, val) => handleUpdateArticle(article.id, { pdfUrl: val })}
+                              accept=".pdf"
+                            />
+                          </>
+                        )}
                       </div>
-                      <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Slug / URL</label>
-                        <input 
-                          type="text" 
-                          value={article.slug}
-                          onChange={(e) => handleUpdateArticle(article.id, { slug: e.target.value })}
-                          className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-zinc-400 focus:outline-none focus:border-[var(--c-6-start)] transition-colors font-mono text-sm"
-                          placeholder="slug-url"
-                        />
-                      </div>
-                    </div>
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Author</label>
-                        <input 
-                          type="text" 
-                          value={article.author}
-                          onChange={(e) => handleUpdateArticle(article.id, { author: e.target.value })}
-                          className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[var(--c-6-start)] transition-colors"
-                          placeholder="Author Name"
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Category</label>
-                        <input 
-                          type="text" 
-                          value={article.category}
-                          onChange={(e) => handleUpdateArticle(article.id, { category: e.target.value })}
-                          className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-zinc-400 focus:outline-none focus:border-[var(--c-6-start)] transition-colors"
-                          placeholder="e.g. Mathematics"
-                        />
-                      </div>
-                    </div>
-                    
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Excerpt</label>
-                      <textarea 
-                        value={article.excerpt}
-                        onChange={(e) => handleUpdateArticle(article.id, { excerpt: e.target.value })}
-                        className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-zinc-300 min-h-[80px] focus:outline-none focus:border-[var(--c-6-start)] transition-colors resize-none"
-                        placeholder="Excerpt..."
-                      />
-                    </div>
-                    
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Content (Text)</label>
-                      <textarea 
-                        value={article.content}
-                        onChange={(e) => handleUpdateArticle(article.id, { content: e.target.value })}
-                        className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-zinc-300 min-h-[160px] focus:outline-none focus:border-[var(--c-6-start)] transition-colors"
-                        placeholder="Full article content (optional if uploading PDF)..."
-                      />
-                    </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      {handleFileUpload && (
-                        <>
-                          <DashboardFileUpload 
-                            label="Cover Image"
-                            value={article.imageUrl || ''}
-                            uploading={uploading === `articles-image-${index}`}
-                            onUpload={(ev) => handleFileUpload(ev, ['articles', 'image', index], (url) => handleUpdateArticle(article.id, { imageUrl: url }))}
-                            onDelete={() => handleUpdateArticle(article.id, { imageUrl: '' })}
-                            onChange={(_, val) => handleUpdateArticle(article.id, { imageUrl: val })}
-                            accept=".jpg,.jpeg,.png,.webp"
+                      <div className="flex-1 w-full space-y-6">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Title</label>
+                            <input 
+                              type="text" 
+                              value={article.title}
+                              onChange={(e) => handleUpdateArticle(article.id, { title: e.target.value })}
+                              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[var(--c-6-start)] transition-colors"
+                              placeholder="Article Title"
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Slug / URL</label>
+                            <input 
+                              type="text" 
+                              value={article.slug}
+                              onChange={(e) => handleUpdateArticle(article.id, { slug: e.target.value })}
+                              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-zinc-400 focus:outline-none focus:border-[var(--c-6-start)] transition-colors font-mono text-sm"
+                              placeholder="slug-url"
+                            />
+                          </div>
+                        </div>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Author</label>
+                            <input 
+                              type="text" 
+                              value={article.author}
+                              onChange={(e) => handleUpdateArticle(article.id, { author: e.target.value })}
+                              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[var(--c-6-start)] transition-colors"
+                              placeholder="Author Name"
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Category</label>
+                            <input 
+                              type="text" 
+                              value={article.category}
+                              onChange={(e) => handleUpdateArticle(article.id, { category: e.target.value })}
+                              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-zinc-400 focus:outline-none focus:border-[var(--c-6-start)] transition-colors"
+                              placeholder="e.g. Mathematics"
+                            />
+                          </div>
+                        </div>
+                        
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Excerpt</label>
+                          <textarea 
+                            value={article.excerpt}
+                            onChange={(e) => handleUpdateArticle(article.id, { excerpt: e.target.value })}
+                            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-zinc-300 min-h-[80px] focus:outline-none focus:border-[var(--c-6-start)] transition-colors resize-none"
+                            placeholder="Excerpt..."
                           />
-                          <DashboardFileUpload 
-                            label="PDF Document"
-                            description="Upload a PDF file to allow reading the article natively."
-                            value={article.pdfUrl || ''}
-                            uploading={uploading === `articles-pdf-${index}`}
-                            onUpload={(ev) => handleFileUpload(ev, ['articles', 'pdf', index], (url) => handleUpdateArticle(article.id, { pdfUrl: url }))}
-                            onDelete={() => handleUpdateArticle(article.id, { pdfUrl: '' })}
-                            onChange={(_, val) => handleUpdateArticle(article.id, { pdfUrl: val })}
-                            accept=".pdf"
+                        </div>
+                        
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Content (Text)</label>
+                          <textarea 
+                            value={article.content}
+                            onChange={(e) => handleUpdateArticle(article.id, { content: e.target.value })}
+                            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-zinc-300 min-h-[240px] focus:outline-none focus:border-[var(--c-6-start)] transition-colors"
+                            placeholder="Full article content (optional if uploading PDF)..."
                           />
-                        </>
-                      )}
+                        </div>
+                      </div>
                     </div>
                     
                     <div className="flex items-center space-x-4 pt-4 border-t border-white/5">

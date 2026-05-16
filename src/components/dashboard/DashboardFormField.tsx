@@ -29,11 +29,14 @@ export const DashboardFormField: React.FC<DashboardFormFieldProps> = ({
   children
 }) => {
   const [localValue, setLocalValue] = React.useState(value);
+  const [isFocused, setIsFocused] = React.useState(false);
 
-  // Sync local value with prop if prop changes externally
+  // Sync local value with prop if prop changes externally and we are not focused
   React.useEffect(() => {
-    setLocalValue(value);
-  }, [value]);
+    if (!isFocused) {
+      setLocalValue(value);
+    }
+  }, [value, isFocused]);
 
   // Debounced onChange
   const debouncedOnChange = React.useCallback(
@@ -100,6 +103,8 @@ export const DashboardFormField: React.FC<DashboardFormFieldProps> = ({
           ) : type === 'textarea' ? (
             <textarea
               value={localValue}
+              onFocus={() => setIsFocused(true)}
+              onBlur={() => setIsFocused(false)}
               onChange={(e) => handleControlledChange(e.target.value)}
               placeholder={placeholder}
               className="w-full bg-white/[0.03] border border-white/10 rounded-2xl px-5 py-4 text-sm text-white placeholder:text-zinc-600 focus:outline-none focus:border-amber-500/50 focus:bg-white/[0.05] transition-all min-h-[120px] resize-none"
@@ -124,6 +129,8 @@ export const DashboardFormField: React.FC<DashboardFormFieldProps> = ({
             <input
               type={type}
               value={localValue}
+              onFocus={() => setIsFocused(true)}
+              onBlur={() => setIsFocused(false)}
               onChange={(e) => handleControlledChange(e.target.value)}
               placeholder={placeholder}
               className="w-full bg-white/[0.03] border border-white/10 rounded-2xl px-5 py-4 text-sm text-white placeholder:text-zinc-600 focus:outline-none focus:border-amber-500/50 focus:bg-white/[0.05] transition-all"

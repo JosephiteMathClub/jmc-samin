@@ -150,7 +150,6 @@ export async function POST(req: Request) {
         `,
         text: `Welcome to Josephite Math Club, ${fullName}!\n\nYour account has been successfully created.\n\nLogin Credentials:\nEmail: ${email}\nPassword: Your provided phone number\n\nYou can sign in at: ${process.env.NEXT_PUBLIC_APP_URL || ''}/auth?mode=login`,
       });
-      console.log('Welcome email sent to:', email);
     } catch (emailErr) {
       console.error('Failed to send welcome email:', emailErr);
       // We don't fail the request if email fails

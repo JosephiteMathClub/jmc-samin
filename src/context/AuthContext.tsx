@@ -93,7 +93,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const isSuperAdminVal = role === 'super_admin' || SUPER_ADMIN_EMAILS_LIST.includes(userEmail);
         setIsAdmin(isAdminVal);
         setIsSuperAdmin(isSuperAdminVal);
-        console.log("AuthContext: role=", role, "isAdmin=", isAdminVal);
       } else {
         const isSuper = SUPER_ADMIN_EMAILS_LIST.includes(userEmail);
         setProfile({ 
@@ -176,7 +175,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         },
         (payload: any) => {
           if (!isMounted) return;
-          console.log('[AuthContext] Profile update detected via realtime:', payload);
           if (user) {
             fetchProfile(user);
           }
@@ -217,7 +215,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (!isMounted) return;
       
       const sessionUser = session?.user ?? null;
-      console.log(`[AuthContext] Event: ${event}, User: ${sessionUser?.email || 'none'}`);
       
       if (event === 'PASSWORD_RECOVERY') {
         // If the user lands here via a recovery link but on the wrong path, redirect them

@@ -96,74 +96,80 @@ const DashboardNoticesSectionComponent: React.FC<DashboardNoticesSectionProps> =
       <DashboardSection icon={Bell} title="Manage Notices" description="Post important announcements and updates.">
         <div className="grid grid-cols-1 gap-8">
           {(data?.notices || []).map((n: any, i: number) => (
-            <div key={i} className="p-6 rounded-2xl bg-white/5 border border-white/10 space-y-4 relative">
+            <div key={n.id || i} className="p-6 rounded-2xl bg-white/5 border border-white/10 space-y-4 relative">
               <button 
                 onClick={() => removeListItem('notices', i)}
                 className="absolute top-4 right-4 p-2 text-zinc-600 hover:text-red-500 transition-colors"
               >
                 <Trash2 className="w-4 h-4" />
               </button>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <DashboardFormField label="Notice Title" value={n.title} onChange={(val) => updateListItem('notices', i, { title: val })} />
-                <DashboardFormField label="Type" value={n.type} onChange={(val) => updateListItem('notices', i, { type: val })} />
-              </div>
-              <DashboardFormField label="Content" type="textarea" value={n.content} onChange={(val) => updateListItem('notices', i, { content: val })} />
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <DashboardFormField label="Date" value={n.date} onChange={(val) => updateListItem('notices', i, { date: val })} />
-                <DashboardFormField label="Link (Optional)" value={n.link} onChange={(val) => updateListItem('notices', i, { link: val })} />
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <DashboardFormField label="Link Text" value={n.linkText} onChange={(val) => updateListItem('notices', i, { linkText: val })} />
-                <DashboardFormField 
-                  label="Tag" 
-                  type="select" 
-                  value={n.tag} 
-                  onChange={(val) => updateListItem('notices', i, { tag: val })}
-                  options={[
-                    { value: 'general', label: 'General' },
-                    { value: 'important', label: 'Important' },
-                    { value: 'urgent', label: 'Urgent' },
-                    { value: 'success', label: 'Success' }
-                  ]}
-                />
-              </div>
-              <div className="flex items-center gap-3">
-                <input 
-                  type="checkbox" 
-                  id={`pin-${i}`}
-                  checked={n.isPinned} 
-                  onChange={(e) => updateListItem('notices', i, { isPinned: e.target.checked })}
-                  className="w-4 h-4 rounded border-white/10 bg-white/5 text-amber-500 focus:ring-amber-500"
-                />
-                <label htmlFor={`pin-${i}`} className="text-sm font-bold text-zinc-400">Pin to top</label>
-              </div>
-              
-              {handleFileUpload && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                  <DashboardFileUpload 
-                    label="Notice Image"
-                    value={n.imageUrl || ''}
-                    uploading={uploading === `notices-notices-${i}-image`}
-                    onUpload={(ev) => handleFileUpload(ev, ['notices', 'notices', i, 'image'], (url) => updateListItem('notices', i, { imageUrl: url }))}
-                    onDelete={() => updateListItem('notices', i, { imageUrl: '' })}
-                    onChange={(_, val) => updateListItem('notices', i, { imageUrl: val })}
-                    accept=".jpg,.jpeg,.png,.webp"
-                  />
-                  <DashboardFileUpload 
-                    label="Notice PDF Attachment"
-                    value={n.pdfUrl || ''}
-                    uploading={uploading === `notices-notices-${i}-pdf`}
-                    onUpload={(ev) => handleFileUpload(ev, ['notices', 'notices', i, 'pdf'], (url) => updateListItem('notices', i, { pdfUrl: url }))}
-                    onDelete={() => updateListItem('notices', i, { pdfUrl: '' })}
-                    onChange={(_, val) => updateListItem('notices', i, { pdfUrl: val })}
-                    accept=".pdf"
-                  />
+              <div className="flex flex-col lg:flex-row gap-8 items-start relative">
+                {handleFileUpload && (
+                  <div className="w-full lg:w-80 lg:sticky lg:top-8 z-20">
+                    <div className="space-y-4">
+                      <DashboardFileUpload 
+                        label="Notice Image"
+                        value={n.imageUrl || ''}
+                        uploading={uploading === `notices-notices-${i}-image`}
+                        onUpload={(ev) => handleFileUpload(ev, ['notices', 'notices', i, 'image'], (url) => updateListItem('notices', i, { imageUrl: url }))}
+                        onDelete={() => updateListItem('notices', i, { imageUrl: '' })}
+                        onChange={(_, val) => updateListItem('notices', i, { imageUrl: val })}
+                        accept=".jpg,.jpeg,.png,.webp"
+                      />
+                      <DashboardFileUpload 
+                        label="Notice PDF Attachment"
+                        value={n.pdfUrl || ''}
+                        uploading={uploading === `notices-notices-${i}-pdf`}
+                        onUpload={(ev) => handleFileUpload(ev, ['notices', 'notices', i, 'pdf'], (url) => updateListItem('notices', i, { pdfUrl: url }))}
+                        onDelete={() => updateListItem('notices', i, { pdfUrl: '' })}
+                        onChange={(_, val) => updateListItem('notices', i, { pdfUrl: val })}
+                        accept=".pdf"
+                      />
+                    </div>
+                  </div>
+                )}
+                
+                <div className="flex-1 w-full space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <DashboardFormField label="Notice Title" value={n.title} onChange={(val) => updateListItem('notices', i, { title: val })} />
+                    <DashboardFormField label="Type" value={n.type} onChange={(val) => updateListItem('notices', i, { type: val })} />
+                  </div>
+                  <DashboardFormField label="Content" type="textarea" value={n.content} onChange={(val) => updateListItem('notices', i, { content: val })} />
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <DashboardFormField label="Date" value={n.date} onChange={(val) => updateListItem('notices', i, { date: val })} />
+                    <DashboardFormField label="Link (Optional)" value={n.link} onChange={(val) => updateListItem('notices', i, { link: val })} />
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <DashboardFormField label="Link Text" value={n.linkText} onChange={(val) => updateListItem('notices', i, { linkText: val })} />
+                    <DashboardFormField 
+                      label="Tag" 
+                      type="select" 
+                      value={n.tag} 
+                      onChange={(val) => updateListItem('notices', i, { tag: val })}
+                      options={[
+                        { value: 'general', label: 'General' },
+                        { value: 'important', label: 'Important' },
+                        { value: 'urgent', label: 'Urgent' },
+                        { value: 'success', label: 'Success' }
+                      ]}
+                    />
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <input 
+                      type="checkbox" 
+                      id={`pin-${i}`}
+                      checked={n.isPinned} 
+                      onChange={(e) => updateListItem('notices', i, { isPinned: e.target.checked })}
+                      className="w-4 h-4 rounded border-white/10 bg-white/5 text-amber-500 focus:ring-amber-500"
+                    />
+                    <label htmlFor={`pin-${i}`} className="text-sm font-bold text-zinc-400">Pin to top</label>
+                  </div>
                 </div>
-              )}
+              </div>
             </div>
           ))}
           <button 
-            onClick={() => addListItem('notices', { title: 'New Notice', type: 'General', content: '', date: new Date().toLocaleDateString(), isPinned: false, link: '', linkText: 'View Details', tag: 'general', imageUrl: '', pdfUrl: '' })}
+            onClick={() => addListItem('notices', { id: `notice-${Date.now()}`, title: 'New Notice', type: 'General', content: '', date: new Date().toLocaleDateString(), isPinned: false, link: '', linkText: 'View Details', tag: 'general', imageUrl: '', pdfUrl: '' })}
             className="w-full py-4 border-2 border-dashed border-white/10 rounded-2xl text-zinc-500 hover:text-amber-500 hover:border-amber-500/50 transition-all flex items-center justify-center gap-2 font-bold"
           >
             <Plus className="w-5 h-5" /> Add New Notice

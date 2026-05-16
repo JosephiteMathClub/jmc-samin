@@ -116,7 +116,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
 
           <Navbar />
           <FloatingSidebar />
-          <main className="flex-grow relative z-10">
+          <main className="flex-grow relative">
             <ErrorBoundary>
               {children}
             </ErrorBoundary>

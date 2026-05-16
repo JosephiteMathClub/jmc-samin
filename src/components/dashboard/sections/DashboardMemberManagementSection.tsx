@@ -400,6 +400,101 @@ const DashboardMemberManagementSectionComponent: React.FC<DashboardMemberManagem
             </div>
           </div>
 
+          <div className="flex justify-end border-b border-white/10 pb-4 gap-4">
+            <button
+              onClick={async () => {
+                const pending = filteredMembers.filter(m => m.verified === 'no');
+                if (pending.length === 0) {
+                  showToast("No pending members in the current view.", "info");
+                  return;
+                }
+                const confirmRes = window.confirm(`Send verification reminders to ${pending.length} pending members?`);
+                if (!confirmRes) return;
+                
+                setSendingEmailId('bulk-pending');
+                try {
+                  const toSend = pending.map(m => ({
+                    email: m.email_address || m.email,
+                    fullName: m.full_name,
+                    memberId: m.member_id
+                  })).filter(m => !!m.email);
+                  
+                  showToast(`Sending ${toSend.length} verification emails...`, 'info');
+                  const res = await fetch('/api/admin/bulk-verification-email', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ members: toSend })
+                  });
+                  const data = await res.json();
+                  if (!res.ok) throw new Error(data.error || "Failed to send emails.");
+                  showToast(`Successfully sent ${data.sentCount} verification emails.`, 'success');
+                } catch (err: any) {
+                  showToast(err.message, 'error');
+                } finally {
+                  setSendingEmailId(null);
+                }
+              }}
+              disabled={sendingEmailId === 'bulk-pending'}
+              className="px-6 py-3 rounded-xl border border-indigo-500/30 text-indigo-400 hover:bg-indigo-500/10 transition-all text-xs font-bold uppercase tracking-widest flex items-center gap-2 disabled:opacity-50"
+            >
+              {sendingEmailId === 'bulk-pending' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Mail className="w-4 h-4" />}
+              {sendingEmailId === 'bulk-pending' ? 'Sending...' : 'Send Verification Emails to Pending'}
+            </button>
+
+            <button
+              onClick={async () => {
+                const unnotified = filteredMembers.filter(m => m.verified === 'yes');
+                if (unnotified.length === 0) {
+                  showToast("No members to email in the current view.", "info");
+                  return;
+                }
+                const confirmRes = window.confirm(`This will send welcome emails to ${unnotified.length} verified members in the current view. Ensure your SMTP settings are correct. Proceed?`);
+                if (!confirmRes) return;
+                
+                setSendingEmailId('bulk-all');
+                try {
+                  const toSend = unnotified.map(m => ({
+                    email: m.email_address || m.email,
+                    fullName: m.full_name,
+                    memberId: m.member_id
+                  })).filter(m => !!m.email);
+                  
+                  showToast(`Sending ${toSend.length} emails...`, 'info');
+                  const res = await fetch('/api/admin/bulk-welcome-email', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ members: toSend })
+                  });
+                  const data = await res.json();
+                  if (!res.ok) throw new Error(data.error || "Failed to send welcome emails.");
+                  
+                  if (data.sentCount > 0) {
+                    if (data.errors && data.errors.length > 0) {
+                      showToast(`Sent ${data.sentCount} emails with ${data.errors.length} errors.`, 'info');
+                    } else {
+                      showToast(`Successfully sent ${data.sentCount} emails.`, 'success');
+                    }
+                  } else {
+                    if (data.errors && data.errors.length > 0) {
+                      throw new Error(data.errors[0]);
+                    } else {
+                      showToast(`No emails were sent.`, 'info');
+                    }
+                  }
+                } catch (err: any) {
+                  showToast(err.message, 'error');
+                } finally {
+                  setSendingEmailId(null);
+                }
+              }}
+              disabled={sendingEmailId === 'bulk-all'}
+              className="px-6 py-3 rounded-xl border border-amber-500/30 text-amber-500 hover:bg-amber-500/10 transition-all text-xs font-bold uppercase tracking-widest flex items-center gap-2 disabled:opacity-50"
+            >
+              {sendingEmailId === 'bulk-all' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Mail className="w-4 h-4" />}
+              {sendingEmailId === 'bulk-all' ? 'Sending...' : 'Send Welcome Emails to Filtered Members'}
+            </button>
+          </div>
+
           {memberError && (
             <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-500 text-[10px] font-bold uppercase tracking-widest flex items-center gap-3">
               <AlertCircle className="w-4 h-4" />
