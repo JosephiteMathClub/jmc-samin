@@ -1,10 +1,9 @@
 "use client";
-import React, { useLayoutEffect, useRef } from 'react';
-import { motion } from 'framer-motion';
+import React, { useRef } from 'react';
+import { motion, useScroll, useTransform, useSpring } from 'framer-motion';
 import { ArrowRight, Globe, Lock, Cpu } from 'lucide-react';
 import Link from 'next/link';
 import TypewriterText from '../TypewriterText';
-import gsap from 'gsap';
 
 interface HeroProps {
   home: any;
@@ -13,48 +12,17 @@ interface HeroProps {
 
 export const Hero: React.FC<HeroProps> = ({ home, shouldReduceGfx }) => {
   const containerRef = useRef<HTMLDivElement>(null);
-  const titleWordsRef = useRef<(HTMLSpanElement | null)[]>([]);
+  
+  const { scrollYProgress } = useScroll({
+    target: containerRef,
+    offset: ["start start", "end start"]
+  });
 
-  useLayoutEffect(() => {
-    if (shouldReduceGfx) return;
-
-    const ctx = gsap.context(() => {
-      const tl = gsap.timeline();
-
-      // Cinematic title reveal
-      tl.fromTo(
-        titleWordsRef.current,
-        {
-          y: 150,
-          rotateX: -90,
-          opacity: 0,
-        },
-        {
-          y: 0,
-          rotateX: 0,
-          opacity: 1,
-          duration: 1.8,
-          stagger: 0.15,
-          ease: "expo.out",
-        },
-        0.5
-      );
-
-      // Background elements subtle parallax
-      gsap.to(".bg-element", {
-        y: (i, target) => -target.dataset.speed * 100,
-        ease: "none",
-        scrollTrigger: {
-          trigger: containerRef.current,
-          start: "top top",
-          end: "bottom top",
-          scrub: true,
-        },
-      });
-    }, containerRef);
-
-    return () => ctx.revert();
-  }, [shouldReduceGfx]);
+  const smoothProgress = useSpring(scrollYProgress, { stiffness: 100, damping: 30, restDelta: 0.001 });
+  
+  // Parallax transforms
+  const y1 = useTransform(smoothProgress, [0, 1], [0, -100]);
+  const y2 = useTransform(smoothProgress, [0, 1], [0, -200]);
 
   return (
     <section 
@@ -124,13 +92,19 @@ export const Hero: React.FC<HeroProps> = ({ home, shouldReduceGfx }) => {
 
             <h1 className="text-[12vw] sm:text-[10vw] md:text-[12vw] font-bold tracking-[-0.06em] text-white font-display leading-[0.85] sm:leading-[0.8] flex flex-col items-center select-none break-words max-w-full overflow-hidden px-2">
               {(home?.heroTitle || "Josephite Math Club").split(' ').map((word: string, i: number) => (
-                <span
+                <motion.span
                   key={i}
-                  ref={el => { titleWordsRef.current[i] = el }}
+                  initial={shouldReduceGfx ? { opacity: 1 } : { y: 150, rotateX: -90, opacity: 0 }}
+                  animate={{ y: 0, rotateX: 0, opacity: 1 }}
+                  transition={{ 
+                    duration: 1.8, 
+                    delay: 0.5 + (i * 0.15), 
+                    ease: [0.16, 1, 0.3, 1] 
+                  }}
                   className={`block px-4 will-change-transform ${i % 2 === 1 ? "blue-text italic -skew-x-12" : "font-black"}`}
                 >
                   {word}
-                </span>
+                </motion.span>
               ))}
             </h1>
           </div>
@@ -192,18 +166,18 @@ export const Hero: React.FC<HeroProps> = ({ home, shouldReduceGfx }) => {
 
       {!shouldReduceGfx && (
         <div className="absolute inset-0 pointer-events-none">
-          <div 
-            data-speed="0.2"
+          <motion.div 
+            style={{ y: y1 }}
             className="bg-element absolute top-[15%] left-[8%] font-mono text-[6vw] select-none uppercase font-black text-white/[0.02]"
           >
             Limit_As_x_→_∞
-          </div>
-          <div 
-            data-speed="0.4"
+          </motion.div>
+          <motion.div 
+            style={{ y: y2 }}
             className="bg-element absolute bottom-[15%] right-[8%] font-mono text-[9vw] select-none uppercase font-black text-white/[0.02]"
           >
              ∫_f(x)_dx
-          </div>
+          </motion.div>
           
           {/* Cinematic Light Leaks */}
           <div className="absolute top-0 right-0 w-[40vw] h-[40vw] bg-[var(--c-6-start)]/10 blur-[150px] animate-float opacity-30" />

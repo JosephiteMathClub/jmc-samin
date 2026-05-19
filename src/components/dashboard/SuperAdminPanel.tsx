@@ -15,7 +15,10 @@ import {
   Activity,
   AlertCircle,
   Plus,
-  ShieldAlert
+  ShieldAlert,
+  Mail,
+  CheckCircle2,
+  XCircle
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useToast } from '../../context/ToastContext';
@@ -30,10 +33,15 @@ export const SuperAdminPanel = () => {
   const [loading, setLoading] = useState(true);
   const [promoting, setPromoting] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [activeSubTab, setActiveSubTab] = useState<'users' | 'database' | 'positions' | 'support'>('users');
+  const [activeSubTab, setActiveSubTab] = useState<'users' | 'database' | 'positions' | 'support' | 'email'>('users');
   
+  // Email state
+  const [emailConfig, setEmailConfig] = useState<any>(null);
+  const [loadingEmailConfig, setLoadingEmailConfig] = useState(false);
+  const [testingEmail, setTestingEmail] = useState(false);
+
   // Database Explorer state
-  const [tables] = useState<string[]>(['profiles', 'member', 'event_participation', 'site_content', 'support_tickets']);
+  const [tables] = useState(['profiles', 'member', 'event_participation', 'site_content', 'support_tickets']);
   const [selectedTable, setSelectedTable] = useState('profiles');
   const [tableData, setTableData] = useState<any[]>([]);
   const [loadingTable, setLoadingTable] = useState(false);
@@ -41,6 +49,37 @@ export const SuperAdminPanel = () => {
   // Position Management state
   const [participations, setParticipations] = useState<any[]>([]);
   const [loadingParticipations, setLoadingParticipations] = useState(false);
+
+  const fetchEmailConfig = useCallback(async () => {
+    setLoadingEmailConfig(true);
+    try {
+      const res = await fetch('/api/admin/check-email-config');
+      const data = await res.json();
+      setEmailConfig(data);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoadingEmailConfig(false);
+    }
+  }, []);
+
+  const testEmail = async () => {
+    setTestingEmail(true);
+    showToast('Sending test email...', 'info');
+    try {
+      const res = await fetch('/api/debug-email');
+      const data = await res.json();
+      if (res.ok) {
+        showToast('Test email sent! Check l47idkpro@gmail.com', 'success');
+      } else {
+        throw new Error(data.details?.message || data.error || 'Failed to send test email');
+      }
+    } catch (err: any) {
+      showToast(err.message, 'error');
+    } finally {
+      setTestingEmail(false);
+    }
+  };
 
   const fetchUsers = useCallback(async () => {
     setLoading(true);
@@ -102,7 +141,8 @@ export const SuperAdminPanel = () => {
     if (activeSubTab === 'users') fetchUsers();
     if (activeSubTab === 'database') fetchTableData(selectedTable);
     if (activeSubTab === 'positions') fetchParticipations();
-  }, [activeSubTab, selectedTable, fetchUsers, fetchTableData, fetchParticipations]);
+    if (activeSubTab === 'email') fetchEmailConfig();
+  }, [activeSubTab, selectedTable, fetchUsers, fetchTableData, fetchParticipations, fetchEmailConfig]);
 
   const updateUserRole = async (userId: string, currentRole: string) => {
     const newRole = currentRole === 'admin' ? 'member' : 'admin';
@@ -216,6 +256,7 @@ export const SuperAdminPanel = () => {
           { id: 'users', label: 'Admin Management', icon: Shield },
           { id: 'positions', label: 'Event Positions', icon: Award },
           { id: 'support', label: 'Support Issues', icon: ShieldAlert },
+          { id: 'email', label: 'Email Status', icon: Mail },
           { id: 'database', label: 'Database Explorer', icon: DatabaseZap }
         ].map(tab => (
           <button
@@ -423,6 +464,88 @@ export const SuperAdminPanel = () => {
             exit={{ opacity: 0, y: -10 }}
           >
             <SupportManagement />
+          </motion.div>
+        )}
+
+        {activeSubTab === 'email' && (
+          <motion.div
+            key="email"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+          >
+            <DashboardSection 
+              title="Email System Health" 
+              description="Monitor SMTP and API configurations. Ensure reliable communication."
+              icon={Mail}
+              actions={
+                <DashboardButton 
+                  label={testingEmail ? "Sending..." : "Send Test Email"} 
+                  onClick={testEmail}
+                  disabled={testingEmail}
+                  icon={testingEmail ? Loader2 : Mail}
+                  variant="primary"
+                  className="h-9 px-4 text-[10px]"
+                />
+              }
+            >
+              {loadingEmailConfig ? (
+                <div className="flex items-center justify-center py-20">
+                  <Loader2 className="w-8 h-8 text-amber-500 animate-spin" />
+                </div>
+              ) : emailConfig ? (
+                <div className="space-y-8">
+                  <div className={`p-6 rounded-3xl border ${emailConfig.is_api_mode ? 'bg-green-500/5 border-green-500/20' : 'bg-amber-500/5 border-amber-500/20'}`}>
+                     <div className="flex items-center gap-4 mb-4">
+                        <div className={`w-12 h-12 rounded-full flex items-center justify-center ${emailConfig.is_api_mode ? 'bg-green-500/20 text-green-500' : 'bg-amber-500/20 text-amber-500'}`}>
+                          {emailConfig.is_api_mode ? <CheckCircle2 className="w-6 h-6" /> : <AlertCircle className="w-6 h-6" />}
+                        </div>
+                        <div>
+                          <h4 className="text-sm font-bold text-white uppercase tracking-widest">
+                            {emailConfig.is_api_mode ? 'API Mode Active' : 'SMTP Mode (Prone to IP Issues)'}
+                          </h4>
+                          <p className="text-[10px] text-zinc-500 uppercase tracking-widest">{emailConfig.recommendation}</p>
+                        </div>
+                     </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {[
+                      { label: 'Brevo API Key', status: emailConfig.BREVO_API_KEY, env: 'BREVO_API_KEY' },
+                      { label: 'SMTP Pass/Key', status: emailConfig.SMTP_PASS, env: 'SMTP_PASS' },
+                      { label: 'Sender Email', status: emailConfig.SMTP_FROM_EMAIL, env: 'SMTP_FROM_EMAIL', val: emailConfig.current_from_email },
+                      { label: 'SMTP User', status: emailConfig.SMTP_USER, env: 'SMTP_USER' }
+                    ].map((item, i) => (
+                      <div key={i} className="p-6 rounded-2xl bg-white/[0.02] border border-white/5 flex items-center justify-between">
+                        <div>
+                          <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest mb-1">{item.label}</p>
+                          <p className="text-xs font-mono text-zinc-400">{item.env}</p>
+                          {item.val && <p className="text-[10px] text-amber-500/60 mt-1">{item.val}</p>}
+                        </div>
+                        <div className={`flex items-center gap-2 text-[10px] font-black uppercase tracking-widest ${item.status ? 'text-green-500' : 'text-red-500'}`}>
+                          {item.status ? <CheckCircle2 className="w-3 h-3" /> : <XCircle className="w-3 h-3" />}
+                          {item.status ? 'Configured' : 'Missing'}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="p-8 rounded-3xl bg-indigo-500/5 border border-indigo-500/10 space-y-4">
+                    <h4 className="text-sm font-bold text-indigo-400 uppercase tracking-widest flex items-center gap-2">
+                       <Shield className="w-4 h-4" />
+                       How to Fix permanently
+                    </h4>
+                    <div className="space-y-3 text-[11px] text-zinc-400 leading-relaxed uppercase tracking-wider">
+                      <p>1. Go to Brevo Dashbord &gt; Settings &gt; SMTP &amp; API.</p>
+                      <p>2. Generate a new <strong className="text-white">API Key</strong> (V3).</p>
+                      <p>3. Set <strong className="text-white">BREVO_API_KEY</strong> environment variable in your host settings.</p>
+                      <p>4. Go to Brevo &gt; Senders &gt; Domains and ensure <strong className="text-white">{emailConfig.current_from_email.split('@')[1]}</strong> is verified.</p>
+                      <p>5. In Brevo &gt; Settings &gt; Security &gt; Authorized IPs, <strong className="text-red-500">REMOVE</strong> all IP addresses if using SMTP.</p>
+                    </div>
+                  </div>
+                </div>
+              ) : null}
+            </DashboardSection>
           </motion.div>
         )}
 

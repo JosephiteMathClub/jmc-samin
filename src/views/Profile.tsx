@@ -111,9 +111,12 @@ const Profile = () => {
       }
 
       if (uploadError) throw uploadError;
+      
+      const bucket = finalPath.startsWith('/avatars/') ? 'avatars' : 'images';
+      const pathInBucket = bucket === 'avatars' ? fileName : filePath;
+      const { data: { publicUrl: avatarUrl } } = supabase.storage.from(bucket).getPublicUrl(pathInBucket);
 
       // Update profile with the new avatar URL
-      const avatarUrl = finalPath;
       const { error: updateError } = await supabase
         .from('profiles')
         .update({ avatar_url: avatarUrl })
@@ -138,19 +141,27 @@ const Profile = () => {
     }
   };
 
-  const triggerCelebration = React.useCallback((topPosition: number) => {
+  const triggerCelebration = React.useCallback((rank: any) => {
     if (shouldReduceGfx) return;
     
+    // Normalize rank to numeric priority for colors
+    const rankLower = String(rank || '').toLowerCase();
+    let rankPriority = 4;
+    if (rankLower.includes('champion') || rankLower.includes('1st') || rankLower === '1') rankPriority = 1;
+    else if (rankLower.includes('runner') || rankLower.includes('2nd') || rankLower === '2') rankPriority = 2;
+    else if (rankLower.includes('3rd') || rankLower === '3') rankPriority = 3;
+
     const duration = 5 * 1000;
     const animationEnd = Date.now() + duration;
     const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 9999 };
 
     const randomInRange = (min: number, max: number) => Math.random() * (max - min) + min;
 
-    // Thematic colors based on position
-    const colors = topPosition === 1 ? ['#fbbf24', '#f59e0b', '#ffffff'] : // Gold
-                   topPosition === 2 ? ['#94a3b8', '#cbd5e1', '#ffffff'] : // Silver
-                   ['#b45309', '#d97706', '#ffffff']; // Bronze
+    // Thematic colors based on rank priority
+    const colors = rankPriority === 1 ? ['#fbbf24', '#f59e0b', '#ffffff'] : // Gold
+                   rankPriority === 2 ? ['#94a3b8', '#cbd5e1', '#ffffff'] : // Silver
+                   rankPriority === 3 ? ['#b45309', '#d97706', '#ffffff'] : // Bronze
+                   ['#0c4a6e', '#0369a1', '#ffffff']; // Club Blue fallback
 
     // Initial burst
     confetti({ 
@@ -189,12 +200,21 @@ const Profile = () => {
       setAchievements(data || []);
       
       // Trigger celebration if there are wins and we haven't celebrated this mount
-      const wins = (data || []).filter((a: any) => a.position !== null);
+      const wins = (data || []).filter((a: any) => a.position !== null && a.position !== '');
       if (wins.length > 0 && !celebratedRef.current) {
         celebratedRef.current = true;
-        const topPosition = Math.min(...wins.map((w: any) => w.position));
+        
+        // Sort wins to find the best position (lowest number)
+        const sortedWins = [...wins].sort((a, b) => {
+          const posA = parseInt(String(a.position).replace(/\D/g, '')) || 999;
+          const posB = parseInt(String(b.position).replace(/\D/g, '')) || 999;
+          return posA - posB;
+        });
+        
+        const bestRank = sortedWins[0].position;
+        
         // Add slight delay so content is visible
-        setTimeout(() => triggerCelebration(topPosition), 800);
+        setTimeout(() => triggerCelebration(bestRank), 800);
       }
     } catch (err) {
       console.error("Error fetching achievements:", err);

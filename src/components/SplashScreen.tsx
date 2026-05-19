@@ -9,11 +9,12 @@ import { resolveImageUrl } from '../lib/utils';
 
 interface SplashScreenProps {
   isLoaded: boolean;
+  isAdminMode?: boolean;
   logoUrl?: string;
   onFinish: () => void;
 }
 
-const SplashScreen = ({ isLoaded, logoUrl, onFinish }: SplashScreenProps) => {
+const SplashScreen = ({ isLoaded, isAdminMode, logoUrl, onFinish }: SplashScreenProps) => {
   const [progress, setProgress] = useState(0);
   const [isExiting, setIsExiting] = useState(false);
   const { shouldReduceGfx } = usePerformance();
@@ -23,8 +24,8 @@ const SplashScreen = ({ isLoaded, logoUrl, onFinish }: SplashScreenProps) => {
   const loadingPhases = [
     "Initializing mathematical sanctuary...",
     "Connecting to database...",
-    "Loading member configurations...",
-    "Preparing quantum calculations...",
+    isAdminMode ? "Authorizing executive terminal..." : "Loading member configurations...",
+    isAdminMode ? "Synchronizing administrative hub..." : "Preparing quantum calculations...",
     "Welcome to the Sanctuary"
   ];
 

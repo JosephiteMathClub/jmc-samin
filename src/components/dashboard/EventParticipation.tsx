@@ -858,6 +858,16 @@ export const EventParticipation = () => {
                   className="flex-1"
                 />
                 
+                <button 
+                  onClick={() => setIsQRScannerOpen(true)}
+                  disabled={!activeEvent || isBulkUploading}
+                  className="h-full px-6 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 text-[10px] font-bold text-indigo-400 uppercase tracking-widest hover:bg-indigo-500 hover:text-white transition-all flex items-center gap-2 disabled:opacity-50"
+                  title="Scan QR Code"
+                >
+                  <QrCode className="w-4 h-4" />
+                  Scan
+                </button>
+
                 <input 
                   type="file" 
                   ref={bulkUploadRef}

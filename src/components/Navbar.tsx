@@ -6,24 +6,26 @@ import { usePathname } from 'next/navigation';
 import { useAuth } from '../context/AuthContext';
 import { useContent } from '../context/ContentContext';
 import { Menu, X, User, LogOut, LayoutDashboard, Globe, Cpu, Radio } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useScroll, useSpring } from 'framer-motion';
 import { resolveImageUrl } from '../lib/utils';
 import { usePerformance } from '../hooks/usePerformance';
-import gsap from 'gsap';
-import { ScrollTrigger } from 'gsap/ScrollTrigger';
-
-gsap.registerPlugin(ScrollTrigger);
 
 const Navbar = () => {
-  const { user, isAdmin, signOut } = useAuth();
+  const { user, isAdmin, profile, signOut } = useAuth();
   const { content } = useContent();
   const [isOpen, setIsOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const pathname = usePathname();
   const { shouldReduceGfx } = usePerformance();
   const [isInputFocused, setIsInputFocused] = useState(false);
-  const progressRef = useRef<HTMLDivElement>(null);
   const navRef = useRef<HTMLDivElement>(null);
+
+  const { scrollYProgress } = useScroll();
+  const scaleX = useSpring(scrollYProgress, {
+    stiffness: 100,
+    damping: 30,
+    restDelta: 0.001
+  });
 
   useEffect(() => {
     // Hide when typing on mobile
@@ -50,26 +52,10 @@ const Navbar = () => {
     };
 
     window.addEventListener('scroll', handleScroll);
-
-    // GSAP Scroll Progress
-    if (progressRef.current && !shouldReduceGfx) {
-      gsap.to(progressRef.current, {
-        scaleX: 1,
-        ease: "none",
-        scrollTrigger: {
-          trigger: "body",
-          start: "top top",
-          end: "bottom bottom",
-          scrub: 0.3,
-        }
-      });
-    }
-
     return () => {
       window.removeEventListener('scroll', handleScroll);
-      ScrollTrigger.getAll().forEach(t => t.kill());
     };
-  }, [shouldReduceGfx]);
+  }, []);
 
   const navLinks = [
     { name: 'Home', path: '/' },
@@ -105,9 +91,9 @@ const Navbar = () => {
       {/* Scroll Progress Bar */}
       {!isAdminPage && (
         <div className="absolute bottom-0 left-0 w-full h-[1px] bg-white/5 pointer-events-none">
-          <div 
-            ref={progressRef}
-            className="h-full bg-gradient-to-r from-transparent via-[var(--c-6-start)] to-transparent origin-left scale-x-0 blur-[1px]"
+          <motion.div 
+            style={{ scaleX }}
+            className="h-full bg-gradient-to-r from-transparent via-[var(--c-6-start)] to-transparent origin-left blur-[1px]"
           />
         </div>
       )}
@@ -179,8 +165,21 @@ const Navbar = () => {
             
             {user ? (
                <div className="flex items-center gap-6 pl-6 border-l border-white/10">
-                <Link href="/profile" className="p-2.5 rounded-xl glass border-white/5 text-zinc-500 hover:text-[var(--c-6-start)] transition-all">
-                  <User className="h-4 w-4" />
+                <Link href="/profile" className="flex items-center gap-3 group/nav-avatar">
+                   <div className="relative w-9 h-9 rounded-xl overflow-hidden glass border border-white/10 group-hover/nav-avatar:border-[var(--c-6-start)]/50 transition-all">
+                      {profile?.avatar_url ? (
+                        <Image 
+                          src={resolveImageUrl(profile.avatar_url)} 
+                          alt="Profile" 
+                          fill 
+                          className="object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-zinc-500 group-hover/nav-avatar:text-[var(--c-6-start)] transition-colors">
+                          <User className="h-4 w-4" />
+                        </div>
+                      )}
+                   </div>
                 </Link>
                 <div className="h-6 w-px bg-white/5" />
                 <button onClick={signOut} className="p-2.5 rounded-xl glass border-white/5 text-zinc-500 hover:text-red-500 transition-all">

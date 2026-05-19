@@ -14,15 +14,22 @@ export function cn(...inputs: ClassValue[]) {
 export function resolveImageUrl(url: string | undefined): string {
   if (!url) return '';
   
-  // If it's already a full URL, return it
+  // If it's already a full URL (http/https), return it
   if (url.startsWith('http')) return url;
   
-  // Only resolve to Supabase for /uploads/ or if explicitly requested
+  // If it's a Supabase storage path that somehow got saved as a relative path
+  if (url.startsWith('avatars/') || url.startsWith('images/')) {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    if (supabaseUrl) {
+      return encodeURI(`${supabaseUrl}/storage/v1/object/public/${url}`);
+    }
+  }
+
+  // Handle /uploads/ prefix explicitly
   if (url.startsWith('/uploads/')) {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     if (supabaseUrl) {
       const path = url.startsWith('/') ? url.substring(1) : url;
-      // encodeURI handles spaces in the path making it a valid URL
       return encodeURI(`${supabaseUrl}/storage/v1/object/public/images/${path}`);
     }
   }

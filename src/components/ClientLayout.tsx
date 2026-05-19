@@ -16,8 +16,8 @@ import { SupportTrigger } from "@/components/SupportTrigger";
 import { usePerformance } from "@/hooks/usePerformance";
 
 export default function ClientLayout({ children }: { children: React.ReactNode }) {
-  const { loading, content } = useContent();
-  const { isAdmin } = useAuth();
+  const { loading: contentLoading, content } = useContent();
+  const { isAdmin, isSuperAdmin, loading: authLoading } = useAuth();
   const pathname = usePathname();
   const router = useRouter();
   const [splashFinished, setSplashFinished] = useState(false);
@@ -90,7 +90,8 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
       {!splashFinished ? (
         <SplashScreen 
           key="splash" 
-          isLoaded={!loading} 
+          isLoaded={!contentLoading && !authLoading} 
+          isAdminMode={isAdmin || isSuperAdmin}
           logoUrl={content?.site?.logoUrl}
           onFinish={() => setSplashFinished(true)} 
         />

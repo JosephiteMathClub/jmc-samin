@@ -11,6 +11,7 @@ CREATE TABLE IF NOT EXISTS public.profiles (
   id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   role TEXT DEFAULT 'member',
   full_name TEXT,
+  avatar_url TEXT,
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
@@ -243,10 +244,7 @@ CREATE POLICY "Allow users to insert own member record" ON public.member FOR INS
 DROP POLICY IF EXISTS "Allow users to update own member entry" ON public.member;
 CREATE POLICY "Allow users to update own member entry" ON public.member FOR UPDATE TO authenticated 
 USING (auth.uid() = id) 
-WITH CHECK (
-  auth.uid() = id AND 
-  (CASE WHEN verified IS DISTINCT FROM (SELECT m.verified FROM public.member m WHERE m.id = id) THEN false ELSE true END)
-);
+WITH CHECK (auth.uid() = id);
 
 DROP POLICY IF EXISTS "Allow admins to manage all members" ON public.member;
 CREATE POLICY "Allow admins to manage all members" ON public.member FOR ALL TO authenticated USING (public.is_admin());
@@ -327,7 +325,7 @@ CREATE POLICY "Users can create own tickets" ON public.support_tickets
   FOR INSERT TO authenticated 
   WITH CHECK (auth.uid() = user_id);
 
-DROP POLICY IF EXISTS "Admins can manage all tickets" ON public.support_tickets;
+DROP POLICY IF EXISTS "Super Admins can manage all tickets" ON public.support_tickets;
 CREATE POLICY "Super Admins can manage all tickets" ON public.support_tickets 
   FOR ALL TO authenticated 
   USING (public.is_super_admin());

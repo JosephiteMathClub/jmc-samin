@@ -1,10 +1,6 @@
 "use client";
 
-import { useLayoutEffect, useRef } from "react";
-import gsap from "gsap";
-import { ScrollTrigger } from "gsap/ScrollTrigger";
-
-gsap.registerPlugin(ScrollTrigger);
+import { motion } from "framer-motion";
 
 interface RevealProps {
   children: React.ReactNode;
@@ -23,44 +19,29 @@ export const Reveal = ({
   className = "",
   triggerOnce = true,
 }: RevealProps) => {
-  const elementRef = useRef<HTMLDivElement>(null);
-
-  useLayoutEffect(() => {
-    const element = elementRef.current;
-    if (!element) return;
-
-    const getInitialProps = () => {
-      switch (direction) {
-        case "up": return { y: 60, opacity: 0 };
-        case "down": return { y: -60, opacity: 0 };
-        case "left": return { x: 60, opacity: 0 };
-        case "right": return { x: -60, opacity: 0 };
-        default: return { y: 60, opacity: 0 };
-      }
-    };
-
-    gsap.fromTo(
-      element,
-      getInitialProps(),
-      {
-        x: 0,
-        y: 0,
-        opacity: 1,
-        duration: duration,
-        delay: delay,
-        ease: "power3.out",
-        scrollTrigger: {
-          trigger: element,
-          start: "top 85%",
-          toggleActions: triggerOnce ? "play none none none" : "play none none reverse",
-        },
-      }
-    );
-  }, [direction, delay, duration, triggerOnce]);
+  const getInitialProps = () => {
+    switch (direction) {
+      case "up": return { y: 60, opacity: 0 };
+      case "down": return { y: -60, opacity: 0 };
+      case "left": return { x: 60, opacity: 0 };
+      case "right": return { x: -60, opacity: 0 };
+      default: return { y: 60, opacity: 0 };
+    }
+  };
 
   return (
-    <div ref={elementRef} className={className} style={{ opacity: 0 }}>
+    <motion.div
+      initial={getInitialProps()}
+      whileInView={{ x: 0, y: 0, opacity: 1 }}
+      viewport={{ once: triggerOnce, margin: "-15%" }}
+      transition={{
+        duration: duration,
+        delay: delay,
+        ease: [0.16, 1, 0.3, 1], // Expo-out like
+      }}
+      className={className}
+    >
       {children}
-    </div>
+    </motion.div>
   );
 };
