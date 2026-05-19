@@ -81,40 +81,33 @@ const Profile = () => {
       const fileName = `${user.id}-${Math.random().toString(36).substring(2)}.${fileExt}`;
       const filePath = `avatars/${fileName}`;
 
-      // Try 'images' bucket first (common in many setups)
+      // Try 'avatars' bucket first as it's more specific
+      let uploadStatus = { bucket: 'avatars', path: fileName };
       let uploadError = null;
+      
       try {
         const { error } = await supabase.storage
-          .from('images')
-          .upload(filePath, file, { upsert: true });
+          .from('avatars')
+          .upload(fileName, file, { upsert: true });
         
-        if (error) uploadError = error;
+        if (error) {
+          // Fallback to 'images' bucket
+          const { error: imagesError } = await supabase.storage
+            .from('images')
+            .upload(filePath, file, { upsert: true });
+          
+          if (imagesError) throw imagesError;
+          uploadStatus = { bucket: 'images', path: filePath };
+        }
       } catch (e: any) {
         uploadError = e;
       }
 
-      // If 'images' failed, try 'avatars' bucket
-      let finalPath = `/images/${filePath}`;
-      if (uploadError) {
-        try {
-          const { error: avatarError } = await supabase.storage
-            .from('avatars')
-            .upload(fileName, file, { upsert: true });
-          
-          if (!avatarError) {
-            finalPath = `/avatars/${fileName}`;
-            uploadError = null;
-          }
-        } catch (e: any) {
-          // Keep original error if this also fails
-        }
-      }
-
       if (uploadError) throw uploadError;
       
-      const bucket = finalPath.startsWith('/avatars/') ? 'avatars' : 'images';
-      const pathInBucket = bucket === 'avatars' ? fileName : filePath;
-      const { data: { publicUrl: avatarUrl } } = supabase.storage.from(bucket).getPublicUrl(pathInBucket);
+      const { data: { publicUrl: avatarUrl } } = supabase.storage
+        .from(uploadStatus.bucket)
+        .getPublicUrl(uploadStatus.path);
 
       // Update profile with the new avatar URL
       const { error: updateError } = await supabase
@@ -200,7 +193,7 @@ const Profile = () => {
       setAchievements(data || []);
       
       // Trigger celebration if there are wins and we haven't celebrated this mount
-      const wins = (data || []).filter((a: any) => a.position !== null && a.position !== '');
+      const wins = (data || []).filter((a: any) => a.position !== null && a.position !== '' && parseInt(String(a.position)) > 0);
       if (wins.length > 0 && !celebratedRef.current) {
         celebratedRef.current = true;
         

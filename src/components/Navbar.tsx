@@ -173,6 +173,7 @@ const Navbar = () => {
                           alt="Profile" 
                           fill 
                           className="object-cover"
+                          referrerPolicy="no-referrer"
                         />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center text-zinc-500 group-hover/nav-avatar:text-[var(--c-6-start)] transition-colors">
