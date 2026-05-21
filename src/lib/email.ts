@@ -11,8 +11,19 @@ export interface EmailOptions {
  * Sends an email using Brevo REST API or SMTP Fallback
  */
 export const sendEmail = async (options: EmailOptions) => {
-  const fromEmail = process.env.SMTP_FROM_EMAIL || 'mathclub@sjs.edu.bd';
+  const rawFromEmail = process.env.SMTP_FROM_EMAIL || 'mathclub@sjs.edu.bd';
   const fromName = process.env.SMTP_FROM_NAME || 'Josephite Math Club';
+
+  // Helper to extract a pure email address from strings like '"Name" <email@domain.com>' or plain 'email@domain.com'
+  const cleanEmailAddress = (emailStr: string): string => {
+    const match = emailStr.match(/<([^>]+)>/);
+    if (match && match[1]) {
+      return match[1].trim();
+    }
+    return emailStr.replace(/["']/g, '').trim();
+  };
+
+  const fromEmail = cleanEmailAddress(rawFromEmail);
 
   // 1. Try Brevo API first (Recommended for serverless/Netlify)
   if (process.env.BREVO_API_KEY) {
@@ -89,7 +100,14 @@ export const sendEmail = async (options: EmailOptions) => {
   try {
     const transporter = nodemailer.createTransport(smtpConfig);
     const info = await transporter.sendMail({
-      from: `"${fromName}" <${fromEmail}>`,
+      from: {
+        name: fromName,
+        address: fromEmail
+      },
+      envelope: {
+        from: fromEmail,
+        to: options.to
+      },
       to: options.to,
       subject: options.subject,
       text: options.text,

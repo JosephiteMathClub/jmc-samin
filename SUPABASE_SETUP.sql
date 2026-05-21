@@ -15,6 +15,14 @@ CREATE TABLE IF NOT EXISTS public.profiles (
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
+-- Ensure avatar_url exists if table was already created
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='profiles' AND column_name='avatar_url') THEN
+        ALTER TABLE public.profiles ADD COLUMN avatar_url TEXT;
+    END IF;
+END $$;
+
 -- Ensure email column exists in profiles
 DO $$
 BEGIN
@@ -329,3 +337,8 @@ DROP POLICY IF EXISTS "Super Admins can manage all tickets" ON public.support_ti
 CREATE POLICY "Super Admins can manage all tickets" ON public.support_tickets 
   FOR ALL TO authenticated 
   USING (public.is_super_admin());
+
+-- STORAGE BUCKETS (Run these in the SQL Editor if buckets are missing)
+-- NOTE: Supabase storage buckets cannot always be created via public SQL schema commands depending on permissions.
+-- Better to create them in the Supabase Dashboard -> Storage -> New Bucket.
+-- Create 'avatars' and 'images' buckets and set them to PUBLIC.

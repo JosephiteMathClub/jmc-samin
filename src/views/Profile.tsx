@@ -134,6 +134,29 @@ const Profile = () => {
     }
   };
 
+  const isActualWin = (positionVal: any): boolean => {
+    if (positionVal === null || positionVal === undefined) return false;
+    const pos = String(positionVal).trim().toLowerCase();
+    if (pos === '' || pos === 'none' || pos === 'null' || pos.includes('participation') || pos.includes('participant')) {
+      return false;
+    }
+    return true;
+  };
+
+  const getRankInfo = (rank: any) => {
+    const rLower = String(rank || '').toLowerCase();
+    if (rLower.includes('champion') || rLower.includes('1st') || rLower === '1') {
+      return { priority: 1, label: rank, colorClass: 'bg-amber-500/10 text-amber-500', isFirst: true };
+    }
+    if (rLower.includes('runner') || rLower.includes('2nd') || rLower === '2' || rLower.includes('second')) {
+      return { priority: 2, label: rank, colorClass: 'bg-zinc-400/10 text-zinc-400', isFirst: false };
+    }
+    if (rLower.includes('3rd') || rLower === '3' || rLower.includes('third')) {
+      return { priority: 3, label: rank, colorClass: 'bg-amber-800/10 text-amber-800', isFirst: false };
+    }
+    return { priority: 4, label: rank, colorClass: 'bg-indigo-500/10 text-indigo-400', isFirst: false };
+  };
+
   const triggerCelebration = React.useCallback((rank: any) => {
     if (shouldReduceGfx) return;
     
@@ -144,27 +167,56 @@ const Profile = () => {
     else if (rankLower.includes('runner') || rankLower.includes('2nd') || rankLower === '2') rankPriority = 2;
     else if (rankLower.includes('3rd') || rankLower === '3') rankPriority = 3;
 
-    const duration = 5 * 1000;
+    const duration = 6 * 1000;
     const animationEnd = Date.now() + duration;
-    const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 9999 };
-
-    const randomInRange = (min: number, max: number) => Math.random() * (max - min) + min;
-
+    
     // Thematic colors based on rank priority
-    const colors = rankPriority === 1 ? ['#fbbf24', '#f59e0b', '#ffffff'] : // Gold
-                   rankPriority === 2 ? ['#94a3b8', '#cbd5e1', '#ffffff'] : // Silver
-                   rankPriority === 3 ? ['#b45309', '#d97706', '#ffffff'] : // Bronze
-                   ['#0c4a6e', '#0369a1', '#ffffff']; // Club Blue fallback
+    const colors = rankPriority === 1 ? ['#fbbf24', '#f59e0b', '#fef08a', '#ffffff'] : // Gold theme
+                   rankPriority === 2 ? ['#94a3b8', '#cbd5e1', '#e2e8f0', '#ffffff'] : // Silver theme
+                   rankPriority === 3 ? ['#b45309', '#d97706', '#fed7aa', '#ffffff'] : // Bronze theme
+                   ['#0c4a6e', '#0369a1', '#38bdf8', '#ffffff']; // Club Blue fallback
 
-    // Initial burst
-    confetti({ 
-      ...defaults, 
-      particleCount: 150, 
-      spread: 70, 
-      origin: { y: 0.6 },
-      colors 
-    });
+    const leftCannon = () => {
+      confetti({
+        particleCount: 140,
+        angle: 60,
+        spread: 60,
+        origin: { x: 0, y: 0.8 },
+        colors,
+        startVelocity: 45,
+        zIndex: 9999
+      });
+    };
 
+    const rightCannon = () => {
+      confetti({
+        particleCount: 140,
+        angle: 120,
+        spread: 60,
+        origin: { x: 1, y: 0.8 },
+        colors,
+        startVelocity: 45,
+        zIndex: 9999
+      });
+    };
+
+    // Fire initial grand lasers/cannons from bottom corners
+    leftCannon();
+    rightCannon();
+    
+    // Middle burst for maximum density and coverage
+    setTimeout(() => {
+      confetti({
+        particleCount: 100,
+        spread: 120,
+        origin: { x: 0.5, y: 0.4 },
+        colors,
+        startVelocity: 35,
+        zIndex: 9999
+      });
+    }, 150);
+
+    // Continuous fireworks and cannons sequence over 6 seconds
     const interval: any = setInterval(function() {
       const timeLeft = animationEnd - Date.now();
 
@@ -172,10 +224,25 @@ const Profile = () => {
         return clearInterval(interval);
       }
 
-      const particleCount = 40 * (timeLeft / duration);
-      // Realistic side bursts
-      confetti({ ...defaults, particleCount, origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 }, colors });
-      confetti({ ...defaults, particleCount, origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 }, colors });
+      const progress = timeLeft / duration;
+      
+      // Keep firing side cannons at random matching intervals
+      if (Math.random() > 0.6) {
+        leftCannon();
+      }
+      if (Math.random() > 0.6) {
+        rightCannon();
+      }
+
+      // Small secondary bursts over the screen area
+      confetti({
+        particleCount: Math.floor(35 * progress),
+        spread: 100,
+        startVelocity: 30,
+        origin: { x: Math.random(), y: Math.random() - 0.2 },
+        colors,
+        zIndex: 9999
+      });
     }, 450);
   }, [shouldReduceGfx]);
 
@@ -192,16 +259,16 @@ const Profile = () => {
       if (error) throw error;
       setAchievements(data || []);
       
-      // Trigger celebration if there are wins and we haven't celebrated this mount
-      const wins = (data || []).filter((a: any) => a.position !== null && a.position !== '' && parseInt(String(a.position)) > 0);
+      // Trigger celebration if there are actual wins and we haven't celebrated this mount
+      const wins = (data || []).filter((a: any) => isActualWin(a.position));
       if (wins.length > 0 && !celebratedRef.current) {
         celebratedRef.current = true;
         
-        // Sort wins to find the best position (lowest number)
+        // Sort wins to find the best position (lowest number/rank priority)
         const sortedWins = [...wins].sort((a, b) => {
-          const posA = parseInt(String(a.position).replace(/\D/g, '')) || 999;
-          const posB = parseInt(String(b.position).replace(/\D/g, '')) || 999;
-          return posA - posB;
+          const pA = getRankInfo(a.position).priority;
+          const pB = getRankInfo(b.position).priority;
+          return pA - pB;
         });
         
         const bestRank = sortedWins[0].position;
@@ -289,8 +356,14 @@ const Profile = () => {
     router.push('/');
   };
 
-  const wins = achievements.filter(a => a.position !== null).sort((a, b) => a.position - b.position);
-  const pending = achievements.filter(a => a.position === null);
+  const wins = achievements
+    .filter(a => isActualWin(a.position))
+    .sort((a, b) => {
+      const pA = getRankInfo(a.position).priority;
+      const pB = getRankInfo(b.position).priority;
+      return pA - pB;
+    });
+  const pending = achievements.filter(a => !isActualWin(a.position));
 
   if (authLoading || !user) {
     return (
@@ -550,45 +623,44 @@ const Profile = () => {
                                     <h3 className="text-xl font-bold text-white uppercase tracking-wider">Major Achievements</h3>
                                   </div>
                                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                    {wins.map((ach) => (
-                                      <motion.div 
-                                        key={ach.id}
-                                        initial={{ opacity: 0, scale: 0.9 }}
-                                        animate={{ opacity: 1, scale: 1 }}
-                                        className="p-5 rounded-2xl bg-black/40 border border-white/5 flex items-center gap-4 relative overflow-hidden group"
-                                      >
-                                        <div className={`p-3 rounded-xl ${
-                                          ach.position === 1 ? 'bg-amber-500/10 text-amber-500' :
-                                          ach.position === 2 ? 'bg-zinc-400/10 text-zinc-400' :
-                                          'bg-amber-800/10 text-amber-800'
-                                        }`}>
-                                          {ach.position === 1 ? <Trophy className="w-5 h-5" /> : 
-                                          ach.position === 2 ? <Medal className="w-5 h-5" /> : 
-                                          <StarIcon className="w-5 h-5" />}
-                                        </div>
-                                        <div className="flex-1">
-                                          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500">
-                                            {ach.position === 1 ? 'First' : ach.position === 2 ? 'Second' : 'Third'} Position
-                                          </p>
-                                          <p className="text-sm font-bold text-white">{ach.event_name}</p>
-                                          <p className="text-[10px] text-zinc-600 font-bold uppercase tracking-widest">{ach.category}</p>
-                                        </div>
+                                    {wins.map((ach) => {
+                                      const rankInfo = getRankInfo(ach.position);
+                                      return (
+                                        <motion.div 
+                                          key={ach.id}
+                                          initial={{ opacity: 0, scale: 0.9 }}
+                                          animate={{ opacity: 1, scale: 1 }}
+                                          className="p-5 rounded-2xl bg-black/40 border border-white/5 flex items-center gap-4 relative overflow-hidden group"
+                                        >
+                                          <div className={`p-3 rounded-xl ${rankInfo.colorClass}`}>
+                                            {rankInfo.priority === 1 ? <Trophy className="w-5 h-5" /> : 
+                                            rankInfo.priority === 2 ? <Medal className="w-5 h-5" /> : 
+                                            <StarIcon className="w-5 h-5" />}
+                                          </div>
+                                          <div className="flex-1">
+                                            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500">
+                                              {rankInfo.label}
+                                            </p>
+                                            <p className="text-sm font-bold text-white">{ach.event_name}</p>
+                                            <p className="text-[10px] text-zinc-600 font-bold uppercase tracking-widest">{ach.category}</p>
+                                          </div>
 
-                                        {ach.position === 1 && (
-                                          <motion.div 
-                                            animate={{ 
-                                              scale: [1, 1.2, 1],
-                                              rotate: [0, 5, -5, 0],
-                                              opacity: [0.5, 1, 0.5]
-                                            }}
-                                            transition={{ duration: 3, repeat: Infinity }}
-                                            className="absolute -right-4 -bottom-4 text-amber-500/20"
-                                          >
-                                            <Trophy className="w-24 h-24" />
-                                          </motion.div>
-                                        )}
-                                      </motion.div>
-                                    ))}
+                                          {rankInfo.priority === 1 && (
+                                            <motion.div 
+                                              animate={{ 
+                                                scale: [1, 1.2, 1],
+                                                rotate: [0, 5, -5, 0],
+                                                opacity: [0.5, 1, 0.5]
+                                              }}
+                                              transition={{ duration: 3, repeat: Infinity }}
+                                              className="absolute -right-4 -bottom-4 text-amber-500/20"
+                                            >
+                                              <Trophy className="w-24 h-24" />
+                                            </motion.div>
+                                          )}
+                                        </motion.div>
+                                      );
+                                    })}
                                   </div>
                                 </div>
                               )}
