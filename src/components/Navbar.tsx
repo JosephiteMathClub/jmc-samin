@@ -10,6 +10,8 @@ import { motion, AnimatePresence, useScroll, useSpring } from 'framer-motion';
 import { resolveImageUrl } from '../lib/utils';
 import { usePerformance } from '../hooks/usePerformance';
 
+const MarqueeElement = 'marquee' as any;
+
 const Navbar = () => {
   const { user, isAdmin, profile, signOut } = useAuth();
   const { content } = useContent();
@@ -100,19 +102,27 @@ const Navbar = () => {
 
       {/* Announcement Marquee System */}
       {!isAdminPage && showAnnouncements && announcements.length > 0 && !scrolled && (
-        <div className="w-full bg-white/[0.02] border-b border-white/5 py-3 relative overflow-hidden hidden md:block">
-           <motion.div 
-            animate={{ x: ["0%", "-50%"] }}
-            transition={{ repeat: Infinity, duration: 30, ease: "linear" }}
-            className="flex whitespace-nowrap gap-12"
+        <div className="w-full bg-white/[0.02] border-b border-white/5 py-2.5 relative overflow-hidden">
+          <MarqueeElement
+            scrollamount="4"
+            className="w-full block"
+            onMouseOver={(e: any) => e.currentTarget.stop()}
+            onMouseOut={(e: any) => e.currentTarget.start()}
           >
-            {[...announcements, ...announcements].map((text, i) => (
-              <div key={i} className="flex items-center gap-4 px-6 border-r border-white/10">
-                <Radio className="w-3 h-3 text-[var(--c-6-start)] animate-pulse" />
-                <span className="text-[9px] font-mono font-black text-white/50 uppercase tracking-[0.3em]">{text}</span>
-              </div>
-            ))}
-          </motion.div>
+            <div className="inline-flex items-center gap-16 whitespace-nowrap px-6">
+              {announcements.map((text: string, i: number) => (
+                <div key={i} className="inline-flex items-center gap-3">
+                  <span className="relative flex h-2 w-2 shrink-0">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[var(--c-6-start)] opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-[var(--c-6-start)]"></span>
+                  </span>
+                  <span className="text-[10px] font-mono font-black text-white/70 uppercase tracking-[0.25em]">
+                    {text}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </MarqueeElement>
         </div>
       )}
 

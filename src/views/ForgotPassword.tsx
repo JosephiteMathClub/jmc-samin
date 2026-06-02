@@ -24,11 +24,22 @@ const ForgotPassword = () => {
     try {
       // Use window.location.origin to dynamically get the current URL
       const origin = typeof window !== 'undefined' ? window.location.origin.replace(/\/$/, '') : '';
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${origin}/reset-password`,
-      });
       
-      if (error) throw error;
+      const response = await fetch('/api/auth/forgot-password', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email,
+          origin,
+        }),
+      });
+
+      const resData = await response.json();
+      if (!response.ok) {
+        throw new Error(resData.error || 'Failed to send password reset email');
+      }
 
       setSuccess(true);
       showToast('Password reset link sent to your email!', 'success');

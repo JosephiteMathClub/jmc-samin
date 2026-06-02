@@ -341,6 +341,22 @@ const RegisterMember = () => {
       
       setSuccess(true);
       showToast('Registration successful!', 'success');
+
+      // Send automatic notification email for pending member registration
+      const targetEmail = registerFor === 'self' ? (user?.email || emailAddress) : emailAddress;
+      if (targetEmail) {
+        fetch('/api/admin/bulk-verification-email', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            members: [{
+              email: targetEmail,
+              fullName: fullName,
+              memberId: 'Pending Verification'
+            }]
+          })
+        }).catch(err => console.error("Failed to send automatic verification email:", err));
+      }
     } catch (err: any) {
       setError(err.message);
       showToast('Registration failed', 'error');

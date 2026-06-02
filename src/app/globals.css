@@ -385,3 +385,162 @@
 .animate-float {
   animation: float 10s ease-in-out infinite;
 }
+
+/* High-fidelity custom rendering rules to handle low-resolution/grainy images */
+.image-render-sharp {
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
+  image-rendering: pixelated;
+  filter: contrast(1.03) saturate(1.02);
+}
+
+/* Hardened, Pixel-Perfect CSS print styles to scale and output only the ID cards */
+@media print {
+  @page {
+    size: portrait;
+    margin: 0 !important;
+  }
+  
+  html, body {
+    background: transparent !important; /* Save printer ink and prevent dark/black pages */
+    background-color: transparent !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  body:not(:has(.print-container-portal)) {
+    height: 100% !important;
+    overflow: hidden !important;
+  }
+
+  body:has(.print-container-portal) {
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  /* Support A: If Printing from Super Admin Panel (with portal class print-container-portal) */
+  body:has(.print-container-portal) > *:not(.print-container-portal) {
+    display: none !important;
+    height: 0 !important;
+    overflow: hidden !important;
+    visibility: hidden !important;
+  }
+
+  body:has(.print-container-portal) .print-container-portal {
+    display: block !important;
+    visibility: visible !important;
+    position: relative !important;
+    width: 100% !important;
+    height: auto !important;
+    z-index: 9999999 !important;
+  }
+
+  /* Support B: If Printing from Profile Modal (with ID printable-id-card-modal) */
+  body:not(:has(.print-container-portal)) {
+    visibility: hidden !important;
+  }
+  
+  body:not(:has(.print-container-portal)) div[class*="fixed inset-0 z-[100]"],
+  body:not(:has(.print-container-portal)) div[class*="fixed inset-0 z-\\[100\\]"] {
+    visibility: visible !important;
+    display: flex !important;
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    background: transparent !important;
+    backdrop-filter: none !important;
+    justify-content: center !important;
+    align-items: center !important;
+    z-index: 9999999 !important;
+  }
+
+  body:not(:has(.print-container-portal)) #printable-id-card-modal,
+  body:not(:has(.print-container-portal)) #printable-id-card-modal * {
+    visibility: visible !important;
+  }
+
+  body:not(:has(.print-container-portal)) #printable-id-card-modal {
+    position: absolute !important;
+    left: 50% !important;
+    top: 50% !important;
+    transform: translate(-50%, -50%) scale(1.15) !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: none !important;
+    box-shadow: none !important;
+    background: transparent !important;
+    pointer-events: none !important;
+    z-index: 99999999 !important;
+  }
+
+  /* Shared Print Styles */
+  .print-page-wrapper {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    page-break-after: always !important;
+    break-after: page !important;
+    height: 100vh !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    box-sizing: border-box !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* 2x2 Portrait Grid Layout for A4 */
+  .print-page-grid-2x2 {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    page-break-after: always !important;
+    break-after: page !important;
+    width: 210mm !important;
+    height: 297mm !important;
+    max-width: 210mm !important;
+    max-height: 297mm !important;
+    background: transparent !important;
+    box-sizing: border-box !important;
+    display: grid !important;
+    grid-template-columns: repeat(2, 105mm) !important;
+    grid-template-rows: repeat(2, 148.5mm) !important;
+    margin: 0 auto !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+  }
+
+  .print-grid-cell {
+    width: 105mm !important;
+    height: 148.5mm !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    box-sizing: border-box !important;
+    overflow: hidden !important;
+    background: transparent !important;
+    position: relative !important;
+  }
+
+  .print-grid-cell .id-card-print-node-scaled {
+    transform: scale(0.785) !important;
+    transform-origin: center center !important;
+    box-shadow: none !important;
+  }
+
+  .no-print {
+    display: none !important;
+    visibility: hidden !important;
+  }
+
+  /* Ensure all print contents look razor-sharp and colors are exact */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+}
+
+

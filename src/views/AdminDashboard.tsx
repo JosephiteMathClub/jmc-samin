@@ -16,6 +16,8 @@ import {
   Award,
   Trophy,
   BookOpen,
+  Utensils,
+  History
 } from 'lucide-react';
 import { useContent } from '../context/ContentContext';
 import { useAuth } from '../context/AuthContext';
@@ -43,6 +45,9 @@ const DashboardGallerySection = dynamic(() => import('../components/dashboard/se
 const DashboardArticlesSection = dynamic(() => import('../components/dashboard/sections/DashboardArticlesSection'), { loading: () => <Skeleton className="h-64 w-full rounded-3xl" /> });
 const DashboardSiteSection = dynamic(() => import('../components/dashboard/sections/DashboardSiteSection').then(mod => mod.DashboardSiteSection), { loading: () => <Skeleton className="h-64 w-full rounded-3xl" /> });
 const DashboardMemberManagementSection = dynamic(() => import('../components/dashboard/sections/DashboardMemberManagementSection').then(mod => mod.DashboardMemberManagementSection), { loading: () => <Skeleton className="h-64 w-full rounded-3xl" /> });
+const DashboardEcMemberManagementSection = dynamic(() => import('../components/dashboard/sections/DashboardEcMemberManagementSection').then(mod => mod.DashboardEcMemberManagementSection), { loading: () => <Skeleton className="h-64 w-full rounded-3xl" /> });
+const FoodManagementSection = dynamic(() => import('../components/dashboard/sections/FoodManagementSection').then(mod => mod.FoodManagementSection), { loading: () => <Skeleton className="h-64 w-full rounded-3xl" /> });
+const DashboardAuditLogsSection = dynamic(() => import('../components/dashboard/sections/DashboardAuditLogsSection').then(mod => mod.DashboardAuditLogsSection), { loading: () => <Skeleton className="h-64 w-full rounded-3xl" /> });
 
 import ConfirmModal from '../components/ConfirmModal';
 import Image from 'next/image';
@@ -191,16 +196,60 @@ const AdminDashboard = () => {
     setConfirmDelete({ path, index, section: '', field: '', isOpen: true });
   }, []);
 
+  const logActivity = useCallback(async (actionType: string, target: string, details: string) => {
+    try {
+      if (!isSupabaseConfigured) return;
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('full_name, email')
+        .eq('id', user.id)
+        .maybeSingle();
+
+      const adminEmail = profile?.email || user.email;
+      const adminName = profile?.full_name || 'Admin';
+
+      await supabase.from('admin_audit_logs').insert({
+        admin_id: user.id,
+        admin_email: adminEmail,
+        admin_name: adminName,
+        action_type: actionType,
+        target: target,
+        details: details
+      });
+    } catch (err) {
+      console.error('Failed to log admin action:', err);
+    }
+  }, []);
+
   const fetchMembers = useCallback(async () => {
     setLoadingMembers(true);
     setMemberError(null);
     try {
-      const { data, error } = await supabase
+      // 1. Fetch regular members
+      const { data: standardData, error: standardError } = await supabase
         .from('member')
         .select('*');
       
-      if (error) throw error;
-      setMembers(data || []);
+      if (standardError) throw standardError;
+
+      // 2. Fetch EC members
+      let ecData: any[] = [];
+      try {
+        const { data: ecRes, error: ecError } = await supabase
+          .from('ec_member')
+          .select('*');
+        if (!ecError && ecRes) {
+          ecData = ecRes.map(m => ({ ...m, is_ec: true }));
+        }
+      } catch (e) {
+        console.error("Failed to fetch from ec_member table:", e);
+      }
+
+      const combined = [...(standardData || []), ...ecData];
+      setMembers(combined);
     } catch (err: any) {
       setMemberError(err.message || 'Failed to fetch members');
       showToast('Failed to fetch members', 'error');
@@ -213,20 +262,39 @@ const AdminDashboard = () => {
     const newStatus = currentStatus === 'yes' ? 'no' : 'yes';
     try {
       const member = members.find(m => m.id === memberId);
+      if (!member) throw new Error("Member not found in current list");
+
+      const isEc = member.is_ec === true || (member.member_id && /^\d{3}$/.test(member.member_id));
+      const targetTable = isEc ? 'ec_member' : 'member';
+
       let updates: any = { 
         verified: newStatus
       };
       
       if (newStatus === 'yes' && !member?.member_id) {
-        // Generate unique ID: JMC + 6 random digits
-        const prefix = "JMC";
-        const digits = Math.floor(100000 + Math.random() * 900000).toString();
-        const generatedId = `${prefix}-${digits}`;
-        updates.member_id = generatedId;
+        if (isEc) {
+          let generatedId = "";
+          for (let attempt = 0; attempt < 500; attempt++) {
+            const val = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+            const { data } = await supabase.from('ec_member').select('id').eq('member_id', val).maybeSingle();
+            if (!data) {
+              generatedId = val;
+              break;
+            }
+          }
+          if (!generatedId) generatedId = Math.floor(100 + Math.random() * 900).toString();
+          updates.member_id = generatedId;
+        } else {
+          // Generate unique ID: JMC + 6 random digits
+          const prefix = "JMC";
+          const digits = Math.floor(100000 + Math.random() * 900000).toString();
+          const generatedId = `${prefix}-${digits}`;
+          updates.member_id = generatedId;
+        }
       }
 
       const { error } = await supabase
-        .from('member')
+        .from(targetTable)
         .update(updates)
         .eq('id', memberId);
       
@@ -236,6 +304,31 @@ const AdminDashboard = () => {
       
       setMembers(prev => prev.map(m => m.id === memberId ? { ...m, ...updates } : m));
       showToast(`Member ${newStatus === 'yes' ? 'verified' : 'unverified'}`, 'success');
+
+      // Send verification email automatically when status becomes verified ('yes')
+      if (newStatus === 'yes') {
+        const destEmail = member.email_address || member.email;
+        if (destEmail) {
+          fetch('/api/admin/bulk-welcome-email', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              members: [{
+                email: destEmail,
+                fullName: member.full_name || 'Member',
+                memberId: updates.member_id || member.member_id || 'Pending ID',
+                isVerification: true
+              }]
+            })
+          }).catch(err => console.error("Failed to send welcome-verification email:", err));
+        }
+      }
+
+      // Log action
+      const actionName = newStatus === 'yes' ? 'VERIFY_MEMBER' : 'UNVERIFY_MEMBER';
+      const logTarget = `Member: ${member.full_name} (${member.member_id || updates.member_id || 'Pending ID'})`;
+      const logDetails = `Status toggled to ${newStatus}. Table: ${targetTable}.`;
+      await logActivity(actionName, logTarget, logDetails);
     } catch (err: any) {
       console.error('Error updating member:', err);
       const errorMessage = err?.message || (typeof err === 'object' ? JSON.stringify(err) : String(err));
@@ -259,8 +352,11 @@ const AdminDashboard = () => {
         }
       }
 
+      const isEc = member.is_ec === true || (member.member_id && /^\d{3}$/.test(member.member_id));
+      const targetTable = isEc ? 'ec_member' : 'member';
+
       const { error } = await supabase
-        .from('member')
+        .from(targetTable)
         .delete()
         .eq('id', member.id);
       
@@ -273,6 +369,9 @@ const AdminDashboard = () => {
       
       setMembers(prev => prev.filter(m => m.id !== member.id));
       showToast(`Member ${member.full_name} removed from database`, "success");
+
+      // Log action
+      await logActivity('DELETE_MEMBER', `Member: ${member.full_name} (${member.member_id || 'No ID'})`, `Removed member record from ${targetTable} table.`);
     } catch (err: any) {
       console.error("Error deleting member:", err);
       showToast(`Failed to delete member: ${err.message}`, "error");
@@ -288,7 +387,10 @@ const AdminDashboard = () => {
     roll: string, 
     email: string, 
     phone?: string, 
-    hasAccount: boolean 
+    hasAccount: boolean,
+    is_ec?: boolean,
+    custom_member_id?: string,
+    department?: string
   }) => {
     if (!isSupabaseConfigured) return;
     try {
@@ -344,38 +446,70 @@ const AdminDashboard = () => {
         ? crypto.randomUUID() 
         : '00000000-0000-4000-8000-' + Math.random().toString(16).slice(2, 14).padStart(12, '0'));
 
+      const targetTable = memberData.is_ec ? 'ec_member' : 'member';
+
       // Check if member already exists to preserve their member_id
       const { data: existingMember } = await supabase
-        .from('member')
+        .from(targetTable)
         .select('member_id')
         .eq('id', tempId)
         .maybeSingle();
 
-      const memberIdToUse = existingMember?.member_id || (() => {
-        const prefix = "JMC";
-        const digits = Math.floor(100000 + Math.random() * 900000).toString();
-        return `${prefix}-${digits}`;
+      const memberIdToUse = existingMember?.member_id || memberData.custom_member_id || await (async () => {
+        if (memberData.is_ec) {
+          // Generate an unused 3-digit member ID check in ec_member
+          for (let attempt = 0; attempt < 500; attempt++) {
+            const val = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+            const { data } = await supabase.from('ec_member').select('id').eq('member_id', val).maybeSingle();
+            if (!data) return val;
+          }
+          return Math.floor(100 + Math.random() * 900).toString();
+        } else {
+          const prefix = "JMC";
+          const digits = Math.floor(100000 + Math.random() * 900000).toString();
+          return `${prefix}-${digits}`;
+        }
       })();
       
-      const { data, error } = await supabase
-        .from('member')
-        .upsert({
-          id: tempId,
-          full_name: memberData.full_name,
-          class: memberData.class,
-          section: memberData.section,
-          roll: memberData.roll,
-          email: memberData.email,
-          email_address: memberData.email,
-          phone: memberData.phone,
-          member_id: memberIdToUse,
-          verified: 'yes',
-          payment_method: 'Manual (Admin)',
-          school: 'St Joseph',
-          updated_at: new Date().toISOString()
-        }, { onConflict: 'id' })
+      let upsertPayload: any = {
+        id: tempId,
+        full_name: memberData.full_name,
+        class: memberData.class,
+        section: memberData.section,
+        roll: memberData.roll,
+        email: memberData.email,
+        email_address: memberData.email,
+        phone: memberData.phone,
+        member_id: memberIdToUse,
+        verified: 'yes',
+        payment_method: 'Manual (Admin)',
+        school: 'St Joseph',
+        updated_at: new Date().toISOString()
+      };
+
+      // Set is_ec in payload
+      upsertPayload.is_ec = memberData.is_ec ? true : false;
+      if (memberData.is_ec && memberData.department) {
+        upsertPayload.department = memberData.department;
+      }
+
+      let { data, error } = await supabase
+        .from(targetTable)
+        .upsert(upsertPayload, { onConflict: 'id' })
         .select()
-        .single();
+        .maybeSingle();
+      
+      if (error && error.message?.includes('column "is_ec"')) {
+        // Fallback for older database versions without the is_ec column
+        delete upsertPayload.is_ec;
+        const retryRes = await supabase
+          .from(targetTable)
+          .upsert(upsertPayload, { onConflict: 'id' })
+          .select()
+          .single();
+        data = retryRes.data;
+        error = retryRes.error;
+      }
       
       if (error) {
         // Specifically catch foreign key constraint errors
@@ -385,8 +519,15 @@ const AdminDashboard = () => {
         throw error;
       }
       
+      if (data && memberData.is_ec) {
+        data = { ...data, is_ec: true };
+      }
+
       setMembers(prev => [data, ...prev]);
       showToast("Member registered and verified successfully!", "success");
+
+      // Log action
+      await logActivity('ADD_MEMBER', `Member: ${memberData.full_name} (${memberIdToUse})`, `Registered member record into ${targetTable} table.`);
 
       // Send welcome email asynchronously without blocking the registration flow
       fetch('/api/admin/bulk-welcome-email', {
@@ -407,8 +548,12 @@ const AdminDashboard = () => {
   const handleMemberPhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>, memberId: string) => {
     await handleFileUpload(e, undefined, async (url) => {
       try {
+        const member = members.find(m => m.id === memberId);
+        const isEc = member?.is_ec === true || (member?.member_id && /^\d{3}$/.test(member.member_id));
+        const targetTable = isEc ? 'ec_member' : 'member';
+
         const { error } = await supabase
-          .from('member')
+          .from(targetTable)
           .update({ photo_url: url })
           .eq('id', memberId);
         
@@ -416,6 +561,9 @@ const AdminDashboard = () => {
         
         setMembers(prev => prev.map(m => m.id === memberId ? { ...m, photo_url: url } : m));
         showToast("Member photo updated successfully", "success");
+
+        // Log action
+        await logActivity('UPDATE_MEMBER_PHOTO', `Member: ${member?.full_name || 'Member'} (${member?.member_id || memberId})`, `Uploaded member photo URL to ${targetTable} table.`);
       } catch (err: any) {
         showToast(`Failed to update member photo: ${err.message}`, "error");
       }
@@ -578,6 +726,9 @@ const AdminDashboard = () => {
       await saveAllContent(localContent);
       setSaveStatus('success');
       setTimeout(() => setSaveStatus('idle'), 3000);
+
+      // Log Content Update Action
+      await logActivity('UPDATE_SITE_CONTENT', 'Global Configuration', 'Updated and synced site configuration sections content through Admin Dashboard settings.');
     } catch (err) {
       console.error(err);
       setSaveStatus('error');
@@ -703,13 +854,16 @@ const AdminDashboard = () => {
     { id: 'participation', label: 'Participation', icon: Trophy },
     { id: 'articles', label: 'Articles', icon: BookOpen },
     { id: 'members', label: 'Members', icon: Award },
+    { id: 'ec_members', label: 'EC Members', icon: Shield },
     { id: 'gallery', label: 'Gallery', icon: LayoutDashboard },
+    { id: 'food', label: 'Food Management', icon: Utensils },
     ...(isSuperAdmin ? [
       { id: 'home', label: 'Home', icon: LayoutDashboard },
       { id: 'about', label: 'About', icon: FileText },
       { id: 'panel', label: 'Panel', icon: Users },
       { id: 'support', label: 'Support', icon: ShieldAlert },
       { id: 'super_admin', label: 'Super Admin', icon: Shield },
+      { id: 'audit_logs', label: 'Audit Logs', icon: History },
       { id: 'site', label: 'Site Config', icon: Settings },
     ] : [])
   ];
@@ -839,6 +993,29 @@ const AdminDashboard = () => {
           />
         )}
 
+        {activeTab === 'ec_members' && (
+          <DashboardEcMemberManagementSection 
+            members={members}
+            loadingMembers={loadingMembers}
+            memberError={memberError}
+            fetchMembers={fetchMembers}
+            toggleVerified={toggleVerified}
+            deleteMember={deleteMember}
+            addMember={addMember}
+            handleMemberPhotoUpload={handleMemberPhotoUpload}
+            uploading={uploading}
+            shouldReduceGfx={shouldReduceGfx}
+            isDeletingMember={isDeletingMember}
+          />
+        )}
+
+        {activeTab === 'food' && (
+          <FoodManagementSection 
+            members={members}
+            shouldReduceGfx={shouldReduceGfx}
+          />
+        )}
+
         {activeTab === 'support' && (
           <motion.div
             key="support"
@@ -861,6 +1038,13 @@ const AdminDashboard = () => {
           >
             <SuperAdminPanel />
           </motion.div>
+        )}
+
+        {activeTab === 'audit_logs' && isSuperAdmin && (
+          <DashboardAuditLogsSection 
+            supabase={supabase}
+            shouldReduceGfx={shouldReduceGfx}
+          />
         )}
 
         {activeTab === 'site' && (

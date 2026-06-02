@@ -19,15 +19,18 @@ interface BatchMemberUploadProps {
   onComplete: () => void;
   showToast: (msg: string, type: 'success' | 'error' | 'info') => void;
   addMember: (memberData: any) => Promise<any>;
+  forceEcUpload?: boolean;
 }
 
 export const BatchMemberUpload: React.FC<BatchMemberUploadProps> = ({
   onComplete,
   showToast,
-  addMember
+  addMember,
+  forceEcUpload = false
 }) => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [sheetUrl, setSheetUrl] = useState('');
+  const [isEcUpload, setIsEcUpload] = useState(forceEcUpload);
   const [results, setResults] = useState<{
     success: number;
     failed: number;
@@ -40,21 +43,34 @@ export const BatchMemberUpload: React.FC<BatchMemberUploadProps> = ({
   const downloadTemplate = async () => {
     try {
       const XLSX = await import('xlsx');
-      const templateData = [
-        {
-          "Full Name": "John Doe",
-          "Email": "john@example.com",
-          "Phone": "01712345678",
-          "Class": "10",
-          "Section": "A",
-          "Roll": "01"
-        }
-      ];
+      const templateData = isEcUpload 
+        ? [
+            {
+              "Full Name": "Jane Smith",
+              "Email": "janesmith@example.com",
+              "Phone": "01812345678",
+              "Class": "12",
+              "Section": "Science",
+              "Roll": "02",
+              "unique_id": "111",
+              "department": "management"
+            }
+          ]
+        : [
+            {
+              "Full Name": "John Doe",
+              "Email": "john@example.com",
+              "Phone": "01712345678",
+              "Class": "10",
+              "Section": "A",
+              "Roll": "01"
+            }
+          ];
 
       const ws = XLSX.utils.json_to_sheet(templateData);
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, "Members");
-      XLSX.writeFile(wb, "JMC_Batch_Upload_Template.xlsx");
+      XLSX.writeFile(wb, isEcUpload ? "JMC_EC_Batch_Upload_Template.xlsx" : "JMC_Batch_Upload_Template.xlsx");
     } catch (err: any) {
       showToast("Could not load spreadsheet library", "error");
     }
@@ -99,6 +115,44 @@ export const BatchMemberUpload: React.FC<BatchMemberUploadProps> = ({
             continue;
           }
 
+          // Compute EC indicator dynamically
+          const isRowEc = String(row.Is_EC || row.is_ec || row.EC || row.ec || "").toLowerCase() === 'yes' || 
+                           String(row.Is_EC || row.is_ec || row.EC || row.ec || "").toLowerCase() === 'true' || 
+                           isEcUpload;
+          
+          let customMemberId = String(row.unique_id || row.Unique_ID || row.Unique_id || row.Member_ID || row.member_id || row.ID || row.id || "").trim();
+          if (isRowEc) {
+            if (!/^\d{3}$/.test(customMemberId)) {
+              const numericOnly = customMemberId.replace(/\D/g, '');
+              if (numericOnly) {
+                customMemberId = numericOnly.slice(0, 3).padStart(3, '0');
+              } else {
+                customMemberId = "";
+              }
+            }
+          } else {
+            if (!customMemberId) {
+              customMemberId = "";
+            }
+          }
+          // Department Parsing
+          let departmentVal = String(row.Department || row.department || row.Dept || row.dept || "").trim().toLowerCase();
+          if (isRowEc) {
+            if (['academics', 'management', 'logistics'].includes(departmentVal)) {
+              // valid
+            } else if (departmentVal.includes('acad')) {
+              departmentVal = 'academics';
+            } else if (departmentVal.includes('manag') || departmentVal.includes('admin')) {
+              departmentVal = 'management';
+            } else if (departmentVal.includes('logis')) {
+              departmentVal = 'logistics';
+            } else {
+              departmentVal = 'management'; // Default
+            }
+          } else {
+            departmentVal = '';
+          }
+
         try {
           // 1. Check if user already exists in profiles
           // We search by ID if we could, but here we only have email.
@@ -125,7 +179,10 @@ export const BatchMemberUpload: React.FC<BatchMemberUploadProps> = ({
                 class: classVal,
                 section: sectionVal,
                 roll: rollVal,
-                hasAccount: true
+                hasAccount: true,
+                is_ec: isRowEc,
+                custom_member_id: customMemberId || undefined,
+                department: departmentVal || undefined
               });
             } else {
               logs.push(`Row ${rowNum}: No account found for ${email}. Creating new account...`);
@@ -136,7 +193,10 @@ export const BatchMemberUpload: React.FC<BatchMemberUploadProps> = ({
                 class: classVal,
                 section: sectionVal,
                 roll: rollVal,
-                hasAccount: false
+                hasAccount: false,
+                is_ec: isRowEc,
+                custom_member_id: customMemberId || undefined,
+                department: departmentVal || undefined
               });
             }
             successCount++;
@@ -249,6 +309,44 @@ export const BatchMemberUpload: React.FC<BatchMemberUploadProps> = ({
           continue;
         }
 
+        // Compute EC indicator dynamically
+        const isRowEc = String(row.Is_EC || row.is_ec || row.EC || row.ec || "").toLowerCase() === 'yes' || 
+                         String(row.Is_EC || row.is_ec || row.EC || row.ec || "").toLowerCase() === 'true' || 
+                         isEcUpload;
+        
+        let customMemberId = String(row.unique_id || row.Unique_ID || row.Unique_id || row.Member_ID || row.member_id || row.ID || row.id || "").trim();
+        if (isRowEc) {
+          if (!/^\d{3}$/.test(customMemberId)) {
+            const numericOnly = customMemberId.replace(/\D/g, '');
+            if (numericOnly) {
+              customMemberId = numericOnly.slice(0, 3).padStart(3, '0');
+            } else {
+              customMemberId = "";
+            }
+          }
+        } else {
+          if (!customMemberId) {
+            customMemberId = "";
+          }
+        }
+
+        let departmentVal = String(row.Department || row.department || row.Dept || row.dept || "").trim().toLowerCase();
+        if (isRowEc) {
+          if (['academics', 'management', 'logistics'].includes(departmentVal)) {
+            // valid as is
+          } else if (departmentVal.includes('acad')) {
+            departmentVal = 'academics';
+          } else if (departmentVal.includes('manag') || departmentVal.includes('admin')) {
+            departmentVal = 'management';
+          } else if (departmentVal.includes('logis')) {
+            departmentVal = 'logistics';
+          } else {
+            departmentVal = 'management'; // Default fallback
+          }
+        } else {
+          departmentVal = '';
+        }
+
         try {
           let profile = null;
           try {
@@ -271,7 +369,10 @@ export const BatchMemberUpload: React.FC<BatchMemberUploadProps> = ({
               class: classVal,
               section: sectionVal,
               roll: rollVal,
-              hasAccount: true
+              hasAccount: true,
+              is_ec: isRowEc,
+              custom_member_id: customMemberId || undefined,
+              department: departmentVal || undefined
             });
           } else {
             logs.push(`Row ${rowNum}: No account found for ${email}. Creating new account...`);
@@ -282,7 +383,10 @@ export const BatchMemberUpload: React.FC<BatchMemberUploadProps> = ({
               class: classVal,
               section: sectionVal,
               roll: rollVal,
-              hasAccount: false
+              hasAccount: false,
+              is_ec: isRowEc,
+              custom_member_id: customMemberId || undefined,
+              department: departmentVal || undefined
             });
           }
           successCount++;
@@ -335,6 +439,34 @@ export const BatchMemberUpload: React.FC<BatchMemberUploadProps> = ({
               Download Template
             </button>
           </div>
+
+          {/* Membership Type Batch Selector Panel */}
+          {!forceEcUpload && (
+            <div className="p-5 border border-white/5 bg-white/[0.01] rounded-2xl flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div>
+                <p className="text-xs font-bold text-white uppercase tracking-wider">Spreadsheet Member Designation</p>
+                <p className="text-[9px] text-zinc-500 uppercase tracking-widest pt-0.5 font-bold">
+                  Select whether spreadsheet rows represent Standard Club Members or Executive Committee Members
+                </p>
+              </div>
+              <div className="flex gap-2.5">
+                <button 
+                  type="button"
+                  onClick={() => setIsEcUpload(false)}
+                  className={`px-5 py-2.5 rounded-xl border text-[9px] font-black uppercase tracking-widest transition-all ${isEcUpload === false ? 'bg-white/10 border-amber-500/50 text-white shadow-md' : 'border-white/5 text-zinc-550 hover:border-white/10 bg-transparent'}`}
+                >
+                  Standard Members
+                </button>
+                <button 
+                  type="button"
+                  onClick={() => setIsEcUpload(true)}
+                  className={`px-5 py-2.5 rounded-xl border text-[9px] font-black uppercase tracking-widest transition-all ${isEcUpload === true ? 'bg-white/10 border-amber-500/50 text-white shadow-md' : 'border-white/5 text-zinc-550 hover:border-white/10 bg-transparent'}`}
+                >
+                  EC Members (3-digit ID)
+                </button>
+              </div>
+            </div>
+          )}
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             {/* File Upload Way */}

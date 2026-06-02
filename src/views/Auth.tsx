@@ -82,6 +82,30 @@ const Auth = () => {
     setLoading(true);
     setError(null);
 
+    // Check IP rate limiting for login attempts
+    if (mode === 'login') {
+      try {
+        const limitCheck = await fetch('/api/auth/login-attempt', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (!limitCheck.ok) {
+          const resData = await limitCheck.json();
+          const errMsg = resData.error || 'Too many login attempts. Please try again later.';
+          setError(errMsg);
+          showToast(errMsg, 'error');
+          setLoading(false);
+          return;
+        }
+      } catch (checkErr) {
+        console.error('Failed to verify login rate limit:', checkErr);
+        // Fallback: proceed to attempt login if rate limit api is offline
+      }
+    }
+
     try {
       if (mode === 'signup') {
         const { data, error: signUpError } = await supabase.auth.signUp({

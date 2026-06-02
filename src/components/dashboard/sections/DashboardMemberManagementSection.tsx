@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Users, 
@@ -23,6 +23,7 @@ import { resolveImageUrl } from '../../../lib/utils';
 import ConfirmModal from '../../ConfirmModal';
 import { BatchMemberUpload } from './BatchMemberUpload';
 import { useToast } from '../../../context/ToastContext';
+import { supabase } from '../../../lib/supabase';
 
 interface DashboardMemberManagementSectionProps {
   members: any[];
@@ -75,8 +76,68 @@ const DashboardMemberManagementSectionComponent: React.FC<DashboardMemberManagem
     roll: '',
     email: '',
     phone: '',
-    hasAccount: false
+    hasAccount: false,
+    is_ec: false,
+    custom_member_id: ''
   });
+
+  const [matchingProfiles, setMatchingProfiles] = useState<any[]>([]);
+  const [isSearchingEmails, setIsSearchingEmails] = useState(false);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+
+  useEffect(() => {
+    if (!formData.hasAccount) {
+      setMatchingProfiles([]);
+      return;
+    }
+
+    const query = formData.email?.trim() || '';
+    if (query.length < 2) {
+      setMatchingProfiles([]);
+      return;
+    }
+
+    let active = true;
+    const searchEmails = async () => {
+      setIsSearchingEmails(true);
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('id, email, full_name')
+          .ilike('email', `%${query}%`)
+          .limit(8);
+
+        if (error) throw error;
+        if (active) {
+          setMatchingProfiles(data || []);
+        }
+      } catch (e) {
+        console.error("Failed to search profiles by email:", e);
+      } finally {
+        if (active) {
+          setIsSearchingEmails(false);
+        }
+      }
+    };
+
+    const timer = setTimeout(() => {
+      searchEmails();
+    }, 150);
+
+    return () => {
+      active = false;
+      clearTimeout(timer);
+    };
+  }, [formData.email, formData.hasAccount]);
+
+  const handleSelectProfile = (profile: any) => {
+    setFormData(prev => ({
+      ...prev,
+      email: profile.email || '',
+      full_name: profile.full_name || prev.full_name || ''
+    }));
+    setShowSuggestions(false);
+  };
 
   const handleManualAdd = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -84,7 +145,17 @@ const DashboardMemberManagementSectionComponent: React.FC<DashboardMemberManagem
     try {
       const data = await addMember(formData);
       setSuccessData(data);
-      setFormData({ full_name: '', class: '', section: '', roll: '', email: '', phone: '', hasAccount: false });
+      setFormData({ 
+        full_name: '', 
+        class: '', 
+        section: '', 
+        roll: '', 
+        email: '', 
+        phone: '', 
+        hasAccount: false, 
+        is_ec: false, 
+        custom_member_id: '' 
+      });
       // Don't close immediately, show success first
     } catch (err) {
       // Error handled by addMember toast
@@ -124,6 +195,10 @@ const DashboardMemberManagementSectionComponent: React.FC<DashboardMemberManagem
 
   const filteredMembers = useMemo(() => {
     return members.filter(m => {
+      // Exclude EC members from standard members list
+      const isEcMember = m.is_ec === true || (m.member_id && /^\d{3}$/.test(m.member_id));
+      if (isEcMember) return false;
+
       const name = m.full_name || '';
       const email = m.email_address || m.email || '';
       const id = m.member_id || '';
@@ -244,26 +319,71 @@ const DashboardMemberManagementSectionComponent: React.FC<DashboardMemberManagem
                 </div>
               ) : (
                 <form onSubmit={handleManualAdd} className="space-y-8">
-                  <div className="p-6 rounded-2xl bg-white/5 border border-white/10 space-y-4">
-                    <p className="text-[10px] font-bold text-zinc-300 uppercase tracking-[0.2em] text-center">Account Verification</p>
-                    <h4 className="text-sm font-bold text-white text-center">Does the user have an existing account on this website?</h4>
-                    <div className="flex gap-4 justify-center pt-2">
-                      <button 
-                        type="button"
-                        onClick={() => setFormData({...formData, hasAccount: true})}
-                        className={`flex-1 px-8 py-4 rounded-xl border text-xs font-bold uppercase tracking-widest transition-all ${formData.hasAccount === true ? 'bg-white/10 border-amber-500/50 text-white shadow-lg' : 'border-white/5 text-zinc-500 hover:border-white/20'}`}
-                      >
-                        Yes, Link Existing
-                      </button>
-                      <button 
-                        type="button"
-                        onClick={() => setFormData({...formData, hasAccount: false})}
-                        className={`flex-1 px-8 py-4 rounded-xl border text-xs font-bold uppercase tracking-widest transition-all ${formData.hasAccount === false ? 'bg-white/10 border-amber-500/50 text-white shadow-lg' : 'border-white/5 text-zinc-500 hover:border-white/20'}`}
-                      >
-                        No, Create New One
-                      </button>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pb-4">
+                    <div className="p-6 rounded-2xl bg-white/5 border border-white/10 space-y-4">
+                      <p className="text-[10px] font-bold text-zinc-300 uppercase tracking-[0.2em] text-center">Account Verification</p>
+                      <h4 className="text-sm font-bold text-white text-center">Does the user have an existing account?</h4>
+                      <div className="flex gap-4 justify-center pt-2">
+                        <button 
+                          type="button"
+                          onClick={() => setFormData({...formData, hasAccount: true})}
+                          className={`flex-1 px-4 py-3 rounded-xl border text-[10px] font-bold uppercase tracking-widest transition-all ${formData.hasAccount === true ? 'bg-white/10 border-amber-500/50 text-white shadow-lg' : 'border-white/5 text-zinc-500 hover:border-white/20'}`}
+                        >
+                          Yes, Link
+                        </button>
+                        <button 
+                          type="button"
+                          onClick={() => setFormData({...formData, hasAccount: false})}
+                          className={`flex-1 px-4 py-3 rounded-xl border text-[10px] font-bold uppercase tracking-widest transition-all ${formData.hasAccount === false ? 'bg-white/10 border-amber-500/50 text-white shadow-lg' : 'border-white/5 text-zinc-500 hover:border-white/20'}`}
+                        >
+                          No, Create
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="p-6 rounded-2xl bg-white/5 border border-white/10 space-y-4">
+                      <p className="text-[10px] font-bold text-zinc-300 uppercase tracking-[0.2em] text-center">Membership Role</p>
+                      <h4 className="text-sm font-bold text-white text-center">Is this an Executive Committee (EC) member?</h4>
+                      <div className="flex gap-4 justify-center pt-2">
+                        <button 
+                          type="button"
+                          onClick={() => setFormData({...formData, is_ec: false, custom_member_id: ''})}
+                          className={`flex-1 px-4 py-3 rounded-xl border text-[10px] font-bold uppercase tracking-widest transition-all ${formData.is_ec === false ? 'bg-white/10 border-amber-500/50 text-white shadow-lg' : 'border-white/5 text-zinc-500 hover:border-white/20'}`}
+                        >
+                          Standard Member
+                        </button>
+                        <button 
+                          type="button"
+                          onClick={() => setFormData({...formData, is_ec: true})}
+                          className={`flex-1 px-4 py-3 rounded-xl border text-[10px] font-bold uppercase tracking-widest transition-all ${formData.is_ec === true ? 'bg-white/10 border-amber-500/50 text-white shadow-lg' : 'border-white/5 text-zinc-500 hover:border-white/20'}`}
+                        >
+                          EC Member
+                        </button>
+                      </div>
                     </div>
                   </div>
+
+                  {formData.is_ec && (
+                    <motion.div 
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      className="p-6 rounded-2xl bg-amber-500/5 border border-amber-500/20 space-y-2"
+                    >
+                      <label className="text-[10px] font-bold uppercase tracking-widest text-amber-500">Unique EC ID Designation (Optional)</label>
+                      <input 
+                        type="text"
+                        pattern="^\d{3}$"
+                        maxLength={3}
+                        value={formData.custom_member_id}
+                        onChange={(e) => setFormData({...formData, custom_member_id: e.target.value.replace(/\D/g, '').substring(0, 3)})}
+                        placeholder="ENTER 3-DIGIT UNIQUE ID (e.g. 017) OR LEAVE EMPTY FOR AUTO"
+                        className="w-full px-6 py-4 bg-white/5 border border-white/10 rounded-xl focus:outline-none focus:border-amber-500 text-white font-mono font-bold text-center text-sm placeholder:text-zinc-700 tracking-[0.2em]"
+                      />
+                      <p className="text-[9px] text-zinc-500 uppercase tracking-wider font-semibold">
+                        EC member IDs must consist of exactly three digits. Leaving this empty will automatically allocate a unique available digit combination.
+                      </p>
+                    </motion.div>
+                  )}
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-2">
@@ -277,16 +397,58 @@ const DashboardMemberManagementSectionComponent: React.FC<DashboardMemberManagem
                         className="w-full px-6 py-4 bg-white/5 border border-white/10 rounded-xl focus:outline-none focus:border-amber-500/50 transition-all text-white font-bold text-xs"
                       />
                     </div>
-                    <div className="space-y-2">
+                    <div className="space-y-2 relative">
                       <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 ml-1">Email Address</label>
                       <input 
                         type="email"
                         required
                         value={formData.email}
-                        onChange={(e) => setFormData({...formData, email: e.target.value})}
+                        onChange={(e) => {
+                          setFormData({...formData, email: e.target.value});
+                          setShowSuggestions(true);
+                        }}
+                        onFocus={() => setShowSuggestions(true)}
+                        onBlur={() => {
+                          setTimeout(() => {
+                            setShowSuggestions(false);
+                          }, 250);
+                        }}
                         placeholder="EMAIL@EXAMPLE.COM"
                         className="w-full px-6 py-4 bg-white/5 border border-white/10 rounded-xl focus:outline-none focus:border-amber-500/50 transition-all text-white font-bold text-xs"
                       />
+
+                      {formData.hasAccount && showSuggestions && (formData.email.trim().length >= 2) && (
+                        <div className="absolute z-50 left-0 right-0 mt-1 bg-zinc-950 border border-white/10 rounded-xl shadow-2xl overflow-hidden max-h-60 overflow-y-auto divide-y divide-white/5 backdrop-blur-md">
+                          {isSearchingEmails && (
+                            <div className="px-6 py-3.5 text-xs text-zinc-500 flex items-center gap-2">
+                              <Loader2 className="w-3.5 h-3.5 animate-spin text-amber-500" />
+                              <span className="uppercase tracking-widest text-[9px] font-bold">Searching matching addresses...</span>
+                            </div>
+                          )}
+                          {!isSearchingEmails && matchingProfiles.length === 0 && (
+                            <div className="px-6 py-3.5 text-xs text-zinc-600 uppercase tracking-widest text-[9px] font-bold">
+                              No registered profile matches "{formData.email}"
+                            </div>
+                          )}
+                          {!isSearchingEmails && matchingProfiles.map((p) => (
+                            <button
+                              key={p.id}
+                              type="button"
+                              onClick={() => handleSelectProfile(p)}
+                              className="w-full px-6 py-3 text-left hover:bg-white/5 transition-colors flex flex-col justify-center gap-1 group"
+                            >
+                              <span className="text-white font-bold font-mono text-xs group-hover:text-amber-500 transition-colors">
+                                {p.email}
+                              </span>
+                              {p.full_name && (
+                                <span className="text-[10px] text-zinc-500 font-semibold uppercase tracking-wider block">
+                                  {p.full_name}
+                                </span>
+                              )}
+                            </button>
+                          ))}
+                        </div>
+                      )}
                     </div>
                     {!formData.hasAccount && (
                       <div className="space-y-2">

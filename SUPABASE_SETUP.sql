@@ -69,9 +69,67 @@ BEGIN
     END IF;
 END $$;
 
+-- Ensure is_ec exists in member table
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='member' AND column_name='is_ec') THEN
+        ALTER TABLE public.member ADD COLUMN is_ec BOOLEAN DEFAULT FALSE;
+    END IF;
+END $$;
+
 -- Add email index for member table
 CREATE INDEX IF NOT EXISTS idx_member_email ON public.member(email);
 CREATE INDEX IF NOT EXISTS idx_member_verified ON public.member(verified);
+
+-- Create the ec_member table
+CREATE TABLE IF NOT EXISTS public.ec_member (
+  id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  full_name TEXT,
+  email TEXT,
+  phone TEXT,
+  school TEXT DEFAULT 'St Joseph',
+  class TEXT,
+  section TEXT,
+  roll TEXT,
+  photo_url TEXT,
+  payment_method TEXT,
+  trxnid TEXT,
+  bkash_number TEXT,
+  verified TEXT DEFAULT 'no',
+  member_id TEXT UNIQUE,
+  is_ec BOOLEAN DEFAULT TRUE,
+  department TEXT, -- academics, management, logistics
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Ensure email_address and other columns exist in ec_member
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='ec_member' AND column_name='email_address') THEN
+        ALTER TABLE public.ec_member ADD COLUMN email_address TEXT;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='ec_member' AND column_name='department') THEN
+        ALTER TABLE public.ec_member ADD COLUMN department TEXT;
+    END IF;
+END $$;
+
+CREATE INDEX IF NOT EXISTS idx_ec_member_email ON public.ec_member(email);
+CREATE INDEX IF NOT EXISTS idx_ec_member_verified ON public.ec_member(verified);
+
+-- Create the admin_audit_logs table
+CREATE TABLE IF NOT EXISTS public.admin_audit_logs (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  admin_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  admin_email TEXT,
+  admin_name TEXT,
+  action_type TEXT NOT NULL,
+  target TEXT,
+  details TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_admin_audit_logs_created_at ON public.admin_audit_logs(created_at);
 
 -- Create the event_participation table
 CREATE TABLE IF NOT EXISTS public.event_participation (
@@ -151,7 +209,9 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.site_content ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.member ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.ec_member ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.event_participation ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.admin_audit_logs ENABLE ROW LEVEL SECURITY;
 
 -- ==========================================
 -- 4. Create Triggers
@@ -173,6 +233,12 @@ CREATE TRIGGER on_profiles_updated
 DROP TRIGGER IF EXISTS on_member_updated ON public.member;
 CREATE TRIGGER on_member_updated
   BEFORE UPDATE ON public.member
+  FOR EACH ROW EXECUTE FUNCTION handle_updated_at();
+
+-- Trigger for ec_member
+DROP TRIGGER IF EXISTS on_ec_member_updated ON public.ec_member;
+CREATE TRIGGER on_ec_member_updated
+  BEFORE UPDATE ON public.ec_member
   FOR EACH ROW EXECUTE FUNCTION handle_updated_at();
 
 -- Trigger for participation
@@ -263,6 +329,37 @@ CREATE POLICY "Public read participation" ON public.event_participation FOR SELE
 
 DROP POLICY IF EXISTS "Admin manage participation" ON public.event_participation;
 CREATE POLICY "Admin manage participation" ON public.event_participation FOR ALL TO authenticated USING (public.is_admin());
+
+-- --- Policies for ec_member ---
+DROP POLICY IF EXISTS "Allow public read ec_members" ON public.ec_member;
+CREATE POLICY "Allow public read ec_members" ON public.ec_member FOR SELECT USING (true);
+
+DROP POLICY IF EXISTS "Allow users to insert own ec_member record" ON public.ec_member;
+CREATE POLICY "Allow users to insert own ec_member record" ON public.ec_member FOR INSERT TO authenticated WITH CHECK (auth.uid() = id);
+
+DROP POLICY IF EXISTS "Allow users to update own ec_member entry" ON public.ec_member;
+CREATE POLICY "Allow users to update own ec_member entry" ON public.ec_member FOR UPDATE TO authenticated 
+USING (auth.uid() = id) 
+WITH CHECK (auth.uid() = id);
+
+DROP POLICY IF EXISTS "Allow admins to manage all ec_members" ON public.ec_member;
+CREATE POLICY "Allow admins to manage all ec_members" ON public.ec_member FOR ALL TO authenticated USING (public.is_admin());
+
+-- --- Policies for admin_audit_logs ---
+DROP POLICY IF EXISTS "Allow admins to insert audit logs" ON public.admin_audit_logs;
+CREATE POLICY "Allow admins to insert audit logs" ON public.admin_audit_logs 
+  FOR INSERT TO authenticated 
+  WITH CHECK (public.is_admin());
+
+DROP POLICY IF EXISTS "Allow super admins to select audit logs" ON public.admin_audit_logs;
+CREATE POLICY "Allow super admins to select audit logs" ON public.admin_audit_logs 
+  FOR SELECT TO authenticated 
+  USING (public.is_super_admin());
+
+DROP POLICY IF EXISTS "Allow super admins to delete audit logs" ON public.admin_audit_logs;
+CREATE POLICY "Allow super admins to delete audit logs" ON public.admin_audit_logs 
+  FOR DELETE TO authenticated 
+  USING (public.is_super_admin());
 
 -- ==========================================
 -- 6. Storage Setup

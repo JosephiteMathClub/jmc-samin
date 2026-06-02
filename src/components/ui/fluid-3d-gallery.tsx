@@ -2,7 +2,7 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { motion, useScroll, useTransform, useSpring, useMotionValue } from 'framer-motion';
 import { OptimizedImage } from '../OptimizedImage';
-import { Maximize2 } from 'lucide-react';
+import { Maximize2, ArrowLeft, ArrowRight } from 'lucide-react';
 import { GalleryItem } from '../../views/Gallery';
 
 interface Fluid3DGalleryProps {
@@ -35,14 +35,51 @@ export const Fluid3DGallery: React.FC<Fluid3DGalleryProps> = ({
   const { scrollX } = useScroll({ container: containerRef });
   const smoothScrollX = useSpring(scrollX, { damping: 25, stiffness: 120, mass: 0.5 }); // Fluid feel
 
-  // For low-end devices, we might want to skip the complex transforms
+  const scrollLeft = () => {
+    if (containerRef.current) {
+      containerRef.current.scrollBy({ left: -340, behavior: 'smooth' });
+    }
+  };
+
+  const scrollRight = () => {
+    if (containerRef.current) {
+      containerRef.current.scrollBy({ left: 340, behavior: 'smooth' });
+    }
+  };
+
   return (
-    <div className="relative w-full overflow-hidden py-10 md:py-20">
+    <div className="relative w-full overflow-hidden py-10 md:py-20 flex flex-col items-center">
       
+      {/* Immersive halo backdrop glow inside 3D Gallery */}
+      {!shouldReduceGfx && (
+        <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[340px] bg-amber-500/5 blur-[160px] rounded-full pointer-events-none z-0" />
+      )}
+
+      {/* Floating Desktop Navigation Controls */}
+      <div className="absolute top-[45%] -translate-y-1/2 left-6 md:left-[10vw] z-30 hidden sm:block">
+        <button
+          onClick={scrollLeft}
+          className="w-14 h-14 rounded-full flex items-center justify-center bg-zinc-900/60 border border-white/5 hover:border-amber-500/30 text-zinc-400 hover:text-white hover:bg-zinc-950 hover:shadow-2xl hover:shadow-amber-500/10 transition-all outline-none backdrop-blur-md"
+          title="Scroll Left"
+        >
+          <ArrowLeft className="w-5 h-5" />
+        </button>
+      </div>
+
+      <div className="absolute top-[45%] -translate-y-1/2 right-6 md:right-[10vw] z-30 hidden sm:block">
+        <button
+          onClick={scrollRight}
+          className="w-14 h-14 rounded-full flex items-center justify-center bg-zinc-900/60 border border-white/5 hover:border-amber-500/30 text-zinc-400 hover:text-white hover:bg-zinc-950 hover:shadow-2xl hover:shadow-amber-500/10 transition-all outline-none backdrop-blur-md"
+          title="Scroll Right"
+        >
+          <ArrowRight className="w-5 h-5" />
+        </button>
+      </div>
+
       {/* Scrollable Container */}
       <div 
         ref={containerRef}
-        className="flex gap-4 md:gap-12 px-[10vw] md:px-[30vw] overflow-x-auto pb-12 snap-x snap-mandatory hide-scrollbar"
+        className="flex gap-4 md:gap-12 px-[10vw] md:px-[30vw] overflow-x-auto pb-12 snap-x snap-mandatory hide-scrollbar relative z-10 w-full"
         style={{ scrollBehavior: shouldReduceGfx ? 'smooth' : 'auto' }}
       >
         {items.map((item, index) => {
@@ -58,6 +95,16 @@ export const Fluid3DGallery: React.FC<Fluid3DGalleryProps> = ({
             />
           );
         })}
+      </div>
+
+      {/* Aesthetic help-indicator panel focused at center */}
+      <div className="flex items-center justify-center gap-1.5 mt-2 relative z-20">
+        <div className="flex items-center gap-2.5 bg-zinc-905/85 border border-white/5 py-2 px-4 rounded-full backdrop-blur-xl shadow-lg">
+          <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse shrink-0" />
+          <span className="text-[10px] font-mono font-black text-zinc-450 uppercase tracking-widest leading-none">
+            DRAG, WHEEL OR USE OVERLAID CONTROLS
+          </span>
+        </div>
       </div>
 
     </div>
@@ -77,19 +124,16 @@ const GalleryCard = ({ item, index, onSelect, scrollX, containerWidth, shouldRed
   }, [containerWidth]);
 
   // Viewport center relative to the scroll container
-  // When scrollX == cardLeft - (window.innerWidth / 2) + (cardWidth / 2), the card is exactly in center.
   const windowWidth = typeof window !== 'undefined' ? window.innerWidth : 1000;
   const centerPosition = cardLeft - (windowWidth / 2) + (cardWidth / 2);
 
   // Distance from center: -1 to 1 
-  // We use windowWidth as the range for full effect
   const distance = useTransform(scrollX, 
     [centerPosition - windowWidth, centerPosition, centerPosition + windowWidth], 
     [-1, 0, 1]
   );
 
   // Calculate transforms
-  // If reduced gfx, minimal animation
   const scale = useTransform(distance, [-1, 0, 1], [shouldReduceGfx ? 1 : 0.75, 1, shouldReduceGfx ? 1 : 0.75]);
   const rotateY = useTransform(distance, [-1, 0, 1], [shouldReduceGfx ? 0 : 35, 0, shouldReduceGfx ? 0 : -35]);
   const brightness = useTransform(distance, [-1, 0, 1], [0.3, 1, 0.3]);
@@ -108,7 +152,7 @@ const GalleryCard = ({ item, index, onSelect, scrollX, containerWidth, shouldRed
       onClick={onSelect}
     >
       <motion.div
-        className="w-full h-full relative rounded-3xl overflow-hidden glass border-white/10 group shadow-2xl preserve-3d"
+        className="w-full h-full relative rounded-3xl overflow-hidden bg-zinc-950 border border-white/10 group shadow-[0_4px_30px_rgba(0,0,0,0.4)] transition-all hover:border-amber-500/30 duration-300 preserve-3d"
         style={{
           scale,
           rotateY,
@@ -126,10 +170,10 @@ const GalleryCard = ({ item, index, onSelect, scrollX, containerWidth, shouldRed
         </motion.div>
 
         {/* Hover / Info Overlay */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 flex flex-col justify-between p-6 md:p-8">
+        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 flex flex-col justify-between p-6 md:p-8">
           <div className="flex justify-between items-start">
-             <div className="px-3 py-1 rounded-full bg-white/10 backdrop-blur-md border border-white/20">
-                <p className="text-[10px] font-mono font-black text-white uppercase tracking-widest">
+             <div className="px-3 py-1 rounded-full bg-zinc-900/90 backdrop-blur-md border border-white/10">
+                <p className="text-[10px] font-mono font-black text-amber-500 uppercase tracking-widest">
                   {item.category}
                 </p>
              </div>
@@ -138,17 +182,24 @@ const GalleryCard = ({ item, index, onSelect, scrollX, containerWidth, shouldRed
              </div>
           </div>
           <div>
-            <h3 className="text-2xl font-bold text-white tracking-tight leading-tight mb-2">
+            <h3 className="text-2xl font-bold text-white tracking-tight leading-tight mb-2 uppercase">
               {item.title}
             </h3>
-            <div className="w-12 h-1 bg-amber-500 rounded-full mb-3" />
-            <p className="text-sm text-zinc-300 line-clamp-2">
+            <div className="w-12 h-0.5 bg-amber-500 rounded-full mb-3" />
+            <p className="text-xs text-zinc-350 line-clamp-2 leading-relaxed">
               {item.description}
             </p>
           </div>
+        </div>
+
+        {/* Static Title Plate for Touch Devices (In Center Position) */}
+        <div className="absolute bottom-4 left-4 right-4 bg-zinc-950/90 backdrop-blur-md px-4 py-3 rounded-2xl border border-white/5 flex items-center justify-between pointer-events-none group-hover:opacity-0 transition-opacity duration-300">
+          <span className="text-[10px] font-bold text-white uppercase tracking-wider truncate max-w-[80%]">{item.title}</span>
+          <Maximize2 className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
         </div>
 
       </motion.div>
     </motion.div>
   );
 };
+

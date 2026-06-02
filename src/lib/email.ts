@@ -11,7 +11,7 @@ export interface EmailOptions {
  * Sends an email using Brevo REST API or SMTP Fallback
  */
 export const sendEmail = async (options: EmailOptions) => {
-  const rawFromEmail = process.env.SMTP_FROM_EMAIL || 'mathclub@sjs.edu.bd';
+  const rawFromEmail = process.env.SMTP_FROM_MAIL || process.env.SMTP_FROM_EMAIL || 'mathclub@sjs.edu.bd';
   const fromName = process.env.SMTP_FROM_NAME || 'Josephite Math Club';
 
   // Helper to extract a pure email address from strings like '"Name" <email@domain.com>' or plain 'email@domain.com'
@@ -25,15 +25,21 @@ export const sendEmail = async (options: EmailOptions) => {
 
   const fromEmail = cleanEmailAddress(rawFromEmail);
 
+  const rawApiKey = process.env.BREVO_API_KEY;
+  const hasBrevoApiKey = rawApiKey && 
+                         rawApiKey.trim() !== '' && 
+                         !rawApiKey.includes('your-brevo-api-key-here') &&
+                         !rawApiKey.startsWith('your-');
+
   // 1. Try Brevo API first (Recommended for serverless/Netlify)
-  if (process.env.BREVO_API_KEY) {
+  if (hasBrevoApiKey) {
     console.log(`[Email] Attempting to send via Brevo API to ${options.to}...`);
     try {
       const response = await fetch('https://api.brevo.com/v3/smtp/email', {
         method: 'POST',
         headers: {
           'accept': 'application/json',
-          'api-key': process.env.BREVO_API_KEY,
+          'api-key': rawApiKey!,
           'content-type': 'application/json'
         },
         body: JSON.stringify({
@@ -61,8 +67,14 @@ export const sendEmail = async (options: EmailOptions) => {
           customError = `IP Restriction: This IP address is blocked by Brevo. 1. Go to Brevo Security settings and REMOVE all Authorized IPs. 2. Ensure you are using the correct API Key.`;
         }
 
+        const rawSmtpUser = process.env.SMTP_USER;
+        const fallbackSmtpAvailable = rawSmtpUser && 
+                                      rawSmtpUser.trim() !== '' && 
+                                      !rawSmtpUser.includes('your-smtp-user') &&
+                                      !rawSmtpUser.startsWith('your-');
+
         // Only fallback if we have SMTP credentials and it's not a definitive API failure
-        if (!process.env.SMTP_USER) {
+        if (!fallbackSmtpAvailable) {
           return { success: false, error: new Error(customError) };
         }
         console.log('Falling back to SMTP due to API error...');
@@ -73,11 +85,22 @@ export const sendEmail = async (options: EmailOptions) => {
       }
     } catch (error) {
       console.error('Brevo API fetch error:', error);
-      if (!process.env.SMTP_USER) return { success: false, error };
+      const rawSmtpUser = process.env.SMTP_USER;
+      const fallbackSmtpAvailable = rawSmtpUser && 
+                                    rawSmtpUser.trim() !== '' && 
+                                    !rawSmtpUser.includes('your-smtp-user') &&
+                                    !rawSmtpUser.startsWith('your-');
+      if (!fallbackSmtpAvailable) return { success: false, error };
     }
   } else {
-    console.warn('[Email] BREVO_API_KEY is not set. Falling back to SMTP. WARNING: SMTP is highly prone to IP authorization issues on dynamic hosts like Netlify.');
+    console.warn('[Email] BREVO_API_KEY is not set or is using placeholder. Falling back to SMTP. WARNING: SMTP is highly prone to IP authorization issues on dynamic hosts like Netlify.');
   }
+
+  const rawSmtpUser = process.env.SMTP_USER;
+  const isSmtpUserValid = rawSmtpUser && 
+                          rawSmtpUser.trim() !== '' && 
+                          !rawSmtpUser.includes('your-smtp-user') &&
+                          !rawSmtpUser.startsWith('your-');
 
   // 2. Fallback to SMTP
   const smtpConfig = {
@@ -85,15 +108,15 @@ export const sendEmail = async (options: EmailOptions) => {
     port: parseInt(process.env.SMTP_PORT || '587'),
     secure: process.env.SMTP_SECURE === 'true',
     auth: {
-      user: process.env.SMTP_USER,
+      user: rawSmtpUser,
       pass: process.env.SMTP_PASS,
     },
   };
 
-  if (!process.env.SMTP_USER) {
+  if (!isSmtpUserValid) {
     return { 
       success: false, 
-      error: new Error('Email configuration missing. Please provide BREVO_API_KEY (Recommended) or SMTP_USER/SMTP_PASS in your environment variables.') 
+      error: new Error('Email configuration missing or using invalid placeholder keys. Please provide a valid BREVO_API_KEY (Highly Recommended) or active SMTP_USER & SMTP_PASS in your environment variables via AI Studio Settings.') 
     };
   }
 

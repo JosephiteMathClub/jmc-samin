@@ -5,6 +5,7 @@ import { Bell, Calendar, Pin, ArrowRight, Search, Filter, Info, AlertTriangle, C
 import { useContent } from '../context/ContentContext';
 import ScrollReveal from '../components/ScrollReveal';
 import { Skeleton } from '../components/Skeleton';
+import { OptimizedImage } from '../components/OptimizedImage';
 import Image from 'next/image';
 
 import { usePerformance } from '../hooks/usePerformance';
@@ -189,8 +190,21 @@ const Notices = () => {
                           </h3>
                           
                           {notice.imageUrl && (
-                            <div className="mb-8 rounded-3xl overflow-hidden border border-white/10 relative w-full h-[400px]">
-                              <Image src={notice.imageUrl} alt={notice.title} fill className="object-cover" referrerPolicy="no-referrer" />
+                            <div className="mb-8 rounded-3xl overflow-hidden border border-white/10 relative w-full h-auto min-h-[300px] max-h-[600px] md:h-[500px] bg-black/50 flex items-center justify-center group/notice-img">
+                              {/* Premium cinematic blurred image mirror backdrop */}
+                              <div 
+                                className="absolute inset-0 bg-cover bg-center blur-2xl opacity-20 pointer-events-none scale-110" 
+                                style={{ backgroundImage: `url(${notice.imageUrl})` }}
+                              />
+                              <OptimizedImage 
+                                src={notice.imageUrl} 
+                                alt={notice.title} 
+                                fill 
+                                className="object-contain z-10" 
+                                wrapperClassName="w-full h-full bg-transparent"
+                                sizes="(max-width: 1200px) 100vw, 1200px"
+                                referrerPolicy="no-referrer" 
+                              />
                             </div>
                           )}
 

@@ -3,6 +3,7 @@ import React from 'react';
 import { useContent } from '@/context/ContentContext';
 import { Plus, Trash2, Edit2 } from 'lucide-react';
 import { DashboardFileUpload } from '../DashboardFileUpload';
+import { OptimizedImage } from '../../OptimizedImage';
 
 import Image from 'next/image';
 
@@ -181,7 +182,7 @@ const DashboardArticlesSection: React.FC<DashboardArticlesSectionProps> = ({ upl
                   <div className="flex gap-6">
                      {article.imageUrl && (
                         <div className="w-24 h-24 rounded-2xl overflow-hidden shrink-0 border border-white/10 relative">
-                           <Image src={article.imageUrl} alt={article.title} fill className="object-cover" referrerPolicy="no-referrer" />
+                           <OptimizedImage src={article.imageUrl} alt={article.title} fill className="object-cover" referrerPolicy="no-referrer" />
                         </div>
                      )}
                      <div>

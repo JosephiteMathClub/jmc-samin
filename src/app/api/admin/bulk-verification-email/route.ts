@@ -15,16 +15,15 @@ export async function POST(req: Request) {
     const emailPromises = members.map(async (m: any) => {
       if (!m.email || !m.fullName) return;
       
-      const subject = `Registration Pending - Action Required for Josephite Math Club!`;
+      const subject = `Registration Request Received - Josephite Math Club`;
       const htmlContent = `
-        <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; color: #333;">
-          <h1 style="color: #0c4a6e;">Hello ${m.fullName},</h1>
+        <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; color: #333; line-height: 1.6; padding: 20px; border: 1px solid #e5e7eb; rounded-2xl;">
+          <h2 style="color: #0c4a6e; border-bottom: 2px solid #0c4a6e; padding-bottom: 10px;">Hello ${m.fullName},</h2>
           <p>Thank you for registering with the Josephite Math Club!</p>
-          <p>This is a reminder that your registration is currently <strong>PENDING</strong> verification.</p>
-          <p>Please ensure you have completed the payment process as per the instructions on the website. Once our team confirms your payment, your membership will be activated and you will receive your Unique Member ID.</p>
-          <br/>
-          <p><strong>Member ID (Temporary):</strong> ${m.memberId || 'Calculating...'}</p>
-          <p>If you have already paid, please ignore this email and allow 24-48 hours for verification.</p>
+          <p style="background: #fffbeb; padding: 15px; border-left: 4px solid #f59e0b; font-weight: 500; font-size: 15px; color: #b45309;">
+            Your registration request has been sent to administration. Please wait for a few hours until verified.
+          </p>
+          <p>Once our administrative team verifies your payment details, you will receive another email containing your Unique Member ID and access instructions.</p>
           <br/>
           <p>Best regards,<br/>The Josephite Math Club Team</p>
         </div>

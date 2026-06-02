@@ -1,6 +1,7 @@
 "use client";
 import React from 'react';
 import Image from 'next/image';
+import { OptimizedImage } from '../OptimizedImage';
 import { 
   Upload, 
   Trash2, 
@@ -76,11 +77,12 @@ export const DashboardFileUpload: React.FC<DashboardFileUploadProps> = ({
                       <FileText className="w-8 h-8 text-red-500" />
                     </div>
                   ) : (
-                    <Image 
+                    <OptimizedImage 
                       src={resolveImageUrl(value)} 
                       alt="Preview" 
                       fill
-                      className="object-cover" 
+                      className="object-contain"
+                      wrapperClassName="w-full h-full bg-zinc-950/40"
                       referrerPolicy="no-referrer" 
                     />
                   )}

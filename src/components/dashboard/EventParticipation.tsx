@@ -54,6 +54,30 @@ export const EventParticipation = () => {
   const [isBulkUploading, setIsBulkUploading] = useState(false);
   const bulkUploadRef = useRef<HTMLInputElement>(null);
 
+  const logAction = async (actionType: string, target: string, details: string) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('full_name, email')
+        .eq('id', user.id)
+        .maybeSingle();
+
+      await supabase.from('admin_audit_logs').insert({
+        admin_id: user.id,
+        admin_email: profile?.email || user.email,
+        admin_name: profile?.full_name || 'Admin',
+        action_type: actionType,
+        target: target,
+        details: details
+      });
+    } catch (e) {
+      console.error("Failed to insert audit log:", e);
+    }
+  };
+
   // Event Mode States
   const eventMode = content?.site?.eventMode || false;
   const [viewMode, setViewMode] = useState<'select' | 'options' | 'manual' | 'scan'>('select');
@@ -127,14 +151,46 @@ export const EventParticipation = () => {
     if (!formattedId || !activeEvent || !activeCategory) return;
     
     try {
-      // 1. Check if member exists
-      const { data: member, error: memberError } = await supabase
+      // 1. Check if member exists (try direct, JMC prefix, or suffix match)
+      let member = null;
+      
+      const { data: exactMember, error: exactError } = await supabase
         .from('member')
         .select('id, full_name, verified, member_id')
         .eq('member_id', formattedId)
         .maybeSingle();
+
+      if (exactError) throw exactError;
+
+      if (exactMember) {
+        member = exactMember;
+      } else {
+        const prependedId = `JMC-${formattedId}`;
+        const { data: prependedMember, error: prependedError } = await supabase
+          .from('member')
+          .select('id, full_name, verified, member_id')
+          .eq('member_id', prependedId)
+          .maybeSingle();
+
+        if (prependedError) throw prependedError;
+
+        if (prependedMember) {
+          member = prependedMember;
+        } else if (formattedId.length >= 3) {
+          const { data: suffixMatches, error: suffixError } = await supabase
+            .from('member')
+            .select('id, full_name, verified, member_id')
+            .ilike('member_id', `%${formattedId}`);
+
+          if (suffixError) throw suffixError;
+
+          if (suffixMatches && suffixMatches.length > 0) {
+            const perfectSub = suffixMatches.find(m => m.member_id.endsWith(`-${formattedId}`));
+            member = perfectSub || suffixMatches[0];
+          }
+        }
+      }
       
-      if (memberError) throw memberError;
       if (!member) {
         throw new Error(`Member with ID ${formattedId} not found.`);
       }
@@ -156,11 +212,11 @@ export const EventParticipation = () => {
         throw new Error(`Member ${member.full_name} is already participating in this specific category.`);
       }
 
-      // 3. Add to participation
+      // 3. Add to participation (using the fully canonical member_id)
       const { error: insertError } = await supabase
         .from('event_participation')
         .insert({
-          member_id: formattedId,
+          member_id: member.member_id,
           event_name: activeEvent,
           category: activeCategory
         });
@@ -215,11 +271,11 @@ export const EventParticipation = () => {
     
     try {
       const text = await file.text();
-      // Split by newline, comma, or semicolon and filter out empty strings
-      const ids = text.split(/[\r\n,;]+/).map(id => id.trim().toUpperCase()).filter(id => id && id.startsWith('JMC-'));
+      // Split by newline, comma, or semicolon and filter out empty strings (allow both JMC- prefix and 3-digit EC IDs)
+      const ids = text.split(/[\r\n,;]+/).map(id => id.trim().toUpperCase()).filter(id => id && (id.startsWith('JMC-') || /^\d{3}$/.test(id)));
       
       if (ids.length === 0) {
-        throw new Error("No valid JMC IDs found in the file.");
+        throw new Error("No valid JMC or EC IDs found in the file.");
       }
       
       showToast(`Processing ${ids.length} entries...`, "info");
@@ -328,6 +384,12 @@ export const EventParticipation = () => {
       
       setParticipations(prev => prev.map(p => p.id === participationId ? { ...p, position } : p));
       showToast("Position updated successfully", "success");
+
+      // Log action
+      const pRecord = participations.find(p => p.id === participationId);
+      if (pRecord) {
+        await logAction('UPDATE_EVENT_POSITION', `Event: ${activeEvent || 'Unknown'}`, `Updated position for ${pRecord.member_name || pRecord.member_id} in category ${activeCategory} to ${position === null ? 'None' : position}.`);
+      }
     } catch (err: any) {
       showToast(err.message, "error");
     }
@@ -336,6 +398,7 @@ export const EventParticipation = () => {
   const removeParticipant = async (id: string) => {
     setIsDeleting(true);
     try {
+      const pRecord = participations.find(p => p.id === id);
       const { error } = await supabase
         .from('event_participation')
         .delete()
@@ -345,6 +408,11 @@ export const EventParticipation = () => {
       setParticipations(prev => prev.filter(p => p.id !== id));
       showToast("Participant removed", "success");
       setDeleteId(null);
+
+      // Log action
+      if (pRecord) {
+        await logAction('DELETE_EVENT_PARTICIPANT', `Event: ${activeEvent || 'Unknown'}`, `Removed participant ${pRecord.member_name || pRecord.member_id} from category ${activeCategory}.`);
+      }
     } catch (err: any) {
       showToast(err.message, "error");
     } finally {
@@ -386,6 +454,9 @@ export const EventParticipation = () => {
         if (data.errors && data.errors.length > 0) {
           console.error("Email errors:", data.errors);
         }
+
+        // Log action
+        await logAction('ANNOUNCE_EVENT_RESULTS', `Event: ${activeEvent}`, `Announced results and emailed ${data.sentCount || 0} participants in category ${activeCategory}.`);
       } else {
         throw new Error(data.error || "Failed to announce results");
       }
