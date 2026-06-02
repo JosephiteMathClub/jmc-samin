@@ -1,6 +1,7 @@
 "use client";
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { X, Loader2, CheckCircle2, QrCode, Zap, ZoomIn, Contrast, Sparkles } from 'lucide-react';
+import { Camera } from '@capacitor/camera';
 
 interface QRScannerProps {
   onScan: (decodedText: string) => void;
@@ -20,8 +21,28 @@ const requestCapacitorPermissions = async (): Promise<boolean> => {
   console.log("[Capacitor] Native environment detected. Attempting to request native camera permissions...");
   let granted = false;
 
-  // 1. Try BarcodeScanner plugin if installed
-  if (cap.Plugins?.BarcodeScanner) {
+  // 1. Try modern @capacitor/camera directly
+  try {
+    const status = await Camera.checkPermissions();
+    if (status.camera === 'granted') {
+      console.log("[Capacitor] camera permission is already granted.");
+      granted = true;
+    } else {
+      console.log("[Capacitor] camera permission not granted yet. Requesting...");
+      const requestStatus = await Camera.requestPermissions({ permissions: ['camera'] });
+      if (requestStatus.camera === 'granted') {
+        console.log("[Capacitor] camera permission successfully granted after prompt.");
+        granted = true;
+      } else {
+        console.warn("[Capacitor] camera permission was denied.");
+      }
+    }
+  } catch (e) {
+    console.warn("[Capacitor] Failed to request permissions using modern @capacitor/camera:", e);
+  }
+
+  // 2. Try BarcodeScanner plugin if installed
+  if (!granted && cap.Plugins?.BarcodeScanner) {
     try {
       const status = await cap.Plugins.BarcodeScanner.checkPermission({ force: true });
       if (status.granted) {
@@ -33,11 +54,11 @@ const requestCapacitorPermissions = async (): Promise<boolean> => {
     }
   }
 
-  // 2. Try Camera plugin if installed
+  // 3. Try Camera plugin via global plugins fallback if installed
   if (!granted && cap.Plugins?.Camera) {
     try {
       const permissionResult = await cap.Plugins.Camera.requestPermissions({ permissions: ['camera'] });
-      console.log("[Capacitor] Camera permission result:", permissionResult);
+      console.log("[Capacitor] Legacy Camera permission result:", permissionResult);
       if (permissionResult?.camera === 'granted') {
         granted = true;
       }
@@ -46,7 +67,7 @@ const requestCapacitorPermissions = async (): Promise<boolean> => {
     }
   }
 
-  // 3. Try Permissions plugin if standard plugins aren't available but permission check is supported
+  // 4. Try Permissions plugin if standard plugins aren't available but permission check is supported
   if (!granted && cap.Plugins?.Permissions) {
     try {
       const result = await cap.Plugins.Permissions.query({ name: 'camera' });
