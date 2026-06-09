@@ -1,6 +1,6 @@
 const sharp = require('sharp');
 
-sharp('public/images/id-card-bg.png')
+sharp('public/images/ec_id_card_bg.jpeg')
   .raw()
   .toBuffer({ resolveWithObject: true })
   .then(({ data, info }) => {

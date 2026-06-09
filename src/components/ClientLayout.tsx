@@ -31,6 +31,28 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
 
   const isMaintenance = content?.site?.maintenanceMode && !isAdmin && !isAuthPage;
 
+  // Seamless, elite custom scroll reset upon refresh/reload
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      // Force scroll restoration to manual so browser doesn't try to jump down on reload
+      if ("scrollRestoration" in window.history) {
+        window.history.scrollRestoration = "manual";
+      }
+
+      // Snap back to top instantly
+      window.scrollTo({ top: 0, left: 0, behavior: "instant" as ScrollBehavior });
+
+      const handleBeforeUnload = () => {
+        window.scrollTo({ top: 0, left: 0, behavior: "instant" as ScrollBehavior });
+      };
+
+      window.addEventListener("beforeunload", handleBeforeUnload);
+      return () => {
+        window.removeEventListener("beforeunload", handleBeforeUnload);
+      };
+    }
+  }, []);
+
   // Restore path if PWA was killed by OS (e.g., during file picking)
   useEffect(() => {
     if (typeof window !== 'undefined' && !restoredRef.current) {
@@ -124,7 +146,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
           </main>
           
           <SupportTrigger />
-          <Footer />
+          {!pathname?.startsWith("/admin") && <Footer />}
         </motion.div>
       )}
     </AnimatePresence>

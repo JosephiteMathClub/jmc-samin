@@ -83,7 +83,8 @@ const AdminDashboard = () => {
   const { user, isAdmin, isSuperAdmin, loading: authLoading } = useAuth();
   const { showToast } = useToast();
   const router = useRouter();
-  const { shouldReduceGfx } = usePerformance();
+  const { shouldReduceGfx: performanceGfx } = usePerformance();
+  const shouldReduceGfx = true; // Force-disable animations within admin screens
   
   const [activeTab, setActiveTab] = useState('events');
 
@@ -259,6 +260,10 @@ const AdminDashboard = () => {
   }, [showToast]);
 
   const toggleVerified = async (memberId: string, currentStatus: string) => {
+    if (currentStatus === 'yes' && !isSuperAdmin) {
+      showToast('Only Super Admins can unverify registered members.', 'error');
+      return;
+    }
     const newStatus = currentStatus === 'yes' ? 'no' : 'yes';
     try {
       const member = members.find(m => m.id === memberId);
@@ -903,7 +908,7 @@ const AdminDashboard = () => {
             exit={shouldReduceGfx ? { opacity: 0 } : { opacity: 0, x: -20 }}
             className="space-y-8"
           >
-            <EventParticipation />
+            <EventParticipation isSuperAdmin={isSuperAdmin} />
           </motion.div>
         )}
 
@@ -990,6 +995,7 @@ const AdminDashboard = () => {
             uploading={uploading}
             shouldReduceGfx={shouldReduceGfx}
             isDeletingMember={isDeletingMember}
+            isSuperAdmin={isSuperAdmin}
           />
         )}
 
@@ -1006,6 +1012,7 @@ const AdminDashboard = () => {
             uploading={uploading}
             shouldReduceGfx={shouldReduceGfx}
             isDeletingMember={isDeletingMember}
+            isSuperAdmin={isSuperAdmin}
           />
         )}
 
@@ -1036,7 +1043,7 @@ const AdminDashboard = () => {
             exit={shouldReduceGfx ? { opacity: 0 } : { opacity: 0, x: -20 }}
             className="space-y-8"
           >
-            <SuperAdminPanel />
+            <SuperAdminPanel isSuperAdmin={isSuperAdmin} />
           </motion.div>
         )}
 

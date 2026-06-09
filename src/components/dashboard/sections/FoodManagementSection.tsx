@@ -146,8 +146,8 @@ export const FoodManagementSection: React.FC<FoodManagementSectionProps> = ({
         }
         if (payload.settings?.active_slot_id) {
           setActiveSlotId(prev => prev || payload.settings.active_slot_id);
-        } else if (!activeSlotId) {
-          setActiveSlotId('snacks');
+        } else {
+          setActiveSlotId(prev => prev || 'snacks');
         }
         setDistributionEnabled(payload.settings?.distribution_enabled === true);
         if (payload.settings?.available_slots) {

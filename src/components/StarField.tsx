@@ -9,6 +9,7 @@ const StarField: React.FC<StarFieldProps> = ({ reduced = false }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
+    /* 
     const canvas = canvasRef.current;
     if (!canvas) return;
 
@@ -161,16 +162,10 @@ const StarField: React.FC<StarFieldProps> = ({ reduced = false }) => {
       window.removeEventListener('mouseout', handleMouseOut);
       cancelAnimationFrame(animationFrameId);
     };
+    */
   }, [reduced]);
 
-  return (
-    <div className="fixed inset-0 top-0 left-0 bg-[#111111]" style={{ zIndex: -10, pointerEvents: 'auto' }}>
-      <canvas
-        ref={canvasRef}
-        className="absolute inset-0 w-full h-full"
-      />
-    </div>
-  );
+  return null;
 };
 
 export default StarField;

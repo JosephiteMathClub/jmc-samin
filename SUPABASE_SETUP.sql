@@ -406,6 +406,14 @@ CREATE TABLE IF NOT EXISTS public.support_tickets (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
+-- Ensure user_id column exists in support_tickets table if it already exists
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='support_tickets' AND column_name='user_id') THEN
+        ALTER TABLE public.support_tickets ADD COLUMN user_id UUID REFERENCES auth.users(id) ON DELETE SET NULL;
+    END IF;
+END $$;
+
 -- Index for support_tickets
 CREATE INDEX IF NOT EXISTS idx_support_tickets_user_id ON public.support_tickets(user_id);
 CREATE INDEX IF NOT EXISTS idx_support_tickets_status ON public.support_tickets(status);
@@ -434,6 +442,249 @@ DROP POLICY IF EXISTS "Super Admins can manage all tickets" ON public.support_ti
 CREATE POLICY "Super Admins can manage all tickets" ON public.support_tickets 
   FOR ALL TO authenticated 
   USING (public.is_super_admin());
+
+-- ==========================================
+-- 9. Event & Segment Registration Tables
+-- ==========================================
+
+-- Primary Events (Class 3 - 5)
+CREATE TABLE IF NOT EXISTS public.primary_events (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+    full_name TEXT NOT NULL,
+    class TEXT NOT NULL,
+    section TEXT NOT NULL,
+    roll TEXT NOT NULL,
+    bkash_number TEXT NOT NULL,
+    trxnid TEXT NOT NULL UNIQUE,
+    amount INTEGER NOT NULL,
+    selected_events TEXT NOT NULL, -- comma-separated list of selected events
+    verified TEXT DEFAULT 'no', -- 'no' or 'yes'
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Junior Events (Class 6 - 8)
+CREATE TABLE IF NOT EXISTS public.junior_events (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+    full_name TEXT NOT NULL,
+    class TEXT NOT NULL,
+    section TEXT NOT NULL,
+    roll TEXT NOT NULL,
+    bkash_number TEXT NOT NULL,
+    trxnid TEXT NOT NULL UNIQUE,
+    amount INTEGER NOT NULL,
+    selected_events TEXT NOT NULL,
+    verified TEXT DEFAULT 'no',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Secondary Events (Class 9 - 10)
+CREATE TABLE IF NOT EXISTS public.secondary_events (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+    full_name TEXT NOT NULL,
+    class TEXT NOT NULL,
+    section TEXT NOT NULL,
+    roll TEXT NOT NULL,
+    bkash_number TEXT NOT NULL,
+    trxnid TEXT NOT NULL UNIQUE,
+    amount INTEGER NOT NULL,
+    selected_events TEXT NOT NULL,
+    verified TEXT DEFAULT 'no',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Higher Secondary Events (Class 11 - 12)
+CREATE TABLE IF NOT EXISTS public.higher_secondary_events (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+    full_name TEXT NOT NULL,
+    class TEXT NOT NULL,
+    section TEXT NOT NULL,
+    roll TEXT NOT NULL,
+    bkash_number TEXT NOT NULL,
+    trxnid TEXT NOT NULL UNIQUE,
+    amount INTEGER NOT NULL,
+    selected_events TEXT NOT NULL,
+    verified TEXT DEFAULT 'no',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Ensure user_id, selected_events, and verified columns exist in event tables if they already exist
+DO $$
+BEGIN
+    -- primary_events
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='primary_events' AND column_name='user_id') THEN
+        ALTER TABLE public.primary_events ADD COLUMN user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='primary_events' AND column_name='selected_events') THEN
+        ALTER TABLE public.primary_events ADD COLUMN selected_events TEXT NOT NULL DEFAULT '';
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='primary_events' AND column_name='verified') THEN
+        ALTER TABLE public.primary_events ADD COLUMN verified TEXT DEFAULT 'no';
+    END IF;
+
+    -- junior_events
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='junior_events' AND column_name='user_id') THEN
+        ALTER TABLE public.junior_events ADD COLUMN user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='junior_events' AND column_name='selected_events') THEN
+        ALTER TABLE public.junior_events ADD COLUMN selected_events TEXT NOT NULL DEFAULT '';
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='junior_events' AND column_name='verified') THEN
+        ALTER TABLE public.junior_events ADD COLUMN verified TEXT DEFAULT 'no';
+    END IF;
+
+    -- secondary_events
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='secondary_events' AND column_name='user_id') THEN
+        ALTER TABLE public.secondary_events ADD COLUMN user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='secondary_events' AND column_name='selected_events') THEN
+        ALTER TABLE public.secondary_events ADD COLUMN selected_events TEXT NOT NULL DEFAULT '';
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='secondary_events' AND column_name='verified') THEN
+        ALTER TABLE public.secondary_events ADD COLUMN verified TEXT DEFAULT 'no';
+    END IF;
+
+    -- higher_secondary_events
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='higher_secondary_events' AND column_name='user_id') THEN
+        ALTER TABLE public.higher_secondary_events ADD COLUMN user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='higher_secondary_events' AND column_name='selected_events') THEN
+        ALTER TABLE public.higher_secondary_events ADD COLUMN selected_events TEXT NOT NULL DEFAULT '';
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='higher_secondary_events' AND column_name='verified') THEN
+        ALTER TABLE public.higher_secondary_events ADD COLUMN verified TEXT DEFAULT 'no';
+    END IF;
+END $$;
+
+-- Enable RLS
+ALTER TABLE public.primary_events ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.junior_events ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.secondary_events ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.higher_secondary_events ENABLE ROW LEVEL SECURITY;
+
+-- Triggers for updated_at
+DROP TRIGGER IF EXISTS on_primary_events_updated ON public.primary_events;
+CREATE TRIGGER on_primary_events_updated BEFORE UPDATE ON public.primary_events FOR EACH ROW EXECUTE FUNCTION handle_updated_at();
+
+DROP TRIGGER IF EXISTS on_junior_events_updated ON public.junior_events;
+CREATE TRIGGER on_junior_events_updated BEFORE UPDATE ON public.junior_events FOR EACH ROW EXECUTE FUNCTION handle_updated_at();
+
+DROP TRIGGER IF EXISTS on_secondary_events_updated ON public.secondary_events;
+CREATE TRIGGER on_secondary_events_updated BEFORE UPDATE ON public.secondary_events FOR EACH ROW EXECUTE FUNCTION handle_updated_at();
+
+DROP TRIGGER IF EXISTS on_higher_secondary_events_updated ON public.higher_secondary_events;
+CREATE TRIGGER on_higher_secondary_events_updated BEFORE UPDATE ON public.higher_secondary_events FOR EACH ROW EXECUTE FUNCTION handle_updated_at();
+
+-- Policies for public reading and user operations
+DROP POLICY IF EXISTS "Allow users to view own primary_events" ON public.primary_events;
+DROP POLICY IF EXISTS "Allow users to insert own primary_events" ON public.primary_events;
+DROP POLICY IF EXISTS "Allow admins to manage primary_events" ON public.primary_events;
+CREATE POLICY "Allow users to view own primary_events" ON public.primary_events FOR SELECT TO authenticated USING (auth.uid() = user_id);
+CREATE POLICY "Allow users to insert own primary_events" ON public.primary_events FOR INSERT TO authenticated WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Allow admins to manage primary_events" ON public.primary_events FOR ALL TO authenticated USING (public.is_admin());
+
+DROP POLICY IF EXISTS "Allow users to view own junior_events" ON public.junior_events;
+DROP POLICY IF EXISTS "Allow users to insert own junior_events" ON public.junior_events;
+DROP POLICY IF EXISTS "Allow admins to manage junior_events" ON public.junior_events;
+CREATE POLICY "Allow users to view own junior_events" ON public.junior_events FOR SELECT TO authenticated USING (auth.uid() = user_id);
+CREATE POLICY "Allow users to insert own junior_events" ON public.junior_events FOR INSERT TO authenticated WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Allow admins to manage junior_events" ON public.junior_events FOR ALL TO authenticated USING (public.is_admin());
+
+DROP POLICY IF EXISTS "Allow users to view own secondary_events" ON public.secondary_events;
+DROP POLICY IF EXISTS "Allow users to insert own secondary_events" ON public.secondary_events;
+DROP POLICY IF EXISTS "Allow admins to manage secondary_events" ON public.secondary_events;
+CREATE POLICY "Allow users to view own secondary_events" ON public.secondary_events FOR SELECT TO authenticated USING (auth.uid() = user_id);
+CREATE POLICY "Allow users to insert own secondary_events" ON public.secondary_events FOR INSERT TO authenticated WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Allow admins to manage secondary_events" ON public.secondary_events FOR ALL TO authenticated USING (public.is_admin());
+
+DROP POLICY IF EXISTS "Allow users to view own higher_secondary_events" ON public.higher_secondary_events;
+DROP POLICY IF EXISTS "Allow users to insert own higher_secondary_events" ON public.higher_secondary_events;
+DROP POLICY IF EXISTS "Allow admins to manage higher_secondary_events" ON public.higher_secondary_events;
+CREATE POLICY "Allow users to view own higher_secondary_events" ON public.higher_secondary_events FOR SELECT TO authenticated USING (auth.uid() = user_id);
+CREATE POLICY "Allow users to insert own higher_secondary_events" ON public.higher_secondary_events FOR INSERT TO authenticated WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Allow admins to manage higher_secondary_events" ON public.higher_secondary_events FOR ALL TO authenticated USING (public.is_admin());
+
+-- ==========================================
+-- 10. System Settings Table
+-- ==========================================
+CREATE TABLE IF NOT EXISTS public.system_settings (
+    key TEXT PRIMARY KEY,
+    value JSONB NOT NULL,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+-- Trigger for system_settings updated_at
+DROP TRIGGER IF EXISTS on_system_settings_updated ON public.system_settings;
+CREATE TRIGGER on_system_settings_updated 
+  BEFORE UPDATE ON public.system_settings 
+  FOR EACH ROW EXECUTE FUNCTION handle_updated_at();
+
+-- Insert initial values for system settings if not exists
+INSERT INTO public.system_settings (key, value) 
+VALUES ('event_registration_enabled', 'true'::jsonb)
+ON CONFLICT (key) DO NOTHING;
+
+INSERT INTO public.system_settings (key, value)
+VALUES (
+  'event_registration_config', 
+  '{
+    "formDescription": "Specify the category format. Standard events are priced at 50tk each. Select all to enjoy premium package bundles.",
+    "perEventPriceSolo": 50,
+    "allEventsSoloPriceGeneral": 100,
+    "allEventsSoloPriceMember": 50,
+    "bkashNumber": "01712345678",
+    "soloEvents": [
+      "Math Olympiad",
+      "IQ",
+      "Probability Pressure",
+      "Code Break",
+      "Human Calculator",
+      "Calc Bee",
+      "Geo Dash",
+      "Rubik''s Cube",
+      "Sudoku",
+      "Cryptomania",
+      "Principia",
+      "Math Relay"
+    ],
+    "teamEvents": [
+      {
+        "name": "Tic-Tac-Toe",
+        "price": 300,
+        "memberCount": 3,
+        "eligibleCategories": "primary_junior",
+        "description": "Class 3 to 8 (Primary & Junior) Team Showdown. Includes 3 members."
+      },
+      {
+        "name": "Escape Room",
+        "price": 200,
+        "memberCount": 2,
+        "eligibleCategories": "secondary_higher_secondary",
+        "description": "Class 9 to 12 (Secondary & Higher Secondary) strategic room puzzles. Includes 2 members."
+      }
+    ]
+  }'::jsonb
+)
+ON CONFLICT (key) DO NOTHING;
+
+-- Enable RLS
+ALTER TABLE public.system_settings ENABLE ROW LEVEL SECURITY;
+
+-- Policies for system settings
+DROP POLICY IF EXISTS "Allow public read access to system settings" ON public.system_settings;
+CREATE POLICY "Allow public read access to system settings" ON public.system_settings FOR SELECT USING (true);
+
+DROP POLICY IF EXISTS "Allow admins to insert/update system settings" ON public.system_settings;
+CREATE POLICY "Allow admins to insert/update system settings" ON public.system_settings FOR ALL TO authenticated USING (
+    EXISTS (SELECT 1 FROM public.profiles WHERE profiles.id = auth.uid() AND (profiles.role = 'admin' OR profiles.role = 'super_admin'))
+);
 
 -- STORAGE BUCKETS (Run these in the SQL Editor if buckets are missing)
 -- NOTE: Supabase storage buckets cannot always be created via public SQL schema commands depending on permissions.

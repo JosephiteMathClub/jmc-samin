@@ -19,11 +19,22 @@ export const Agenda: React.FC<AgendaProps> = ({ home }) => {
   ];
 
   return (
-    <section id="agenda" className="py-32 md:py-64 relative overflow-hidden">
-      {/* Decorative background elements */}
-      <div className="absolute top-0 right-0 w-[50vw] h-[50vw] bg-[var(--c-5-start)]/5 blur-[120px] rounded-full pointer-events-none" />
+    <section 
+      id="agenda" 
+      className="py-32 md:py-64 relative overflow-hidden border-b border-white/[0.03] premium-3d-bg"
+      style={{
+        '--bg-section-color': '#020309',
+        '--bg-dot-color': 'rgba(43, 50, 178, 0.25)',
+        '--bg-grid-line-color': 'rgba(43, 50, 178, 0.018)',
+        '--bg-dot-spacing': '24px',
+        '--bg-grid-size': '96px',
+      } as React.CSSProperties}
+    >
+      {/* Dynamic, High-End Section-Specific Glows */}
+      <div className="premium-glow-orb top-[5%] right-[5%] w-[40vw] h-[40vw] bg-[var(--c-5-start)]" style={{ '--glow-opacity': 0.1 } as React.CSSProperties} />
+      <div className="premium-glow-orb bottom-[5%] left-[5%] w-[40vw] h-[40vw] bg-[var(--c-4-start)]" style={{ '--glow-opacity': 0.08 } as React.CSSProperties} />
       
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         <Reveal direction="up" className="mb-32">
           <div className="inline-block px-4 py-1.5 mb-8 rounded-full bg-[var(--c-5-start)]/10 text-[var(--c-5-start)] text-[10px] font-mono font-black tracking-[0.5em] uppercase border border-[var(--c-5-start)]/20 shadow-[0_0_20px_rgba(106,48,147,0.1)]">
             {home?.agendaTagline || "OUR_MISSION_SCOPE"}

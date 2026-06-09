@@ -51,24 +51,28 @@ export function ExpandableEventCards({ events, shouldReduceGfx }: { events: any[
       </AnimatePresence>
       <AnimatePresence>
         {active && typeof active === "object" ? (
-          <div className="fixed inset-0 grid place-items-center z-[1000] p-4 sm:p-0 overflow-y-auto pt-24 pb-12">
+          <div 
+            className="fixed inset-0 flex justify-center items-start overflow-y-auto z-[1000] p-4 md:p-8 pt-10 pb-12"
+            data-lenis-prevent
+          >
+            {/* Fixed Close Button placed in the viewport top right to never scroll out of sight */}
+            <motion.button
+              key={`button-${active.title}-${id}`}
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.8, transition: { duration: 0.1 } }}
+              className="fixed top-4 right-4 sm:top-6 sm:right-6 md:top-8 md:right-8 z-[1150] flex items-center justify-center bg-black/75 hover:bg-black/95 backdrop-blur-md rounded-full h-12 w-12 border border-white/20 text-white transition-all shadow-2xl hover:scale-110 active:scale-95 group cursor-pointer"
+              onClick={() => setActive(null)}
+              title="Close Event Details"
+            >
+              <X className="w-6 h-6 group-hover:rotate-90 transition-transform duration-300" />
+            </motion.button>
+
             <motion.div
               layoutId={`card-${active.title}-${id}`}
               ref={ref}
-              className="w-full max-w-[700px] h-fit flex flex-col bg-[#050505] border border-white/10 rounded-[2.5rem] overflow-hidden shadow-2xl relative"
+              className="w-full max-w-[700px] my-8 md:my-16 h-fit flex flex-col bg-[#050505] border border-white/10 rounded-[2.5rem] overflow-hidden shadow-2xl relative"
             >
-              <motion.button
-                key={`button-${active.title}-${id}`}
-                layout
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0, transition: { duration: 0.05 } }}
-                className="flex absolute top-6 right-6 z-[1110] items-center justify-center bg-white/10 backdrop-blur-3xl rounded-full h-12 w-12 border border-white/20 text-white hover:bg-white/20 transition-all shadow-2xl group"
-                onClick={() => setActive(null)}
-              >
-                <X className="w-6 h-6 group-hover:scale-110 transition-transform" />
-              </motion.button>
-              
               <motion.div layoutId={`image-${active.title}-${id}`} className="relative h-72 sm:h-96 w-full shrink-0">
                 <Image
                   fill
@@ -110,10 +114,8 @@ export function ExpandableEventCards({ events, shouldReduceGfx }: { events: any[
                     {active.buttonText || 'Secure Seat'}
                   </motion.a>
                 </div>
-                <div 
-                  className="p-6 md:p-10 relative flex-1 overflow-y-auto overscroll-contain bg-[#0a0a0a]"
-                  data-lenis-prevent
-                >
+                {/* Scroll container logic changed so entire card flows naturally together */}
+                <div className="p-6 md:p-10 relative bg-[#0a0a0a]">
                   <motion.div
                     layout
                     initial={{ opacity: 0 }}

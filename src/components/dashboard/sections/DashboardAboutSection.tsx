@@ -81,7 +81,7 @@ const DashboardAboutSectionComponent: React.FC<DashboardAboutSectionProps> = ({
                   <div key={i} className="p-4 rounded-xl bg-white/5 border border-white/10 relative group">
                     <button 
                       onClick={() => removeListItem('stats', i)}
-                      className="absolute top-2 right-2 p-1 text-zinc-600 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all"
+                      className="absolute top-2 right-2 z-30 p-1.5 text-zinc-500 hover:text-red-500 hover:bg-red-500/10 rounded-full opacity-0 group-hover:opacity-100 transition-all hover:scale-110"
                     >
                       <Trash2 className="w-3 h-3" />
                     </button>
@@ -107,7 +107,7 @@ const DashboardAboutSectionComponent: React.FC<DashboardAboutSectionProps> = ({
                   <div key={i} className="p-4 rounded-xl bg-white/5 border border-white/10 relative group">
                     <button 
                       onClick={() => removeListItem('objectives', i)}
-                      className="absolute top-2 right-2 p-1 text-zinc-600 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all"
+                      className="absolute top-2 right-2 z-30 p-1.5 text-zinc-500 hover:text-red-500 hover:bg-red-500/10 rounded-full opacity-0 group-hover:opacity-100 transition-all hover:scale-110"
                     >
                       <Trash2 className="w-3 h-3" />
                     </button>
@@ -155,7 +155,7 @@ const DashboardAboutSectionComponent: React.FC<DashboardAboutSectionProps> = ({
                   <div key={i} className="p-4 rounded-xl bg-white/5 border border-white/10 relative group">
                     <button 
                       onClick={() => removeListItem('visionSteps', i)}
-                      className="absolute top-2 right-2 p-1 text-zinc-600 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all"
+                      className="absolute top-2 right-2 z-30 p-1.5 text-zinc-500 hover:text-red-500 hover:bg-red-500/10 rounded-full opacity-0 group-hover:opacity-100 transition-all hover:scale-110"
                     >
                       <Trash2 className="w-3 h-3" />
                     </button>

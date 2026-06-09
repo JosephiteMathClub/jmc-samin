@@ -49,6 +49,7 @@ interface DashboardEcMemberManagementSectionProps {
   uploading: string | null;
   shouldReduceGfx: boolean;
   isDeletingMember: boolean;
+  isSuperAdmin?: boolean;
 }
 
 export const DashboardEcMemberManagementSection: React.FC<DashboardEcMemberManagementSectionProps> = ({
@@ -62,7 +63,8 @@ export const DashboardEcMemberManagementSection: React.FC<DashboardEcMemberManag
   handleMemberPhotoUpload,
   uploading,
   shouldReduceGfx,
-  isDeletingMember
+  isDeletingMember,
+  isSuperAdmin = false
 }) => {
   const [memberSearch, setMemberSearch] = useState('');
   const [memberFilter, setMemberFilter] = useState('all'); // Filter status
@@ -674,7 +676,7 @@ export const DashboardEcMemberManagementSection: React.FC<DashboardEcMemberManag
                     <th className="py-4 px-4 text-[10px] font-bold uppercase tracking-widest text-zinc-500">Designation</th>
                     <th className="py-4 px-4 text-[10px] font-bold uppercase tracking-widest text-zinc-500">Roll No.</th>
                     <th className="py-4 px-4 text-[10px] font-bold uppercase tracking-widest text-zinc-500">Status</th>
-                    <th className="py-4 px-4 text-[10px] font-bold uppercase tracking-widest text-zinc-500 text-right">Options</th>
+                    <th className="py-4 pr-8 pl-4 text-[10px] font-bold uppercase tracking-widest text-zinc-500 text-right">Options</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/5">
@@ -752,15 +754,17 @@ export const DashboardEcMemberManagementSection: React.FC<DashboardEcMemberManag
                             <span className="text-[8px] text-zinc-650 uppercase tracking-tight">{m.payment_method}</span>
                           </div>
                         </td>
-                        <td className="py-4 px-4 text-right">
+                        <td className="py-4 pr-8 pl-4 text-right">
                           <div className="flex items-center justify-end gap-2 text-right">
                             <button
                               onClick={() => toggleVerified(m.id, m.verified)}
+                              disabled={m.verified === 'yes' && !isSuperAdmin}
                               className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all ${
                                 m.verified === 'yes'
-                                  ? 'bg-red-500/10 text-red-500 hover:bg-red-500/20'
+                                  ? (isSuperAdmin ? 'bg-red-500/10 text-red-500 hover:bg-red-500/20' : 'bg-green-500/5 text-zinc-500 cursor-not-allowed opacity-50')
                                   : 'bg-green-500/10 text-green-500 hover:bg-green-500/20'
                               }`}
+                              title={m.verified === 'yes' && !isSuperAdmin ? "Only Super Admins can deactivate/unverify officers" : ""}
                             >
                               {m.verified === 'yes' ? 'Deactivate' : 'Verify'}
                             </button>
@@ -775,7 +779,7 @@ export const DashboardEcMemberManagementSection: React.FC<DashboardEcMemberManag
                             <button
                               onClick={() => setMemberToDelete(m)}
                               disabled={isDeletingMember}
-                              className="p-1.5 bg-red-500/10 text-red-500 rounded-lg hover:bg-red-500/20 transition-all opacity-40 hover:opacity-100 disabled:opacity-50"
+                              className="p-2.5 bg-red-500/10 text-red-500 rounded-lg hover:bg-red-500/20 hover:scale-[1.08] transition-all opacity-60 hover:opacity-100 disabled:opacity-50 flex items-center justify-center cursor-pointer"
                               title="Remove EC officer"
                             >
                               <Trash2 className="w-4 h-4" />
@@ -858,11 +862,13 @@ export const DashboardEcMemberManagementSection: React.FC<DashboardEcMemberManag
                     <div className="flex gap-2 pt-4 border-t border-white/5">
                       <button
                         onClick={() => toggleVerified(m.id, m.verified)}
+                        disabled={m.verified === 'yes' && !isSuperAdmin}
                         className={`flex-1 py-3.5 rounded-xl text-[10px] font-bold uppercase tracking-widest text-center transition-all ${
                           m.verified === 'yes'
-                            ? 'bg-red-500/10 border border-red-500/20 text-red-550'
+                            ? (isSuperAdmin ? 'bg-red-500/10 border border-red-500/20 text-red-550' : 'bg-green-500/5 text-zinc-500 cursor-not-allowed opacity-50 border border-white/5')
                             : 'bg-green-500/10 border border-green-500/20 text-green-550'
                         }`}
+                        title={m.verified === 'yes' && !isSuperAdmin ? "Only Super Admins can deactivate/unverify officers" : ""}
                       >
                         {m.verified === 'yes' ? 'Deactivate' : 'Verify Officer'}
                       </button>

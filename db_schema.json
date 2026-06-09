@@ -1,0 +1,4110 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "description": "",
+    "title": "standard public schema",
+    "version": "14.5"
+  },
+  "host": "ikciatrploqznijspyuk.supabase.co:443",
+  "basePath": "/",
+  "schemes": [
+    "https"
+  ],
+  "consumes": [
+    "application/json",
+    "application/vnd.pgrst.object+json;nulls=stripped",
+    "application/vnd.pgrst.object+json",
+    "text/csv"
+  ],
+  "produces": [
+    "application/json",
+    "application/vnd.pgrst.object+json;nulls=stripped",
+    "application/vnd.pgrst.object+json",
+    "text/csv"
+  ],
+  "paths": {
+    "/": {
+      "get": {
+        "produces": [
+          "application/openapi+json",
+          "application/json"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "summary": "OpenAPI description (this document)",
+        "tags": [
+          "Introspection"
+        ]
+      }
+    },
+    "/support_tickets": {
+      "get": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.support_tickets.id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.support_tickets.user_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.support_tickets.user_email"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.support_tickets.user_name"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.support_tickets.subject"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.support_tickets.message"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.support_tickets.error_context"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.support_tickets.status"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.support_tickets.admin_reply"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.support_tickets.created_at"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.support_tickets.updated_at"
+          },
+          {
+            "$ref": "#/parameters/select"
+          },
+          {
+            "$ref": "#/parameters/order"
+          },
+          {
+            "$ref": "#/parameters/range"
+          },
+          {
+            "$ref": "#/parameters/rangeUnit"
+          },
+          {
+            "$ref": "#/parameters/offset"
+          },
+          {
+            "$ref": "#/parameters/limit"
+          },
+          {
+            "$ref": "#/parameters/preferCount"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "items": {
+                "$ref": "#/definitions/support_tickets"
+              },
+              "type": "array"
+            }
+          },
+          "206": {
+            "description": "Partial Content"
+          }
+        },
+        "tags": [
+          "support_tickets"
+        ]
+      },
+      "post": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/body.support_tickets"
+          },
+          {
+            "$ref": "#/parameters/select"
+          },
+          {
+            "$ref": "#/parameters/preferPost"
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created"
+          }
+        },
+        "tags": [
+          "support_tickets"
+        ]
+      },
+      "delete": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.support_tickets.id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.support_tickets.user_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.support_tickets.user_email"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.support_tickets.user_name"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.support_tickets.subject"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.support_tickets.message"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.support_tickets.error_context"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.support_tickets.status"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.support_tickets.admin_reply"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.support_tickets.created_at"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.support_tickets.updated_at"
+          },
+          {
+            "$ref": "#/parameters/preferReturn"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        },
+        "tags": [
+          "support_tickets"
+        ]
+      },
+      "patch": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.support_tickets.id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.support_tickets.user_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.support_tickets.user_email"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.support_tickets.user_name"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.support_tickets.subject"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.support_tickets.message"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.support_tickets.error_context"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.support_tickets.status"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.support_tickets.admin_reply"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.support_tickets.created_at"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.support_tickets.updated_at"
+          },
+          {
+            "$ref": "#/parameters/body.support_tickets"
+          },
+          {
+            "$ref": "#/parameters/preferReturn"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        },
+        "tags": [
+          "support_tickets"
+        ]
+      }
+    },
+    "/site_content": {
+      "get": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.site_content.id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.site_content.data"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.site_content.updated_at"
+          },
+          {
+            "$ref": "#/parameters/select"
+          },
+          {
+            "$ref": "#/parameters/order"
+          },
+          {
+            "$ref": "#/parameters/range"
+          },
+          {
+            "$ref": "#/parameters/rangeUnit"
+          },
+          {
+            "$ref": "#/parameters/offset"
+          },
+          {
+            "$ref": "#/parameters/limit"
+          },
+          {
+            "$ref": "#/parameters/preferCount"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "items": {
+                "$ref": "#/definitions/site_content"
+              },
+              "type": "array"
+            }
+          },
+          "206": {
+            "description": "Partial Content"
+          }
+        },
+        "tags": [
+          "site_content"
+        ]
+      },
+      "post": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/body.site_content"
+          },
+          {
+            "$ref": "#/parameters/select"
+          },
+          {
+            "$ref": "#/parameters/preferPost"
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created"
+          }
+        },
+        "tags": [
+          "site_content"
+        ]
+      },
+      "delete": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.site_content.id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.site_content.data"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.site_content.updated_at"
+          },
+          {
+            "$ref": "#/parameters/preferReturn"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        },
+        "tags": [
+          "site_content"
+        ]
+      },
+      "patch": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.site_content.id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.site_content.data"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.site_content.updated_at"
+          },
+          {
+            "$ref": "#/parameters/body.site_content"
+          },
+          {
+            "$ref": "#/parameters/preferReturn"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        },
+        "tags": [
+          "site_content"
+        ]
+      }
+    },
+    "/profiles": {
+      "get": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.profiles.id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.profiles.role"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.profiles.full_name"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.profiles.updated_at"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.profiles.email"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.profiles.avatar_url"
+          },
+          {
+            "$ref": "#/parameters/select"
+          },
+          {
+            "$ref": "#/parameters/order"
+          },
+          {
+            "$ref": "#/parameters/range"
+          },
+          {
+            "$ref": "#/parameters/rangeUnit"
+          },
+          {
+            "$ref": "#/parameters/offset"
+          },
+          {
+            "$ref": "#/parameters/limit"
+          },
+          {
+            "$ref": "#/parameters/preferCount"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "items": {
+                "$ref": "#/definitions/profiles"
+              },
+              "type": "array"
+            }
+          },
+          "206": {
+            "description": "Partial Content"
+          }
+        },
+        "tags": [
+          "profiles"
+        ]
+      },
+      "post": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/body.profiles"
+          },
+          {
+            "$ref": "#/parameters/select"
+          },
+          {
+            "$ref": "#/parameters/preferPost"
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created"
+          }
+        },
+        "tags": [
+          "profiles"
+        ]
+      },
+      "delete": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.profiles.id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.profiles.role"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.profiles.full_name"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.profiles.updated_at"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.profiles.email"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.profiles.avatar_url"
+          },
+          {
+            "$ref": "#/parameters/preferReturn"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        },
+        "tags": [
+          "profiles"
+        ]
+      },
+      "patch": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.profiles.id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.profiles.role"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.profiles.full_name"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.profiles.updated_at"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.profiles.email"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.profiles.avatar_url"
+          },
+          {
+            "$ref": "#/parameters/body.profiles"
+          },
+          {
+            "$ref": "#/parameters/preferReturn"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        },
+        "tags": [
+          "profiles"
+        ]
+      }
+    },
+    "/primary_events": {
+      "get": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.primary_events.id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.primary_events.full_name"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.primary_events.class"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.primary_events.section"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.primary_events.roll"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.primary_events.phone"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.primary_events.email"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.primary_events.events"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.primary_events.amount"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.primary_events.payment_method"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.primary_events.trxnid"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.primary_events.bkash_number"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.primary_events.verified"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.primary_events.created_at"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.primary_events.updated_at"
+          },
+          {
+            "$ref": "#/parameters/select"
+          },
+          {
+            "$ref": "#/parameters/order"
+          },
+          {
+            "$ref": "#/parameters/range"
+          },
+          {
+            "$ref": "#/parameters/rangeUnit"
+          },
+          {
+            "$ref": "#/parameters/offset"
+          },
+          {
+            "$ref": "#/parameters/limit"
+          },
+          {
+            "$ref": "#/parameters/preferCount"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "items": {
+                "$ref": "#/definitions/primary_events"
+              },
+              "type": "array"
+            }
+          },
+          "206": {
+            "description": "Partial Content"
+          }
+        },
+        "tags": [
+          "primary_events"
+        ]
+      },
+      "post": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/body.primary_events"
+          },
+          {
+            "$ref": "#/parameters/select"
+          },
+          {
+            "$ref": "#/parameters/preferPost"
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created"
+          }
+        },
+        "tags": [
+          "primary_events"
+        ]
+      },
+      "delete": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.primary_events.id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.primary_events.full_name"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.primary_events.class"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.primary_events.section"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.primary_events.roll"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.primary_events.phone"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.primary_events.email"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.primary_events.events"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.primary_events.amount"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.primary_events.payment_method"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.primary_events.trxnid"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.primary_events.bkash_number"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.primary_events.verified"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.primary_events.created_at"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.primary_events.updated_at"
+          },
+          {
+            "$ref": "#/parameters/preferReturn"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        },
+        "tags": [
+          "primary_events"
+        ]
+      },
+      "patch": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.primary_events.id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.primary_events.full_name"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.primary_events.class"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.primary_events.section"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.primary_events.roll"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.primary_events.phone"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.primary_events.email"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.primary_events.events"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.primary_events.amount"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.primary_events.payment_method"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.primary_events.trxnid"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.primary_events.bkash_number"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.primary_events.verified"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.primary_events.created_at"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.primary_events.updated_at"
+          },
+          {
+            "$ref": "#/parameters/body.primary_events"
+          },
+          {
+            "$ref": "#/parameters/preferReturn"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        },
+        "tags": [
+          "primary_events"
+        ]
+      }
+    },
+    "/ec_member": {
+      "get": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.ec_member.id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.ec_member.full_name"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.ec_member.email"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.ec_member.phone"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.ec_member.school"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.ec_member.class"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.ec_member.section"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.ec_member.roll"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.ec_member.photo_url"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.ec_member.payment_method"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.ec_member.trxnid"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.ec_member.bkash_number"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.ec_member.verified"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.ec_member.member_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.ec_member.is_ec"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.ec_member.created_at"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.ec_member.updated_at"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.ec_member.email_address"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.ec_member.department"
+          },
+          {
+            "$ref": "#/parameters/select"
+          },
+          {
+            "$ref": "#/parameters/order"
+          },
+          {
+            "$ref": "#/parameters/range"
+          },
+          {
+            "$ref": "#/parameters/rangeUnit"
+          },
+          {
+            "$ref": "#/parameters/offset"
+          },
+          {
+            "$ref": "#/parameters/limit"
+          },
+          {
+            "$ref": "#/parameters/preferCount"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "items": {
+                "$ref": "#/definitions/ec_member"
+              },
+              "type": "array"
+            }
+          },
+          "206": {
+            "description": "Partial Content"
+          }
+        },
+        "tags": [
+          "ec_member"
+        ]
+      },
+      "post": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/body.ec_member"
+          },
+          {
+            "$ref": "#/parameters/select"
+          },
+          {
+            "$ref": "#/parameters/preferPost"
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created"
+          }
+        },
+        "tags": [
+          "ec_member"
+        ]
+      },
+      "delete": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.ec_member.id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.ec_member.full_name"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.ec_member.email"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.ec_member.phone"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.ec_member.school"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.ec_member.class"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.ec_member.section"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.ec_member.roll"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.ec_member.photo_url"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.ec_member.payment_method"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.ec_member.trxnid"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.ec_member.bkash_number"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.ec_member.verified"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.ec_member.member_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.ec_member.is_ec"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.ec_member.created_at"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.ec_member.updated_at"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.ec_member.email_address"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.ec_member.department"
+          },
+          {
+            "$ref": "#/parameters/preferReturn"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        },
+        "tags": [
+          "ec_member"
+        ]
+      },
+      "patch": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.ec_member.id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.ec_member.full_name"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.ec_member.email"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.ec_member.phone"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.ec_member.school"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.ec_member.class"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.ec_member.section"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.ec_member.roll"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.ec_member.photo_url"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.ec_member.payment_method"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.ec_member.trxnid"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.ec_member.bkash_number"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.ec_member.verified"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.ec_member.member_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.ec_member.is_ec"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.ec_member.created_at"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.ec_member.updated_at"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.ec_member.email_address"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.ec_member.department"
+          },
+          {
+            "$ref": "#/parameters/body.ec_member"
+          },
+          {
+            "$ref": "#/parameters/preferReturn"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        },
+        "tags": [
+          "ec_member"
+        ]
+      }
+    },
+    "/secondary_events": {
+      "get": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.secondary_events.id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.secondary_events.full_name"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.secondary_events.class"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.secondary_events.section"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.secondary_events.roll"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.secondary_events.phone"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.secondary_events.email"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.secondary_events.events"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.secondary_events.amount"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.secondary_events.payment_method"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.secondary_events.trxnid"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.secondary_events.bkash_number"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.secondary_events.verified"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.secondary_events.created_at"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.secondary_events.updated_at"
+          },
+          {
+            "$ref": "#/parameters/select"
+          },
+          {
+            "$ref": "#/parameters/order"
+          },
+          {
+            "$ref": "#/parameters/range"
+          },
+          {
+            "$ref": "#/parameters/rangeUnit"
+          },
+          {
+            "$ref": "#/parameters/offset"
+          },
+          {
+            "$ref": "#/parameters/limit"
+          },
+          {
+            "$ref": "#/parameters/preferCount"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "items": {
+                "$ref": "#/definitions/secondary_events"
+              },
+              "type": "array"
+            }
+          },
+          "206": {
+            "description": "Partial Content"
+          }
+        },
+        "tags": [
+          "secondary_events"
+        ]
+      },
+      "post": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/body.secondary_events"
+          },
+          {
+            "$ref": "#/parameters/select"
+          },
+          {
+            "$ref": "#/parameters/preferPost"
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created"
+          }
+        },
+        "tags": [
+          "secondary_events"
+        ]
+      },
+      "delete": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.secondary_events.id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.secondary_events.full_name"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.secondary_events.class"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.secondary_events.section"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.secondary_events.roll"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.secondary_events.phone"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.secondary_events.email"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.secondary_events.events"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.secondary_events.amount"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.secondary_events.payment_method"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.secondary_events.trxnid"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.secondary_events.bkash_number"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.secondary_events.verified"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.secondary_events.created_at"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.secondary_events.updated_at"
+          },
+          {
+            "$ref": "#/parameters/preferReturn"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        },
+        "tags": [
+          "secondary_events"
+        ]
+      },
+      "patch": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.secondary_events.id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.secondary_events.full_name"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.secondary_events.class"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.secondary_events.section"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.secondary_events.roll"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.secondary_events.phone"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.secondary_events.email"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.secondary_events.events"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.secondary_events.amount"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.secondary_events.payment_method"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.secondary_events.trxnid"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.secondary_events.bkash_number"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.secondary_events.verified"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.secondary_events.created_at"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.secondary_events.updated_at"
+          },
+          {
+            "$ref": "#/parameters/body.secondary_events"
+          },
+          {
+            "$ref": "#/parameters/preferReturn"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        },
+        "tags": [
+          "secondary_events"
+        ]
+      }
+    },
+    "/higher_secondary_events": {
+      "get": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.higher_secondary_events.id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.higher_secondary_events.full_name"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.higher_secondary_events.class"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.higher_secondary_events.section"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.higher_secondary_events.roll"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.higher_secondary_events.phone"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.higher_secondary_events.email"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.higher_secondary_events.events"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.higher_secondary_events.amount"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.higher_secondary_events.payment_method"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.higher_secondary_events.trxnid"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.higher_secondary_events.bkash_number"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.higher_secondary_events.verified"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.higher_secondary_events.created_at"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.higher_secondary_events.updated_at"
+          },
+          {
+            "$ref": "#/parameters/select"
+          },
+          {
+            "$ref": "#/parameters/order"
+          },
+          {
+            "$ref": "#/parameters/range"
+          },
+          {
+            "$ref": "#/parameters/rangeUnit"
+          },
+          {
+            "$ref": "#/parameters/offset"
+          },
+          {
+            "$ref": "#/parameters/limit"
+          },
+          {
+            "$ref": "#/parameters/preferCount"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "items": {
+                "$ref": "#/definitions/higher_secondary_events"
+              },
+              "type": "array"
+            }
+          },
+          "206": {
+            "description": "Partial Content"
+          }
+        },
+        "tags": [
+          "higher_secondary_events"
+        ]
+      },
+      "post": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/body.higher_secondary_events"
+          },
+          {
+            "$ref": "#/parameters/select"
+          },
+          {
+            "$ref": "#/parameters/preferPost"
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created"
+          }
+        },
+        "tags": [
+          "higher_secondary_events"
+        ]
+      },
+      "delete": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.higher_secondary_events.id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.higher_secondary_events.full_name"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.higher_secondary_events.class"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.higher_secondary_events.section"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.higher_secondary_events.roll"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.higher_secondary_events.phone"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.higher_secondary_events.email"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.higher_secondary_events.events"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.higher_secondary_events.amount"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.higher_secondary_events.payment_method"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.higher_secondary_events.trxnid"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.higher_secondary_events.bkash_number"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.higher_secondary_events.verified"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.higher_secondary_events.created_at"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.higher_secondary_events.updated_at"
+          },
+          {
+            "$ref": "#/parameters/preferReturn"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        },
+        "tags": [
+          "higher_secondary_events"
+        ]
+      },
+      "patch": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.higher_secondary_events.id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.higher_secondary_events.full_name"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.higher_secondary_events.class"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.higher_secondary_events.section"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.higher_secondary_events.roll"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.higher_secondary_events.phone"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.higher_secondary_events.email"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.higher_secondary_events.events"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.higher_secondary_events.amount"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.higher_secondary_events.payment_method"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.higher_secondary_events.trxnid"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.higher_secondary_events.bkash_number"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.higher_secondary_events.verified"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.higher_secondary_events.created_at"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.higher_secondary_events.updated_at"
+          },
+          {
+            "$ref": "#/parameters/body.higher_secondary_events"
+          },
+          {
+            "$ref": "#/parameters/preferReturn"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        },
+        "tags": [
+          "higher_secondary_events"
+        ]
+      }
+    },
+    "/member": {
+      "get": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.member.id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.member.full_name"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.member.email"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.member.email_address"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.member.phone"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.member.school"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.member.class"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.member.section"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.member.roll"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.member.photo_url"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.member.payment_method"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.member.trxnid"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.member.bkash_number"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.member.verified"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.member.member_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.member.created_at"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.member.updated_at"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.member.is_ec"
+          },
+          {
+            "$ref": "#/parameters/select"
+          },
+          {
+            "$ref": "#/parameters/order"
+          },
+          {
+            "$ref": "#/parameters/range"
+          },
+          {
+            "$ref": "#/parameters/rangeUnit"
+          },
+          {
+            "$ref": "#/parameters/offset"
+          },
+          {
+            "$ref": "#/parameters/limit"
+          },
+          {
+            "$ref": "#/parameters/preferCount"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "items": {
+                "$ref": "#/definitions/member"
+              },
+              "type": "array"
+            }
+          },
+          "206": {
+            "description": "Partial Content"
+          }
+        },
+        "tags": [
+          "member"
+        ]
+      },
+      "post": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/body.member"
+          },
+          {
+            "$ref": "#/parameters/select"
+          },
+          {
+            "$ref": "#/parameters/preferPost"
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created"
+          }
+        },
+        "tags": [
+          "member"
+        ]
+      },
+      "delete": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.member.id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.member.full_name"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.member.email"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.member.email_address"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.member.phone"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.member.school"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.member.class"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.member.section"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.member.roll"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.member.photo_url"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.member.payment_method"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.member.trxnid"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.member.bkash_number"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.member.verified"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.member.member_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.member.created_at"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.member.updated_at"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.member.is_ec"
+          },
+          {
+            "$ref": "#/parameters/preferReturn"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        },
+        "tags": [
+          "member"
+        ]
+      },
+      "patch": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.member.id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.member.full_name"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.member.email"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.member.email_address"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.member.phone"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.member.school"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.member.class"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.member.section"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.member.roll"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.member.photo_url"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.member.payment_method"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.member.trxnid"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.member.bkash_number"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.member.verified"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.member.member_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.member.created_at"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.member.updated_at"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.member.is_ec"
+          },
+          {
+            "$ref": "#/parameters/body.member"
+          },
+          {
+            "$ref": "#/parameters/preferReturn"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        },
+        "tags": [
+          "member"
+        ]
+      }
+    },
+    "/junior_events": {
+      "get": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.junior_events.id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.junior_events.full_name"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.junior_events.class"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.junior_events.section"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.junior_events.roll"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.junior_events.phone"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.junior_events.email"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.junior_events.events"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.junior_events.amount"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.junior_events.payment_method"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.junior_events.trxnid"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.junior_events.bkash_number"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.junior_events.verified"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.junior_events.created_at"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.junior_events.updated_at"
+          },
+          {
+            "$ref": "#/parameters/select"
+          },
+          {
+            "$ref": "#/parameters/order"
+          },
+          {
+            "$ref": "#/parameters/range"
+          },
+          {
+            "$ref": "#/parameters/rangeUnit"
+          },
+          {
+            "$ref": "#/parameters/offset"
+          },
+          {
+            "$ref": "#/parameters/limit"
+          },
+          {
+            "$ref": "#/parameters/preferCount"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "items": {
+                "$ref": "#/definitions/junior_events"
+              },
+              "type": "array"
+            }
+          },
+          "206": {
+            "description": "Partial Content"
+          }
+        },
+        "tags": [
+          "junior_events"
+        ]
+      },
+      "post": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/body.junior_events"
+          },
+          {
+            "$ref": "#/parameters/select"
+          },
+          {
+            "$ref": "#/parameters/preferPost"
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created"
+          }
+        },
+        "tags": [
+          "junior_events"
+        ]
+      },
+      "delete": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.junior_events.id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.junior_events.full_name"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.junior_events.class"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.junior_events.section"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.junior_events.roll"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.junior_events.phone"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.junior_events.email"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.junior_events.events"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.junior_events.amount"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.junior_events.payment_method"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.junior_events.trxnid"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.junior_events.bkash_number"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.junior_events.verified"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.junior_events.created_at"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.junior_events.updated_at"
+          },
+          {
+            "$ref": "#/parameters/preferReturn"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        },
+        "tags": [
+          "junior_events"
+        ]
+      },
+      "patch": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.junior_events.id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.junior_events.full_name"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.junior_events.class"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.junior_events.section"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.junior_events.roll"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.junior_events.phone"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.junior_events.email"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.junior_events.events"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.junior_events.amount"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.junior_events.payment_method"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.junior_events.trxnid"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.junior_events.bkash_number"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.junior_events.verified"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.junior_events.created_at"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.junior_events.updated_at"
+          },
+          {
+            "$ref": "#/parameters/body.junior_events"
+          },
+          {
+            "$ref": "#/parameters/preferReturn"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        },
+        "tags": [
+          "junior_events"
+        ]
+      }
+    },
+    "/event_participation": {
+      "get": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.event_participation.id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.event_participation.member_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.event_participation.event_name"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.event_participation.category"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.event_participation.position"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.event_participation.created_at"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.event_participation.updated_at"
+          },
+          {
+            "$ref": "#/parameters/select"
+          },
+          {
+            "$ref": "#/parameters/order"
+          },
+          {
+            "$ref": "#/parameters/range"
+          },
+          {
+            "$ref": "#/parameters/rangeUnit"
+          },
+          {
+            "$ref": "#/parameters/offset"
+          },
+          {
+            "$ref": "#/parameters/limit"
+          },
+          {
+            "$ref": "#/parameters/preferCount"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "items": {
+                "$ref": "#/definitions/event_participation"
+              },
+              "type": "array"
+            }
+          },
+          "206": {
+            "description": "Partial Content"
+          }
+        },
+        "tags": [
+          "event_participation"
+        ]
+      },
+      "post": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/body.event_participation"
+          },
+          {
+            "$ref": "#/parameters/select"
+          },
+          {
+            "$ref": "#/parameters/preferPost"
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created"
+          }
+        },
+        "tags": [
+          "event_participation"
+        ]
+      },
+      "delete": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.event_participation.id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.event_participation.member_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.event_participation.event_name"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.event_participation.category"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.event_participation.position"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.event_participation.created_at"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.event_participation.updated_at"
+          },
+          {
+            "$ref": "#/parameters/preferReturn"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        },
+        "tags": [
+          "event_participation"
+        ]
+      },
+      "patch": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.event_participation.id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.event_participation.member_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.event_participation.event_name"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.event_participation.category"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.event_participation.position"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.event_participation.created_at"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.event_participation.updated_at"
+          },
+          {
+            "$ref": "#/parameters/body.event_participation"
+          },
+          {
+            "$ref": "#/parameters/preferReturn"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        },
+        "tags": [
+          "event_participation"
+        ]
+      }
+    },
+    "/admin_audit_logs": {
+      "get": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.admin_audit_logs.id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.admin_audit_logs.admin_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.admin_audit_logs.admin_email"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.admin_audit_logs.admin_name"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.admin_audit_logs.action_type"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.admin_audit_logs.target"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.admin_audit_logs.details"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.admin_audit_logs.created_at"
+          },
+          {
+            "$ref": "#/parameters/select"
+          },
+          {
+            "$ref": "#/parameters/order"
+          },
+          {
+            "$ref": "#/parameters/range"
+          },
+          {
+            "$ref": "#/parameters/rangeUnit"
+          },
+          {
+            "$ref": "#/parameters/offset"
+          },
+          {
+            "$ref": "#/parameters/limit"
+          },
+          {
+            "$ref": "#/parameters/preferCount"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "items": {
+                "$ref": "#/definitions/admin_audit_logs"
+              },
+              "type": "array"
+            }
+          },
+          "206": {
+            "description": "Partial Content"
+          }
+        },
+        "tags": [
+          "admin_audit_logs"
+        ]
+      },
+      "post": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/body.admin_audit_logs"
+          },
+          {
+            "$ref": "#/parameters/select"
+          },
+          {
+            "$ref": "#/parameters/preferPost"
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created"
+          }
+        },
+        "tags": [
+          "admin_audit_logs"
+        ]
+      },
+      "delete": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.admin_audit_logs.id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.admin_audit_logs.admin_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.admin_audit_logs.admin_email"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.admin_audit_logs.admin_name"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.admin_audit_logs.action_type"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.admin_audit_logs.target"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.admin_audit_logs.details"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.admin_audit_logs.created_at"
+          },
+          {
+            "$ref": "#/parameters/preferReturn"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        },
+        "tags": [
+          "admin_audit_logs"
+        ]
+      },
+      "patch": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.admin_audit_logs.id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.admin_audit_logs.admin_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.admin_audit_logs.admin_email"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.admin_audit_logs.admin_name"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.admin_audit_logs.action_type"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.admin_audit_logs.target"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.admin_audit_logs.details"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.admin_audit_logs.created_at"
+          },
+          {
+            "$ref": "#/parameters/body.admin_audit_logs"
+          },
+          {
+            "$ref": "#/parameters/preferReturn"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        },
+        "tags": [
+          "admin_audit_logs"
+        ]
+      }
+    },
+    "/rpc/is_admin": {
+      "post": {
+        "parameters": [
+          {
+            "in": "body",
+            "name": "args",
+            "required": true,
+            "schema": {
+              "type": "object"
+            }
+          },
+          {
+            "$ref": "#/parameters/preferParams"
+          }
+        ],
+        "produces": [
+          "application/json",
+          "application/vnd.pgrst.object+json;nulls=stripped",
+          "application/vnd.pgrst.object+json"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "tags": [
+          "(rpc) is_admin"
+        ]
+      }
+    },
+    "/rpc/rls_auto_enable": {
+      "post": {
+        "parameters": [
+          {
+            "in": "body",
+            "name": "args",
+            "required": true,
+            "schema": {
+              "type": "object"
+            }
+          },
+          {
+            "$ref": "#/parameters/preferParams"
+          }
+        ],
+        "produces": [
+          "application/json",
+          "application/vnd.pgrst.object+json;nulls=stripped",
+          "application/vnd.pgrst.object+json"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "tags": [
+          "(rpc) rls_auto_enable"
+        ]
+      }
+    },
+    "/rpc/is_super_admin": {
+      "post": {
+        "parameters": [
+          {
+            "in": "body",
+            "name": "args",
+            "required": true,
+            "schema": {
+              "type": "object"
+            }
+          },
+          {
+            "$ref": "#/parameters/preferParams"
+          }
+        ],
+        "produces": [
+          "application/json",
+          "application/vnd.pgrst.object+json;nulls=stripped",
+          "application/vnd.pgrst.object+json"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "tags": [
+          "(rpc) is_super_admin"
+        ]
+      }
+    }
+  },
+  "definitions": {
+    "support_tickets": {
+      "required": [
+        "id",
+        "message"
+      ],
+      "properties": {
+        "id": {
+          "default": "gen_random_uuid()",
+          "description": "Note:\nThis is a Primary Key.<pk/>",
+          "format": "uuid",
+          "type": "string"
+        },
+        "user_id": {
+          "format": "uuid",
+          "type": "string"
+        },
+        "user_email": {
+          "format": "text",
+          "type": "string"
+        },
+        "user_name": {
+          "format": "text",
+          "type": "string"
+        },
+        "subject": {
+          "default": "Technical Problem",
+          "format": "text",
+          "type": "string"
+        },
+        "message": {
+          "format": "text",
+          "type": "string"
+        },
+        "error_context": {
+          "format": "jsonb"
+        },
+        "status": {
+          "default": "open",
+          "format": "text",
+          "type": "string"
+        },
+        "admin_reply": {
+          "format": "text",
+          "type": "string"
+        },
+        "created_at": {
+          "default": "now()",
+          "format": "timestamp with time zone",
+          "type": "string"
+        },
+        "updated_at": {
+          "default": "now()",
+          "format": "timestamp with time zone",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "site_content": {
+      "required": [
+        "id",
+        "data"
+      ],
+      "properties": {
+        "id": {
+          "description": "Note:\nThis is a Primary Key.<pk/>",
+          "format": "text",
+          "type": "string"
+        },
+        "data": {
+          "format": "jsonb"
+        },
+        "updated_at": {
+          "default": "now()",
+          "format": "timestamp with time zone",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "profiles": {
+      "required": [
+        "id"
+      ],
+      "properties": {
+        "id": {
+          "description": "Note:\nThis is a Primary Key.<pk/>",
+          "format": "uuid",
+          "type": "string"
+        },
+        "role": {
+          "default": "member",
+          "format": "text",
+          "type": "string"
+        },
+        "full_name": {
+          "format": "text",
+          "type": "string"
+        },
+        "updated_at": {
+          "default": "now()",
+          "format": "timestamp with time zone",
+          "type": "string"
+        },
+        "email": {
+          "format": "text",
+          "type": "string"
+        },
+        "avatar_url": {
+          "format": "text",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "primary_events": {
+      "required": [
+        "id",
+        "full_name",
+        "class",
+        "section",
+        "roll",
+        "amount",
+        "payment_method",
+        "trxnid",
+        "bkash_number"
+      ],
+      "properties": {
+        "id": {
+          "default": "gen_random_uuid()",
+          "description": "Note:\nThis is a Primary Key.<pk/>",
+          "format": "uuid",
+          "type": "string"
+        },
+        "full_name": {
+          "format": "text",
+          "type": "string"
+        },
+        "class": {
+          "format": "text",
+          "type": "string"
+        },
+        "section": {
+          "format": "text",
+          "type": "string"
+        },
+        "roll": {
+          "format": "text",
+          "type": "string"
+        },
+        "phone": {
+          "format": "text",
+          "type": "string"
+        },
+        "email": {
+          "format": "text",
+          "type": "string"
+        },
+        "events": {
+          "format": "text[]",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "amount": {
+          "format": "integer",
+          "type": "integer"
+        },
+        "payment_method": {
+          "default": "bkash",
+          "format": "text",
+          "type": "string"
+        },
+        "trxnid": {
+          "format": "text",
+          "type": "string"
+        },
+        "bkash_number": {
+          "format": "text",
+          "type": "string"
+        },
+        "verified": {
+          "default": false,
+          "format": "boolean",
+          "type": "boolean"
+        },
+        "created_at": {
+          "default": "now()",
+          "format": "timestamp with time zone",
+          "type": "string"
+        },
+        "updated_at": {
+          "default": "now()",
+          "format": "timestamp with time zone",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "ec_member": {
+      "required": [
+        "id"
+      ],
+      "properties": {
+        "id": {
+          "description": "Note:\nThis is a Primary Key.<pk/>",
+          "format": "uuid",
+          "type": "string"
+        },
+        "full_name": {
+          "format": "text",
+          "type": "string"
+        },
+        "email": {
+          "format": "text",
+          "type": "string"
+        },
+        "phone": {
+          "format": "text",
+          "type": "string"
+        },
+        "school": {
+          "default": "St Joseph",
+          "format": "text",
+          "type": "string"
+        },
+        "class": {
+          "format": "text",
+          "type": "string"
+        },
+        "section": {
+          "format": "text",
+          "type": "string"
+        },
+        "roll": {
+          "format": "text",
+          "type": "string"
+        },
+        "photo_url": {
+          "format": "text",
+          "type": "string"
+        },
+        "payment_method": {
+          "format": "text",
+          "type": "string"
+        },
+        "trxnid": {
+          "format": "text",
+          "type": "string"
+        },
+        "bkash_number": {
+          "format": "text",
+          "type": "string"
+        },
+        "verified": {
+          "default": "no",
+          "format": "text",
+          "type": "string"
+        },
+        "member_id": {
+          "format": "text",
+          "type": "string"
+        },
+        "is_ec": {
+          "default": true,
+          "format": "boolean",
+          "type": "boolean"
+        },
+        "created_at": {
+          "default": "now()",
+          "format": "timestamp with time zone",
+          "type": "string"
+        },
+        "updated_at": {
+          "default": "now()",
+          "format": "timestamp with time zone",
+          "type": "string"
+        },
+        "email_address": {
+          "format": "text",
+          "type": "string"
+        },
+        "department": {
+          "format": "text",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "secondary_events": {
+      "required": [
+        "id",
+        "full_name",
+        "class",
+        "section",
+        "roll",
+        "amount",
+        "payment_method",
+        "trxnid",
+        "bkash_number"
+      ],
+      "properties": {
+        "id": {
+          "default": "gen_random_uuid()",
+          "description": "Note:\nThis is a Primary Key.<pk/>",
+          "format": "uuid",
+          "type": "string"
+        },
+        "full_name": {
+          "format": "text",
+          "type": "string"
+        },
+        "class": {
+          "format": "text",
+          "type": "string"
+        },
+        "section": {
+          "format": "text",
+          "type": "string"
+        },
+        "roll": {
+          "format": "text",
+          "type": "string"
+        },
+        "phone": {
+          "format": "text",
+          "type": "string"
+        },
+        "email": {
+          "format": "text",
+          "type": "string"
+        },
+        "events": {
+          "format": "text[]",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "amount": {
+          "format": "integer",
+          "type": "integer"
+        },
+        "payment_method": {
+          "default": "bkash",
+          "format": "text",
+          "type": "string"
+        },
+        "trxnid": {
+          "format": "text",
+          "type": "string"
+        },
+        "bkash_number": {
+          "format": "text",
+          "type": "string"
+        },
+        "verified": {
+          "default": false,
+          "format": "boolean",
+          "type": "boolean"
+        },
+        "created_at": {
+          "default": "now()",
+          "format": "timestamp with time zone",
+          "type": "string"
+        },
+        "updated_at": {
+          "default": "now()",
+          "format": "timestamp with time zone",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "higher_secondary_events": {
+      "required": [
+        "id",
+        "full_name",
+        "class",
+        "section",
+        "roll",
+        "amount",
+        "payment_method",
+        "trxnid",
+        "bkash_number"
+      ],
+      "properties": {
+        "id": {
+          "default": "gen_random_uuid()",
+          "description": "Note:\nThis is a Primary Key.<pk/>",
+          "format": "uuid",
+          "type": "string"
+        },
+        "full_name": {
+          "format": "text",
+          "type": "string"
+        },
+        "class": {
+          "format": "text",
+          "type": "string"
+        },
+        "section": {
+          "format": "text",
+          "type": "string"
+        },
+        "roll": {
+          "format": "text",
+          "type": "string"
+        },
+        "phone": {
+          "format": "text",
+          "type": "string"
+        },
+        "email": {
+          "format": "text",
+          "type": "string"
+        },
+        "events": {
+          "format": "text[]",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "amount": {
+          "format": "integer",
+          "type": "integer"
+        },
+        "payment_method": {
+          "default": "bkash",
+          "format": "text",
+          "type": "string"
+        },
+        "trxnid": {
+          "format": "text",
+          "type": "string"
+        },
+        "bkash_number": {
+          "format": "text",
+          "type": "string"
+        },
+        "verified": {
+          "default": false,
+          "format": "boolean",
+          "type": "boolean"
+        },
+        "created_at": {
+          "default": "now()",
+          "format": "timestamp with time zone",
+          "type": "string"
+        },
+        "updated_at": {
+          "default": "now()",
+          "format": "timestamp with time zone",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "member": {
+      "required": [
+        "id"
+      ],
+      "properties": {
+        "id": {
+          "description": "Note:\nThis is a Primary Key.<pk/>",
+          "format": "uuid",
+          "type": "string"
+        },
+        "full_name": {
+          "format": "text",
+          "type": "string"
+        },
+        "email": {
+          "format": "text",
+          "type": "string"
+        },
+        "email_address": {
+          "format": "text",
+          "type": "string"
+        },
+        "phone": {
+          "format": "text",
+          "type": "string"
+        },
+        "school": {
+          "format": "text",
+          "type": "string"
+        },
+        "class": {
+          "format": "text",
+          "type": "string"
+        },
+        "section": {
+          "format": "text",
+          "type": "string"
+        },
+        "roll": {
+          "format": "text",
+          "type": "string"
+        },
+        "photo_url": {
+          "format": "text",
+          "type": "string"
+        },
+        "payment_method": {
+          "format": "text",
+          "type": "string"
+        },
+        "trxnid": {
+          "format": "text",
+          "type": "string"
+        },
+        "bkash_number": {
+          "format": "text",
+          "type": "string"
+        },
+        "verified": {
+          "default": "no",
+          "format": "text",
+          "type": "string"
+        },
+        "member_id": {
+          "format": "text",
+          "type": "string"
+        },
+        "created_at": {
+          "default": "now()",
+          "format": "timestamp with time zone",
+          "type": "string"
+        },
+        "updated_at": {
+          "default": "now()",
+          "format": "timestamp with time zone",
+          "type": "string"
+        },
+        "is_ec": {
+          "default": false,
+          "format": "boolean",
+          "type": "boolean"
+        }
+      },
+      "type": "object"
+    },
+    "junior_events": {
+      "required": [
+        "id",
+        "full_name",
+        "class",
+        "section",
+        "roll",
+        "amount",
+        "payment_method",
+        "trxnid",
+        "bkash_number"
+      ],
+      "properties": {
+        "id": {
+          "default": "gen_random_uuid()",
+          "description": "Note:\nThis is a Primary Key.<pk/>",
+          "format": "uuid",
+          "type": "string"
+        },
+        "full_name": {
+          "format": "text",
+          "type": "string"
+        },
+        "class": {
+          "format": "text",
+          "type": "string"
+        },
+        "section": {
+          "format": "text",
+          "type": "string"
+        },
+        "roll": {
+          "format": "text",
+          "type": "string"
+        },
+        "phone": {
+          "format": "text",
+          "type": "string"
+        },
+        "email": {
+          "format": "text",
+          "type": "string"
+        },
+        "events": {
+          "format": "text[]",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "amount": {
+          "format": "integer",
+          "type": "integer"
+        },
+        "payment_method": {
+          "default": "bkash",
+          "format": "text",
+          "type": "string"
+        },
+        "trxnid": {
+          "format": "text",
+          "type": "string"
+        },
+        "bkash_number": {
+          "format": "text",
+          "type": "string"
+        },
+        "verified": {
+          "default": false,
+          "format": "boolean",
+          "type": "boolean"
+        },
+        "created_at": {
+          "default": "now()",
+          "format": "timestamp with time zone",
+          "type": "string"
+        },
+        "updated_at": {
+          "default": "now()",
+          "format": "timestamp with time zone",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "event_participation": {
+      "required": [
+        "id",
+        "member_id",
+        "event_name",
+        "category"
+      ],
+      "properties": {
+        "id": {
+          "default": "gen_random_uuid()",
+          "description": "Note:\nThis is a Primary Key.<pk/>",
+          "format": "uuid",
+          "type": "string"
+        },
+        "member_id": {
+          "description": "Note:\nThis is a Foreign Key to `member.member_id`.<fk table='member' column='member_id'/>",
+          "format": "text",
+          "type": "string"
+        },
+        "event_name": {
+          "format": "text",
+          "type": "string"
+        },
+        "category": {
+          "format": "text",
+          "type": "string"
+        },
+        "position": {
+          "format": "integer",
+          "type": "integer"
+        },
+        "created_at": {
+          "default": "now()",
+          "format": "timestamp with time zone",
+          "type": "string"
+        },
+        "updated_at": {
+          "default": "now()",
+          "format": "timestamp with time zone",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "admin_audit_logs": {
+      "required": [
+        "id",
+        "action_type"
+      ],
+      "properties": {
+        "id": {
+          "default": "gen_random_uuid()",
+          "description": "Note:\nThis is a Primary Key.<pk/>",
+          "format": "uuid",
+          "type": "string"
+        },
+        "admin_id": {
+          "format": "uuid",
+          "type": "string"
+        },
+        "admin_email": {
+          "format": "text",
+          "type": "string"
+        },
+        "admin_name": {
+          "format": "text",
+          "type": "string"
+        },
+        "action_type": {
+          "format": "text",
+          "type": "string"
+        },
+        "target": {
+          "format": "text",
+          "type": "string"
+        },
+        "details": {
+          "format": "text",
+          "type": "string"
+        },
+        "created_at": {
+          "default": "now()",
+          "format": "timestamp with time zone",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    }
+  },
+  "parameters": {
+    "preferParams": {
+      "name": "Prefer",
+      "description": "Preference",
+      "required": false,
+      "in": "header",
+      "type": "string"
+    },
+    "preferReturn": {
+      "name": "Prefer",
+      "description": "Preference",
+      "required": false,
+      "enum": [
+        "return=representation",
+        "return=minimal",
+        "return=none"
+      ],
+      "in": "header",
+      "type": "string"
+    },
+    "preferCount": {
+      "name": "Prefer",
+      "description": "Preference",
+      "required": false,
+      "enum": [
+        "count=none"
+      ],
+      "in": "header",
+      "type": "string"
+    },
+    "preferPost": {
+      "name": "Prefer",
+      "description": "Preference",
+      "required": false,
+      "enum": [
+        "return=representation",
+        "return=minimal",
+        "return=none",
+        "resolution=ignore-duplicates",
+        "resolution=merge-duplicates"
+      ],
+      "in": "header",
+      "type": "string"
+    },
+    "select": {
+      "name": "select",
+      "description": "Filtering Columns",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "on_conflict": {
+      "name": "on_conflict",
+      "description": "On Conflict",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "order": {
+      "name": "order",
+      "description": "Ordering",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "range": {
+      "name": "Range",
+      "description": "Limiting and Pagination",
+      "required": false,
+      "in": "header",
+      "type": "string"
+    },
+    "rangeUnit": {
+      "name": "Range-Unit",
+      "description": "Limiting and Pagination",
+      "required": false,
+      "default": "items",
+      "in": "header",
+      "type": "string"
+    },
+    "offset": {
+      "name": "offset",
+      "description": "Limiting and Pagination",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "limit": {
+      "name": "limit",
+      "description": "Limiting and Pagination",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "body.support_tickets": {
+      "name": "support_tickets",
+      "description": "support_tickets",
+      "required": false,
+      "in": "body",
+      "schema": {
+        "$ref": "#/definitions/support_tickets"
+      }
+    },
+    "rowFilter.support_tickets.id": {
+      "name": "id",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.support_tickets.user_id": {
+      "name": "user_id",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.support_tickets.user_email": {
+      "name": "user_email",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.support_tickets.user_name": {
+      "name": "user_name",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.support_tickets.subject": {
+      "name": "subject",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.support_tickets.message": {
+      "name": "message",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.support_tickets.error_context": {
+      "name": "error_context",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.support_tickets.status": {
+      "name": "status",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.support_tickets.admin_reply": {
+      "name": "admin_reply",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.support_tickets.created_at": {
+      "name": "created_at",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.support_tickets.updated_at": {
+      "name": "updated_at",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "body.site_content": {
+      "name": "site_content",
+      "description": "site_content",
+      "required": false,
+      "in": "body",
+      "schema": {
+        "$ref": "#/definitions/site_content"
+      }
+    },
+    "rowFilter.site_content.id": {
+      "name": "id",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.site_content.data": {
+      "name": "data",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.site_content.updated_at": {
+      "name": "updated_at",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "body.profiles": {
+      "name": "profiles",
+      "description": "profiles",
+      "required": false,
+      "in": "body",
+      "schema": {
+        "$ref": "#/definitions/profiles"
+      }
+    },
+    "rowFilter.profiles.id": {
+      "name": "id",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.profiles.role": {
+      "name": "role",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.profiles.full_name": {
+      "name": "full_name",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.profiles.updated_at": {
+      "name": "updated_at",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.profiles.email": {
+      "name": "email",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.profiles.avatar_url": {
+      "name": "avatar_url",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "body.primary_events": {
+      "name": "primary_events",
+      "description": "primary_events",
+      "required": false,
+      "in": "body",
+      "schema": {
+        "$ref": "#/definitions/primary_events"
+      }
+    },
+    "rowFilter.primary_events.id": {
+      "name": "id",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.primary_events.full_name": {
+      "name": "full_name",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.primary_events.class": {
+      "name": "class",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.primary_events.section": {
+      "name": "section",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.primary_events.roll": {
+      "name": "roll",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.primary_events.phone": {
+      "name": "phone",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.primary_events.email": {
+      "name": "email",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.primary_events.events": {
+      "name": "events",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.primary_events.amount": {
+      "name": "amount",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.primary_events.payment_method": {
+      "name": "payment_method",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.primary_events.trxnid": {
+      "name": "trxnid",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.primary_events.bkash_number": {
+      "name": "bkash_number",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.primary_events.verified": {
+      "name": "verified",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.primary_events.created_at": {
+      "name": "created_at",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.primary_events.updated_at": {
+      "name": "updated_at",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "body.ec_member": {
+      "name": "ec_member",
+      "description": "ec_member",
+      "required": false,
+      "in": "body",
+      "schema": {
+        "$ref": "#/definitions/ec_member"
+      }
+    },
+    "rowFilter.ec_member.id": {
+      "name": "id",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.ec_member.full_name": {
+      "name": "full_name",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.ec_member.email": {
+      "name": "email",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.ec_member.phone": {
+      "name": "phone",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.ec_member.school": {
+      "name": "school",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.ec_member.class": {
+      "name": "class",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.ec_member.section": {
+      "name": "section",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.ec_member.roll": {
+      "name": "roll",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.ec_member.photo_url": {
+      "name": "photo_url",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.ec_member.payment_method": {
+      "name": "payment_method",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.ec_member.trxnid": {
+      "name": "trxnid",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.ec_member.bkash_number": {
+      "name": "bkash_number",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.ec_member.verified": {
+      "name": "verified",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.ec_member.member_id": {
+      "name": "member_id",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.ec_member.is_ec": {
+      "name": "is_ec",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.ec_member.created_at": {
+      "name": "created_at",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.ec_member.updated_at": {
+      "name": "updated_at",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.ec_member.email_address": {
+      "name": "email_address",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.ec_member.department": {
+      "name": "department",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "body.secondary_events": {
+      "name": "secondary_events",
+      "description": "secondary_events",
+      "required": false,
+      "in": "body",
+      "schema": {
+        "$ref": "#/definitions/secondary_events"
+      }
+    },
+    "rowFilter.secondary_events.id": {
+      "name": "id",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.secondary_events.full_name": {
+      "name": "full_name",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.secondary_events.class": {
+      "name": "class",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.secondary_events.section": {
+      "name": "section",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.secondary_events.roll": {
+      "name": "roll",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.secondary_events.phone": {
+      "name": "phone",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.secondary_events.email": {
+      "name": "email",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.secondary_events.events": {
+      "name": "events",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.secondary_events.amount": {
+      "name": "amount",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.secondary_events.payment_method": {
+      "name": "payment_method",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.secondary_events.trxnid": {
+      "name": "trxnid",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.secondary_events.bkash_number": {
+      "name": "bkash_number",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.secondary_events.verified": {
+      "name": "verified",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.secondary_events.created_at": {
+      "name": "created_at",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.secondary_events.updated_at": {
+      "name": "updated_at",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "body.higher_secondary_events": {
+      "name": "higher_secondary_events",
+      "description": "higher_secondary_events",
+      "required": false,
+      "in": "body",
+      "schema": {
+        "$ref": "#/definitions/higher_secondary_events"
+      }
+    },
+    "rowFilter.higher_secondary_events.id": {
+      "name": "id",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.higher_secondary_events.full_name": {
+      "name": "full_name",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.higher_secondary_events.class": {
+      "name": "class",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.higher_secondary_events.section": {
+      "name": "section",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.higher_secondary_events.roll": {
+      "name": "roll",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.higher_secondary_events.phone": {
+      "name": "phone",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.higher_secondary_events.email": {
+      "name": "email",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.higher_secondary_events.events": {
+      "name": "events",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.higher_secondary_events.amount": {
+      "name": "amount",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.higher_secondary_events.payment_method": {
+      "name": "payment_method",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.higher_secondary_events.trxnid": {
+      "name": "trxnid",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.higher_secondary_events.bkash_number": {
+      "name": "bkash_number",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.higher_secondary_events.verified": {
+      "name": "verified",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.higher_secondary_events.created_at": {
+      "name": "created_at",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.higher_secondary_events.updated_at": {
+      "name": "updated_at",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "body.member": {
+      "name": "member",
+      "description": "member",
+      "required": false,
+      "in": "body",
+      "schema": {
+        "$ref": "#/definitions/member"
+      }
+    },
+    "rowFilter.member.id": {
+      "name": "id",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.member.full_name": {
+      "name": "full_name",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.member.email": {
+      "name": "email",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.member.email_address": {
+      "name": "email_address",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.member.phone": {
+      "name": "phone",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.member.school": {
+      "name": "school",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.member.class": {
+      "name": "class",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.member.section": {
+      "name": "section",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.member.roll": {
+      "name": "roll",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.member.photo_url": {
+      "name": "photo_url",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.member.payment_method": {
+      "name": "payment_method",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.member.trxnid": {
+      "name": "trxnid",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.member.bkash_number": {
+      "name": "bkash_number",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.member.verified": {
+      "name": "verified",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.member.member_id": {
+      "name": "member_id",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.member.created_at": {
+      "name": "created_at",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.member.updated_at": {
+      "name": "updated_at",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.member.is_ec": {
+      "name": "is_ec",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "body.junior_events": {
+      "name": "junior_events",
+      "description": "junior_events",
+      "required": false,
+      "in": "body",
+      "schema": {
+        "$ref": "#/definitions/junior_events"
+      }
+    },
+    "rowFilter.junior_events.id": {
+      "name": "id",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.junior_events.full_name": {
+      "name": "full_name",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.junior_events.class": {
+      "name": "class",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.junior_events.section": {
+      "name": "section",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.junior_events.roll": {
+      "name": "roll",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.junior_events.phone": {
+      "name": "phone",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.junior_events.email": {
+      "name": "email",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.junior_events.events": {
+      "name": "events",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.junior_events.amount": {
+      "name": "amount",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.junior_events.payment_method": {
+      "name": "payment_method",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.junior_events.trxnid": {
+      "name": "trxnid",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.junior_events.bkash_number": {
+      "name": "bkash_number",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.junior_events.verified": {
+      "name": "verified",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.junior_events.created_at": {
+      "name": "created_at",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.junior_events.updated_at": {
+      "name": "updated_at",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "body.event_participation": {
+      "name": "event_participation",
+      "description": "event_participation",
+      "required": false,
+      "in": "body",
+      "schema": {
+        "$ref": "#/definitions/event_participation"
+      }
+    },
+    "rowFilter.event_participation.id": {
+      "name": "id",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.event_participation.member_id": {
+      "name": "member_id",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.event_participation.event_name": {
+      "name": "event_name",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.event_participation.category": {
+      "name": "category",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.event_participation.position": {
+      "name": "position",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.event_participation.created_at": {
+      "name": "created_at",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.event_participation.updated_at": {
+      "name": "updated_at",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "body.admin_audit_logs": {
+      "name": "admin_audit_logs",
+      "description": "admin_audit_logs",
+      "required": false,
+      "in": "body",
+      "schema": {
+        "$ref": "#/definitions/admin_audit_logs"
+      }
+    },
+    "rowFilter.admin_audit_logs.id": {
+      "name": "id",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.admin_audit_logs.admin_id": {
+      "name": "admin_id",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.admin_audit_logs.admin_email": {
+      "name": "admin_email",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.admin_audit_logs.admin_name": {
+      "name": "admin_name",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.admin_audit_logs.action_type": {
+      "name": "action_type",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.admin_audit_logs.target": {
+      "name": "target",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.admin_audit_logs.details": {
+      "name": "details",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.admin_audit_logs.created_at": {
+      "name": "created_at",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    }
+  },
+  "externalDocs": {
+    "description": "PostgREST Documentation",
+    "url": "https://postgrest.org/en/v14/references/api.html"
+  }
+}

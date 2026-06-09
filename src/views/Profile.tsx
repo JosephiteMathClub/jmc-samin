@@ -24,7 +24,9 @@ import {
   X,
   Upload,
   Printer,
-  Download
+  Download,
+  Calendar,
+  Ticket
 } from 'lucide-react';
 import { toPng } from 'html-to-image';
 import dynamic from 'next/dynamic';
@@ -40,6 +42,118 @@ import confetti from 'canvas-confetti';
 
 import { usePerformance } from '../hooks/usePerformance';
 import { resolveImageUrl } from '../lib/utils';
+
+const isValidClassForTable = (className: string, tableName: string): boolean => {
+  if (!className) return false;
+  const norm = className.trim().toLowerCase();
+  
+  // Extract numbers first (e.g., "Class 5" -> 5)
+  const numMatch = norm.match(/\d+/);
+  if (numMatch) {
+    const val = parseInt(numMatch[0], 10);
+    if (val >= 3 && val <= 5) return tableName === 'primary_events';
+    if (val >= 6 && val <= 8) return tableName === 'junior_events';
+    if (val >= 9 && val <= 10) return tableName === 'secondary_events';
+    if (val >= 11 && val <= 12) return tableName === 'higher_secondary_events';
+  }
+  
+  // Roman Numerals or words if no digit is found
+  if (norm.includes('xii') || norm.includes('twelve')) {
+    return tableName === 'higher_secondary_events';
+  }
+  if (norm.includes('xi') || norm.includes('eleven')) {
+    return tableName === 'higher_secondary_events';
+  }
+  if (norm.includes('ix') || norm.includes('nine')) {
+    return tableName === 'secondary_events';
+  }
+  if (norm.includes('x') || norm.includes('ten')) {
+    return tableName === 'secondary_events';
+  }
+  if (norm.includes('viii') || norm.includes('eight')) {
+    return tableName === 'junior_events';
+  }
+  if (norm.includes('vii') || norm.includes('seven')) {
+    return tableName === 'junior_events';
+  }
+  if (norm.includes('vi') || norm.includes('six')) {
+    return tableName === 'junior_events';
+  }
+  if (norm.includes('iv') || norm.includes('four')) {
+    return tableName === 'primary_events';
+  }
+  if (norm.includes('iii') || norm.includes('three')) {
+    return tableName === 'primary_events';
+  }
+  if (norm.includes('v') || norm.includes('five')) {
+    return tableName === 'primary_events';
+  }
+  
+  return tableName === 'primary_events'; // fallback
+};
+
+const getTicketCode = (reg: any, isGeneralMember: boolean, isEc: boolean, memberId: string | null): string => {
+  if (isEc && memberId) {
+    // EC members see their 3 digit UNIQUE ID in the ticket
+    const cleanId = String(memberId).replace('JMC-', '').trim();
+    const digitsOnly = cleanId.replace(/\D/g, '');
+    if (digitsOnly.length >= 3) {
+      return digitsOnly.slice(-3);
+    }
+    return digitsOnly.padStart(3, '0');
+  }
+  
+  if (isGeneralMember) {
+    // General members see their own unique 6 digit unique code
+    if (memberId) {
+      const cleanId = String(memberId).replace('JMC-', '').trim();
+      const digitsOnly = cleanId.replace(/\D/g, '');
+      if (digitsOnly.length === 5) {
+        return digitsOnly.padStart(6, '1');
+      } else if (digitsOnly.length >= 6) {
+        return digitsOnly.slice(-6);
+      }
+    }
+    // Fallback: unique 6-digit hashed code
+    if (reg) {
+      const str = String(reg.id || "") + (reg.trxnid || "");
+      let hash = 0;
+      for (let i = 0; i < str.length; i++) {
+        hash = str.charCodeAt(i) + ((hash << 5) - hash);
+      }
+      const code = Math.abs(hash % 900000) + 100000;
+      return String(code);
+    }
+    return "110101"; // default 6 digit code for general member without member ID record yet
+  }
+  
+  if (!reg) return "73812";
+  
+  // Non-general member standard ticket code: 5-digit code or fallback
+  const str = String(reg.id || "") + (reg.trxnid || "");
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = str.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const code = Math.abs(hash % 90000) + 10000;
+  return String(code);
+};
+
+const formatSegments = (eventsStr: string | null) => {
+  if (!eventsStr) return "—";
+  const events = eventsStr.split(',').map(e => e.trim());
+  if (events.length <= 4) return events.join(', ');
+  // Group first 4 events, and the rest on the second line
+  const firstFour = events.slice(0, 4).join(', ');
+  const remaining = events.slice(4).join(', ');
+  return (
+    <>
+      {firstFour},
+      <br />
+      {remaining}
+    </>
+  );
+};
 
 const Profile = () => {
   const { user, profile, loading: authLoading, isAdmin, signOut, refreshProfile } = useAuth();
@@ -57,6 +171,8 @@ const Profile = () => {
   const [memberId, setMemberId] = useState<string | null>(null);
   const [achievements, setAchievements] = useState<any[]>([]);
   const [loadingAchievements, setLoadingAchievements] = useState(false);
+  const [registeredEventsList, setRegisteredEventsList] = useState<any[]>([]);
+  const [loadingRegisteredEvents, setLoadingRegisteredEvents] = useState(false);
   const [checkingMember, setCheckingMember] = useState(true);
   const [loading, setLoading] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
@@ -70,6 +186,41 @@ const Profile = () => {
   const celebratedRef = React.useRef(false);
   const cardRef = useRef<HTMLDivElement>(null);
   const [downloadingCard, setDownloadingCard] = useState(false);
+  const [showTicketModal, setShowTicketModal] = useState(false);
+  const [selectedTicketIndex, setSelectedTicketIndex] = useState(0);
+  const [downloadingTicket, setDownloadingTicket] = useState(false);
+  const [ticketImageFailed, setTicketImageFailed] = useState(false);
+  const ticketRef = useRef<HTMLDivElement>(null);
+
+  const downloadTicketPng = async () => {
+    if (!ticketRef.current || downloadingTicket) return;
+    setDownloadingTicket(true);
+    try {
+      await new Promise((res) => setTimeout(res, 200));
+      const dataUrl = await toPng(ticketRef.current, {
+        cacheBust: true,
+        width: 900,
+        height: 320,
+        style: {
+          transform: 'scale(1)',
+          transformOrigin: 'top left',
+          width: '900px',
+          height: '320px',
+        }
+      });
+      const link = document.createElement('a');
+      const sanitizedName = (profile?.full_name || fullName || 'Participant').trim().replace(/\s+/g, '_');
+      link.download = `JMC_Fiesta_Ticket_${sanitizedName}.png`;
+      link.href = dataUrl;
+      link.click();
+      showToast('Digital Entry ticket downloaded successfully!', 'success');
+    } catch (err) {
+      console.error('Error generating ticket image:', err);
+      showToast('Failed to download digital ticket, please try again.', 'error');
+    } finally {
+      setDownloadingTicket(false);
+    }
+  };
 
   const downloadIdCardPng = async () => {
     if (!cardRef.current || downloadingCard) return;
@@ -326,6 +477,34 @@ const Profile = () => {
     }
   }, [triggerCelebration]);
 
+  const fetchRegisteredEventsList = React.useCallback(async () => {
+    if (!user || !isSupabaseConfigured) return;
+    setLoadingRegisteredEvents(true);
+    try {
+      const tables = ['primary_events', 'junior_events', 'secondary_events', 'higher_secondary_events'];
+      let allReg: any[] = [];
+      for (const tb of tables) {
+        const { data, error } = await supabase
+          .from(tb)
+          .select('*')
+          .eq('user_id', user.id);
+        
+        if (data && data.length > 0) {
+          const mapped = data.map((item: any) => ({
+            ...item,
+            tableName: tb
+          }));
+          allReg = [...allReg, ...mapped];
+        }
+      }
+      setRegisteredEventsList(allReg);
+    } catch (err) {
+      console.error("Error loading registered events list:", err);
+    } finally {
+      setLoadingRegisteredEvents(false);
+    }
+  }, [user]);
+
   const checkMemberStatus = React.useCallback(async () => {
     if (!user) return;
     try {
@@ -339,26 +518,49 @@ const Profile = () => {
       // Fetch from ec_member table
       const { data: ecData } = await supabase
         .from('ec_member')
-        .select('id, verified, member_id')
+        .select('id, verified, member_id, class, section, roll')
         .eq('id', user.id)
         .maybeSingle();
       
-      const isUserEc = (ecData !== null) || (memberData?.is_ec === true);
+      const isUserEc = (ecData !== null) || 
+                       (memberData?.is_ec === true) || 
+                       (ecData?.member_id ? /^\d{3}$/.test(ecData.member_id) : false) || 
+                       (memberData?.member_id ? /^\d{3}$/.test(memberData.member_id) : false);
 
-      if (ecData) {
+      if (isUserEc) {
         setIsMember(true);
         setIsEc(true);
-        setVerified(ecData.verified || 'no');
-        const mId = ecData.member_id || null;
+        
+        let resolvedVerified = 'no';
+        if (ecData?.verified === 'yes' || memberData?.verified === 'yes') {
+          resolvedVerified = 'yes';
+        } else if (ecData?.verified === 'rejected' || memberData?.verified === 'rejected') {
+          resolvedVerified = 'rejected';
+        } else {
+          resolvedVerified = 'no';
+        }
+        setVerified(resolvedVerified);
+
+        const mId = ecData?.member_id || memberData?.member_id || null;
         setMemberId(mId);
-        setMemberClass('');
-        setMemberSection('');
-        setMemberRoll('');
+        setMemberClass(ecData?.class || memberData?.class || '');
+        setMemberSection(ecData?.section || memberData?.section || '');
+        setMemberRoll(ecData?.roll || memberData?.roll || '');
         if (mId) fetchAchievements(mId);
       } else if (memberData) {
         setIsMember(true);
-        setIsEc(isUserEc);
-        setVerified(memberData.verified || 'no');
+        setIsEc(false);
+        
+        let resolvedVerified = 'no';
+        if (memberData.verified === 'yes') {
+          resolvedVerified = 'yes';
+        } else if (memberData.verified === 'rejected') {
+          resolvedVerified = 'rejected';
+        } else {
+          resolvedVerified = 'no';
+        }
+        setVerified(resolvedVerified);
+
         const mId = memberData.member_id || null;
         setMemberId(mId);
         setMemberClass(memberData.class || '');
@@ -374,31 +576,88 @@ const Profile = () => {
         setMemberSection('');
         setMemberRoll('');
       }
+      
+      await fetchRegisteredEventsList();
     } catch (err) {
       console.error('Error checking member status:', err);
     } finally {
       setCheckingMember(false);
     }
-  }, [user, fetchAchievements]);
+  }, [user, fetchAchievements, fetchRegisteredEventsList]);
+
+  // Real-time listener to sync verification status changes immediately
+  useEffect(() => {
+    if (!user || !isSupabaseConfigured) return;
+
+    let isMounted = true;
+
+    // Listen to changes in standard member table for this user
+    const memberChannel = supabase
+      .channel(`member-sync-${user.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'member',
+          filter: `id=eq.${user.id}`
+        },
+        () => {
+          if (isMounted) {
+            checkMemberStatus();
+          }
+        }
+      )
+      .subscribe();
+
+    // Listen to changes in ec_member table for this user
+    const ecChannel = supabase
+      .channel(`ec_member-sync-${user.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'ec_member',
+          filter: `id=eq.${user.id}`
+        },
+        () => {
+          if (isMounted) {
+            checkMemberStatus();
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      isMounted = false;
+      memberChannel.unsubscribe();
+      ecChannel.unsubscribe();
+    };
+  }, [user, checkMemberStatus]);
 
   useEffect(() => {
     if (!authLoading && !user) {
       router.push('/login');
     }
+    if (user) {
+      fetchRegisteredEventsList();
+      checkMemberStatus();
+    }
     if (profile) {
       setFullName(profile.full_name || '');
-      checkMemberStatus();
     }
 
     // Refresh profile when window gains focus (e.g. after returning from registration tab)
     const handleFocus = () => {
       refreshProfile();
       checkMemberStatus();
+      fetchRegisteredEventsList();
     };
 
     window.addEventListener('focus', handleFocus);
     return () => window.removeEventListener('focus', handleFocus);
-  }, [user, authLoading, router, profile, checkMemberStatus, refreshProfile]);
+  }, [user, authLoading, router, profile, checkMemberStatus, refreshProfile, fetchRegisteredEventsList]);
 
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -418,16 +677,33 @@ const Profile = () => {
       if (error) throw error;
 
       if (isMember) {
+        // Update member table if they have a standard member record
         const { error: memberError } = await supabase
           .from('member')
           .update({
             class: memberClass,
             section: memberSection,
             roll: memberRoll,
+            full_name: fullName,
           })
           .eq('id', user?.id);
-        
-        if (memberError) throw memberError;
+
+        // Update ec_member table if they have an EC record
+        if (isEc) {
+          const { error: ecError } = await supabase
+            .from('ec_member')
+            .update({
+              class: memberClass,
+              section: memberSection,
+              roll: memberRoll,
+              full_name: fullName,
+            })
+            .eq('id', user?.id);
+          
+          if (ecError) throw ecError;
+        } else {
+          if (memberError) throw memberError;
+        }
       }
 
       setSuccess(true);
@@ -445,14 +721,60 @@ const Profile = () => {
     router.push('/');
   };
 
-  const wins = achievements
+  const filteredAchievements = React.useMemo(() => {
+    return achievements.filter(a => {
+      const targetEvent = String(a.event_name || '').toLowerCase().trim();
+      return registeredEventsList.some(reg => {
+        const eventsStr = String(reg.selected_events || '').toLowerCase();
+        return eventsStr.split(',').map((s: string) => s.trim()).includes(targetEvent) || 
+               eventsStr.includes(targetEvent);
+      });
+    });
+  }, [achievements, registeredEventsList]);
+
+  const wins = filteredAchievements
     .filter(a => isActualWin(a.position))
     .sort((a, b) => {
       const pA = getRankInfo(a.position).priority;
       const pB = getRankInfo(b.position).priority;
       return pA - pB;
     });
-  const pending = achievements.filter(a => !isActualWin(a.position));
+  const pending = filteredAchievements.filter(a => !isActualWin(a.position));
+
+  const isGeneralMember = React.useMemo(() => {
+    return isMember && verified === 'yes' && (isEc || (memberId && (memberId.startsWith('JMC-') || /^\d{3}$/.test(memberId))));
+  }, [isMember, verified, isEc, memberId]);
+
+  const unverifiedRegistrations = React.useMemo(() => {
+    return registeredEventsList.filter(reg => reg.verified !== 'yes');
+  }, [registeredEventsList]);
+
+  const allPendingParticipations = React.useMemo(() => {
+    const list = [...pending];
+    
+    // Auto-populate verified registrations if not already in achievements or wins
+    registeredEventsList.forEach(reg => {
+      if (reg.verified === 'yes') {
+        const events = (reg.selected_events || '').split(',').map((s: string) => s.trim()).filter(Boolean);
+        events.forEach(evt => {
+          const alreadyInPending = list.some(p => p.event_name?.toLowerCase().trim() === evt.toLowerCase().trim());
+          const alreadyInWins = wins.some(w => w.event_name?.toLowerCase().trim() === evt.toLowerCase().trim());
+          if (!alreadyInPending && !alreadyInWins) {
+            list.push({
+              id: `AUTO-VERIFIED-${reg.tableName}-${reg.id}-${evt}`,
+              event_name: evt,
+              category: reg.tableName === 'primary_events' ? 'Primary' :
+                        reg.tableName === 'junior_events' ? 'Junior' :
+                        reg.tableName === 'secondary_events' ? 'Secondary' :
+                        'Higher Secondary',
+            });
+          }
+        });
+      }
+    });
+    
+    return list;
+  }, [pending, registeredEventsList, wins]);
 
   if (authLoading || !user) {
     return (
@@ -497,7 +819,7 @@ const Profile = () => {
                   >
                     {/* Blank Background Template Image */}
                     <Image 
-                      src="/images/id-card-bg.png" 
+                      src="/images/ec_id_card_bg.jpeg" 
                       alt="ID Card Background" 
                       fill
                       className="absolute inset-0 w-full h-full object-fill rounded-[48px] pointer-events-none z-0"
@@ -1126,6 +1448,407 @@ const Profile = () => {
         )}
       </AnimatePresence>
 
+      {/* Digital Ticket Modal */}
+      <AnimatePresence>
+        {showTicketModal && (registeredEventsList.length > 0 || isGeneralMember) && (() => {
+          const currentReg = registeredEventsList[selectedTicketIndex] || registeredEventsList[0] || null;
+          const ticketCode = getTicketCode(currentReg, isGeneralMember, isEc, memberId);
+          const getCategoryFromClass = (clsStr: string) => {
+            const num = parseInt(clsStr.replace(/\D/g, ''));
+            if (isNaN(num)) return 'Junior'; // default fallback
+            if (num >= 3 && num <= 5) return 'Primary';
+            if (num >= 6 && num <= 8) return 'Junior';
+            if (num >= 9 && num <= 10) return 'Secondary';
+            return 'Higher Secondary';
+          };
+          const categoryName = currentReg
+            ? (currentReg.tableName === 'primary_events' ? 'Primary' :
+               currentReg.tableName === 'junior_events' ? 'Junior' :
+               currentReg.tableName === 'secondary_events' ? 'Secondary' : 'Higher Secondary')
+            : getCategoryFromClass(memberClass);
+          const isTeam = currentReg?.selected_events?.toLowerCase().includes('team') || currentReg?.amount >= 200;
+
+          return (
+            <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center px-4 overflow-y-auto py-8">
+              <motion.div 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                onClick={() => setShowTicketModal(false)}
+                className="absolute inset-0 bg-black/90 backdrop-blur-md"
+              />
+
+              <motion.div
+                initial={{ opacity: 0, scale: 0.9, y: 15 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.9, y: 15 }}
+                className="relative flex flex-col items-center max-w-full z-10"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {/* Selector for multiple tickets */}
+                {registeredEventsList.length > 1 && (
+                  <div className="flex items-center gap-2 mb-6 bg-white/5 p-1.5 rounded-xl border border-white/10 max-w-full overflow-x-auto no-scrollbar z-10">
+                    {registeredEventsList.map((reg, idx) => (
+                      <button
+                        key={idx}
+                        onClick={() => setSelectedTicketIndex(idx)}
+                        className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all whitespace-nowrap cursor-pointer ${
+                          selectedTicketIndex === idx
+                            ? 'bg-indigo-600 text-white shadow-lg'
+                            : 'bg-transparent text-zinc-400 hover:text-white hover:bg-white/5'
+                        }`}
+                      >
+                        {reg.tableName === 'primary_events' ? 'Primary' :
+                         reg.tableName === 'junior_events' ? 'Junior' :
+                         reg.tableName === 'secondary_events' ? 'Secondary' : 'Higher Secondary'} Ticket ({idx + 1})
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {/* Ticket Wrapper scaled for on-screen view */}
+                <div className="scale-[0.38] xs:scale-[0.45] sm:scale-[0.58] md:scale-[0.75] lg:scale-[1] origin-center -my-32 xs:-my-24 sm:-my-16 md:-my-10 lg:my-0 select-none">
+                  <div 
+                    ref={ticketRef}
+                    id="printable-ticket-card-modal"
+                    className="relative w-[900px] h-[320px] rounded-3xl overflow-hidden bg-[#fafafa] text-black border-2 border-indigo-500/30 flex select-none"
+                    style={{
+                      boxShadow: '0 0 60px rgba(99, 102, 241, 0.4)',
+                    }}
+                  >
+                    {/* Blank Background Template Image */}
+                    <Image 
+                      src="/images/Ticket_bg.png" 
+                      alt="Ticket Background" 
+                      fill
+                      className="absolute inset-0 w-full h-full object-fill rounded-[22px] pointer-events-none z-0"
+                      onError={() => {
+                        setTicketImageFailed(true);
+                      }}
+                      onLoad={() => {
+                        setTicketImageFailed(false);
+                      }}
+                      referrerPolicy="no-referrer" 
+                    />
+
+                    {/* HTML/CSS Fallback Graphics if image fails or is empty */}
+                    {ticketImageFailed && (
+                      <div className="absolute inset-0 bg-gradient-to-br from-[#f8f6ff] to-[#efecff] p-6 flex items-center pointer-events-none z-0">
+                        {/* Diagonal subtle geometric lines */}
+                        <div className="absolute inset-0 opacity-[0.03] bg-[repeating-linear-gradient(45deg,#4f46e5,#4f46e5_10px,transparent_10px,transparent_20px)]" />
+                        
+                        {/* Background glowing orb */}
+                        <div className="absolute -top-1/2 -left-1/4 w-[80%] h-[150%] bg-[radial-gradient(circle_at_center,rgba(99,102,241,0.06),transparent_65%)] rotate-12" />
+                        
+                        {/* Perforation Line right at 540px */}
+                        <div className="absolute top-0 bottom-0 left-[540px] border-r-2 border-dashed border-indigo-200" />
+                        
+                        {/* Vertical Perforation Band */}
+                        <div className="absolute left-[540px] top-0 w-[46px] h-full bg-[#0d0925] flex flex-col items-center justify-center text-white font-black text-[15px] tracking-[0.25em] py-4 leading-none select-none z-10">
+                          <span className="block">T</span>
+                          <span className="block">I</span>
+                          <span className="block">C</span>
+                          <span className="block">K</span>
+                          <span className="block">E</span>
+                          <span className="block">T</span>
+                        </div>
+
+                        {/* St. Joseph Crest in Header (Left) */}
+                        <div className="absolute top-5 left-5 w-11 h-11 rounded-full border border-black/10 bg-white p-0.5 shadow-sm flex items-center justify-center">
+                          <Image 
+                            src="/images/logo.png" 
+                            alt="St. Joseph Crest" 
+                            width={38}
+                            height={38}
+                            className="object-contain rounded-full" 
+                            referrerPolicy="no-referrer" 
+                          />
+                        </div>
+
+                        {/* JMC logo on right stub */}
+                        <div className="absolute top-4 right-4 w-9 h-9 rounded-full border border-black/10 bg-white p-0.5 shadow-sm flex items-center justify-center">
+                          <Image 
+                            src="/images/logo.png" 
+                            alt="St. Joseph Crest" 
+                            width={32}
+                            height={32}
+                            className="object-contain rounded-full" 
+                            referrerPolicy="no-referrer" 
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Absolute Overlays with coordinates mapped precisely to original Ticket_bg.png blueprint layout */}
+                    <div className="absolute inset-0 z-10 pointer-events-none">
+                      
+                      {/* Left portion: Master card */}
+                      
+                      {/* Name Overlay block */}
+                      <div 
+                        className="absolute flex items-end justify-start pointer-events-auto text-left"
+                        style={{
+                          top: '67px',
+                          left: '89px',
+                          width: '320px',
+                          height: '24px',
+                        }}
+                      >
+                        <span className="font-extrabold uppercase text-[#1e1b4b] tracking-wide text-[13px] leading-none truncate select-all">
+                          {currentReg?.full_name || fullName || profile?.full_name || "—"}
+                        </span>
+                      </div>
+
+                      {/* Unique 5 digit code after name in the same line */}
+                      <div 
+                        className="absolute flex items-end justify-start pointer-events-auto text-left animate-pulse"
+                        style={{
+                          top: '67px',
+                          left: '435px',
+                          width: '95px',
+                          height: '24px',
+                        }}
+                      >
+                        <span className="font-mono text-[14px] font-black tracking-widest text-[#dc2626] select-all border border-[#dc2626]/25 bg-[#fef2f2]/70 px-1.5 py-0.5 rounded shadow-sm leading-none">
+                          #{ticketCode}
+                        </span>
+                      </div>
+
+                      {/* Class Overlay */}
+                      <div 
+                        className="absolute flex items-end justify-start pointer-events-auto text-left"
+                        style={{
+                          top: '103px',
+                          left: '100px',
+                          width: '75px',
+                          height: '24px',
+                        }}
+                      >
+                        <span className="font-bold uppercase text-[#1e1b4b] text-[12px] leading-none truncate select-all">
+                          {currentReg?.class || memberClass || "—"}
+                        </span>
+                      </div>
+
+                      {/* Section Overlay */}
+                      <div 
+                        className="absolute flex items-end justify-start pointer-events-auto text-left"
+                        style={{
+                          top: '103px',
+                          left: '230px',
+                          width: '125px',
+                          height: '24px',
+                        }}
+                      >
+                        <span className="font-bold uppercase text-[#1e1b4b] text-[12px] leading-none truncate select-all">
+                          {currentReg?.section || memberSection || "—"}
+                        </span>
+                      </div>
+
+                      {/* Roll Overlay */}
+                      <div 
+                        className="absolute flex items-end justify-start pointer-events-auto text-left"
+                        style={{
+                          top: '103px',
+                          left: '445px',
+                          width: '80px',
+                          height: '24px',
+                        }}
+                      >
+                        <span className="font-bold text-[#1e1b4b] text-[12px] leading-none select-all font-mono">
+                          {currentReg?.roll || memberRoll || "—"}
+                        </span>
+                      </div>
+
+                      {/* Contact No Overlay */}
+                      <div 
+                        className="absolute flex items-end justify-start pointer-events-auto text-left"
+                        style={{
+                          top: '142px',
+                          left: '167px',
+                          width: '365px',
+                          height: '24px',
+                        }}
+                      >
+                        <span className="font-bold text-[#1e1b4b] text-[12px] leading-none truncate select-all font-mono">
+                          {currentReg?.bkash_number || profile?.contact || "—"}
+                        </span>
+                      </div>
+
+                      {/* Category Overlay */}
+                      <div 
+                        className="absolute flex items-end justify-start pointer-events-auto text-left"
+                        style={{
+                          top: '176px',
+                          left: '145px',
+                          width: '365px',
+                          height: '24px',
+                        }}
+                      >
+                        <span className="font-extrabold text-[#1e1b4b] text-[12px] leading-none truncate select-all uppercase tracking-wider">
+                          {categoryName} Level
+                        </span>
+                      </div>
+
+                      {/* Segments Overlay */}
+                      <div 
+                        className="absolute flex items-start justify-start pointer-events-auto text-left overflow-visible"
+                        style={{
+                          top: '201px',
+                          left: '140px',
+                          width: '385px',
+                          height: '42px',
+                        }}
+                      >
+                        <span className="font-bold text-[#1e1b4b] text-[10px] leading-tight select-all whitespace-normal break-words block w-full" title={currentReg?.selected_events || ""}>
+                          {currentReg ? formatSegments(currentReg.selected_events) : ""}
+                        </span>
+                      </div>
+
+
+                      {/* Right portion: Stub card (x: 586px to 900px) */}
+
+                      {/* Class/Section/Roll Stub Overlay (Rotated -90deg) */}
+                      <div 
+                        className="absolute flex items-start justify-start pointer-events-none"
+                        style={{
+                          left: '640px',
+                          top: '143px',
+                          width: '160px',
+                          height: '24px',
+                          transform: 'rotate(-90deg)',
+                          transformOrigin: 'left top',
+                        }}
+                      >
+                        <span className="font-bold text-[#1e1b4b] text-[12px] whitespace-nowrap tracking-wide font-mono select-all">
+                          {currentReg?.class || memberClass || "—"} / {currentReg?.section || memberSection || "—"} / {currentReg?.roll || memberRoll || "—"}
+                        </span>
+                      </div>
+
+                      {/* Active Category Bubble Highlight */}
+                      {(() => {
+                        const bubbleY = 
+                          categoryName === 'Primary' ? 210 :
+                          categoryName === 'Junior' ? 163 :
+                          categoryName === 'Secondary' ? 117 : 71;
+                        return (
+                          <div 
+                            className="absolute w-3.5 h-3.5 rounded-full bg-[#5c21b5] border border-[#5c21b5] shadow-sm flex items-center justify-center pointer-events-none"
+                            style={{
+                              left: '678px',
+                              top: `${bubbleY - 7}px`,
+                            }}
+                          >
+                            <div className="w-1.5 h-1.5 bg-white rounded-full" />
+                          </div>
+                        );
+                      })()}
+
+                      {/* Category Stub Overlay (Rotated -90deg) */}
+                      <div 
+                        className="absolute flex items-start justify-start pointer-events-none"
+                        style={{
+                          left: '715px',
+                          top: '200px',
+                          width: '160px',
+                          height: '24px',
+                          transform: 'rotate(-90deg)',
+                          transformOrigin: 'left top',
+                        }}
+                      >
+                        <span className="font-extrabold uppercase text-[#1e1b4b] text-[12px] whitespace-nowrap tracking-wide select-all">
+                          {categoryName}
+                        </span>
+                      </div>
+
+                      {/* Segments Stub Overlay (Rotated -90deg) */}
+                      <div 
+                        className="absolute flex items-start justify-start pointer-events-none"
+                        style={{
+                          left: '730px',
+                          top: '220px',
+                          width: '190px',
+                          height: '36px',
+                          transform: 'rotate(-90deg)',
+                          transformOrigin: 'left top',
+                        }}
+                      >
+                        <span className="font-bold text-[#1e1b4b] text-[8.5px] leading-tight select-all whitespace-normal break-words block w-full uppercase tracking-tight" title={currentReg?.selected_events || ""}>
+                          {currentReg ? formatSegments(currentReg.selected_events) : ""}
+                        </span>
+                      </div>
+
+                      {/* Registration Fee Stub Overlay (Rotated -90deg) */}
+                      <div 
+                        className="absolute flex items-start justify-start pointer-events-none"
+                        style={{
+                          left: '808px',
+                          top: '230px',
+                          width: '160px',
+                          height: '24px',
+                          transform: 'rotate(-90deg)',
+                          transformOrigin: 'left top',
+                        }}
+                      >
+                        <span className="font-black text-[#1e1b4b] text-[12px] whitespace-nowrap font-mono select-all">
+                          BDT {currentReg?.amount || 100}/-
+                        </span>
+                      </div>
+
+                      {/* Unique 5 digit code on the stub right next to/after signature section (Rotated -90deg, bottom-to-top) */}
+                      <div 
+                        className="absolute flex items-start justify-start pointer-events-none"
+                        style={{
+                          left: '803px',
+                          top: '160px',
+                          width: '140px',
+                          height: '28px',
+                          transform: 'rotate(-90deg)',
+                          transformOrigin: 'left top',
+                        }}
+                      >
+                        <span className="font-mono text-[13px] font-black tracking-widest text-red-600 select-all border border-red-600/25 bg-red-50/70 px-1.5 py-0.5 rounded shadow-sm whitespace-nowrap">
+                          #{ticketCode}
+                        </span>
+                      </div>
+
+                    </div>
+                  </div>
+                </div>
+
+                {/* Below-card action controls */}
+                <div className="flex items-center gap-3.5 mt-8 no-print">
+                  <button 
+                    onClick={downloadTicketPng}
+                    disabled={downloadingTicket}
+                    className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-heavy text-[10px] uppercase tracking-widest transition-all active:scale-95 flex items-center justify-center gap-2 cursor-pointer shadow-lg disabled:opacity-50"
+                  >
+                    {downloadingTicket ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <Download className="w-3.5 h-3.5 text-zinc-100" />
+                    )}
+                    {downloadingTicket ? 'Saving...' : 'Download Ticket'}
+                  </button>
+                  <button 
+                    onClick={() => window.print()}
+                    className="px-5 py-2.5 rounded-xl bg-white/5 border border-white/10 hover:border-white/20 text-white font-heavy text-[10px] uppercase tracking-widest transition-all active:scale-95 flex items-center justify-center gap-2 cursor-pointer shadow-lg hover:bg-white/10"
+                  >
+                    <Printer className="w-3.5 h-3.5 text-zinc-400" />
+                    Print Ticket
+                  </button>
+                  <button 
+                    onClick={() => setShowTicketModal(false)}
+                    className="px-5 py-2.5 rounded-xl bg-indigo-500 hover:bg-indigo-400 active:scale-95 text-black font-black text-[10px] uppercase tracking-widest transition-all cursor-pointer shadow-md shadow-indigo-500/10"
+                  >
+                    Close
+                  </button>
+                </div>
+              </motion.div>
+            </div>
+          );
+        })()}
+      </AnimatePresence>
+
       <div className="container mx-auto px-4">
         <div className="max-w-6xl mx-auto">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
@@ -1174,6 +1897,36 @@ const Profile = () => {
                     >
                       {uploadingAvatar ? <Loader2 className="w-5 h-5 sm:w-4 sm:h-4 animate-spin" /> : <Camera className="w-5 h-5 sm:w-4 sm:h-4" />}
                     </button>
+
+                    {/* SHOW ID / SHOW TICKET buttons */}
+                    <div className="absolute -top-3 left-1/2 -translate-x-1/2 flex items-center gap-1.5 z-25">
+                      {isGeneralMember && (
+                        <button
+                          onClick={() => {
+                            if (isMember) {
+                              setShowQrModal(true);
+                            } else {
+                              showToast('Please register yourself as a member first.', 'error');
+                            }
+                          }}
+                          className="px-3.5 py-1.5 rounded-full bg-gradient-to-r from-[var(--c-6-start)] to-[#3A1FF1] text-white text-[8px] sm:text-[9px] font-black uppercase tracking-widest border border-white/20 shadow-[0_4px_20px_rgba(58,31,241,0.4)] active:scale-95 hover:brightness-110 transition-all cursor-pointer whitespace-nowrap flex items-center gap-1"
+                        >
+                          <QrCode className="w-3 h-3" />
+                          Show ID
+                        </button>
+                      )}
+                      {(registeredEventsList.length > 0 || isGeneralMember) && (
+                        <button
+                          onClick={() => {
+                            setShowTicketModal(true);
+                          }}
+                          className="px-3.5 py-1.5 rounded-full bg-gradient-to-r from-indigo-600 to-indigo-500 text-white text-[8px] sm:text-[9px] font-black uppercase tracking-widest border border-white/20 shadow-[0_4px_20px_rgba(99,102,241,0.4)] active:scale-95 hover:brightness-110 transition-all cursor-pointer whitespace-nowrap flex items-center gap-1"
+                        >
+                          <Ticket className="w-3 h-3" />
+                          Show Ticket
+                        </button>
+                      )}
+                    </div>
                   </div>
 
                   <h2 className="text-2xl font-bold text-white mb-2">{fullName || profile?.full_name || 'Josephite'}</h2>
@@ -1196,6 +1949,7 @@ const Profile = () => {
                         Admin Dashboard
                       </button>
                     )}
+                    {isGeneralMember && (
                       <button 
                         onClick={() => {
                           if (isMember) {
@@ -1209,6 +1963,29 @@ const Profile = () => {
                         <QrCode className="w-4 h-4 group-hover/id:rotate-12 transition-transform" />
                         Show ID
                       </button>
+                    )}
+                    {(registeredEventsList.length > 0 || isGeneralMember) ? (
+                      <button 
+                        onClick={() => {
+                          setShowTicketModal(true);
+                        }}
+                        className="w-full py-4 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 font-bold hover:bg-indigo-500/20 transition-all flex items-center justify-center gap-2 group/ticket"
+                      >
+                        <Ticket className="w-4 h-4 group-hover/ticket:rotate-12 transition-transform" />
+                        Show Ticket
+                      </button>
+                    ) : (
+                      <button 
+                        onClick={() => {
+                          showToast('Please register for events first to view your digital ticket.', 'info');
+                          router.push('/events');
+                        }}
+                        className="w-full py-4 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 font-bold hover:bg-indigo-500/20 transition-all flex items-center justify-center gap-2 group/ticket"
+                      >
+                        <Ticket className="w-4 h-4 group-hover/ticket:rotate-12 transition-transform" />
+                        Show Ticket
+                      </button>
+                    )}
                       <button 
                         onClick={() => setIsEditing(!isEditing)}
                       className="w-full py-4 rounded-2xl bg-white/5 border border-white/10 text-white font-bold hover:bg-white/10 transition-all flex items-center justify-center gap-2"
@@ -1328,8 +2105,8 @@ const Profile = () => {
                           </div>
                           <div className="p-8 rounded-3xl bg-white/5 border border-white/5">
                             <p className="text-xs font-bold uppercase tracking-widest text-zinc-500 mb-2">Member Status</p>
-                            <p className={isMember ? `${isEc ? 'text-amber-500' : 'text-[var(--c-6-start)]'} font-bold` : "text-zinc-550 font-medium"}>
-                              {isMember ? (isEc ? "EC Committee Officer" : "Verified Member") : "Not Registered"}
+                            <p className={isMember ? `${verified === 'yes' ? (isEc ? 'text-amber-500' : 'text-[var(--c-6-start)]') : 'text-amber-400 animate-pulse'} font-bold` : "text-zinc-550 font-medium"}>
+                              {isMember ? (verified === 'yes' ? (isEc ? "EC Committee Officer" : "Verified Member") : (verified === 'rejected' ? "Registration Rejected" : "Verification Pending")) : "Not Registered"}
                             </p>
                           </div>
                           <div className="p-8 rounded-3xl bg-white/5 border border-white/5">
@@ -1338,8 +2115,119 @@ const Profile = () => {
                               {memberId || 'PENDING'}
                             </p>
                           </div>
+
+                          {isGeneralMember && registeredEventsList.length > 0 && (
+                            <div className="md:col-span-2 p-8 rounded-3xl bg-white/5 border border-white/10 space-y-6">
+                              <div className="flex items-center gap-4">
+                                <Calendar className="w-6 h-6 text-amber-500" />
+                                <h3 className="text-xl font-bold text-white uppercase tracking-wider">Registered Event Transactions</h3>
+                              </div>
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                {registeredEventsList.map((reg) => {
+                                  const events = (reg.selected_events || '').split(',').map((s: string) => s.trim()).filter(Boolean);
+                                  return events.map((evt, idx) => (
+                                    <div key={`${reg.tableName}-${reg.id}-${idx}`} className="p-5 rounded-2xl bg-black/40 border border-white/5 flex flex-col justify-between gap-2 relative">
+                                      <div>
+                                        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500">
+                                          {reg.tableName === 'primary_events' ? 'Primary (Class 3-5)' :
+                                           reg.tableName === 'junior_events' ? 'Junior (Class 6-8)' :
+                                           reg.tableName === 'secondary_events' ? 'Secondary (Class 9-10)' :
+                                           'Higher Secondary (Class 11-12)'}
+                                        </p>
+                                        <p className="text-sm font-bold text-white mt-1">{evt}</p>
+                                        <p className="text-[10px] font-mono font-medium text-zinc-400 mt-0.5">TrxID: {reg.trxnid}</p>
+                                      </div>
+                                      <div className="flex items-center justify-between mt-2 pt-2 border-t border-white/5">
+                                        <span className="text-[9px] uppercase font-bold tracking-widest text-zinc-500">Status</span>
+                                        <span className={`text-[10px] font-bold uppercase tracking-wider ${
+                                          reg.verified === 'yes' ? 'text-green-400' :
+                                          reg.verified === 'rejected' ? 'text-red-400' : 'text-amber-400 animate-pulse'
+                                        }`}>
+                                          {reg.verified === 'yes' ? 'Verified (Welcome!)' :
+                                           reg.verified === 'rejected' ? 'Rejected' : 'Verification Pending'}
+                                        </span>
+                                      </div>
+                                    </div>
+                                  ));
+                                })}
+                              </div>
+                            </div>
+                          )}
+
+                          {!isGeneralMember && unverifiedRegistrations.length > 0 && (
+                            <div className="md:col-span-2 p-8 rounded-[2rem] bg-gradient-to-br from-[#0c1220] to-[#05070a] border border-indigo-500/20 space-y-6 relative overflow-hidden shadow-2xl">
+                              <div className="absolute top-0 right-0 w-[200px] h-[200px] bg-indigo-500/5 rounded-full blur-[80px] pointer-events-none" />
+                              <div className="flex flex-wrap items-center justify-between gap-4">
+                                <div className="flex items-center gap-3">
+                                  <Calendar className="w-6 h-6 text-indigo-400" />
+                                  <div>
+                                    <h3 className="text-lg font-black text-white uppercase tracking-wider">Event Entry Passes</h3>
+                                    <p className="text-[10px] font-mono font-medium text-zinc-500 uppercase tracking-widest mt-0.5">External/Teammate Track</p>
+                                  </div>
+                                </div>
+                                <span className="px-3 py-1 rounded bg-indigo-500/10 text-indigo-400 text-[9px] font-black uppercase tracking-widest border border-indigo-500/20">
+                                  Non-General Participant
+                                </span>
+                              </div>
+                              
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-2">
+                                {unverifiedRegistrations.map((reg) => {
+                                  const eventsList = (reg.selected_events || '').split(',').map((s: string) => s.trim()).filter(Boolean);
+                                  return eventsList.map((evt, idx) => {
+                                    const displayId = 'EVT-' + (reg.id?.split('-')[0]?.toUpperCase() || reg.trxnid || 'PENDING');
+                                    return (
+                                      <div 
+                                        key={`${reg.tableName}-${reg.id}-${idx}`} 
+                                        className="relative flex flex-col justify-between p-6 rounded-2xl bg-white/[0.02] border border-white/5 hover:border-indigo-500/30 transition-all duration-300 overflow-hidden group shadow-lg"
+                                      >
+                                        <div className="absolute -left-2 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-[#020202] border-r border-white/10 opacity-70" />
+                                        <div className="absolute -right-2 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-[#020202] border-l border-white/10 opacity-70" />
+                                        
+                                        <div className="space-y-4 px-2">
+                                          <div className="flex items-center justify-between">
+                                            <p className="text-[9px] font-black uppercase tracking-wider text-indigo-400">
+                                              {reg.tableName === 'primary_events' ? 'Primary' :
+                                               reg.tableName === 'junior_events' ? 'Junior' :
+                                               reg.tableName === 'secondary_events' ? 'Secondary' :
+                                               'Higher Secondary'}
+                                            </p>
+                                            <span className="text-[9px] font-mono font-bold text-zinc-505 select-all">{displayId}</span>
+                                          </div>
+                                          
+                                          <div>
+                                            <h4 className="text-sm font-black text-white uppercase tracking-wider group-hover:text-indigo-300 transition-colors duration-300">{evt}</h4>
+                                            <div className="flex gap-4 mt-2 font-mono">
+                                              <div>
+                                                <span className="text-[8px] uppercase font-bold tracking-wider text-zinc-550 block">TrxID</span>
+                                                <span className="block text-[10px] font-bold text-zinc-300 select-all">{reg.trxnid}</span>
+                                              </div>
+                                              <div>
+                                                <span className="text-[8px] uppercase font-bold tracking-wider text-zinc-550 block">Amount</span>
+                                                <span className="block text-[10px] font-bold text-zinc-300">BDT {reg.amount}</span>
+                                              </div>
+                                            </div>
+                                          </div>
+                                        </div>
+                                        
+                                        <div className="flex items-center justify-between mt-6 pt-4 border-t border-white/5 px-2">
+                                          <span className="text-[8px] uppercase font-bold tracking-widest text-zinc-500">Verification</span>
+                                          <span className={`text-[10px] font-black uppercase tracking-widest ${
+                                            reg.verified === 'yes' ? 'text-emerald-400' :
+                                            reg.verified === 'rejected' ? 'text-rose-400' : 'text-amber-400 animate-pulse'
+                                          }`}>
+                                            {reg.verified === 'yes' ? 'Verified' :
+                                             reg.verified === 'rejected' ? 'Rejected' : 'Pending Approval'}
+                                          </span>
+                                        </div>
+                                      </div>
+                                    );
+                                  });
+                                })}
+                              </div>
+                            </div>
+                          )}
                    
-                          {achievements.length > 0 && (
+                          {(achievements.length > 0 || allPendingParticipations.length > 0) && (
                             <div className="md:col-span-2 space-y-8">
                               {/* Major Achievements (Wins) */}
                               {wins.length > 0 && (
@@ -1392,14 +2280,14 @@ const Profile = () => {
                               )}
 
                               {/* Pending Participations */}
-                              {pending.length > 0 && (
+                              {allPendingParticipations.length > 0 && (
                                 <div className="p-8 rounded-3xl bg-white/5 border border-white/10 space-y-6">
                                   <div className="flex items-center gap-4">
                                     <Briefcase className="w-6 h-6 text-indigo-400" />
                                     <h3 className="text-xl font-bold text-white uppercase tracking-wider">Active Participations</h3>
                                   </div>
                                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                    {pending.map((ach) => (
+                                    {allPendingParticipations.map((ach) => (
                                       <motion.div 
                                         key={ach.id}
                                         initial={{ opacity: 0, y: 10 }}
@@ -1407,7 +2295,7 @@ const Profile = () => {
                                         className="p-5 rounded-2xl bg-white/5 border border-white/5 flex items-center gap-4 relative"
                                       >
                                         <div className="p-3 rounded-xl bg-indigo-500/10 text-indigo-400">
-                                          <Loader2 className="w-5 h-5 animate-spin-slow" />
+                                          <Loader2 className="w-5 h-5 animate-spin" />
                                         </div>
                                         <div className="flex-1">
                                           <p className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-400">Result Pending</p>

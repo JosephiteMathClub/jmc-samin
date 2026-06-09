@@ -25,7 +25,12 @@ import {
   Unlock,
   Volume2,
   QrCode,
-  Printer
+  Printer,
+  Sliders,
+  Coins,
+  Save,
+  Trophy,
+  SlidersHorizontal
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useToast } from '../../context/ToastContext';
@@ -38,7 +43,645 @@ import dynamic from 'next/dynamic';
 
 const QRCode = dynamic(() => import('../QRCode'), { ssr: false });
 
-export const SuperAdminPanel = () => {
+interface SuperAdminPanelProps {
+  isSuperAdmin?: boolean;
+}
+
+export function RegistrationToggleControl() {
+  const [isEnabled, setIsEnabled] = useState<boolean>(true);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [updating, setUpdating] = useState<boolean>(false);
+  const [statusMessage, setStatusMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function fetchStatus() {
+      try {
+        const { data, error } = await supabase
+          .from('system_settings')
+          .select('value')
+          .eq('key', 'event_registration_enabled')
+          .maybeSingle();
+
+        if (error) throw error;
+        if (data) {
+          setIsEnabled(data.value === true);
+        } else {
+          // Attempt to insert initial default value
+          await supabase
+            .from('system_settings')
+            .insert({ key: 'event_registration_enabled', value: true });
+        }
+      } catch (err: any) {
+        if (err?.code === '42P01') {
+          console.warn("Table 'system_settings' does not exist yet. Please run DB setup schema.", err);
+        } else {
+          console.warn('Failed to load registration status gracefully:', err);
+        }
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchStatus();
+  }, []);
+
+  const handleToggle = async () => {
+    setUpdating(true);
+    setStatusMessage(null);
+    const nextState = !isEnabled;
+    try {
+      const { error } = await supabase
+        .from('system_settings')
+        .upsert({
+          key: 'event_registration_enabled',
+          value: nextState,
+          updated_at: new Date().toISOString()
+        });
+
+      if (error) {
+        if (error.message?.includes("relation") || error.code === '42P01') {
+          throw new Error("The settings table ('system_settings') is not yet created in Supabase. Please execute the SQL schema creation block first.");
+        }
+        throw error;
+      }
+      setIsEnabled(nextState);
+      setStatusMessage(`Event registration forms are now ${nextState ? 'ONLINE & ENABLED' : 'OFFLINE & DISABLED'}.`);
+    } catch (err: any) {
+      console.error('Failed to update registration status', err);
+      setStatusMessage(`Error: ${err.message || 'Could not update status.'}`);
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="animate-pulse bg-white/[0.02] border border-white/5 rounded-3xl p-8 flex items-center justify-between">
+        <div className="space-y-2 w-1/2">
+          <div className="h-4 bg-white/10 rounded w-1/3"></div>
+          <div className="h-3 bg-white/5 rounded w-2/3"></div>
+        </div>
+        <div className="h-8 bg-white/10 rounded-full w-14"></div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-white/[0.01] border border-white/5 rounded-3xl p-8 shadow-2xl space-y-6">
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+        <div className="flex items-start gap-4">
+          <div className={`p-4 rounded-2xl flex items-center justify-center border transition-all ${isEnabled ? 'bg-green-500/10 border-green-500/20 text-green-400' : 'bg-red-500/10 border-red-500/20 text-red-500 animate-pulse'}`}>
+            <ShieldAlert className="w-7 h-7" />
+          </div>
+          <div>
+            <h3 className="font-extrabold text-white text-lg uppercase tracking-tight">Event Registration Form Toggle</h3>
+            <p className="text-xs text-zinc-500 mt-1 max-w-md leading-relaxed">
+              Control whether normal users can access any event/segment registration forms. Setting this offline blocks new submissions and acts as a firewall.
+            </p>
+          </div>
+        </div>
+
+        <button
+          onClick={handleToggle}
+          disabled={updating}
+          id="registration-toggle-btn"
+          className={`relative inline-flex h-9 w-18 items-center rounded-full transition-colors duration-300 focus:outline-none ${
+            isEnabled ? 'bg-green-500' : 'bg-zinc-850'
+          } ${updating ? 'opacity-55 cursor-not-allowed' : 'cursor-pointer'}`}
+        >
+          <span
+            className={`inline-block h-7 w-7 transform rounded-full bg-white transition-transform duration-300 shadow-lg ${
+              isEnabled ? 'translate-x-[40px]' : 'translate-x-[4px]'
+            }`}
+          />
+        </button>
+      </div>
+
+      {statusMessage && (
+        <div className={`flex items-start gap-3 p-4 rounded-2xl border text-xs font-bold uppercase tracking-wide leading-relaxed ${
+          statusMessage.startsWith('Error') 
+            ? 'bg-rose-500/10 border-rose-500/20 text-rose-500' 
+            : 'bg-green-500/10 border-green-500/20 text-green-400'
+        }`}>
+          {statusMessage.startsWith('Error') ? <AlertCircle className="w-5 h-5 mt-0.5 shrink-0" /> : <CheckCircle2 className="w-5 h-5 mt-0.5 shrink-0" />}
+          <div className="flex-1">
+            <p className="font-extrabold">{statusMessage}</p>
+            {statusMessage.includes("relation") && (
+              <div className="mt-2 text-[10px] text-zinc-400 font-mono tracking-normal normal-case border-t border-white/5 pt-2 space-y-1 bg-black/20 p-2.5 rounded-lg border">
+                <p className="font-bold text-amber-500/90 uppercase tracking-wider text-[9px]">⚠️ Setup Action Required:</p>
+                <p>Run the SQL in your Supabase SQL Editor to provision the settings table:</p>
+                <pre className="text-zinc-500 mt-1 select-all overflow-x-auto whitespace-pre p-2 rounded bg-black">
+{`CREATE TABLE public.system_settings (
+    key TEXT PRIMARY KEY,
+    value JSONB NOT NULL,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+INSERT INTO public.system_settings (key, value) VALUES ('event_registration_enabled', 'true'::jsonb);
+ALTER TABLE public.system_settings ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Allow public read access to system settings" ON public.system_settings FOR SELECT USING (true);
+CREATE POLICY "Allow admins to insert/update system settings" ON public.system_settings FOR ALL USING (
+    EXISTS (SELECT 1 FROM public.profiles WHERE profiles.id = auth.uid() AND profiles.role = 'admin')
+);`}
+                </pre>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Database Schema Setup & Integration Helper Box */}
+      <div className="p-6 rounded-2xl bg-amber-500/5 border border-amber-500/10 space-y-3.5">
+        <h4 className="text-xs font-black text-amber-500 uppercase tracking-widest flex items-center gap-2">
+           <Activity className="w-4 h-4 text-amber-500" />
+           Integration Ledger Guide
+        </h4>
+        <div className="space-y-2 text-[10px] text-zinc-400 leading-relaxed uppercase tracking-wider">
+          <p>1. <strong className="text-white">Authorizing controls</strong>: The status database switch reflects instantly system-wide.</p>
+          <p>2. <strong className="text-white">Standard Users</strong>: Access is completely firewalled. Attempting to click registration URLs redirects to the registration closed dashboard.</p>
+          <p>3. <strong className="text-white">Admin override</strong>: Administrators and Super Admins retain the license to bypass registration lockdowns for testing purposes.</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+interface TeamEventConfig {
+  name: string;
+  price: number;
+  memberCount: number;
+  eligibleCategories: string;
+  description: string;
+}
+
+export function EventRegistrationConfigEditor({ showToast }: { showToast: (msg: string, type: 'success' | 'error' | 'info') => void }) {
+  const [loading, setLoading] = useState<boolean>(true);
+  const [saving, setSaving] = useState<boolean>(false);
+  
+  // Settings Form States
+  const [formDescription, setFormDescription] = useState<string>('');
+  const [bkashNumber, setBkashNumber] = useState<string>('');
+  const [perEventPriceSolo, setPerEventPriceSolo] = useState<number>(50);
+  const [allEventsSoloPriceGeneral, setAllEventsSoloPriceGeneral] = useState<number>(100);
+  const [allEventsSoloPriceMember, setAllEventsSoloPriceMember] = useState<number>(50);
+  
+  // Lists States
+  const [soloEvents, setSoloEvents] = useState<string[]>([]);
+  const [teamEvents, setTeamEvents] = useState<TeamEventConfig[]>([]);
+  
+  // Inline addition helper states
+  const [newSoloName, setNewSoloName] = useState<string>('');
+  const [newTeamName, setNewTeamName] = useState<string>('');
+  const [newTeamPrice, setNewTeamPrice] = useState<number>(200);
+  const [newTeamMemberCount, setNewTeamMemberCount] = useState<number>(2);
+  const [newTeamCategory, setNewTeamCategory] = useState<string>('secondary_higher_secondary');
+  const [newTeamDesc, setNewTeamDesc] = useState<string>('');
+
+  const DEFAULT_CONFIG = {
+    formDescription: "Specify the category format. Standard events are priced at 50tk each. Select all to enjoy premium package bundles.",
+    perEventPriceSolo: 50,
+    allEventsSoloPriceGeneral: 100,
+    allEventsSoloPriceMember: 50,
+    bkashNumber: "01712345678",
+    soloEvents: [
+      "Math Olympiad",
+      "IQ",
+      "Probability Pressure",
+      "Code Break",
+      "Human Calculator",
+      "Calc Bee",
+      "Geo Dash",
+      "Rubik's Cube",
+      "Sudoku",
+      "Cryptomania",
+      "Principia",
+      "Math Relay"
+    ],
+    teamEvents: [
+      {
+        name: "Tic-Tac-Toe",
+        price: 300,
+        memberCount: 3,
+        eligibleCategories: "primary_junior",
+        description: "Class 3 to 8 (Primary & Junior) Team Showdown. Includes 3 members."
+      },
+      {
+        name: "Escape Room",
+        price: 200,
+        memberCount: 2,
+        eligibleCategories: "secondary_higher_secondary",
+        description: "Class 9 to 12 (Secondary & Higher Secondary) strategic room puzzles. Includes 2 members."
+      }
+    ]
+  };
+
+  useEffect(() => {
+    async function fetchConfig() {
+      try {
+        const { data, error } = await supabase
+          .from('system_settings')
+          .select('value')
+          .eq('key', 'event_registration_config')
+          .maybeSingle();
+
+        if (error) throw error;
+
+        if (data && data.value) {
+          const val = data.value;
+          setFormDescription(val.formDescription || DEFAULT_CONFIG.formDescription);
+          setBkashNumber(val.bkashNumber || DEFAULT_CONFIG.bkashNumber);
+          setPerEventPriceSolo(typeof val.perEventPriceSolo === 'number' ? val.perEventPriceSolo : DEFAULT_CONFIG.perEventPriceSolo);
+          setAllEventsSoloPriceGeneral(typeof val.allEventsSoloPriceGeneral === 'number' ? val.allEventsSoloPriceGeneral : DEFAULT_CONFIG.allEventsSoloPriceGeneral);
+          setAllEventsSoloPriceMember(typeof val.allEventsSoloPriceMember === 'number' ? val.allEventsSoloPriceMember : DEFAULT_CONFIG.allEventsSoloPriceMember);
+          setSoloEvents(val.soloEvents || DEFAULT_CONFIG.soloEvents);
+          setTeamEvents(val.teamEvents || DEFAULT_CONFIG.teamEvents);
+        } else {
+          // Initialize DB row
+          await supabase
+            .from('system_settings')
+            .upsert({ key: 'event_registration_config', value: DEFAULT_CONFIG });
+
+          setFormDescription(DEFAULT_CONFIG.formDescription);
+          setBkashNumber(DEFAULT_CONFIG.bkashNumber);
+          setPerEventPriceSolo(DEFAULT_CONFIG.perEventPriceSolo);
+          setAllEventsSoloPriceGeneral(DEFAULT_CONFIG.allEventsSoloPriceGeneral);
+          setAllEventsSoloPriceMember(DEFAULT_CONFIG.allEventsSoloPriceMember);
+          setSoloEvents(DEFAULT_CONFIG.soloEvents);
+          setTeamEvents(DEFAULT_CONFIG.teamEvents);
+        }
+      } catch (err: any) {
+        console.warn("Failed to load custom settings row:", err);
+        // Fallback states to original defaults
+        setFormDescription(DEFAULT_CONFIG.formDescription);
+        setBkashNumber(DEFAULT_CONFIG.bkashNumber);
+        setPerEventPriceSolo(DEFAULT_CONFIG.perEventPriceSolo);
+        setAllEventsSoloPriceGeneral(DEFAULT_CONFIG.allEventsSoloPriceGeneral);
+        setAllEventsSoloPriceMember(DEFAULT_CONFIG.allEventsSoloPriceMember);
+        setSoloEvents(DEFAULT_CONFIG.soloEvents);
+        setTeamEvents(DEFAULT_CONFIG.teamEvents);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchConfig();
+  }, []);
+
+  const handleSave = async () => {
+    setSaving(true);
+    const payload = {
+      formDescription,
+      bkashNumber,
+      perEventPriceSolo: Number(perEventPriceSolo),
+      allEventsSoloPriceGeneral: Number(allEventsSoloPriceGeneral),
+      allEventsSoloPriceMember: Number(allEventsSoloPriceMember),
+      soloEvents,
+      teamEvents
+    };
+
+    try {
+      const { error } = await supabase
+        .from('system_settings')
+        .upsert({
+          key: 'event_registration_config',
+          value: payload,
+          updated_at: new Date().toISOString()
+        });
+
+      if (error) throw error;
+      showToast("Event registration wizard parameters updated successfully!", "success");
+    } catch (err: any) {
+      console.error(err);
+      showToast("Failed to save event parameters: " + (err.message || err.details || "Check RLS policies."), "error");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleResetToDefault = () => {
+    if (window.confirm("Are you sure you want to reset all registration configuration properties back to factory JMC defaults?")) {
+      setFormDescription(DEFAULT_CONFIG.formDescription);
+      setBkashNumber(DEFAULT_CONFIG.bkashNumber);
+      setPerEventPriceSolo(DEFAULT_CONFIG.perEventPriceSolo);
+      setAllEventsSoloPriceGeneral(DEFAULT_CONFIG.allEventsSoloPriceGeneral);
+      setAllEventsSoloPriceMember(DEFAULT_CONFIG.allEventsSoloPriceMember);
+      setSoloEvents(DEFAULT_CONFIG.soloEvents);
+      setTeamEvents(DEFAULT_CONFIG.teamEvents);
+      showToast("Fields reverted locally. Make sure to click save to write changes permanently.", "info");
+    }
+  };
+
+  // Solo events helper actions
+  const addSoloEvent = () => {
+    const trimmed = newSoloName.trim();
+    if (!trimmed) return;
+    if (soloEvents.some(se => se.toLowerCase() === trimmed.toLowerCase())) {
+      showToast("Event already exists in the catalog.", "error");
+      return;
+    }
+    setSoloEvents([...soloEvents, trimmed]);
+    setNewSoloName('');
+  };
+
+  const removeSoloEvent = (indexToRemove: number) => {
+    setSoloEvents(soloEvents.filter((_, idx) => idx !== indexToRemove));
+  };
+
+  // Team events helper actions
+  const addTeamEvent = () => {
+    const nameTrimmed = newTeamName.trim();
+    if (!nameTrimmed) {
+      showToast("Please provide a team event identifier title.", "error");
+      return;
+    }
+    if (teamEvents.some(te => te.name.toLowerCase() === nameTrimmed.toLowerCase())) {
+      showToast("Team event with that identifier already exists.", "error");
+      return;
+    }
+    
+    const newEvent: TeamEventConfig = {
+      name: nameTrimmed,
+      price: Number(newTeamPrice),
+      memberCount: Number(newTeamMemberCount),
+      eligibleCategories: newTeamCategory,
+      description: newTeamDesc.trim() || `${nameTrimmed} general championship`
+    };
+
+    setTeamEvents([...teamEvents, newEvent]);
+    setNewTeamName('');
+    setNewTeamPrice(200);
+    setNewTeamMemberCount(2);
+    setNewTeamCategory('secondary_higher_secondary');
+    setNewTeamDesc('');
+    showToast(`Added team event "${nameTrimmed}" to configuration list.`, "success");
+  };
+
+  const removeTeamEvent = (indexToRemove: number) => {
+    setTeamEvents(teamEvents.filter((_, idx) => idx !== indexToRemove));
+  };
+
+  if (loading) {
+    return (
+      <div className="animate-pulse bg-white/[0.01] border border-white/5 rounded-3xl p-8 space-y-4">
+        <div className="h-4 bg-white/10 rounded w-1/4"></div>
+        <div className="h-20 bg-white/5 rounded w-full"></div>
+        <div className="h-10 bg-white/5 rounded w-1/3"></div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-white/[0.01] border border-white/5 rounded-3xl p-8 shadow-2xl space-y-8">
+      {/* Basic Form parameters */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pb-6 border-b border-white/5">
+        <div className="space-y-2 col-span-1 md:col-span-2">
+          <label className="text-[10px] font-black uppercase tracking-wider text-zinc-500">Form Promotional Description / Category Tagline</label>
+          <textarea
+            value={formDescription}
+            onChange={(e) => setFormDescription(e.target.value)}
+            rows={2}
+            className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-xs font-bold text-white focus:outline-none focus:border-indigo-500 transition-all [resize:none]"
+            placeholder="Introduce the solo event prices and bundle details..."
+          />
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-[10px] font-black uppercase tracking-wider text-zinc-500">Official bKash Target Number (Receiver)</label>
+          <input
+            type="text"
+            value={bkashNumber}
+            onChange={(e) => setBkashNumber(e.target.value)}
+            className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-xs font-bold text-white focus:outline-none focus:border-indigo-500 transition-all"
+            placeholder="01XXXXXXXXX"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-[10px] font-black uppercase tracking-wider text-zinc-500">Solo Event Price (Per Checked Segment BDT)</label>
+          <input
+            type="number"
+            value={perEventPriceSolo}
+            onChange={(e) => setPerEventPriceSolo(Number(e.target.value))}
+            className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-xs font-bold text-white focus:outline-none focus:border-indigo-500 transition-all"
+            placeholder="50"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-[10px] font-black uppercase tracking-wider text-zinc-500">All-Solo-Events Bundle - General Users (BDT)</label>
+          <input
+            type="number"
+            value={allEventsSoloPriceGeneral}
+            onChange={(e) => setAllEventsSoloPriceGeneral(Number(e.target.value))}
+            className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-xs font-bold text-white focus:outline-none focus:border-indigo-500 transition-all"
+            placeholder="100"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-[10px] font-black uppercase tracking-wider text-zinc-500">All-Solo-Events Bundle - JMC Members (BDT)</label>
+          <input
+            type="number"
+            value={allEventsSoloPriceMember}
+            onChange={(e) => setAllEventsSoloPriceMember(Number(e.target.value))}
+            className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-xs font-bold text-white focus:outline-none focus:border-indigo-500 transition-all"
+            placeholder="50"
+          />
+        </div>
+      </div>
+
+      {/* Solo Events List Component */}
+      <div className="space-y-4 pb-6 border-b border-white/5">
+        <div>
+          <h4 className="text-xs font-black uppercase tracking-wider text-zinc-300 flex items-center gap-2">
+            <Trophy className="w-4 h-4 text-indigo-400" />
+            1. Solo-Event Catalog Catalysts ({soloEvents.length})
+          </h4>
+          <p className="text-[10px] text-zinc-500 mt-1">Manage standard solo challenges that users can register for in Step 2 of the form.</p>
+        </div>
+
+        <div className="flex flex-wrap gap-2.5 p-4 rounded-2xl bg-black/20 border border-white/5">
+          {soloEvents.length === 0 ? (
+            <span className="text-[10px] font-bold text-zinc-600 uppercase tracking-wider py-1">No solo events configured.</span>
+          ) : (
+            soloEvents.map((event, idx) => (
+              <span 
+                key={idx} 
+                className="inline-flex items-center gap-2 px-3 py-1.5 bg-white/5 border border-white/10 rounded-xl text-[10px] font-black uppercase tracking-wider text-white"
+              >
+                {event}
+                <button 
+                  type="button" 
+                  onClick={() => removeSoloEvent(idx)} 
+                  className="text-zinc-500 hover:text-red-500 transition-colors shrink-0 cursor-pointer"
+                >
+                  <XCircle className="w-3.5 h-3.5" />
+                </button>
+              </span>
+            ))
+          )}
+        </div>
+
+        <div className="flex gap-2 max-w-md">
+          <input
+            type="text"
+            value={newSoloName}
+            onChange={(e) => setNewSoloName(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addSoloEvent())}
+            placeholder="E.g. Math Relay Championship"
+            className="flex-1 bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-xs font-bold text-white focus:outline-none focus:border-indigo-500 transition-all"
+          />
+          <button
+            type="button"
+            onClick={addSoloEvent}
+            className="px-4 py-2 text-xs bg-indigo-500 hover:bg-indigo-400 text-white font-black rounded-xl uppercase tracking-wider transition-all flex items-center gap-1.5 cursor-pointer shadow-lg shadow-indigo-500/10"
+          >
+            <Plus className="w-3.5 h-3.5" /> ADD
+          </button>
+        </div>
+      </div>
+
+      {/* Team Events config */}
+      <div className="space-y-4 pb-6">
+        <div>
+          <h4 className="text-xs font-black uppercase tracking-wider text-zinc-300 flex items-center gap-2">
+            <Users className="w-4 h-4 text-indigo-400" />
+            2. Team Event Configurations ({teamEvents.length})
+          </h4>
+          <p className="text-[10px] text-zinc-500 mt-1">Configure active team category registrations, including registration price and teammate caps.</p>
+        </div>
+
+        {/* Existing Team Events list */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {teamEvents.map((te, idx) => (
+            <div key={idx} className="p-5 rounded-2xl bg-black/30 border border-white/10 relative overflow-hidden group">
+              <button
+                type="button"
+                onClick={() => removeTeamEvent(idx)}
+                className="absolute right-4 top-4 text-zinc-500 hover:text-rose-500 transition-colors cursor-pointer"
+                title="Delete this event"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+              <div className="space-y-2">
+                <span className="px-2.5 py-1 rounded-full text-[8px] font-black uppercase tracking-widest bg-indigo-500/10 border border-indigo-500/20 text-indigo-400">
+                  {te.eligibleCategories === 'all' ? 'All Classes' : te.eligibleCategories === 'primary_junior' ? 'Class 3-8' : 'Class 9-12'}
+                </span>
+                <h5 className="text-xs font-extrabold text-white uppercase tracking-tight">{te.name}</h5>
+                <p className="text-[10px] text-zinc-500 leading-relaxed font-semibold italic">"{te.description}"</p>
+                
+                <div className="grid grid-cols-2 gap-2 pt-2 border-t border-white/5 text-[10px] font-bold uppercase tracking-wider text-zinc-400">
+                  <div>
+                    <span className="block text-[8px] text-zinc-600">Entry BDT Fee:</span>
+                    <span className="text-white font-black">{te.price} BDT</span>
+                  </div>
+                  <div>
+                    <span className="block text-[8px] text-zinc-600">Required Members:</span>
+                    <span className="text-white font-black">{te.memberCount} Participants</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Builder Panel to add team event */}
+        <div className="p-6 rounded-2xl bg-white/[0.02] border border-white/5 space-y-4">
+          <h5 className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Add Custom Team Category Challenge</h5>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="space-y-1">
+              <span className="text-[8px] font-black uppercase tracking-wider text-zinc-500">Event Name Title</span>
+              <input
+                type="text"
+                value={newTeamName}
+                onChange={(e) => setNewTeamName(e.target.value)}
+                placeholder="E.g. Math Relays"
+                className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-xs font-bold text-white focus:outline-none"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <span className="text-[8px] font-black uppercase tracking-wider text-zinc-500">Registration Price / BDT</span>
+              <input
+                type="number"
+                value={newTeamPrice}
+                onChange={(e) => setNewTeamPrice(Number(e.target.value))}
+                placeholder="300"
+                className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-xs font-bold text-white focus:outline-none"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <span className="text-[8px] font-black uppercase tracking-wider text-zinc-500">Mandatory Member Count</span>
+              <select
+                value={newTeamMemberCount}
+                onChange={(e) => setNewTeamMemberCount(Number(e.target.value))}
+                className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-xs font-bold text-white focus:outline-none cursor-pointer"
+              >
+                <option value={2} className="bg-zinc-900 text-white">2 Members total</option>
+                <option value={3} className="bg-zinc-900 text-white">3 Members total</option>
+              </select>
+            </div>
+
+            <div className="space-y-1 md:col-span-1">
+              <span className="text-[8px] font-black uppercase tracking-wider text-zinc-500">Class Category Grouping</span>
+              <select
+                value={newTeamCategory}
+                onChange={(e) => setNewTeamCategory(e.target.value)}
+                className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-xs font-bold text-white focus:outline-none cursor-pointer"
+              >
+                <option value="primary_junior" className="bg-zinc-900 text-white">Class 3 to 8 (Primary & Junior)</option>
+                <option value="secondary_higher_secondary" className="bg-zinc-900 text-white">Class 9 to 12 (Secondary & Higher Secondary)</option>
+                <option value="all" className="bg-zinc-900 text-white">All Class Levels</option>
+              </select>
+            </div>
+
+            <div className="space-y-1 md:col-span-2">
+              <span className="text-[8px] font-black uppercase tracking-wider text-zinc-500">Short Subheading Description</span>
+              <input
+                type="text"
+                value={newTeamDesc}
+                onChange={(e) => setNewTeamDesc(e.target.value)}
+                placeholder="Class 3 to 8 speed math relay challenge..."
+                className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-xs font-bold text-white focus:outline-none"
+              />
+            </div>
+          </div>
+
+          <div className="flex justify-end pt-2">
+            <button
+              type="button"
+              onClick={addTeamEvent}
+              className="px-4 py-2 bg-indigo-500/20 hover:bg-indigo-500 text-indigo-400 hover:text-white font-black text-[10px] uppercase tracking-wider rounded-xl transition-all flex items-center gap-1.5 cursor-pointer border border-indigo-500/30"
+            >
+              <Plus className="w-3.5 h-3.5" /> ADD TEAM EVENT TYPE
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Editor footer actions */}
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-6 mt-4 border-t border-white/5">
+        <button
+          type="button"
+          onClick={handleResetToDefault}
+          className="w-full sm:w-auto px-4 py-2.5 rounded-xl border border-white/5 hover:bg-white/5 text-zinc-400 hover:text-white text-xs font-black uppercase tracking-wider transition-all cursor-pointer"
+        >
+          Reset to Factory Defaults
+        </button>
+
+        <button
+          type="button"
+          onClick={handleSave}
+          disabled={saving}
+          className="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-indigo-500 hover:bg-indigo-400 hover:scale-[1.02] text-white active:scale-95 text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-lg shadow-indigo-500/20 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+        >
+          {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+          SAVE EVENT AND PRICING VALUES
+        </button>
+      </div>
+    </div>
+  );
+}
+
+export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ isSuperAdmin = false }) => {
   const { showToast } = useToast();
   const [mounted, setMounted] = useState(false);
   
@@ -50,7 +693,7 @@ export const SuperAdminPanel = () => {
   const [loading, setLoading] = useState(true);
   const [promoting, setPromoting] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [activeSubTab, setActiveSubTab] = useState<'users' | 'database' | 'positions' | 'support' | 'email' | 'food' | 'cards'>('users');
+  const [activeSubTab, setActiveSubTab] = useState<'users' | 'database' | 'positions' | 'support' | 'email' | 'food' | 'cards' | 'transactions' | 'registration'>('users');
   
   // Member ID Cards state
   const [members, setMembers] = useState<any[]>([]);
@@ -75,7 +718,18 @@ export const SuperAdminPanel = () => {
   const [testingEmail, setTestingEmail] = useState(false);
 
   // Database Explorer state
-  const [tables] = useState(['profiles', 'member', 'event_participation', 'site_content', 'support_tickets']);
+  const [tables] = useState([
+    'profiles', 
+    'member', 
+    'ec_member', 
+    'primary_events', 
+    'junior_events', 
+    'secondary_events', 
+    'higher_secondary_events', 
+    'event_participation', 
+    'site_content', 
+    'support_tickets'
+  ]);
   const [selectedTable, setSelectedTable] = useState('profiles');
   const [tableData, setTableData] = useState<any[]>([]);
   const [loadingTable, setLoadingTable] = useState(false);
@@ -83,6 +737,11 @@ export const SuperAdminPanel = () => {
   // Position Management state
   const [participations, setParticipations] = useState<any[]>([]);
   const [loadingParticipations, setLoadingParticipations] = useState(false);
+
+  // Verified Transactions state
+  const [verifiedTransactions, setVerifiedTransactions] = useState<any[]>([]);
+  const [loadingTransactions, setLoadingTransactions] = useState(false);
+  const [txSearchTerm, setTxSearchTerm] = useState('');
 
   const fetchEmailConfig = useCallback(async () => {
     setLoadingEmailConfig(true);
@@ -170,6 +829,126 @@ export const SuperAdminPanel = () => {
       setLoadingParticipations(false);
     }
   }, [showToast]);
+
+  const fetchVerifiedTransactions = useCallback(async () => {
+    setLoadingTransactions(true);
+    const tables = ['primary_events', 'junior_events', 'secondary_events', 'higher_secondary_events'];
+    let allVerified: any[] = [];
+    try {
+      for (const tb of tables) {
+        const { data, error } = await supabase
+          .from(tb)
+          .select('*')
+          .eq('verified', 'yes');
+        
+        if (error) throw error;
+        
+        if (data && data.length > 0) {
+          const userIds = data.map((d: any) => d.user_id).filter(Boolean);
+          let emailsMap: Record<string, string> = {};
+          if (userIds.length > 0) {
+            const { data: profs } = await supabase
+              .from('profiles')
+              .select('id, email')
+              .in('id', userIds);
+            profs?.forEach((p: any) => {
+              emailsMap[p.id] = p.email;
+            });
+          }
+
+          const mapped = data.map((item: any) => ({
+            ...item,
+            tableName: tb,
+            email: emailsMap[item.user_id] || ''
+          }));
+          allVerified = [...allVerified, ...mapped];
+        }
+      }
+      
+      allVerified.sort((a, b) => {
+        const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
+        const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
+        return dateB - dateA;
+      });
+      setVerifiedTransactions(allVerified);
+    } catch (err: any) {
+      console.error("Error loading verified transactions:", err);
+      showToast(err.message || "Failed to load verified transactions", "error");
+    } finally {
+      setLoadingTransactions(false);
+    }
+  }, [showToast]);
+
+  const exportVerifiedTransactionsCSV = () => {
+    if (verifiedTransactions.length === 0) {
+      showToast("No verified transactions to export", "error");
+      return;
+    }
+
+    const headers = [
+      "Record ID",
+      "Category",
+      "Full Name",
+      "Email Address",
+      "Class",
+      "Section",
+      "Roll No",
+      "bKash Number",
+      "Transaction ID",
+      "Amount (BDT)",
+      "Registered Segments",
+      "Verification Time"
+    ];
+
+    const getCategoryName = (tbName: string) => {
+      switch (tbName) {
+        case 'primary_events': return 'Primary (Class 3-5)';
+        case 'junior_events': return 'Junior (Class 6-8)';
+        case 'secondary_events': return 'Secondary (Class 9-10)';
+        case 'higher_secondary_events': return 'Higher Secondary (Class 11-12)';
+        default: return tbName;
+      }
+    };
+
+    const csvRows = [
+      headers.join(','),
+      ...verifiedTransactions.map(tx => {
+        const category = getCategoryName(tx.tableName);
+        const values = [
+          tx.id || '',
+          category,
+          tx.full_name || '',
+          tx.email || '',
+          tx.class || '',
+          tx.section || '',
+          tx.roll || '',
+          tx.bkash_number || '',
+          tx.trxnid || '',
+          tx.amount || '0',
+          tx.selected_events || '',
+          tx.created_at || ''
+        ];
+
+        const escapedValues = values.map(val => {
+          const stringVal = String(val).replace(/"/g, '""');
+          return `"${stringVal}"`;
+        });
+
+        return escapedValues.join(',');
+      })
+    ];
+
+    const csvContent = csvRows.join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `verified_transactions_export_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    showToast("Verified transaction list exported successfully as CSV!", "success");
+  };
 
   const fetchFoodConfig = useCallback(async () => {
     setLoadingFoodConfig(true);
@@ -466,18 +1245,50 @@ export const SuperAdminPanel = () => {
   const fetchVerifiedMembers = useCallback(async () => {
     setLoadingMembers(true);
     try {
-      const { data, error } = await supabase
+      const { data: standardData, error: standardError } = await supabase
         .from('member')
         .select('*')
         .eq('verified', 'yes')
         .order('full_name');
       
-      if (error) throw error;
-      setMembers(data || []);
+      if (standardError) throw standardError;
+
+      let ecData: any[] = [];
+      try {
+        const { data: ecRes, error: ecError } = await supabase
+          .from('ec_member')
+          .select('*')
+          .eq('verified', 'yes');
+        if (!ecError && ecRes) {
+          ecData = ecRes.map(m => ({ ...m, is_ec: true }));
+        }
+      } catch (e) {
+        console.error("Failed to fetch verified EC members:", e);
+      }
+
+      // Deduplicate by member id to prevent React key collision warnings
+      const uniqueMembersMap = new Map<string, any>();
+      (standardData || []).forEach(m => {
+        if (m.id) {
+          uniqueMembersMap.set(m.id, { ...m, is_ec: m.is_ec || false });
+        }
+      });
+      ecData.forEach(m => {
+        if (m.id) {
+          if (uniqueMembersMap.has(m.id)) {
+            const existing = uniqueMembersMap.get(m.id);
+            uniqueMembersMap.set(m.id, { ...existing, ...m, is_ec: true });
+          } else {
+            uniqueMembersMap.set(m.id, m);
+          }
+        }
+      });
+      const combined = Array.from(uniqueMembersMap.values());
+      setMembers(combined);
       
       // Initially select all verified members for printing
       const initialSelection: Record<string, boolean> = {};
-      (data || []).forEach((m: any) => {
+      combined.forEach((m: any) => {
         initialSelection[m.id] = true;
       });
       setSelectedMembers(initialSelection);
@@ -589,7 +1400,18 @@ export const SuperAdminPanel = () => {
     if (activeSubTab === 'email') fetchEmailConfig();
     if (activeSubTab === 'food') fetchFoodConfig();
     if (activeSubTab === 'cards') fetchVerifiedMembers();
-  }, [activeSubTab, selectedTable, fetchUsers, fetchTableData, fetchParticipations, fetchEmailConfig, fetchFoodConfig, fetchVerifiedMembers]);
+    if (activeSubTab === 'transactions') fetchVerifiedTransactions();
+  }, [
+    activeSubTab, 
+    selectedTable, 
+    fetchUsers, 
+    fetchTableData, 
+    fetchParticipations, 
+    fetchEmailConfig, 
+    fetchFoodConfig, 
+    fetchVerifiedMembers,
+    fetchVerifiedTransactions
+  ]);
 
   const updateUserRole = async (userId: string, currentRole: string) => {
     const newRole = currentRole === 'admin' ? 'member' : 'admin';
@@ -628,6 +1450,10 @@ export const SuperAdminPanel = () => {
   };
 
   const deleteRow = async (tableName: string, rowId: any) => {
+    if (!isSuperAdmin) {
+      showToast('Only Super Admins can delete database records.', 'error');
+      return;
+    }
     if (!window.confirm('Are you sure you want to delete this row? This action is irreversible.')) return;
     try {
       // Handle different ID types (id for UUID, or specific key for site_content)
@@ -647,10 +1473,14 @@ export const SuperAdminPanel = () => {
   };
 
   const editRow = async (tableName: string, row: any) => {
+    if (!isSuperAdmin) {
+      showToast('Only Super Admins can edit database records.', 'error');
+      return;
+    }
     const field = window.prompt(`Enter column name to edit (Available: ${Object.keys(row).join(', ')}):`);
-    if (!field || !row[field]) return;
+    if (!field || !(field in row)) return;
     
-    const newValue = window.prompt(`Enter new value for "${field}" (Current: ${row[field]}):`);
+    const newValue = window.prompt(`Enter new value for "${field}" (Current: ${row[field] !== undefined ? String(row[field]) : ''}):`);
     if (newValue === null) return;
 
     try {
@@ -695,6 +1525,27 @@ export const SuperAdminPanel = () => {
     u.email?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  const filteredTransactions = verifiedTransactions.filter(tx => 
+    tx.full_name?.toLowerCase().includes(txSearchTerm.toLowerCase()) ||
+    tx.trxnid?.toLowerCase().includes(txSearchTerm.toLowerCase()) ||
+    tx.email?.toLowerCase().includes(txSearchTerm.toLowerCase()) ||
+    tx.class?.toLowerCase().includes(txSearchTerm.toLowerCase())
+  );
+
+  if (mounted && !isSuperAdmin) {
+    return (
+      <div className="p-12 text-center rounded-[2.5rem] border border-red-500/20 bg-red-500/5 max-w-2xl mx-auto my-12 flex flex-col items-center">
+        <div className="p-5 rounded-full bg-red-500/10 text-red-400 mb-6">
+          <ShieldAlert className="w-10 h-10 animate-pulse" />
+        </div>
+        <h3 className="text-xl font-black text-white uppercase tracking-tight mb-2">Access Restrained</h3>
+        <p className="text-xs text-zinc-400 leading-relaxed max-w-md">
+          Only Super Admins possess the root level credentials required to initialize database schema mutations, edit user forms, or adjust club structures.
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-8">
       {/* Sub-tabs header */}
@@ -706,6 +1557,8 @@ export const SuperAdminPanel = () => {
           { id: 'email', label: 'Email Status', icon: Mail },
           { id: 'food', label: 'Food Management', icon: Utensils },
           { id: 'cards', label: 'Member ID Cards', icon: QrCode },
+          { id: 'transactions', label: 'Verified Transactions', icon: CheckCircle2 },
+          { id: 'registration', label: 'Registration Toggle', icon: ShieldAlert },
           { id: 'database', label: 'Database Explorer', icon: DatabaseZap }
         ].map(tab => (
           <button
@@ -1511,6 +2364,131 @@ export const SuperAdminPanel = () => {
             </DashboardSection>
           </motion.div>
         )}
+
+        {activeSubTab === 'transactions' && (
+          <motion.div
+            key="transactions"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+          >
+            <DashboardSection 
+              title="Verified Transactions & Export" 
+              description="Monitor all verified event registrations. Export details as a CSV file."
+              icon={CheckCircle2}
+              actions={
+                <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
+                  <div className="relative w-full sm:w-64">
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
+                    <input
+                      type="text"
+                      placeholder="Search transactions..."
+                      value={txSearchTerm}
+                      onChange={(e) => setTxSearchTerm(e.target.value)}
+                      className="pl-11 pr-6 py-2.5 bg-white/5 border border-white/5 rounded-xl text-xs text-white outline-none focus:border-amber-500/30 transition-all w-full font-bold"
+                    />
+                  </div>
+                  <button
+                    onClick={exportVerifiedTransactionsCSV}
+                    disabled={loadingTransactions || verifiedTransactions.length === 0}
+                    className="w-full sm:w-auto px-5 py-2.5 bg-green-500 text-black font-black text-[10px] uppercase tracking-wider rounded-xl transition-all shadow-[0_0_20px_rgba(34,197,94,0.15)] flex items-center justify-center gap-2 hover:bg-green-400 cursor-pointer disabled:opacity-50"
+                  >
+                    <Printer className="w-3.5 h-3.5" /> Export as CSV
+                  </button>
+                </div>
+              }
+            >
+              <div className="p-4 bg-amber-500/5 border border-amber-500/10 rounded-2xl flex items-center gap-4 mb-6">
+                <AlertCircle className="w-5 h-5 text-amber-500 flex-shrink-0" />
+                <p className="text-[10px] text-amber-500 font-medium leading-relaxed uppercase tracking-widest">
+                  Showing authenticated, verified registrations only. These records have been confirmed, paid, and verified by administrators.
+                </p>
+              </div>
+
+              <div className="overflow-x-auto">
+                {loadingTransactions ? (
+                  <div className="flex items-center justify-center py-20">
+                    <Loader2 className="w-8 h-8 text-amber-500 animate-spin" />
+                  </div>
+                ) : filteredTransactions.length === 0 ? (
+                  <div className="py-20 text-center text-zinc-600 text-xs italic">
+                    No verified transactions found matching your criteria.
+                  </div>
+                ) : (
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="border-b border-white/5">
+                        <th className="py-4 px-6 text-[10px] uppercase tracking-widest text-zinc-500 font-black">Full Name</th>
+                        <th className="py-4 px-6 text-[10px] uppercase tracking-widest text-zinc-500 font-black">Table / Category</th>
+                        <th className="py-4 px-6 text-[10px] uppercase tracking-widest text-zinc-500 font-black">Class / Sec / Roll</th>
+                        <th className="py-4 px-6 text-[10px] uppercase tracking-widest text-zinc-500 font-black">bKash Number</th>
+                        <th className="py-4 px-6 text-[10px] uppercase tracking-widest text-zinc-500 font-black">Transaction ID</th>
+                        <th className="py-4 px-6 text-[10px] uppercase tracking-widest text-zinc-500 font-black">Amount</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredTransactions.map((tx, idx) => (
+                        <tr key={`${tx.tableName}-${tx.id}-${idx}`} className="border-b border-white/5 group hover:bg-white/[0.01]">
+                          <td className="py-4 px-6">
+                            <div>
+                              <p className="text-xs font-bold text-white mb-0.5">{tx.full_name}</p>
+                              <p className="text-[10px] text-zinc-500 font-mono">{tx.email || 'No email profile'}</p>
+                            </div>
+                          </td>
+                          <td className="py-4 px-6">
+                            <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest bg-amber-500/10 text-amber-500 border border-amber-500/20">
+                              {tx.tableName.replace('_', ' ')}
+                            </span>
+                          </td>
+                          <td className="py-4 px-6">
+                            <p className="text-xs font-semibold text-zinc-300">
+                              Class: {tx.class} | {tx.section} | #{tx.roll}
+                            </p>
+                          </td>
+                          <td className="py-4 px-6">
+                            <p className="text-xs font-mono text-zinc-400">{tx.bkash_number}</p>
+                          </td>
+                          <td className="py-4 px-6 font-mono text-xs font-black text-green-500 uppercase">
+                            {tx.trxnid}
+                          </td>
+                          <td className="py-4 px-6 text-xs text-white font-bold">
+                            {tx.amount} BDT
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+              </div>
+            </DashboardSection>
+          </motion.div>
+        )}
+
+        {activeSubTab === 'registration' && (
+          <motion.div
+            key="registration"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="space-y-8"
+          >
+            <DashboardSection 
+              title="Form Toggle & Gatekeepers" 
+              description="Dynamically unlock or lock all user-facing event registration systems."
+              icon={ShieldAlert}
+            >
+              <RegistrationToggleControl />
+            </DashboardSection>
+
+            <DashboardSection
+              title="Event Registration Parameters Editor"
+              description="Completely customize solo events, team events, participant sizes, pricing structures, and payment instructions."
+              icon={SlidersHorizontal}
+            >
+              <EventRegistrationConfigEditor showToast={showToast} />
+            </DashboardSection>
+          </motion.div>
+        )}
       </AnimatePresence>
 
       {mounted && typeof document !== 'undefined' && createPortal(
@@ -1541,7 +2519,7 @@ export const SuperAdminPanel = () => {
                       >
                         {/* Blank Background Template Image */}
                         <Image 
-                          src="/images/id-card-bg.png" 
+                          src={isEc ? "/images/ec_id_card_bg.jpeg" : "/images/id-card-bg.png"} 
                           alt="ID Card Background" 
                           fill
                           className="absolute inset-0 w-full h-full object-fill rounded-[48px] pointer-events-none z-0"
@@ -1584,7 +2562,7 @@ export const SuperAdminPanel = () => {
                           <div 
                             className="absolute flex items-center justify-start pointer-events-auto"
                             style={{
-                              top: '825px',
+                              top: isEc ? '814px' : '825px',
                               left: '186px',
                               width: '390px',
                               height: '32px',
@@ -1603,10 +2581,10 @@ export const SuperAdminPanel = () => {
 
                           {/* Class */}
                           <div 
-                            className="absolute flex items-center justify-center text-left pointer-events-auto font-extrabold"
+                            className="absolute flex items-center justify-center text-center pointer-events-auto font-extrabold"
                             style={{
-                              top: '880px',
-                              left: '150px',
+                              top: isEc ? '870px' : '880px',
+                              left: isEc ? '183px' : '150px',
                               width: '80px',
                               height: '24px',
                             }}
@@ -1618,10 +2596,10 @@ export const SuperAdminPanel = () => {
 
                           {/* Section */}
                           <div 
-                            className="absolute flex items-center justify-center text-left pointer-events-auto font-extrabold"
+                            className="absolute flex items-center justify-center text-center pointer-events-auto font-extrabold"
                             style={{
-                              top: '880px',
-                              left: '390px',
+                              top: isEc ? '870px' : '880px',
+                              left: isEc ? '423px' : '390px',
                               width: '60px',
                               height: '24px',
                             }}
@@ -1637,9 +2615,9 @@ export const SuperAdminPanel = () => {
 
                           {/* Roll */}
                           <div 
-                            className="absolute flex items-center justify-center text-left pointer-events-auto font-extrabold"
+                            className="absolute flex items-center justify-center text-center pointer-events-auto font-extrabold"
                             style={{
-                              top: '880px',
+                              top: isEc ? '870px' : '880px',
                               left: '544px',
                               width: '50px',
                               height: '24px',
@@ -1654,7 +2632,7 @@ export const SuperAdminPanel = () => {
                           <div 
                             className="absolute flex items-center justify-start text-left pointer-events-auto font-mono font-bold"
                             style={{
-                              top: '940px',
+                              top: isEc ? '934px' : '940px',
                               left: '213px',
                               width: '260px',
                               height: '24px',
@@ -1703,7 +2681,7 @@ export const SuperAdminPanel = () => {
                     className="relative w-[638px] h-[1012px] rounded-[52px] border-4 overflow-hidden bg-gradient-to-b from-[#11053D] via-[#090225] to-[#01000B] text-center text-white flex flex-col items-center id-card-print-node-scaled"
                     style={{
                       borderColor: `${brandingColor}66`,
-                      boxShadow: '0 0 60px rgba(58, 31, 241, 0.35)',
+                      boxShadow: isEc ? '0 0 60px rgba(245, 158, 11, 0.35)' : '0 0 60px rgba(58, 31, 241, 0.35)',
                       transform: 'scale(0.62)',
                       transformOrigin: 'center center',
                       WebkitPrintColorAdjust: 'exact',
@@ -1712,7 +2690,7 @@ export const SuperAdminPanel = () => {
                   >
                     {/* Blank Background Template Image */}
                     <Image 
-                      src="/images/id-card-bg.png" 
+                      src={isEc ? "/images/ec_id_card_bg.jpeg" : "/images/id-card-bg.png"} 
                       alt="ID Card Background" 
                       fill
                       className="absolute inset-0 w-full h-full object-fill rounded-[48px] pointer-events-none z-0"
@@ -1755,7 +2733,7 @@ export const SuperAdminPanel = () => {
                           <div 
                             className="absolute flex items-center justify-start pointer-events-auto"
                             style={{
-                              top: '825px',
+                              top: isEc ? '814px' : '825px',
                               left: '186px',
                               width: '390px',
                               height: '32px',
@@ -1774,10 +2752,10 @@ export const SuperAdminPanel = () => {
 
                           {/* Class */}
                           <div 
-                            className="absolute flex items-center justify-center text-left pointer-events-auto font-extrabold"
+                            className="absolute flex items-center justify-center text-center pointer-events-auto font-extrabold"
                             style={{
-                              top: '880px',
-                              left: '150px',
+                              top: isEc ? '870px' : '880px',
+                              left: isEc ? '183px' : '150px',
                               width: '80px',
                               height: '24px',
                             }}
@@ -1789,10 +2767,10 @@ export const SuperAdminPanel = () => {
 
                           {/* Section */}
                           <div 
-                            className="absolute flex items-center justify-center text-left pointer-events-auto font-extrabold"
+                            className="absolute flex items-center justify-center text-center pointer-events-auto font-extrabold"
                             style={{
-                              top: '880px',
-                              left: '390px',
+                              top: isEc ? '870px' : '880px',
+                              left: isEc ? '423px' : '390px',
                               width: '60px',
                               height: '24px',
                             }}
@@ -1808,9 +2786,9 @@ export const SuperAdminPanel = () => {
 
                       {/* Roll */}
                       <div 
-                        className="absolute flex items-center justify-center text-left pointer-events-auto font-extrabold"
+                        className="absolute flex items-center justify-center text-center pointer-events-auto font-extrabold"
                         style={{
-                          top: '880px',
+                          top: isEc ? '870px' : '880px',
                           left: '544px',
                           width: '50px',
                           height: '24px',
@@ -1825,7 +2803,7 @@ export const SuperAdminPanel = () => {
                       <div 
                         className="absolute flex items-center justify-start text-left pointer-events-auto font-mono font-bold"
                         style={{
-                          top: '940px',
+                          top: isEc ? '934px' : '940px',
                           left: '213px',
                           width: '260px',
                           height: '24px',
@@ -1873,7 +2851,7 @@ export const SuperAdminPanel = () => {
             }}
           >
             <Image 
-              src="/images/id-card-bg.png" 
+              src={activePdfMember.is_ec ? "/images/ec_id_card_bg.jpeg" : "/images/id-card-bg.png"} 
               alt="ID Card Background" 
               fill
               className="absolute inset-0 w-full h-full object-fill rounded-[48px] pointer-events-none z-0"
@@ -1914,7 +2892,7 @@ export const SuperAdminPanel = () => {
               <div 
                 className="absolute flex items-center justify-start pointer-events-auto"
                 style={{
-                  top: '825px',
+                  top: activePdfMember.is_ec ? '814px' : '825px',
                   left: '186px',
                   width: '390px',
                   height: '32px',
@@ -1933,10 +2911,10 @@ export const SuperAdminPanel = () => {
 
               {/* Class */}
               <div 
-                className="absolute flex items-center justify-center text-left pointer-events-auto font-extrabold"
+                className="absolute flex items-center justify-center text-center pointer-events-auto font-extrabold"
                 style={{
-                  top: '880px',
-                  left: '150px',
+                  top: activePdfMember.is_ec ? '870px' : '880px',
+                  left: activePdfMember.is_ec ? '183px' : '150px',
                   width: '80px',
                   height: '24px',
                 }}
@@ -1948,10 +2926,10 @@ export const SuperAdminPanel = () => {
 
               {/* Section */}
               <div 
-                className="absolute flex items-center justify-center text-left pointer-events-auto font-extrabold"
+                className="absolute flex items-center justify-center text-center pointer-events-auto font-extrabold"
                 style={{
-                  top: '880px',
-                  left: '390px',
+                  top: activePdfMember.is_ec ? '870px' : '880px',
+                  left: activePdfMember.is_ec ? '423px' : '390px',
                   width: '60px',
                   height: '24px',
                 }}
@@ -1967,9 +2945,9 @@ export const SuperAdminPanel = () => {
 
               {/* Roll */}
               <div 
-                className="absolute flex items-center justify-center text-left pointer-events-auto font-extrabold"
+                className="absolute flex items-center justify-center text-center pointer-events-auto font-extrabold"
                 style={{
-                  top: '880px',
+                  top: activePdfMember.is_ec ? '870px' : '880px',
                   left: '544px',
                   width: '50px',
                   height: '24px',
@@ -1984,7 +2962,7 @@ export const SuperAdminPanel = () => {
               <div 
                 className="absolute flex items-center justify-start text-left pointer-events-auto font-mono font-bold"
                 style={{
-                  top: '940px',
+                  top: activePdfMember.is_ec ? '934px' : '940px',
                   left: '213px',
                   width: '260px',
                   height: '24px',

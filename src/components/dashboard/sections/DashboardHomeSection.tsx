@@ -126,7 +126,7 @@ const DashboardHomeSectionComponent: React.FC<DashboardHomeSectionProps> = ({
                        const newList = data.gallery.filter((_: any, idx: number) => idx !== i);
                        updateField('gallery', newList);
                     }}
-                    className="absolute top-2 right-2 p-1 text-zinc-600 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all z-10"
+                    className="absolute top-2 right-2 z-30 p-1.5 text-zinc-500 hover:text-red-500 hover:bg-red-500/10 rounded-full opacity-0 group-hover:opacity-100 transition-all hover:scale-110"
                   >
                     <Trash2 className="w-3 h-3" />
                   </button>
@@ -184,7 +184,7 @@ const DashboardHomeSectionComponent: React.FC<DashboardHomeSectionProps> = ({
                 <div key={i} className="p-4 rounded-xl bg-white/5 border border-white/10 relative group">
                   <button 
                     onClick={() => removeListItem('agendaItems', i)}
-                    className="absolute top-2 right-2 p-1 text-zinc-600 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all"
+                    className="absolute top-2 right-2 z-30 p-1.5 text-zinc-500 hover:text-red-500 hover:bg-red-500/10 rounded-full opacity-0 group-hover:opacity-100 transition-all hover:scale-110"
                   >
                     <Trash2 className="w-3 h-3" />
                   </button>
@@ -238,7 +238,7 @@ const DashboardHomeSectionComponent: React.FC<DashboardHomeSectionProps> = ({
               <div key={i} className="p-6 rounded-2xl bg-white/5 border border-white/10 space-y-4 relative group">
                 <button 
                   onClick={() => removeListItem('testimonials', i)}
-                  className="absolute top-4 right-4 p-2 text-zinc-600 hover:text-red-500 transition-colors"
+                  className="absolute top-4 right-4 z-30 p-2 text-zinc-500 hover:text-red-500 hover:bg-red-500/10 rounded-full transition-all hover:scale-110"
                 >
                   <Trash2 className="w-4 h-4" />
                 </button>

@@ -3,12 +3,17 @@ import { NextResponse } from 'next/server';
 import { sendEmail } from '@/lib/email';
 
 function getSupabaseAdmin() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  let url = (process.env.NEXT_PUBLIC_SUPABASE_URL || '').trim().replace(/^['"]|['"]$/g, '');
+  let key = (process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim().replace(/^['"]|['"]$/g, '');
   
   if (!url || !key) {
     throw new Error('Supabase admin environment variables are missing');
   }
+
+  if (!url.startsWith('http')) {
+    url = `https://${url}`;
+  }
+  url = url.replace(/\/$/, '').replace(/\/rest\/v1$/, '');
   
   return createClient(url, key, {
     auth: {

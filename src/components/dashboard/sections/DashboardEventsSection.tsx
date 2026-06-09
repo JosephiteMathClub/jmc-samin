@@ -102,7 +102,7 @@ const DashboardEventsSectionComponent: React.FC<DashboardEventsSectionProps> = (
             <div key={i} className="p-6 rounded-2xl bg-white/5 border border-white/10 space-y-4 relative">
               <button 
                 onClick={() => removeListItem('events', i)}
-                className="absolute top-4 right-4 p-2 text-zinc-600 hover:text-red-500 transition-colors"
+                className="absolute top-4 right-4 z-30 p-2 text-zinc-500 hover:text-red-500 hover:bg-red-500/10 rounded-full transition-all hover:scale-110"
               >
                 <Trash2 className="w-4 h-4" />
               </button>

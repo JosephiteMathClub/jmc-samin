@@ -44,7 +44,8 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
   children
 }) => {
   const router = useRouter();
-  const { shouldReduceGfx } = usePerformance();
+  const { shouldReduceGfx: performanceReduceGfx } = usePerformance();
+  const shouldReduceGfx = true; // Force reduced animations in dashboard to eliminate lag and ensure total responsiveness
   const [isSidebarOpen, setIsSidebarOpen] = React.useState(false);
 
   return (
@@ -63,10 +64,13 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
       </AnimatePresence>
 
       {/* Sidebar */}
-      <div className={`
-        fixed inset-y-0 left-0 z-[70] w-72 lg:w-80 border-r border-white/5 bg-[#080808] flex flex-col transition-transform duration-500 lg:translate-x-0 lg:h-screen
-        ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}
-      `}>
+      <div 
+        data-lenis-prevent
+        className={`
+          fixed inset-y-0 left-0 z-[70] w-72 lg:w-80 border-r border-white/5 bg-[#080808] flex flex-col transition-transform duration-500 lg:translate-x-0 lg:h-screen
+          ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}
+        `}
+      >
         <div className="p-6 lg:p-8 border-b border-white/5 flex items-center justify-between relative overflow-hidden group">
           {!shouldReduceGfx && (
             <div className="absolute inset-0 bg-gradient-to-r from-amber-500/0 via-amber-500/5 to-amber-500/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
@@ -99,7 +103,10 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
           </button>
         </div>
 
-        <div className="flex-1 p-6 overflow-y-auto space-y-8 custom-scrollbar relative">
+        <div 
+          data-lenis-prevent
+          className="flex-1 p-6 overflow-y-auto space-y-8 custom-scrollbar relative"
+        >
           {/* Subtle noise pattern for background */}
           {!shouldReduceGfx && <div className="absolute inset-0 opacity-[0.02] pointer-events-none bg-[url('https://grainy-gradients.vercel.app/noise.svg')]" />}
           

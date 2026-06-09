@@ -7,12 +7,17 @@ import { sendEmail } from '@/lib/email';
 
 // Helper function to get the admin client
 function getSupabaseAdmin() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  let url = (process.env.NEXT_PUBLIC_SUPABASE_URL || '').trim().replace(/^['"]|['"]$/g, '');
+  let key = (process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim().replace(/^['"]|['"]$/g, '');
   
   if (!url || !key) {
     throw new Error('Supabase admin environment variables are missing');
   }
+
+  if (!url.startsWith('http')) {
+    url = `https://${url}`;
+  }
+  url = url.replace(/\/$/, '').replace(/\/rest\/v1$/, '');
   
   return createClient(url, key, {
     auth: {
@@ -158,6 +163,10 @@ export async function POST(req: Request) {
     return NextResponse.json({ userId: newUser.user.id });
   } catch (err: any) {
     console.error('API Error:', err);
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+    let errorMessage = err.message || 'Internal Server Error';
+    if (errorMessage.includes('Invalid API key') || errorMessage.includes('invalid') || errorMessage.includes('API key')) {
+      errorMessage = 'Invalid SUPABASE_SERVICE_ROLE_KEY setup on the server. TIP: Go to your Supabase Dashboard -> Project Settings -> API. Copy the secret "service_role" key (NOT the public "anon" key) and update the SUPABASE_SERVICE_ROLE_KEY environment variable. If you already set it, make sure there are no surrounding quotes.';
+    }
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 }

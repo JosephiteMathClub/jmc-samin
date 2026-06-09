@@ -297,13 +297,24 @@ export const DEFAULT_CONTENT = {
           "teamSize": 3
         },
         {
-          "id": "event-team-13",
+          "id": "event-solo-14",
           "title": "Math Relay",
           "date": "TBA",
           "time": "TBA",
           "location": "TBA",
           "category": "Competition",
-          "description": "A thrilling team event (Math Relay) where logic and teamwork matter.",
+          "description": "An intense solo relay of numerical speeds and sequence operations.",
+          "registrationLink": "#",
+          "isTeamEvent": false
+        },
+        {
+          "id": "event-team-15",
+          "title": "Tic-Tac-Toe",
+          "date": "TBA",
+          "time": "TBA",
+          "location": "TBA",
+          "category": "Competition",
+          "description": "A tactical grid match where math formulas and patterns meet board-game maneuvers. Exclusive to Primary and Junior categories.",
           "registrationLink": "#",
           "isTeamEvent": true,
           "teamSize": 3

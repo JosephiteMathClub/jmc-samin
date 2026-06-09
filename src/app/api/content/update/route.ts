@@ -4,6 +4,7 @@ import path from 'path';
 import { requireAdmin } from '@/lib/auth';
 import { rateLimit } from '@/lib/rate-limit';
 import { headers } from 'next/headers';
+import { DEFAULT_CONTENT } from '@/data/default-content';
 
 export async function POST(req: NextRequest) {
   try {
@@ -37,8 +38,22 @@ export async function POST(req: NextRequest) {
     }
 
     const contentPath = path.join(process.cwd(), 'src', 'data', 'site-content.json');
-    const contentData = await fs.readFile(contentPath, 'utf8');
-    const content = JSON.parse(contentData);
+    let content;
+    try {
+      const contentData = await fs.readFile(contentPath, 'utf8');
+      if (!contentData || contentData.trim() === '') {
+        throw new Error('Content file is empty');
+      }
+      content = JSON.parse(contentData);
+    } catch (parseError) {
+      console.warn('WIP content file was corrupted/empty, healing with DEFAULT_CONTENT:', parseError);
+      content = { ...DEFAULT_CONTENT };
+      try {
+        await fs.writeFile(contentPath, JSON.stringify(DEFAULT_CONTENT, null, 2), 'utf8');
+      } catch (writeErr) {
+        console.error('Failed to write self-healed content file:', writeErr);
+      }
+    }
 
     // Helper to set nested property
     const setNestedProperty = (obj: any, path: string, value: any) => {

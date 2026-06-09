@@ -28,8 +28,19 @@ export const Hero: React.FC<HeroProps> = ({ home, shouldReduceGfx }) => {
     <section 
       id="hero" 
       ref={containerRef}
-      className="relative pt-32 pb-48 md:pt-48 md:pb-64 overflow-hidden border-b border-white/[0.03] perspective-2000"
+      className="relative pt-32 pb-48 md:pt-48 md:pb-64 overflow-hidden border-b border-white/[0.03] perspective-2000 premium-3d-bg"
+      style={{
+        '--bg-section-color': '#030305',
+        '--bg-dot-color': 'rgba(0, 180, 219, 0.22)',
+        '--bg-grid-line-color': 'rgba(0, 180, 219, 0.015)',
+        '--bg-dot-spacing': '24px',
+        '--bg-grid-size': '96px',
+      } as React.CSSProperties}
     >
+      {/* Dynamic, High-End Section-Specific Glows */}
+      <div className="premium-glow-orb top-[-10%] right-[5%] w-[45vw] h-[45vw] bg-[var(--c-6-start)]" style={{ '--glow-opacity': 0.12 } as React.CSSProperties} />
+      <div className="premium-glow-orb bottom-[-10%] left-[5%] w-[35vw] h-[35vw] bg-[var(--c-2-start)]" style={{ '--glow-opacity': 0.08, transform: 'translateX(-10%)' } as React.CSSProperties} />
+
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center relative z-10">
           <motion.div
@@ -179,9 +190,7 @@ export const Hero: React.FC<HeroProps> = ({ home, shouldReduceGfx }) => {
              ∫_f(x)_dx
           </motion.div>
           
-          {/* Cinematic Light Leaks */}
-          <div className="absolute top-0 right-0 w-[40vw] h-[40vw] bg-[var(--c-6-start)]/10 blur-[150px] animate-float opacity-30" />
-          <div className="absolute bottom-0 left-0 w-[30vw] h-[30vw] bg-[var(--c-2-start)]/10 blur-[150px] animate-float opacity-30" style={{ animationDelay: '-5s' }} />
+          {/* Mathematical Text Decor */}
         </div>
       )}
     </section>

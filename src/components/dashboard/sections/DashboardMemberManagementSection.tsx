@@ -45,6 +45,7 @@ interface DashboardMemberManagementSectionProps {
   uploading: string | null;
   shouldReduceGfx: boolean;
   isDeletingMember: boolean;
+  isSuperAdmin?: boolean;
 }
 
 const DashboardMemberManagementSectionComponent: React.FC<DashboardMemberManagementSectionProps> = ({
@@ -58,7 +59,8 @@ const DashboardMemberManagementSectionComponent: React.FC<DashboardMemberManagem
   handleMemberPhotoUpload,
   uploading,
   shouldReduceGfx,
-  isDeletingMember
+  isDeletingMember,
+  isSuperAdmin = false
 }) => {
   const [memberSearch, setMemberSearch] = useState('');
   const [memberFilter, setMemberFilter] = useState('yes'); // Default to 'yes' as per request
@@ -681,7 +683,7 @@ const DashboardMemberManagementSectionComponent: React.FC<DashboardMemberManagem
                     <th className="py-4 px-4 text-[10px] font-bold uppercase tracking-widest text-zinc-500">Class/Section</th>
                     <th className="py-4 px-4 text-[10px] font-bold uppercase tracking-widest text-zinc-500">Roll</th>
                     <th className="py-4 px-4 text-[10px] font-bold uppercase tracking-widest text-zinc-500">Payment</th>
-                    <th className="py-4 px-4 text-[10px] font-bold uppercase tracking-widest text-zinc-500 text-right">Action</th>
+                    <th className="py-4 pr-8 pl-4 text-[10px] font-bold uppercase tracking-widest text-zinc-500 text-right">Action</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/5">
@@ -730,15 +732,17 @@ const DashboardMemberManagementSectionComponent: React.FC<DashboardMemberManagem
                             <span className="text-[8px] text-zinc-600 uppercase tracking-tighter">{m.payment_method}</span>
                           </div>
                         </td>
-                        <td className="py-4 px-4 text-right">
+                        <td className="py-4 pr-8 pl-4 text-right">
                           <div className="flex items-center justify-end gap-2 text-right">
                             <button
                               onClick={() => toggleVerified(m.id, m.verified)}
+                              disabled={m.verified === 'yes' && !isSuperAdmin}
                               className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all ${
                                 m.verified === 'yes'
-                                  ? 'bg-red-500/10 text-red-500 hover:bg-red-500/20'
+                                  ? (isSuperAdmin ? 'bg-red-500/10 text-red-500 hover:bg-red-500/20' : 'bg-green-500/5 text-zinc-500 cursor-not-allowed opacity-50')
                                   : 'bg-green-500/10 text-green-500 hover:bg-green-500/20'
                               }`}
+                              title={m.verified === 'yes' && !isSuperAdmin ? "Only Super Admins can unverify members" : ""}
                             >
                               {m.verified === 'yes' ? 'Unverify' : 'Verify'}
                             </button>
@@ -752,7 +756,7 @@ const DashboardMemberManagementSectionComponent: React.FC<DashboardMemberManagem
                             </button>
                             <button
                               onClick={() => setMemberToDelete(m)}
-                              className="p-1.5 bg-red-500/10 text-red-500 rounded-lg hover:bg-red-500/20 transition-all opacity-40 hover:opacity-100"
+                              className="p-2.5 bg-red-500/10 text-red-500 rounded-lg hover:bg-red-500/20 hover:scale-[1.08] transition-all opacity-60 hover:opacity-100 flex items-center justify-center cursor-pointer"
                               title="Delete Member From Database"
                             >
                               <Trash2 className="w-4 h-4" />
@@ -826,6 +830,7 @@ const DashboardMemberManagementSectionComponent: React.FC<DashboardMemberManagem
                        <div className="flex justify-end gap-2 items-center">
                           <button
                             onClick={() => toggleVerified(m.id, m.verified)}
+                            disabled={m.verified === 'yes' && !isSuperAdmin}
                             className={`px-3 py-1.5 rounded-lg text-[9px] font-bold uppercase tracking-widest transition-all ${
                               m.verified === 'yes'
                                 ? 'bg-red-500/10 text-red-500'
@@ -844,7 +849,7 @@ const DashboardMemberManagementSectionComponent: React.FC<DashboardMemberManagem
                           </button>
                           <button
                             onClick={() => setMemberToDelete(m)}
-                            className="p-2 bg-red-500/10 text-red-500 rounded-lg"
+                            className="p-2.5 bg-red-500/10 text-red-500 rounded-lg hover:bg-red-500/20 active:scale-95 transition-all flex items-center justify-center"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>

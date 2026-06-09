@@ -5,12 +5,17 @@ import { NextResponse } from 'next/server';
 import { DEFAULT_ADMINS } from '@/lib/constants';
 
 function getSupabaseAdmin() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  let url = (process.env.NEXT_PUBLIC_SUPABASE_URL || '').trim().replace(/^['"]|['"]$/g, '');
+  let key = (process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim().replace(/^['"]|['"]$/g, '');
   
   if (!url || !key) {
     throw new Error('Supabase admin environment variables are missing');
   }
+
+  if (!url.startsWith('http')) {
+    url = `https://${url}`;
+  }
+  url = url.replace(/\/$/, '').replace(/\/rest\/v1$/, '');
   
   return createClient(url, key, {
     auth: {
@@ -91,14 +96,14 @@ export async function POST(req: Request) {
     const profileIds = new Set(existingProfiles?.map(p => p.id) || []);
 
     // 3. Find missing profiles
-    const missingUsers = users.filter(u => !profileIds.has(u.id));
+    const missingUsers = (users as any[]).filter(u => !profileIds.has(u.id));
     
     if (missingUsers.length === 0) {
       return NextResponse.json({ message: 'All users already have profiles.', count: 0 });
     }
 
     // 4. Batch insert missing profiles
-    const profilesToInsert = missingUsers.map(u => ({
+    const profilesToInsert = (missingUsers as any[]).map(u => ({
       id: u.id,
       full_name: u.user_metadata?.full_name || u.user_metadata?.name || 'Anonymous User',
       role: ADMIN_EMAILS.includes(u.email?.toLowerCase() || '') ? 'admin' : 'member'
@@ -117,6 +122,10 @@ export async function POST(req: Request) {
 
   } catch (err: any) {
     console.error('Sync Error:', err);
-    return NextResponse.json({ error: err.message || 'Internal Server Error' }, { status: 500 });
+    let errorMessage = err.message || 'Internal Server Error';
+    if (errorMessage.includes('Invalid API key') || errorMessage.includes('invalid') || errorMessage.includes('API key')) {
+      errorMessage = 'Invalid SUPABASE_SERVICE_ROLE_KEY setup on the server. TIP: Go to your Supabase Dashboard -> Project Settings -> API. Copy the secret "service_role" key (NOT the public "anon" key) and update the SUPABASE_SERVICE_ROLE_KEY environment variable. If you already set it, make sure there are no surrounding quotes.';
+    }
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 }

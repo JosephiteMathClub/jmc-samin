@@ -89,7 +89,21 @@ export const Testimonials: React.FC<TestimonialsProps> = ({ home, duplicatedTest
   const fourthRow = expandedReviews.slice(Math.ceil((expandedReviews.length * 3) / 4));
 
   return (
-    <section id="testimonials" className="py-32 relative overflow-hidden bg-transparent">
+    <section 
+      id="testimonials" 
+      className="py-32 relative overflow-hidden premium-3d-bg border-b border-white/[0.03]"
+      style={{
+        '--bg-section-color': '#040405',
+        '--bg-dot-color': 'rgba(255, 255, 255, 0.12)',
+        '--bg-grid-line-color': 'rgba(255, 255, 255, 0.012)',
+        '--bg-dot-spacing': '24px',
+        '--bg-grid-size': '96px',
+      } as React.CSSProperties}
+    >
+      {/* Dynamic, High-End Section-Specific Glows */}
+      <div className="premium-glow-orb top-[10%] left-[20%] w-[45vw] h-[45vw] bg-[var(--c-6-start)]" style={{ '--glow-opacity': 0.06 } as React.CSSProperties} />
+      <div className="premium-glow-orb bottom-[10%] right-[20%] w-[45vw] h-[45vw] bg-[var(--c-1-start)]" style={{ '--glow-opacity': 0.06 } as React.CSSProperties} />
+      
       <div className="max-w-7xl mx-auto px-6 lg:px-8 mb-16 text-center relative z-20">
         <Reveal direction="up" className="inline-flex items-center gap-3 px-4 py-1.5 mb-10 rounded-full bg-white/5 border border-white/10">
            <Sparkles className="w-3 h-3 text-[var(--c-6-start)]" />

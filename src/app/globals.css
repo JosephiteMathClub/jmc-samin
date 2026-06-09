@@ -324,6 +324,56 @@
   .glow-text-cyan {
     @apply text-[var(--c-6-start)] drop-shadow-[0_0_8px_rgba(0,180,219,0.5)];
   }
+
+  /* Redesigned Premium 3D Background Architecture */
+  .premium-3d-bg {
+    position: relative;
+    background-color: var(--bg-section-color, #040406);
+    transition: background-color 1s cubic-bezier(0.16, 1, 0.3, 1);
+    overflow: hidden;
+  }
+
+  .premium-3d-bg::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 1;
+    
+    /* Layer 1: Ultra-clean background grid overlay */
+    /* Layer 2: 3D-feeling dot matrix pattern using layered radial-gradients with shadows and slight offsets to simulate tangible depth */
+    background-image: 
+      linear-gradient(var(--bg-grid-line-color, rgba(255, 255, 255, 0.015)) 1px, transparent 1px),
+      linear-gradient(90deg, var(--bg-grid-line-color, rgba(255, 255, 255, 0.015)) 1px, transparent 1px),
+      
+      /* Center highlight (light-catching dot bead) */
+      radial-gradient(circle at 1px 1px, var(--bg-dot-color, rgba(0, 180, 219, 0.2)) 1px, transparent 1.5px),
+      /* 3D Drop shadow offset (Micro-shadow slightly offset down-right to simulate realistic raised dots) */
+      radial-gradient(circle at 1.5px 1.5px, rgba(0, 0, 0, 0.95) 1.2px, transparent 2px);
+      
+    background-size: 
+      var(--bg-grid-size, 80px) var(--bg-grid-size, 80px), 
+      var(--bg-grid-size, 80px) var(--bg-grid-size, 80px),
+      var(--bg-dot-spacing, 24px) var(--bg-dot-spacing, 24px),
+      var(--bg-dot-spacing, 24px) var(--bg-dot-spacing, 24px);
+      
+    background-position: 0 0, 0 0, 0 0, 1px 1px;
+    
+    /* Elegant mathematical soft-fade off at the margins / bounds */
+    mask-image: linear-gradient(to bottom, transparent, black 12%, black 88%, transparent);
+    opacity: var(--bg-opacity, 0.9);
+  }
+
+  /* Atmospheric soft-colored globs tailored per section for gorgeous visual rhythm */
+  .premium-glow-orb {
+    position: absolute;
+    border-radius: 9999px;
+    filter: blur(140px);
+    pointer-events: none;
+    z-index: 0;
+    opacity: var(--glow-opacity, 0.16);
+    transition: all 1.2s cubic-bezier(0.16, 1, 0.3, 1);
+  }
 }
 
 @layer utilities {

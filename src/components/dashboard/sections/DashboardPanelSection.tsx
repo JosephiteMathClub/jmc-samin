@@ -59,7 +59,7 @@ const DashboardPanelSectionComponent: React.FC<DashboardPanelSectionProps> = ({
             <div key={i} className="p-6 rounded-2xl bg-white/5 border border-white/10 space-y-4 relative">
               <button 
                 onClick={() => removeListItem('moderators', i)}
-                className="absolute top-4 right-4 p-2 text-zinc-600 hover:text-red-500 transition-colors"
+                className="absolute top-4 right-4 z-30 p-2 text-zinc-500 hover:text-red-500 hover:bg-red-500/10 rounded-full transition-all hover:scale-110"
               >
                 <Trash2 className="w-4 h-4" />
               </button>
@@ -138,7 +138,7 @@ const DashboardPanelSectionComponent: React.FC<DashboardPanelSectionProps> = ({
                       <div key={i} className="p-4 rounded-xl bg-white/5 border border-white/10 relative group">
                         <button 
                           onClick={() => removeDeepListItem(['panel', 'executive', executiveTab, category.id], i)}
-                          className="absolute top-2 right-2 p-1 text-zinc-600 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all"
+                          className="absolute top-2 right-2 z-30 p-1.5 text-zinc-500 hover:text-red-500 hover:bg-red-500/10 rounded-full opacity-0 group-hover:opacity-100 transition-all hover:scale-110"
                         >
                           <Trash2 className="w-3 h-3" />
                         </button>
@@ -200,7 +200,7 @@ const DashboardPanelSectionComponent: React.FC<DashboardPanelSectionProps> = ({
                           <div key={i} className="p-3 rounded-lg bg-white/5 border border-white/10 flex flex-col gap-3 relative group">
                             <button 
                               onClick={() => removeDeepListItem(['panel', 'executive', executiveTab, 'secretaries', sec.id], i)}
-                              className="absolute top-2 right-2 p-1 text-zinc-600 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all"
+                              className="absolute top-2 right-2 z-30 p-1.5 text-zinc-500 hover:text-red-500 hover:bg-red-500/10 rounded-full opacity-0 group-hover:opacity-100 transition-all hover:scale-110"
                             >
                               <Trash2 className="w-3 h-3" />
                             </button>

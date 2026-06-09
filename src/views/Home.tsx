@@ -80,15 +80,7 @@ const Home = () => {
   if (loading) return <HomeSkeleton />;
 
   return (
-    <div className="relative min-h-screen selection:bg-[var(--c-6-start)]/30 selection:text-white">
-      {/* Immersive Background Grid System */}
-      <div className="fixed inset-0 pointer-events-none overflow-hidden -z-10">
-          <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:100px_100px] [mask-image:radial-gradient(ellipse_at_center,black,transparent_80%)] opacity-30" />
-          
-          <div className="absolute top-0 left-1/4 w-[60vw] h-[60vw] bg-[var(--c-6-start)]/10 blur-[150px] rounded-full animate-pulse opacity-40" />
-          <div className="absolute bottom-0 right-1/4 w-[60vw] h-[60vw] bg-[var(--c-5-start)]/10 blur-[150px] rounded-full animate-pulse opacity-40" />
-      </div>
-
+    <div className="relative min-h-screen selection:bg-[var(--c-6-start)]/30 selection:text-white bg-[#030304]">
       <Hero home={home} shouldReduceGfx={shouldReduceGfx} />
 
       <div className="relative z-10 flex flex-col">

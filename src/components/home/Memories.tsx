@@ -20,8 +20,22 @@ export const Memories: React.FC<any> = ({ home, gallery }) => {
   if (!gallery || gallery.length === 0) return null;
 
   return (
-    <section id="memories" className="py-24 relative border-b border-white/[0.03] bg-transparent">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+    <section 
+      id="memories" 
+      className="py-24 relative border-b border-white/[0.03] premium-3d-bg"
+      style={{
+        '--bg-section-color': '#050308',
+        '--bg-dot-color': 'rgba(233, 51, 180, 0.22)',
+        '--bg-grid-line-color': 'rgba(233, 51, 180, 0.015)',
+        '--bg-dot-spacing': '24px',
+        '--bg-grid-size': '96px',
+      } as React.CSSProperties}
+    >
+      {/* Dynamic, High-End Section-Specific Glows */}
+      <div className="premium-glow-orb top-[10%] left-[5%] w-[35vw] h-[35vw] bg-[var(--c-2-start)]" style={{ '--glow-opacity': 0.1 } as React.CSSProperties} />
+      <div className="premium-glow-orb bottom-[10%] right-[5%] w-[35vw] h-[35vw] bg-[var(--c-5-start)]" style={{ '--glow-opacity': 0.08 } as React.CSSProperties} />
+
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         <div className="flex flex-col items-center mb-16 text-center">
           <Reveal direction="up">
             <h2 className="text-4xl sm:text-6xl font-bold tracking-tight text-white mb-4">
