@@ -189,6 +189,25 @@ export const ContentProvider: React.FC<{ children: React.ReactNode }> = ({ child
           console.error("Supabase Upsert Error (updateContent):", error);
           throw error;
         }
+
+        // Sync to challenges table if editing challengePaper
+        if (section === 'challengePaper' && data) {
+          try {
+            await supabase
+              .from('challenges')
+              .upsert({
+                id: 'active',
+                title: data.title || 'Question paper',
+                description: data.description || '',
+                questions: data.questions || [],
+                published: !!data.published,
+                deadline: data.deadline || null,
+                updated_at: new Date().toISOString()
+              });
+          } catch (chalErr) {
+            console.error("Failed to sync to challenges table in updateContent:", chalErr);
+          }
+        }
       } catch (err: any) {
         console.error("Error updating Supabase content (updateContent):", err);
         const errorMessage = err.message || "Unknown error";
@@ -267,6 +286,26 @@ export const ContentProvider: React.FC<{ children: React.ReactNode }> = ({ child
           if (error) {
             console.error("Supabase Upsert Error (saveAllContent):", error);
             throw error;
+          }
+
+          // Sync to challenges table if editing challengePaper
+          if (contentWithTimestamp.challengePaper) {
+            try {
+              const cp = contentWithTimestamp.challengePaper;
+              await supabase
+                .from('challenges')
+                .upsert({
+                  id: 'active',
+                  title: cp.title || 'Question paper',
+                  description: cp.description || '',
+                  questions: cp.questions || [],
+                  published: !!cp.published,
+                  deadline: cp.deadline || null,
+                  updated_at: new Date().toISOString()
+                });
+            } catch (chalErr) {
+              console.error("Failed to sync to challenges table in saveAllContent:", chalErr);
+            }
           }
         } catch (err: any) {
           console.error("Error updating Supabase content (saveAllContent):", err);

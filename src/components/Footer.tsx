@@ -107,6 +107,17 @@ const Footer = () => {
                 </li>
               ))}
               <li>
+                <Link 
+                  href="/challenge-problems" 
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs font-mono font-black uppercase tracking-[0.2em] text-zinc-500 hover:text-[var(--c-6-start)] transition-all flex items-center gap-3 group"
+                >
+                  <span className="w-0 h-[1px] bg-[var(--c-6-start)] transition-all group-hover:w-4" />
+                  Challenges
+                </Link>
+              </li>
+              <li>
                 <button onClick={() => setIsContactOpen(true)} className="text-xs font-mono font-black uppercase tracking-[0.2em] text-zinc-500 hover:text-[var(--c-6-start)] transition-all flex items-center gap-3 group">
                   <span className="w-0 h-[1px] bg-[var(--c-6-start)] transition-all group-hover:w-4" />
                   Contact

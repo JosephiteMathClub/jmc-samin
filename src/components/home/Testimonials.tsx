@@ -91,22 +91,22 @@ export const Testimonials: React.FC<TestimonialsProps> = ({ home, duplicatedTest
   return (
     <section 
       id="testimonials" 
-      className="py-32 relative overflow-hidden premium-3d-bg border-b border-white/[0.03]"
+      className="py-32 relative overflow-hidden premium-3d-bg border-b border-white/[0.05]"
       style={{
-        '--bg-section-color': '#040405',
-        '--bg-dot-color': 'rgba(255, 255, 255, 0.12)',
-        '--bg-grid-line-color': 'rgba(255, 255, 255, 0.012)',
+        '--bg-section-color': '#130801',
+        '--bg-dot-color': 'rgba(255, 184, 0, 0.28)',
+        '--bg-grid-line-color': 'rgba(255, 184, 0, 0.025)',
         '--bg-dot-spacing': '24px',
         '--bg-grid-size': '96px',
       } as React.CSSProperties}
     >
       {/* Dynamic, High-End Section-Specific Glows */}
-      <div className="premium-glow-orb top-[10%] left-[20%] w-[45vw] h-[45vw] bg-[var(--c-6-start)]" style={{ '--glow-opacity': 0.06 } as React.CSSProperties} />
-      <div className="premium-glow-orb bottom-[10%] right-[20%] w-[45vw] h-[45vw] bg-[var(--c-1-start)]" style={{ '--glow-opacity': 0.06 } as React.CSSProperties} />
+      <div className="premium-glow-orb top-[10%] left-[20%] w-[45vw] h-[45vw] bg-[var(--c-1-start)]" style={{ '--glow-opacity': 0.08 } as React.CSSProperties} />
+      <div className="premium-glow-orb bottom-[10%] right-[20%] w-[45vw] h-[45vw] bg-[var(--c-1-end)]" style={{ '--glow-opacity': 0.06 } as React.CSSProperties} />
       
       <div className="max-w-7xl mx-auto px-6 lg:px-8 mb-16 text-center relative z-20">
         <Reveal direction="up" className="inline-flex items-center gap-3 px-4 py-1.5 mb-10 rounded-full bg-white/5 border border-white/10">
-           <Sparkles className="w-3 h-3 text-[var(--c-6-start)]" />
+           <Sparkles className="w-3 h-3 text-[var(--c-1-start)]" />
            <span className="text-[10px] font-mono font-black text-zinc-500 tracking-[0.4em] uppercase">{home?.testimonialsTagline || "PEOPLE ABOUT JMC"}</span>
         </Reveal>
         
@@ -147,10 +147,10 @@ export const Testimonials: React.FC<TestimonialsProps> = ({ home, duplicatedTest
             </Marquee>
           </div>
 
-          <div className="pointer-events-none absolute inset-x-0 top-0 h-[15%] bg-gradient-to-b from-[#050505] to-transparent"></div>
-          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[15%] bg-gradient-to-t from-[#050505] to-transparent"></div>
-          <div className="pointer-events-none absolute inset-y-0 left-0 w-[15%] bg-gradient-to-r from-[#050505] to-transparent"></div>
-          <div className="pointer-events-none absolute inset-y-0 right-0 w-[15%] bg-gradient-to-l from-[#050505] to-transparent"></div>
+          <div className="pointer-events-none absolute inset-x-0 top-0 h-[15%] bg-gradient-to-b from-[#130801] to-transparent"></div>
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[15%] bg-gradient-to-t from-[#130801] to-transparent"></div>
+          <div className="pointer-events-none absolute inset-y-0 left-0 w-[15%] bg-gradient-to-r from-[#130801] to-transparent"></div>
+          <div className="pointer-events-none absolute inset-y-0 right-0 w-[15%] bg-gradient-to-l from-[#130801] to-transparent"></div>
         </div>
       </div>
 

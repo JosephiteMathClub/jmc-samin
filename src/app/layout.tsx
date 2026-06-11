@@ -7,6 +7,7 @@ import { TechSupportProvider } from "@/context/TechSupportContext";
 import ClientLayout from "@/components/ClientLayout";
 import { SmoothScroll } from "@/components/SmoothScroll";
 import React from "react";
+import Script from "next/script";
 
 const inter = Inter({
   variable: "--font-sans",
@@ -63,6 +64,33 @@ export default function RootLayout({
       <body
         className={`${inter.variable} ${spaceGrotesk.variable} ${jetbrainsMono.variable} ${caveat.variable} ${cormorant.variable} antialiased bg-[#050505] text-zinc-100`}
       >
+        <Script
+          id="mathjax-config"
+          strategy="beforeInteractive"
+          dangerouslySetInnerHTML={{
+            __html: `
+              window.MathJax = {
+                loader: {
+                  load: ['[tex]/physics', '[tex]/mhchem']
+                },
+                tex: {
+                  packages: {'[+]': ['physics', 'mhchem', 'ams', 'newcommand']},
+                  inlineMath: [['$', '$'], ['\\\\(', '\\\\)']],
+                  displayMath: [['$$', '$$'], ['\\\\[', '\\\\]']],
+                  processEscapes: true
+                },
+                options: {
+                  enableMenu: false
+                }
+              };
+            `
+          }}
+        />
+        <Script
+          id="mathjax-script"
+          src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"
+          strategy="afterInteractive"
+        />
         <AuthProvider>
           <ToastProvider>
             <TechSupportProvider>

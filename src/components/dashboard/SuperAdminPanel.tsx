@@ -219,7 +219,7 @@ export function EventRegistrationConfigEditor({ showToast }: { showToast: (msg: 
   // Settings Form States
   const [formDescription, setFormDescription] = useState<string>('');
   const [bkashNumber, setBkashNumber] = useState<string>('');
-  const [perEventPriceSolo, setPerEventPriceSolo] = useState<number>(50);
+  const [perEventPriceSolo, setPerEventPriceSolo] = useState<number>(100);
   const [allEventsSoloPriceGeneral, setAllEventsSoloPriceGeneral] = useState<number>(100);
   const [allEventsSoloPriceMember, setAllEventsSoloPriceMember] = useState<number>(50);
   
@@ -236,8 +236,8 @@ export function EventRegistrationConfigEditor({ showToast }: { showToast: (msg: 
   const [newTeamDesc, setNewTeamDesc] = useState<string>('');
 
   const DEFAULT_CONFIG = {
-    formDescription: "Specify the category format. Standard events are priced at 50tk each. Select all to enjoy premium package bundles.",
-    perEventPriceSolo: 50,
+    formDescription: "Specify the category format. Standard events are priced at 100tk each. Select all to enjoy premium package bundles.",
+    perEventPriceSolo: 100,
     allEventsSoloPriceGeneral: 100,
     allEventsSoloPriceMember: 50,
     bkashNumber: "01712345678",
@@ -1433,17 +1433,17 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ isSuperAdmin =
     }
   };
 
-  const updatePosition = async (participationId: string, position: string) => {
+  const updatePosition = async (participationId: string, position: string | null) => {
     try {
       const { error } = await supabase
         .from('event_participation')
-        .update({ position: position })
+        .update({ position: position || null })
         .eq('id', participationId);
       
       if (error) throw error;
       
-      setParticipations(prev => prev.map(p => p.id === participationId ? { ...p, position } : p));
-      showToast('Position updated', 'success');
+      setParticipations(prev => prev.map(p => p.id === participationId ? { ...p, position: position || null } : p));
+      showToast(position ? 'Position updated' : 'Position revoked completely', 'success');
     } catch (err: any) {
       showToast(err.message, 'error');
     }
@@ -1735,6 +1735,18 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ isSuperAdmin =
                                    {pos}
                                  </button>
                                ))}
+                               {p.position && (
+                                 <button
+                                   onClick={() => {
+                                     if (confirm("Are you absolutely sure you want to revoke this user's position/rank? This will clear their historical achievements for this event.")) {
+                                       updatePosition(p.id, null);
+                                     }
+                                   }}
+                                   className="px-2 py-1 bg-red-500/10 hover:bg-red-600 border border-red-500/20 hover:border-red-500 text-red-400 hover:text-white rounded-lg text-[8px] font-bold transition-all uppercase font-sans"
+                                 >
+                                   Revoke
+                                 </button>
+                               )}
                                <input 
                                  type="text" 
                                  placeholder="Custom..."

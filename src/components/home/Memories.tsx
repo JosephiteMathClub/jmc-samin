@@ -22,11 +22,11 @@ export const Memories: React.FC<any> = ({ home, gallery }) => {
   return (
     <section 
       id="memories" 
-      className="py-24 relative border-b border-white/[0.03] premium-3d-bg"
+      className="py-24 relative border-b border-white/[0.05] premium-3d-bg"
       style={{
-        '--bg-section-color': '#050308',
-        '--bg-dot-color': 'rgba(233, 51, 180, 0.22)',
-        '--bg-grid-line-color': 'rgba(233, 51, 180, 0.015)',
+        '--bg-section-color': '#0e0319',
+        '--bg-dot-color': 'rgba(233, 51, 180, 0.28)',
+        '--bg-grid-line-color': 'rgba(233, 51, 180, 0.025)',
         '--bg-dot-spacing': '24px',
         '--bg-grid-size': '96px',
       } as React.CSSProperties}

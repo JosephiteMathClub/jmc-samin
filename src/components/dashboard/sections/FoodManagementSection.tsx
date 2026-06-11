@@ -97,6 +97,10 @@ export const FoodManagementSection: React.FC<FoodManagementSectionProps> = ({
 
     return (members || []).filter(m => {
       const mId = (m.member_id || '').toLowerCase();
+      // Only general member and EC member's code can be input; the other 5-digit code is blocked.
+      if (/^\d{5}$/.test(mId)) {
+        return false;
+      }
       const fullName = (m.full_name || '').toLowerCase();
 
       // Match full_name or member_id
@@ -239,6 +243,18 @@ export const FoodManagementSection: React.FC<FoodManagementSectionProps> = ({
     
     const formattedId = decodedText.trim().toUpperCase();
 
+    // Block any 5-digit Event/Spot registration code immediately as they are not General/EC Members
+    if (/^\d{5}$/.test(formattedId)) {
+      setScanFeedback({
+        status: 'error',
+        title: 'Event-Only Ticket Code',
+        message: `The 5-digit code "${formattedId}" is an Event-Only Participant ticket. Food distribution is strictly limited to verified General Members and EC Officers.`,
+        memberId: formattedId
+      });
+      setIsProcessing(false);
+      return;
+    }
+
     try {
       // 1. Fetch matching member (try direct, JMC prefix, or suffix match)
       let member = null;
@@ -287,6 +303,19 @@ export const FoodManagementSection: React.FC<FoodManagementSectionProps> = ({
           title: 'Not Found',
           message: `The scanned ID "${formattedId}" does not exist in the client registry. Please confirm they have registered.`,
           memberId: formattedId
+        });
+        setIsProcessing(false);
+        return;
+      }
+
+      // Block resolved 5-digit Event/Spot registration codes from redeeming food
+      if (/^\d{5}$/.test(member.member_id || '')) {
+        setScanFeedback({
+          status: 'error',
+          title: 'Event-Only Ticket Code',
+          message: `${member.full_name} has an Event-Only Participant ticket. Food distribution is strictly limited to verified General Members and EC Officers.`,
+          memberName: member.full_name,
+          memberId: member.member_id
         });
         setIsProcessing(false);
         return;

@@ -21,11 +21,11 @@ export const Agenda: React.FC<AgendaProps> = ({ home }) => {
   return (
     <section 
       id="agenda" 
-      className="py-32 md:py-64 relative overflow-hidden border-b border-white/[0.03] premium-3d-bg"
+      className="py-32 md:py-64 relative overflow-hidden border-b border-white/[0.05] premium-3d-bg"
       style={{
-        '--bg-section-color': '#020309',
-        '--bg-dot-color': 'rgba(43, 50, 178, 0.25)',
-        '--bg-grid-line-color': 'rgba(43, 50, 178, 0.018)',
+        '--bg-section-color': '#02041d',
+        '--bg-dot-color': 'rgba(43, 50, 178, 0.32)',
+        '--bg-grid-line-color': 'rgba(43, 50, 178, 0.030)',
         '--bg-dot-spacing': '24px',
         '--bg-grid-size': '96px',
       } as React.CSSProperties}

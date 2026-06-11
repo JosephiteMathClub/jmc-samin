@@ -28,11 +28,11 @@ export const Hero: React.FC<HeroProps> = ({ home, shouldReduceGfx }) => {
     <section 
       id="hero" 
       ref={containerRef}
-      className="relative pt-32 pb-48 md:pt-48 md:pb-64 overflow-hidden border-b border-white/[0.03] perspective-2000 premium-3d-bg"
+      className="relative pt-32 pb-48 md:pt-48 md:pb-64 overflow-hidden border-b border-white/[0.05] perspective-2000 premium-3d-bg"
       style={{
-        '--bg-section-color': '#030305',
-        '--bg-dot-color': 'rgba(0, 180, 219, 0.22)',
-        '--bg-grid-line-color': 'rgba(0, 180, 219, 0.015)',
+        '--bg-section-color': '#020b18',
+        '--bg-dot-color': 'rgba(0, 180, 219, 0.28)',
+        '--bg-grid-line-color': 'rgba(0, 180, 219, 0.025)',
         '--bg-dot-spacing': '24px',
         '--bg-grid-size': '96px',
       } as React.CSSProperties}

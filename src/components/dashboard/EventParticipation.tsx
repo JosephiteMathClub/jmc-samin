@@ -486,12 +486,42 @@ export const EventParticipation = ({
     const rawEvents =
       content?.events?.events || DEFAULT_CONTENT.events?.events || [];
     if (rawEvents.length > 0) {
-      setEvents(rawEvents);
+      const updatedEvents = [...rawEvents];
+      
+      const hasEscapeRoom = updatedEvents.some(
+        (e: any) => e.title.toLowerCase() === "escape room"
+      );
+      if (!hasEscapeRoom) {
+        updatedEvents.push({
+          id: "event-team-escape-room",
+          title: "Escape Room",
+          isTeamEvent: true,
+          teamSize: 2,
+          category: "Competition",
+          description: "Escape Room"
+        });
+      }
+      
+      const hasTicTacToe = updatedEvents.some(
+        (e: any) => e.title.toLowerCase() === "tic-tac-toe"
+      );
+      if (!hasTicTacToe) {
+        updatedEvents.push({
+          id: "event-team-tic-tac-toe",
+          title: "Tic-Tac-Toe",
+          isTeamEvent: true,
+          teamSize: 3,
+          category: "Competition",
+          description: "Tic-Tac-Toe"
+        });
+      }
+
+      setEvents(updatedEvents);
       if (
-        rawEvents.length > 0 &&
-        (!activeEvent || !rawEvents.find((e: any) => e.title === activeEvent))
+        updatedEvents.length > 0 &&
+        (!activeEvent || !updatedEvents.find((e: any) => e.title === activeEvent))
       ) {
-        setActiveEvent(rawEvents[0].title);
+        setActiveEvent(updatedEvents[0].title);
       }
     }
   }, [content, activeEvent]);
@@ -691,6 +721,8 @@ export const EventParticipation = ({
       // 2. Check if verified for registration of INTRA EVENTS
       let hasVerifiedRegistration = false;
       let isEventRegisteredAtAll = false;
+      let matchedRegRecord: any = null;
+      let matchedRegTable = "";
 
       if (member.id && !member.id.startsWith("DUMMY-")) {
         const tables = [
@@ -703,7 +735,7 @@ export const EventParticipation = ({
         for (const tb of tables) {
           const { data, error } = await supabase
             .from(tb)
-            .select("selected_events, verified")
+            .select("id, trxnid, full_name, selected_events, verified")
             .eq("user_id", member.id);
 
           if (data && data.length > 0) {
@@ -715,6 +747,8 @@ export const EventParticipation = ({
               const isMatch = selectedList.includes(activeEvent.toLowerCase());
               if (isMatch) {
                 isEventRegisteredAtAll = true;
+                matchedRegRecord = reg;
+                matchedRegTable = tb;
                 if (reg.verified === "yes") {
                   hasVerifiedRegistration = true;
                 }
@@ -734,7 +768,7 @@ export const EventParticipation = ({
         for (const tb of tables) {
           const { data } = await supabase
             .from(tb)
-            .select("selected_events, verified")
+            .select("id, trxnid, full_name, selected_events, verified")
             .eq("id", parseInt(dummyId, 10));
           if (data && data.length > 0) {
             for (const reg of data) {
@@ -745,6 +779,8 @@ export const EventParticipation = ({
               const isMatch = selectedList.includes(activeEvent.toLowerCase());
               if (isMatch) {
                 isEventRegisteredAtAll = true;
+                matchedRegRecord = reg;
+                matchedRegTable = tb;
                 if (reg.verified === "yes") {
                   hasVerifiedRegistration = true;
                 }
@@ -779,41 +815,135 @@ export const EventParticipation = ({
         }
       }
 
-      // 3. Check if already participating in THIS event and category
-      const { data: existing, error: checkError } = await supabase
-        .from("event_participation")
-        .select("id")
-        .eq("member_id", member.member_id)
-        .eq("event_name", activeEvent)
-        .eq("category", activeCategory)
-        .maybeSingle();
+      // Check if this is a team event
+      const isTeam = activeEventData?.isTeamEvent || false;
 
-      if (checkError) throw checkError;
-      if (existing) {
-        showToast(
-          `Checked! ${member.full_name} is already checked-in and verified for "${activeEvent}".`,
-          "success",
-        );
-        return true;
-      }
+      if (isTeam && matchedRegRecord) {
+        // Get the root Transaction ID for this team
+        const rootTrxnid = matchedRegRecord.trxnid.replace(/-T\d+$/, '');
 
-      // 4. Add to participation (using the fully canonical member_id)
-      const { error: insertError } = await supabase
-        .from("event_participation")
-        .insert({
-          member_id: member.member_id,
-          event_name: activeEvent,
-          category: activeCategory,
+        // Fetch all team registration entries sharing this rootTrxnid across all tables
+        const tables = [
+          "primary_events",
+          "junior_events",
+          "secondary_events",
+          "higher_secondary_events",
+        ];
+        let teamRegRecords: any[] = [];
+        for (const tb of tables) {
+          const { data } = await supabase
+            .from(tb)
+            .select("user_id, trxnid, full_name, selected_events, verified")
+            .or(`trxnid.eq.${rootTrxnid},trxnid.eq.${rootTrxnid}-T2,trxnid.eq.${rootTrxnid}-T3`);
+          if (data && data.length > 0) {
+            teamRegRecords = [...teamRegRecords, ...data.map((d: any) => ({ ...d, tableName: tb }))];
+          }
+        }
+
+        // Keep only records that contain the activeEvent
+        teamRegRecords = teamRegRecords.filter((or) => {
+          const list = (or.selected_events || "").split(",").map((s: string) => s.trim().toLowerCase());
+          return list.includes(activeEvent.toLowerCase());
         });
 
-      if (insertError) throw insertError;
+        // Resolve each teammate to canonical member_id and full_name
+        const teamMembersToRegister: { member_id: string; full_name: string }[] = [];
+        for (const tr of teamRegRecords) {
+          let canonicalMemberId = tr.trxnid;
+          let rName = tr.full_name;
 
-      showToast(
-        `Welcome, ${member.full_name}! Verified for ${activeEvent}.`,
-        "success",
-      );
-      fetchParticipations();
-      return true;
+          if (tr.user_id) {
+            const { data: mem } = await supabase
+              .from("member")
+              .select("member_id, full_name")
+              .eq("id", tr.user_id)
+              .maybeSingle();
+            if (mem) {
+              canonicalMemberId = mem.member_id || tr.trxnid;
+              rName = mem.full_name || tr.full_name;
+            }
+          }
+          teamMembersToRegister.push({
+            member_id: canonicalMemberId,
+            full_name: rName
+          });
+        }
+
+        // Check if ANY member's ID in this team already exists in event_participation for this event
+        const teamMemberIds = teamMembersToRegister.map(tm => tm.member_id);
+        const { data: existingTeamParticipation, error: teamCheckError } = await supabase
+          .from("event_participation")
+          .select("member_id")
+          .eq("event_name", activeEvent)
+          .in("member_id", teamMemberIds);
+
+        if (teamCheckError) throw teamCheckError;
+
+        if (existingTeamParticipation && existingTeamParticipation.length > 0) {
+          const checkedInId = existingTeamParticipation[0].member_id;
+          const checkedInName = teamMembersToRegister.find(tm => tm.member_id === checkedInId)?.full_name || checkedInId;
+          throw new Error(`This team has already been checked-in under member "${checkedInName}". Duplicate entries are not allowed.`);
+        }
+
+        // Insert all team members as participants
+        const inserts = teamMembersToRegister.map(tm => ({
+          member_id: tm.member_id,
+          event_name: activeEvent,
+          category: activeCategory,
+          position: null
+        }));
+
+        const { error: insertError } = await supabase
+          .from("event_participation")
+          .insert(inserts);
+
+        if (insertError) throw insertError;
+
+        showToast(
+          `Team checked in successfully! All ${teamMembersToRegister.length} members verified for ${activeEvent}.`,
+          "success"
+        );
+        fetchParticipations();
+        return true;
+      } else {
+        // Solo Event participation
+        // 3. Check if already participating in THIS event and category
+        const { data: existing, error: checkError } = await supabase
+          .from("event_participation")
+          .select("id")
+          .eq("member_id", member.member_id)
+          .eq("event_name", activeEvent)
+          .eq("category", activeCategory)
+          .maybeSingle();
+
+        if (checkError) throw checkError;
+        if (existing) {
+          showToast(
+            `Checked! ${member.full_name} is already checked-in and verified for "${activeEvent}".`,
+            "success",
+          );
+          return true;
+        }
+
+        // 4. Add to participation (using the fully canonical member_id)
+        const { error: insertError } = await supabase
+          .from("event_participation")
+          .insert({
+            member_id: member.member_id,
+            event_name: activeEvent,
+            category: activeCategory,
+            position: null
+          });
+
+        if (insertError) throw insertError;
+
+        showToast(
+          `Welcome, ${member.full_name}! Verified for ${activeEvent}.`,
+          "success",
+        );
+        fetchParticipations();
+        return true;
+      }
     } catch (err: any) {
       showToast(err.message, "error");
       return false;
@@ -822,36 +952,14 @@ export const EventParticipation = ({
 
   const handleAddParticipant = async () => {
     setAddingMember(true);
-    if (isTeamEvent) {
-      const memberIds = teamMemberInputs
-        .slice(0, teamSize)
-        .map((s) => s.trim().toUpperCase())
-        .filter(Boolean);
-      if (memberIds.length < teamSize) {
-        showToast(
-          `Please enter all ${teamSize} member IDs for the team.`,
-          "error",
-        );
-        setAddingMember(false);
-        return;
-      }
-
-      let successCount = 0;
-      for (const mId of memberIds) {
-        const success = await addParticipantByMemberId(mId);
-        if (success) successCount++;
-      }
-      if (successCount === teamSize) {
-        setTeamMemberInputs(Array(10).fill(""));
-        showToast(`Successfully registered team!`, "success");
-      } else {
-        showToast(`Registered ${successCount} out of ${teamSize}.`, "info");
-      }
-    } else {
-      const success = await addParticipantByMemberId(memberIdInput);
-      if (success) {
-        setMemberIdInput("");
-      }
+    if (!memberIdInput.trim()) {
+      showToast("Please enter a member ID or code.", "error");
+      setAddingMember(false);
+      return;
+    }
+    const success = await addParticipantByMemberId(memberIdInput);
+    if (success) {
+      setMemberIdInput("");
     }
     setAddingMember(false);
   };
@@ -942,34 +1050,6 @@ export const EventParticipation = ({
 
     scannedCooldownRef.current[scannedId] = now;
     setLastScannedId(scannedId);
-
-    if (isTeamEvent) {
-      if (scannedTeam.includes(scannedId)) {
-        showToast("Already scanned this member for current team", "info");
-        return;
-      }
-      const newTeam = [...scannedTeam, scannedId];
-      if (newTeam.length === teamSize) {
-        setIsScanning(true);
-        let successCount = 0;
-        for (const mId of newTeam) {
-          const success = await addParticipantByMemberId(mId);
-          if (success) successCount++;
-        }
-        setIsScanning(false);
-        setScannedTeam([]);
-        if (successCount === teamSize) {
-          showToast(`Full team of ${teamSize} added!`, "success");
-        }
-      } else {
-        setScannedTeam(newTeam);
-        showToast(
-          `Scanned Team Member ${newTeam.length} of ${teamSize}`,
-          "info",
-        );
-      }
-      return;
-    }
 
     setIsScanning(true);
     try {
@@ -1658,53 +1738,27 @@ export const EventParticipation = ({
                 {viewMode === "manual" && (
                   <div className="glass-card p-8 flex flex-col gap-4">
                     <div className="flex-1">
-                      {isTeamEvent ? (
-                        <div className="space-y-4">
-                          <h4 className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">
-                            Enter Team Members ({teamSize})
-                          </h4>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            {Array.from({ length: teamSize }).map((_, i) => (
-                              <div key={i} className="relative">
-                                <UserPlus className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-600" />
-                                <input
-                                  type="text"
-                                  value={teamMemberInputs[i] || ""}
-                                  onChange={(e) => {
-                                    const newInputs = [...teamMemberInputs];
-                                    newInputs[i] = e.target.value.toUpperCase();
-                                    setTeamMemberInputs(newInputs);
-                                  }}
-                                  placeholder={`JMC-XXXXXX (Member ${i + 1})`}
-                                  className="w-full pl-12 pr-6 py-4 bg-black/40 border border-white/10 rounded-2xl text-white outline-none focus:border-amber-500/50 transition-all font-mono text-sm"
-                                />
-                              </div>
-                            ))}
-                          </div>
+                      <DashboardFormField
+                        label={isTeamEvent ? "Captain or Teammate's Unique ID" : "Member Unique ID"}
+                        description={isTeamEvent ? "Entering any team member's code will automatically register the entire team once" : "Type ID and press Add"}
+                      >
+                        <div className="relative">
+                          <UserPlus className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-600" />
+                          <input
+                            type="text"
+                            value={memberIdInput}
+                            onChange={(e) =>
+                              setMemberIdInput(e.target.value.toUpperCase())
+                            }
+                            onKeyDown={(e) =>
+                              e.key === "Enter" && handleAddParticipant()
+                            }
+                            placeholder="JMC-123456"
+                            autoFocus
+                            className="w-full pl-12 pr-6 py-4 bg-black/40 border border-white/10 rounded-2xl text-white outline-none focus:border-amber-500/50 transition-all font-mono"
+                          />
                         </div>
-                      ) : (
-                        <DashboardFormField
-                          label="Member Unique ID"
-                          description="Type ID and press Add"
-                        >
-                          <div className="relative">
-                            <UserPlus className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-600" />
-                            <input
-                              type="text"
-                              value={memberIdInput}
-                              onChange={(e) =>
-                                setMemberIdInput(e.target.value.toUpperCase())
-                              }
-                              onKeyDown={(e) =>
-                                e.key === "Enter" && handleAddParticipant()
-                              }
-                              placeholder="JMC-123456"
-                              autoFocus
-                              className="w-full pl-12 pr-6 py-4 bg-black/40 border border-white/10 rounded-2xl text-white outline-none focus:border-amber-500/50 transition-all font-mono"
-                            />
-                          </div>
-                        </DashboardFormField>
-                      )}
+                      </DashboardFormField>
                     </div>
                     <div className="self-end mt-4">
                       <DashboardButton
@@ -1716,14 +1770,7 @@ export const EventParticipation = ({
                               ? "Add Team"
                               : "Add Member"
                         }
-                        disabled={
-                          addingMember ||
-                          (isTeamEvent
-                            ? teamMemberInputs
-                                .slice(0, teamSize)
-                                .filter(Boolean).length < teamSize
-                            : !memberIdInput.trim())
-                        }
+                        disabled={addingMember || !memberIdInput.trim()}
                         icon={addingMember ? Loader2 : Plus}
                         className="h-[60px] px-12"
                       />
@@ -1743,15 +1790,7 @@ export const EventParticipation = ({
                       </h4>
                       {isTeamEvent ? (
                         <p className="text-zinc-500 text-xs max-w-xs mx-auto">
-                          Team mode: Scanned{" "}
-                          <span className="text-white font-bold">
-                            {scannedTeam.length}
-                          </span>{" "}
-                          out of{" "}
-                          <span className="text-white font-bold">
-                            {teamSize}
-                          </span>{" "}
-                          members.
+                          Single scan registers the entire team. Position any team member's QR code in front of the camera.
                         </p>
                       ) : (
                         <p className="text-zinc-500 text-xs max-w-xs mx-auto">
@@ -1942,54 +1981,26 @@ export const EventParticipation = ({
 
               {/* Add Participant Input */}
               <div className="flex flex-col md:flex-row gap-4 items-end">
-                <div className="flex-1">
-                  {isTeamEvent ? (
-                    <div className="space-y-4 p-6 rounded-3xl bg-black/20 border border-white/5">
-                      <h4 className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">
-                        Team Registration ({teamSize} Members)
-                      </h4>
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {Array.from({ length: teamSize }).map((_, i) => (
-                          <div key={i} className="relative">
-                            <UserPlus className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-600" />
-                            <input
-                              type="text"
-                              value={teamMemberInputs[i] || ""}
-                              onChange={(e) => {
-                                const newInputs = [...teamMemberInputs];
-                                newInputs[i] = e.target.value.toUpperCase();
-                                setTeamMemberInputs(newInputs);
-                              }}
-                              placeholder={`JMC-XXXXXX M${i + 1}`}
-                              className="w-full pl-9 pr-4 py-3 bg-black/40 border border-white/10 rounded-xl text-white text-xs outline-none focus:border-amber-500/50 transition-all font-mono"
-                            />
-                          </div>
-                        ))}
-                      </div>
+                <div className="flex-1 w-full">
+                  <DashboardFormField
+                    label={isTeamEvent ? "Captain or Teammate's Unique ID" : "Member Unique ID"}
+                    description={isTeamEvent ? "Entering any team member's code will automatically register the entire team once" : "Enter the JMC-XXXXXX code to add a participant"}
+                  >
+                    <div className="relative">
+                      <UserPlus className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-600" />
+                      <input
+                        type="text"
+                        value={memberIdInput}
+                        onChange={(e) =>
+                          setMemberIdInput(e.target.value.toUpperCase())
+                        }
+                        placeholder="JMC-123456"
+                        className="w-full pl-12 pr-6 py-3.5 bg-black/40 border border-white/10 rounded-2xl text-white outline-none focus:border-amber-500/50 transition-all font-mono"
+                      />
                     </div>
-                  ) : (
-                    <DashboardFormField
-                      label="Member Unique ID"
-                      description="Enter the JMC-XXXXXX code to add a participant"
-                    >
-                      <div className="relative">
-                        <UserPlus className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-600" />
-                        <input
-                          type="text"
-                          value={memberIdInput}
-                          onChange={(e) =>
-                            setMemberIdInput(e.target.value.toUpperCase())
-                          }
-                          placeholder="JMC-123456"
-                          className="w-full pl-12 pr-6 py-3.5 bg-black/40 border border-white/10 rounded-2xl text-white outline-none focus:border-amber-500/50 transition-all font-mono"
-                        />
-                      </div>
-                    </DashboardFormField>
-                  )}
+                  </DashboardFormField>
                 </div>
-                <div
-                  className={`flex gap-2 ${isTeamEvent ? "self-end h-[48px]" : "h-[54px]"}`}
-                >
+                <div className="flex gap-2 h-[54px] w-full md:w-auto">
                   <DashboardButton
                     onClick={handleAddParticipant}
                     label={
@@ -2002,13 +2013,10 @@ export const EventParticipation = ({
                     disabled={
                       addingMember ||
                       !activeEvent ||
-                      (isTeamEvent
-                        ? teamMemberInputs.slice(0, teamSize).filter(Boolean)
-                            .length < teamSize
-                        : !memberIdInput.trim())
+                      !memberIdInput.trim()
                     }
                     icon={addingMember ? Loader2 : Plus}
-                    className="flex-1"
+                    className="flex-1 min-w-[120px]"
                   />
 
                   <button

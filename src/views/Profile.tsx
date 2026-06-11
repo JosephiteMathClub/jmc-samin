@@ -629,12 +629,36 @@ const Profile = () => {
       )
       .subscribe();
 
+    // Listen to changes in event registration tables for this user
+    const eventTables = ['primary_events', 'junior_events', 'secondary_events', 'higher_secondary_events'];
+    const eventChannels = eventTables.map(tb => {
+      return supabase
+        .channel(`${tb}-sync-${user.id}`)
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: tb,
+            filter: `user_id=eq.${user.id}`
+          },
+          () => {
+            if (isMounted) {
+              fetchRegisteredEventsList();
+              checkMemberStatus();
+            }
+          }
+        )
+        .subscribe();
+    });
+
     return () => {
       isMounted = false;
       memberChannel.unsubscribe();
       ecChannel.unsubscribe();
+      eventChannels.forEach(ch => ch.unsubscribe());
     };
-  }, [user, checkMemberStatus]);
+  }, [user, checkMemberStatus, fetchRegisteredEventsList]);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -746,7 +770,10 @@ const Profile = () => {
   }, [isMember, verified, isEc, memberId]);
 
   const unverifiedRegistrations = React.useMemo(() => {
-    return registeredEventsList.filter(reg => reg.verified !== 'yes');
+    return registeredEventsList.filter(reg => {
+      const v = String(reg.verified || '').toLowerCase().trim();
+      return v !== 'yes';
+    });
   }, [registeredEventsList]);
 
   const allPendingParticipations = React.useMemo(() => {
@@ -754,7 +781,8 @@ const Profile = () => {
     
     // Auto-populate verified registrations if not already in achievements or wins
     registeredEventsList.forEach(reg => {
-      if (reg.verified === 'yes') {
+      const v = String(reg.verified || '').toLowerCase().trim();
+      if (v === 'yes') {
         const events = (reg.selected_events || '').split(',').map((s: string) => s.trim()).filter(Boolean);
         events.forEach(evt => {
           const alreadyInPending = list.some(p => p.event_name?.toLowerCase().trim() === evt.toLowerCase().trim());
@@ -1450,11 +1478,25 @@ const Profile = () => {
 
       {/* Digital Ticket Modal */}
       <AnimatePresence>
-        {showTicketModal && (registeredEventsList.length > 0 || isGeneralMember) && (() => {
+        {showTicketModal && (registeredEventsList.length > 0) && (() => {
           const currentReg = registeredEventsList[selectedTicketIndex] || registeredEventsList[0] || null;
           const ticketCode = getTicketCode(currentReg, isGeneralMember, isEc, memberId);
           const getCategoryFromClass = (clsStr: string) => {
-            const num = parseInt(clsStr.replace(/\D/g, ''));
+            const clean = (clsStr || '').trim().toLowerCase();
+            if (clean.includes('11') || clean.includes('12') || clean.includes('xi') || clean.includes('xii') || clean.includes('eleven') || clean.includes('twelve') || clean.includes('hsc')) {
+              return 'Higher Secondary';
+            }
+            if (clean.includes('9') || clean.includes('10') || clean.includes('ix') || clean.includes('x') || clean.includes('nine') || clean.includes('ten') || clean.includes('ssc')) {
+              return 'Secondary';
+            }
+            if (clean.includes('6') || clean.includes('7') || clean.includes('8') || clean.includes('vi') || clean.includes('vii') || clean.includes('viii') || clean.includes('six') || clean.includes('seven') || clean.includes('eight')) {
+              return 'Junior';
+            }
+            if (clean.includes('3') || clean.includes('4') || clean.includes('5') || clean.includes('iii') || clean.includes('iv') || clean.includes('v') || clean.includes('three') || clean.includes('four') || clean.includes('five')) {
+              return 'Primary';
+            }
+            
+            const num = parseInt(clean.replace(/\D/g, ''));
             if (isNaN(num)) return 'Junior'; // default fallback
             if (num >= 3 && num <= 5) return 'Primary';
             if (num >= 6 && num <= 8) return 'Junior';
@@ -1676,24 +1718,31 @@ const Profile = () => {
 
                       {/* Category Overlay */}
                       <div 
-                        className="absolute flex items-end justify-start pointer-events-auto text-left"
+                        className="absolute flex items-center justify-start pointer-events-auto text-left"
                         style={{
-                          top: '176px',
+                          top: '172px',
                           left: '145px',
                           width: '365px',
-                          height: '24px',
+                          height: '32px',
                         }}
                       >
-                        <span className="font-extrabold text-[#1e1b4b] text-[12px] leading-none truncate select-all uppercase tracking-wider">
-                          {categoryName} Level
-                        </span>
+                        {categoryName === 'Higher Secondary' ? (
+                          <span className="font-black text-rose-600 text-[11px] uppercase tracking-widest select-all border border-rose-500/30 bg-rose-50 px-2.5 py-0.5 rounded-full shadow-sm leading-none flex items-center gap-1.5 animate-pulse">
+                            <span className="w-1.5 h-1.5 rounded-full bg-rose-600" />
+                            {categoryName} Level [HS]
+                          </span>
+                        ) : (
+                          <span className="font-extrabold text-[#1e1b4b] text-[12px] leading-none truncate select-all uppercase tracking-wider">
+                            {categoryName} Level
+                          </span>
+                        )}
                       </div>
 
                       {/* Segments Overlay */}
                       <div 
                         className="absolute flex items-start justify-start pointer-events-auto text-left overflow-visible"
                         style={{
-                          top: '201px',
+                          top: '210px',
                           left: '140px',
                           width: '385px',
                           height: '42px',
@@ -1726,19 +1775,27 @@ const Profile = () => {
 
                       {/* Active Category Bubble Highlight */}
                       {(() => {
+                        const normalizedCat = (categoryName || '').trim().toLowerCase();
                         const bubbleY = 
-                          categoryName === 'Primary' ? 210 :
-                          categoryName === 'Junior' ? 163 :
-                          categoryName === 'Secondary' ? 117 : 71;
+                          normalizedCat.includes('primary') ? 210 :
+                          normalizedCat.includes('junior') ? 163 :
+                          normalizedCat.includes('higher') ? 219 :
+                          normalizedCat.includes('secondary') ? 117 : 71;
+                        
+                        const isHigherSecondary = normalizedCat.includes('higher');
                         return (
                           <div 
-                            className="absolute w-3.5 h-3.5 rounded-full bg-[#5c21b5] border border-[#5c21b5] shadow-sm flex items-center justify-center pointer-events-none"
+                            className={`absolute rounded-full flex items-center justify-center pointer-events-none transition-all duration-300 ${
+                              isHigherSecondary 
+                                ? 'w-5 h-5 bg-rose-600 border-2 border-rose-400 ring-2 ring-rose-500/30 shadow-[0_0_8px_rgba(244,63,94,0.6)] animate-pulse' 
+                                : 'w-3.5 h-3.5 bg-[#5c21b5] border border-[#5c21b5] shadow-sm'
+                            }`}
                             style={{
-                              left: '678px',
-                              top: `${bubbleY - 7}px`,
+                              left: isHigherSecondary ? '695px' : '678px',
+                              top: `${bubbleY - (isHigherSecondary ? 10 : 7)}px`,
                             }}
                           >
-                            <div className="w-1.5 h-1.5 bg-white rounded-full" />
+                            <div className={`rounded-full bg-white ${isHigherSecondary ? 'w-2 h-2' : 'w-1.5 h-1.5'}`} />
                           </div>
                         );
                       })()}
@@ -1747,17 +1804,24 @@ const Profile = () => {
                       <div 
                         className="absolute flex items-start justify-start pointer-events-none"
                         style={{
-                          left: '715px',
+                          left: '712px',
                           top: '200px',
                           width: '160px',
-                          height: '24px',
+                          height: '32px',
                           transform: 'rotate(-90deg)',
                           transformOrigin: 'left top',
                         }}
                       >
-                        <span className="font-extrabold uppercase text-[#1e1b4b] text-[12px] whitespace-nowrap tracking-wide select-all">
-                          {categoryName}
-                        </span>
+                        {categoryName === 'Higher Secondary' ? (
+                          <span className="font-black uppercase text-rose-600 text-[10px] whitespace-nowrap tracking-wider select-all border border-rose-500/30 bg-rose-50 px-2.5 py-0.5 rounded-full shadow-sm leading-none flex items-center gap-1.5 animate-pulse">
+                            <span className="w-1.5 h-1.5 rounded-full bg-rose-600" />
+                            {categoryName}
+                          </span>
+                        ) : (
+                          <span className="font-extrabold uppercase text-[#1e1b4b] text-[12px] whitespace-nowrap tracking-wide select-all">
+                            {categoryName}
+                          </span>
+                        )}
                       </div>
 
                       {/* Segments Stub Overlay (Rotated -90deg) */}
@@ -1794,7 +1858,7 @@ const Profile = () => {
                         </span>
                       </div>
 
-                      {/* Unique 5 digit code on the stub right next to/after signature section (Rotated -90deg, bottom-to-top) */}
+                      {/* Unique 5 digit code on the stub right next to/after signature section */}
                       <div 
                         className="absolute flex items-start justify-start pointer-events-none"
                         style={{
@@ -1915,7 +1979,7 @@ const Profile = () => {
                           Show ID
                         </button>
                       )}
-                      {(registeredEventsList.length > 0 || isGeneralMember) && (
+                      {registeredEventsList.length > 0 && (
                         <button
                           onClick={() => {
                             setShowTicketModal(true);
@@ -1964,7 +2028,7 @@ const Profile = () => {
                         Show ID
                       </button>
                     )}
-                    {(registeredEventsList.length > 0 || isGeneralMember) ? (
+                    {registeredEventsList.length > 0 ? (
                       <button 
                         onClick={() => {
                           setShowTicketModal(true);
@@ -2116,14 +2180,14 @@ const Profile = () => {
                             </p>
                           </div>
 
-                          {isGeneralMember && registeredEventsList.length > 0 && (
+                          {isGeneralMember && unverifiedRegistrations.length > 0 && (
                             <div className="md:col-span-2 p-8 rounded-3xl bg-white/5 border border-white/10 space-y-6">
                               <div className="flex items-center gap-4">
                                 <Calendar className="w-6 h-6 text-amber-500" />
                                 <h3 className="text-xl font-bold text-white uppercase tracking-wider">Registered Event Transactions</h3>
                               </div>
                               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                {registeredEventsList.map((reg) => {
+                                {unverifiedRegistrations.map((reg) => {
                                   const events = (reg.selected_events || '').split(',').map((s: string) => s.trim()).filter(Boolean);
                                   return events.map((evt, idx) => (
                                     <div key={`${reg.tableName}-${reg.id}-${idx}`} className="p-5 rounded-2xl bg-black/40 border border-white/5 flex flex-col justify-between gap-2 relative">

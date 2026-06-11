@@ -67,6 +67,7 @@ const Navbar = () => {
     { name: 'Notices', path: '/notices' },
     { name: 'Gallery', path: '/gallery' },
     { name: 'Panel', path: '/panel' },
+    { name: 'Challenges', path: '/challenge-problems', newTab: true },
   ];
 
   const logoUrl = content?.site?.logoUrl;
@@ -156,6 +157,8 @@ const Navbar = () => {
               <Link
                 key={link.path}
                 href={link.path}
+                target={link.newTab ? "_blank" : undefined}
+                rel={link.newTab ? "noopener noreferrer" : undefined}
                 className={`text-[10px] font-mono font-black uppercase tracking-[0.25em] transition-all duration-500 relative group px-2 py-1 ${
                   pathname === link.path ? 'text-[var(--c-6-start)]' : 'text-zinc-500 hover:text-white'
                 }`}
@@ -251,6 +254,8 @@ const Navbar = () => {
                   <Link
                     href={link.path}
                     onClick={() => setIsOpen(false)}
+                    target={link.newTab ? "_blank" : undefined}
+                    rel={link.newTab ? "noopener noreferrer" : undefined}
                     className={`text-3xl font-display font-black uppercase tracking-tighter transition-all block ${
                       pathname === link.path ? 'text-[var(--c-6-start)]' : 'text-zinc-700 hover:text-white'
                     }`}

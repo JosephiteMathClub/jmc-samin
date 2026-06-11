@@ -17,7 +17,8 @@ import {
   Trophy,
   BookOpen,
   Utensils,
-  History
+  History,
+  HelpCircle
 } from 'lucide-react';
 import { useContent } from '../context/ContentContext';
 import { useAuth } from '../context/AuthContext';
@@ -47,6 +48,7 @@ const DashboardSiteSection = dynamic(() => import('../components/dashboard/secti
 const DashboardMemberManagementSection = dynamic(() => import('../components/dashboard/sections/DashboardMemberManagementSection').then(mod => mod.DashboardMemberManagementSection), { loading: () => <Skeleton className="h-64 w-full rounded-3xl" /> });
 const DashboardEcMemberManagementSection = dynamic(() => import('../components/dashboard/sections/DashboardEcMemberManagementSection').then(mod => mod.DashboardEcMemberManagementSection), { loading: () => <Skeleton className="h-64 w-full rounded-3xl" /> });
 const FoodManagementSection = dynamic(() => import('../components/dashboard/sections/FoodManagementSection').then(mod => mod.FoodManagementSection), { loading: () => <Skeleton className="h-64 w-full rounded-3xl" /> });
+const ChallengeManagementSection = dynamic(() => import('../components/dashboard/sections/ChallengeManagementSection').then(mod => mod.ChallengeManagementSection), { loading: () => <Skeleton className="h-64 w-full rounded-3xl" /> });
 const DashboardAuditLogsSection = dynamic(() => import('../components/dashboard/sections/DashboardAuditLogsSection').then(mod => mod.DashboardAuditLogsSection), { loading: () => <Skeleton className="h-64 w-full rounded-3xl" /> });
 
 import ConfirmModal from '../components/ConfirmModal';
@@ -305,6 +307,21 @@ const AdminDashboard = () => {
       
       if (error) {
         throw error;
+      }
+
+      // Sync matching user event registrations in event tables as well to keep Profile page state aligned
+      try {
+        const eventTablesList = ['primary_events', 'junior_events', 'secondary_events', 'higher_secondary_events'];
+        await Promise.all(
+          eventTablesList.map(tb =>
+            supabase
+              .from(tb)
+              .update({ verified: newStatus })
+              .eq('user_id', memberId)
+          )
+        );
+      } catch (evtErr) {
+        console.warn("Event tables verification sync warning (continuing membership action):", evtErr);
       }
       
       setMembers(prev => prev.map(m => m.id === memberId ? { ...m, ...updates } : m));
@@ -862,6 +879,7 @@ const AdminDashboard = () => {
     { id: 'ec_members', label: 'EC Members', icon: Shield },
     { id: 'gallery', label: 'Gallery', icon: LayoutDashboard },
     { id: 'food', label: 'Food Management', icon: Utensils },
+    { id: 'challenge', label: 'Challenge Problems', icon: HelpCircle },
     ...(isSuperAdmin ? [
       { id: 'home', label: 'Home', icon: LayoutDashboard },
       { id: 'about', label: 'About', icon: FileText },
@@ -1019,6 +1037,23 @@ const AdminDashboard = () => {
         {activeTab === 'food' && (
           <FoodManagementSection 
             members={members}
+            shouldReduceGfx={shouldReduceGfx}
+          />
+        )}
+
+        {activeTab === 'challenge' && (
+          <ChallengeManagementSection 
+            data={localContent}
+            updateField={(field, val) => {
+              setLocalContent((prev: any) => ({
+                ...prev,
+                [field]: val
+              }));
+              saveAllContent({
+                ...localContent,
+                [field]: val
+              });
+            }}
             shouldReduceGfx={shouldReduceGfx}
           />
         )}

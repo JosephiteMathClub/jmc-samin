@@ -73,8 +73,8 @@ const EventRegister = () => {
   const [soloEventsList, setSoloEventsList] = useState<string[]>(SOLO_EVENTS);
   const [teamEventsList, setTeamEventsList] = useState<any[]>(DEFAULT_TEAM_EVENTS);
   const [formConfig, setFormConfig] = useState({
-    formDescription: "Specify the category format. Standard events are priced at 50tk each. Select all to enjoy premium package bundles.",
-    perEventPriceSolo: 50,
+    formDescription: "Specify the category format. Standard events are priced at 100tk each. Select all to enjoy premium package bundles.",
+    perEventPriceSolo: 100,
     allEventsSoloPriceGeneral: 100,
     allEventsSoloPriceMember: 50,
     bkashNumber: "01712345678"
@@ -130,6 +130,8 @@ const EventRegister = () => {
   const [fetchingMemberStatus, setFetchingMemberStatus] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [showConfirmSegmentModal, setShowConfirmSegmentModal] = useState(false);
+  const [hasConfirmedSegments, setHasConfirmedSegments] = useState(false);
 
   // Admin Proxy/Spot Registration States
   const [isProxyRegistration, setIsProxyRegistration] = useState(false);
@@ -260,8 +262,8 @@ const EventRegister = () => {
             setTeamEventsList(val.teamEvents);
           }
           setFormConfig({
-            formDescription: val.formDescription || "Specify the category format. Standard events are priced at 50tk each. Select all to enjoy premium package bundles.",
-            perEventPriceSolo: typeof val.perEventPriceSolo === 'number' ? val.perEventPriceSolo : 50,
+            formDescription: val.formDescription || "Specify the category format. Standard events are priced at 100tk each. Select all to enjoy premium package bundles.",
+            perEventPriceSolo: typeof val.perEventPriceSolo === 'number' ? val.perEventPriceSolo : 100,
             allEventsSoloPriceGeneral: typeof val.allEventsSoloPriceGeneral === 'number' ? val.allEventsSoloPriceGeneral : 100,
             allEventsSoloPriceMember: typeof val.allEventsSoloPriceMember === 'number' ? val.allEventsSoloPriceMember : 50,
             bkashNumber: val.bkashNumber || "01712345678"
@@ -355,17 +357,33 @@ const EventRegister = () => {
 
     const N = selectedEvents.length;
     if (N === 0) return 0;
-    
-    const allSelected = N === soloEventsList.length;
-    
-    if (allSelected) {
-      if (isGeneralMember) {
+
+    if (!isGeneralMember) {
+      // If they have registered once before, registering for more events later costs another 100 BDT as a fine
+      if (userRegisteredEvents.length > 0) {
+        return 100;
+      }
+
+      // First-time registration:
+      // If only Math Olympiad is selected, it is completely free
+      const isOnlyMathOlympiad = N === 1 && selectedEvents[0].toLowerCase() === "math olympiad";
+      if (isOnlyMathOlympiad) {
+        return 0;
+      }
+
+      // Otherwise, flat fee of 100 BDT
+      return 100;
+    } else {
+      // General members use original price rules
+      const allSelected = N === soloEventsList.length;
+      if (allSelected) {
         return formConfig.allEventsSoloPriceMember;
       } else {
-        return formConfig.allEventsSoloPriceGeneral;
+        const paidSoloEvents = selectedEvents.filter(
+          (evt) => evt.toLowerCase() !== "math olympiad"
+        );
+        return paidSoloEvents.length * formConfig.perEventPriceSolo;
       }
-    } else {
-      return N * formConfig.perEventPriceSolo;
     }
   };
 
@@ -671,15 +689,37 @@ const EventRegister = () => {
     }
   };
 
-  const handleSubmitRegistration = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!bkashNumber.trim() || bkashNumber.length < 11) {
-      showToast("Please enter a valid bKash Sender Phone Number.", "error");
+  const handleSubmitRegistration = async (e?: React.FormEvent, bypassConfirm: boolean = false) => {
+    if (e) e.preventDefault();
+
+    // Check if we need to confirm solo segments before submitting
+    if (eventTab === 'solo' && !hasConfirmedSegments && !bypassConfirm) {
+      setShowConfirmSegmentModal(true);
       return;
     }
-    if (!trxnid.trim() || trxnid.length < 8) {
-      showToast("Please enter a valid Transaction ID.", "error");
-      return;
+
+    const finalPrice = calculateAmount();
+    const isOnlyFreeMathOlympiad = finalPrice === 0 && selectedEvents.length === 1 && selectedEvents[0]?.trim().toLowerCase() === "math olympiad";
+
+    let finalBkashNumber = bkashNumber.trim();
+    let finalTrxnid = trxnid.trim();
+
+    if (isOnlyFreeMathOlympiad) {
+      if (!finalBkashNumber) {
+        finalBkashNumber = "N/A - FREE ENTRY";
+      }
+      if (!finalTrxnid) {
+        finalTrxnid = "FREE-MO-" + Math.floor(100000 + Math.random() * 900000).toString();
+      }
+    } else {
+      if (!finalBkashNumber || finalBkashNumber.length < 11) {
+        showToast("Please enter a valid bKash Sender Phone Number.", "error");
+        return;
+      }
+      if (!finalTrxnid || finalTrxnid.length < 8) {
+        showToast("Please enter a valid Transaction ID.", "error");
+        return;
+      }
     }
 
     setSubmitting(true);
@@ -715,7 +755,6 @@ const EventRegister = () => {
         }
       }
 
-      const finalPrice = calculateAmount();
       const targetTable = getTargetTable(className);
       
       const payload = {
@@ -724,11 +763,11 @@ const EventRegister = () => {
         class: className,
         section: section,
         roll: roll,
-        bkash_number: bkashNumber,
-        trxnid: trxnid,
+        bkash_number: finalBkashNumber,
+        trxnid: finalTrxnid,
         amount: finalPrice,
         selected_events: selectedEvents.join(', '),
-        verified: 'no'
+        verified: isOnlyFreeMathOlympiad ? 'yes' : 'no'
       };
 
       const { error } = await supabase
@@ -770,8 +809,8 @@ const EventRegister = () => {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              trxnid,
-              bkash_number: bkashNumber,
+              trxnid: finalTrxnid,
+              bkash_number: finalBkashNumber,
               targetTable,
               event_name: selectedEvents[0],
               teammates: teammatesList
@@ -833,16 +872,16 @@ const EventRegister = () => {
             full_name: fullName,
             email: isProxyRegistration ? proxyEmail.trim().toLowerCase() : (user?.email || ''),
             email_address: isProxyRegistration ? proxyEmail.trim().toLowerCase() : (user?.email || ''),
-            phone: isProxyRegistration ? proxyPhoneNumber : bkashNumber,
+            phone: isProxyRegistration ? proxyPhoneNumber : (bkashNumber.trim() || 'N/A - FREE ENTRY'),
             school: 'St Joseph Higher Secondary School',
             class: className,
             section: section,
             roll: roll,
             photo_url: '',
             payment_method: 'bkash',
-            trxnid: trxnid,
-            bkash_number: bkashNumber,
-            verified: 'no', // mark as pending verification, but they officially have their 5-digit ID!
+            trxnid: finalTrxnid,
+            bkash_number: finalBkashNumber,
+            verified: isOnlyFreeMathOlympiad ? 'yes' : 'no', // mark as pending verification, but they officially have their 5-digit ID!
             member_id: resolvedMemberId
           });
 
@@ -1011,14 +1050,26 @@ const EventRegister = () => {
             </div>
             
             <h2 className="text-3xl font-black text-white uppercase tracking-tight mb-4">
-              Successfully Submitted!
+              {finalAmount === 0 ? "Entry Approved!" : "Successfully Submitted!"}
             </h2>
             <p className="text-zinc-400 mb-8 text-sm leading-relaxed">
-              Hey <strong>{fullName}</strong>, your transaction verification details (bKash number and transaction ID: <code>{trxnid}</code>) are saved successfully. Please allow up to a few hours for club administrators to verify and confirm your records in the <strong>{getTargetTable(className).split('_').join(' ').toUpperCase()}</strong>.
+              {finalAmount === 0 ? (
+                <span>
+                  Hey <strong>{fullName}</strong>, your free entry for <strong className="text-amber-500">Math Olympiad</strong> is approved! We have <strong>automatically verified</strong> your spot and generated your digital ticket instantly.
+                </span>
+              ) : (
+                <span>
+                  Hey <strong>{fullName}</strong>, your transaction verification details (bKash number and transaction ID: <code>{trxnid}</code>) are saved successfully. Please allow up to a few hours for club administrators to verify and confirm your records in the <strong>{getTargetTable(className).split('_').join(' ').toUpperCase()}</strong>.
+                </span>
+              )}
             </p>
 
             <p className="text-amber-400 text-xs font-bold mb-8 uppercase tracking-wider bg-amber-500/5 px-6 py-3 rounded-xl border border-amber-500/10">
-              A notification email was fired. Confirmed events will list in your Profile section.
+              {finalAmount === 0 ? (
+                "You can view your ticket on the profile page or register for more events later!"
+              ) : (
+                "A notification email was fired. Confirmed events will list in your Profile section."
+              )}
             </p>
 
             <button
@@ -1366,7 +1417,7 @@ const EventRegister = () => {
                                   );
                                 }
 
-                                return (
+                                 return (
                                   <button
                                     key={eventTitle}
                                     onClick={() => handleToggleEvent(eventTitle)}
@@ -1376,7 +1427,14 @@ const EventRegister = () => {
                                         : 'bg-white/5 border-white/5 text-zinc-400 hover:border-white/10 hover:text-white'
                                     }`}
                                   >
-                                    <span className="text-xs font-bold">{eventTitle}</span>
+                                    <div className="flex flex-col gap-0.5">
+                                      <span className="text-xs font-bold">{eventTitle}</span>
+                                      {eventTitle.toLowerCase() === "math olympiad" && (
+                                        <span className="text-[8px] font-black uppercase tracking-wider text-amber-500 bg-amber-500/10 border border-amber-500/20 px-1.5 py-0.5 rounded w-max mt-1">
+                                          FREE ENTRY
+                                        </span>
+                                      )}
+                                    </div>
                                     <div className={`w-5 h-5 rounded flex items-center justify-center border transition-all ${
                                       isChecked 
                                         ? 'bg-amber-500 border-transparent text-black' 
@@ -1390,17 +1448,37 @@ const EventRegister = () => {
                             </div>
                           )}
 
-                          {/* Price Tracker Badge card */}
+                           {/* Price Tracker Badge card */}
                           <div className="p-6 rounded-2xl bg-white/[0.02] border border-white/5 flex flex-col sm:flex-row items-center justify-between gap-4">
                             <div>
                               <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider">Dynamic Valuation</p>
-                              {selectedEvents.length === soloEventsList.length ? (
+                              {!isGeneralMember ? (
+                                <p className="text-xs text-amber-500 font-bold mt-1">
+                                  {userRegisteredEvents.length > 0 ? (
+                                    <span className="text-red-400 font-black uppercase">⚠️ Subsequent Registration Charge (Fine): 100 BDT applies!</span>
+                                  ) : selectedEvents.length === 1 && selectedEvents[0].toLowerCase() === "math olympiad" ? (
+                                    <span className="text-emerald-400 font-black uppercase">Math Olympiad is completely FREE. Grab your ticket now!</span>
+                                  ) : (
+                                    <span>
+                                      🏅 Flat Participation Fee: Only <strong className="text-white">100 BDT</strong> total for all your selected events.
+                                    </span>
+                                  )}
+                                </p>
+                              ) : selectedEvents.length === soloEventsList.length ? (
                                 <p className="text-xs text-amber-500 font-bold mt-1">
                                   🏆 Package discount loaded! {isGeneralMember ? `General Member ALL-EXCLUSIVE rate of ${formConfig.allEventsSoloPriceMember}tk.` : `Special bundle rate of ${formConfig.allEventsSoloPriceGeneral}tk.`}
                                 </p>
                               ) : (
                                 <p className="text-xs text-zinc-400 mt-1">
-                                  {selectedEvents.length} event(s) at {formConfig.perEventPriceSolo}tk each.
+                                  {selectedEvents.some(e => e.toLowerCase() === "math olympiad") ? (
+                                    <span>
+                                      {selectedEvents.filter(e => e.toLowerCase() !== "math olympiad").length} paid event(s) at {formConfig.perEventPriceSolo}tk each + <strong className="text-amber-500 uppercase">Math Olympiad (FREE)</strong>
+                                    </span>
+                                  ) : (
+                                    <span>
+                                      {selectedEvents.length} event(s) at {formConfig.perEventPriceSolo}tk each.
+                                    </span>
+                                  )}
                                 </p>
                               )}
                             </div>
@@ -1868,44 +1946,55 @@ const EventRegister = () => {
 
                       {/* Payment inputs */}
                       <form onSubmit={handleSubmitRegistration} className="space-y-6">
-                        <div className="bg-amber-500/5 p-5 rounded-3xl border border-amber-500/10">
-                          <p className="text-[10px] font-black uppercase tracking-widest text-amber-500 mb-2">Instructions</p>
-                          <ol className="text-[10px] space-y-2 text-zinc-400 list-decimal pl-4 font-bold">
-                            <li>Send BDT <strong className="text-white">{finalAmount}</strong> to bKash Number: <strong className="text-white">{formConfig.bkashNumber}</strong> (Send Money)</li>
-                            <li>Type your Send Money transaction ID (TrxID) and mobile number details below.</li>
-                            <li>An administrator will perform confirmation checks on the bank ledger.</li>
-                          </ol>
-                        </div>
-
-                        {/* bKash Phone */}
-                        <div className="space-y-3">
-                          <label className="text-[10px] font-black uppercase tracking-wider text-zinc-500">bKash Phone Number</label>
-                          <div className="relative group">
-                            <Phone className="absolute left-6 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500 group-focus-within:text-amber-500 transition-colors" />
-                            <input 
-                              type="tel"
-                              placeholder="01XXXXXXXXX"
-                              value={bkashNumber}
-                              onChange={(e) => setBkashNumber(e.target.value)}
-                              className="w-full pl-14 pr-6 py-4.5 bg-white/5 border border-white/10 rounded-2xl focus:outline-none focus:border-amber-500/50 focus:ring-4 focus:ring-amber-500/10 transition-all text-sm font-bold text-white placeholder:text-zinc-600"
-                            />
+                        {finalAmount === 0 ? (
+                          <div className="bg-green-500/5 p-6 rounded-3xl border border-green-500/20 text-green-400 space-y-3">
+                            <p className="text-[10px] font-black uppercase tracking-widest text-emerald-400">FREE CO-PARTICIPATION BENEFITS</p>
+                            <p className="text-xs leading-relaxed text-zinc-400 font-medium">
+                              Because you selected <strong className="text-amber-500 uppercase">Math Olympiad</strong> exclusively, entry is completely free. No bKash payment, transaction tracking, or manual verification is needed. This ticket will be auto-approved instantly upon submission!
+                            </p>
                           </div>
-                        </div>
+                        ) : (
+                          <>
+                            <div className="bg-amber-500/5 p-5 rounded-3xl border border-amber-500/10">
+                              <p className="text-[10px] font-black uppercase tracking-widest text-amber-500 mb-2">Instructions</p>
+                              <ol className="text-[10px] space-y-2 text-zinc-400 list-decimal pl-4 font-bold">
+                                <li>Send BDT <strong className="text-white">{finalAmount}</strong> to bKash Number: <strong className="text-white">{formConfig.bkashNumber}</strong> (Send Money)</li>
+                                <li>Type your Send Money transaction ID (TrxID) and mobile number details below.</li>
+                                <li>An administrator will perform confirmation checks on the bank ledger.</li>
+                              </ol>
+                            </div>
 
-                        {/* TrxID */}
-                        <div className="space-y-3">
-                          <label className="text-[10px] font-black uppercase tracking-wider text-zinc-500">Transaction ID (TrxID)</label>
-                          <div className="relative group">
-                            <Hash className="absolute left-6 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500 group-focus-within:text-amber-500 transition-colors" />
-                            <input 
-                              type="text"
-                              placeholder="E.G. A1B2C3D4E5"
-                              value={trxnid}
-                              onChange={(e) => setTrxnid(e.target.value.toUpperCase())}
-                              className="w-full pl-14 pr-6 py-4.5 bg-white/5 border border-white/10 rounded-2xl focus:outline-none focus:border-amber-500/50 focus:ring-4 focus:ring-amber-500/10 transition-all text-sm font-bold text-white placeholder:text-zinc-600"
-                            />
-                          </div>
-                        </div>
+                            {/* bKash Phone */}
+                            <div className="space-y-3">
+                              <label className="text-[10px] font-black uppercase tracking-wider text-zinc-500">bKash Phone Number</label>
+                              <div className="relative group">
+                                <Phone className="absolute left-6 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500 group-focus-within:text-amber-500 transition-colors" />
+                                <input 
+                                  type="tel"
+                                  placeholder="01XXXXXXXXX"
+                                  value={bkashNumber}
+                                  onChange={(e) => setBkashNumber(e.target.value)}
+                                  className="w-full pl-14 pr-6 py-4.5 bg-white/5 border border-white/10 rounded-2xl focus:outline-none focus:border-amber-500/50 focus:ring-4 focus:ring-amber-500/10 transition-all text-sm font-bold text-white placeholder:text-zinc-600"
+                                />
+                              </div>
+                            </div>
+
+                            {/* TrxID */}
+                            <div className="space-y-3">
+                              <label className="text-[10px] font-black uppercase tracking-wider text-zinc-500">Transaction ID (TrxID)</label>
+                              <div className="relative group">
+                                <Hash className="absolute left-6 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500 group-focus-within:text-amber-500 transition-colors" />
+                                <input 
+                                  type="text"
+                                  placeholder="E.G. A1B2C3D4E5"
+                                  value={trxnid}
+                                  onChange={(e) => setTrxnid(e.target.value.toUpperCase())}
+                                  className="w-full pl-14 pr-6 py-4.5 bg-white/5 border border-white/10 rounded-2xl focus:outline-none focus:border-amber-500/50 focus:ring-4 focus:ring-amber-500/10 transition-all text-sm font-bold text-white placeholder:text-zinc-600"
+                                />
+                              </div>
+                            </div>
+                          </>
+                        )}
 
                         {/* Submit Button */}
                         <button
@@ -1947,6 +2036,67 @@ const EventRegister = () => {
         )}
 
       </div>
+
+      {/* Dynamic Segment Confirmation Modal */}
+      <AnimatePresence>
+        {showConfirmSegmentModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md"
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 20 }}
+              className="w-full max-w-md bg-[#0d0d0d] border border-white/10 rounded-3xl p-8 relative overflow-hidden shadow-[0_0_50px_rgba(245,158,11,0.1)] text-center"
+            >
+              <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-transparent via-amber-500 to-transparent" />
+              
+              <div className="w-16 h-16 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-500 flex items-center justify-center mx-auto mb-6">
+                <AlertCircle className="w-8 h-8" />
+              </div>
+
+              <h3 className="text-xl font-display font-black text-white uppercase tracking-tight mb-3">
+                Are you absolutely sure?
+              </h3>
+              
+              <p className="text-zinc-400 text-xs leading-relaxed mb-6">
+                You can <strong className="text-white">only register for segments once</strong>. 
+                Before submitting, make sure you have selected all desired segments. If you decide to register for more segments later on, you will have to pay another <strong className="text-amber-500">100 BDT flat charge (fine/penalty)</strong>.
+              </p>
+
+              <div className="bg-white/[0.02] border border-white/5 p-4 rounded-2xl mb-6 text-left">
+                <p className="text-[10px] font-black uppercase tracking-widest text-zinc-500 mb-1">Currently Selected Segments</p>
+                <p className="text-xs font-black text-white">
+                  {selectedEvents.join(', ') || 'None'}
+                </p>
+              </div>
+
+              <div className="flex flex-col gap-3">
+                <button
+                  onClick={() => {
+                    setShowConfirmSegmentModal(false);
+                    setHasConfirmedSegments(true);
+                    handleSubmitRegistration(undefined, true);
+                  }}
+                  className="w-full py-4.5 rounded-2xl bg-amber-500 hover:bg-amber-400 text-black font-black text-xs uppercase tracking-[0.2em] transition-all"
+                >
+                  Yes, I'm Sure. Register Now
+                </button>
+                
+                <button
+                  onClick={() => setShowConfirmSegmentModal(false)}
+                  className="w-full py-4.5 rounded-2xl bg-white/5 hover:bg-white/10 text-white font-black text-xs uppercase tracking-[0.2em] border border-white/10 transition-all"
+                >
+                  No, Let me select more
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
