@@ -836,10 +836,27 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ isSuperAdmin =
     let allVerified: any[] = [];
     try {
       for (const tb of tables) {
-        const { data, error } = await supabase
+        let data: any[] | null = null;
+        let error: any = null;
+
+        // Try querying with boolean true first (since db_schema says they are boolean)
+        const boolRes = await supabase
           .from(tb)
           .select('*')
-          .eq('verified', 'yes');
+          .eq('verified', true);
+
+        if (boolRes.error) {
+          // Fall back to querying with string 'yes' (for text column)
+          const strRes = await supabase
+            .from(tb)
+            .select('*')
+            .eq('verified', 'yes');
+          data = strRes.data;
+          error = strRes.error;
+        } else {
+          data = boolRes.data;
+          error = boolRes.error;
+        }
         
         if (error) throw error;
         

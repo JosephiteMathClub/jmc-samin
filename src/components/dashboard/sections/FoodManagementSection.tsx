@@ -42,6 +42,84 @@ interface ScanLog {
   serving_number: number;
 }
 
+const cleanToUniqueCode = (input: string): string => {
+  let cleaned = (input || "").trim();
+  if (!cleaned) return "";
+
+  // 1. Try to parse as JSON first
+  try {
+    const data = JSON.parse(cleaned);
+    if (data && typeof data === "object") {
+      const resolved = data.id || data.member_id || data.code || "";
+      cleaned = resolved.toString().trim();
+    }
+  } catch (err) {
+    // 2. Not JSON. Check standard string line-by-line / keywords
+    const lines = cleaned.split(/\r?\n/);
+    for (const line of lines) {
+      const passIdMatch = line.match(/PassId:\s*([A-Za-z0-9-]+)/i);
+      const idMatch = line.match(/\bid:\s*([A-Za-z0-9-]+)/i);
+      const mIdMatch = line.match(/member[-_]id:\s*([A-Za-z0-9-]+)/i);
+
+      if (passIdMatch) {
+         cleaned = passIdMatch[1];
+         break;
+      }
+      if (idMatch) {
+         cleaned = idMatch[1];
+         break;
+      }
+      if (mIdMatch) {
+         cleaned = mIdMatch[1];
+         break;
+      }
+    }
+  }
+
+  // 3. Try to parse as HTTP/HTTPS URL
+  if (cleaned.toLowerCase().startsWith("http://") || cleaned.toLowerCase().startsWith("https://")) {
+    try {
+      const url = new URL(cleaned);
+      const idParam = url.searchParams.get("id") || url.searchParams.get("code") || url.searchParams.get("member_id");
+      if (idParam) {
+        cleaned = idParam.trim();
+      } else {
+        // Check path segments
+        const paths = url.pathname.split("/").map(p => p.trim()).filter(Boolean);
+        const matchedSegment = paths.find(p => /^\d{3}$|^\d{5}$|^\d{6}$/.test(p));
+        if (matchedSegment) {
+          cleaned = matchedSegment;
+        }
+      }
+    } catch (e) {
+      // Ignore URL parse error
+    }
+  }
+
+  // Strip "JMC-" prefix
+  let code = cleaned.replace(/JMC-/i, "").trim();
+
+  // Extract digits only!
+  const digitsOnly = code.replace(/\D/g, "");
+
+  // If we have mapped a 3-digit, 5-digit, or 6-digit number, return it!
+  if (digitsOnly.length === 3 || digitsOnly.length === 5 || digitsOnly.length === 6) {
+    return digitsOnly;
+  }
+
+  // Fallback: match largest group of digits
+  const match6 = digitsOnly.match(/\d{6}/);
+  if (match6) return match6[0];
+
+  const match5 = digitsOnly.match(/\d{5}/);
+  if (match5) return match5[0];
+
+  const match3 = digitsOnly.match(/\d{3}/);
+  if (match3) return match3[0];
+
+  return digitsOnly || cleaned.toUpperCase();
+};
+
 interface FoodManagementSectionProps {
   members: any[];
   shouldReduceGfx?: boolean;
@@ -55,6 +133,7 @@ export const FoodManagementSection: React.FC<FoodManagementSectionProps> = ({
   
   // State
   const [loading, setLoading] = useState(true);
+  const [localMembers, setLocalMembers] = useState<any[]>([]);
   const [distributionEnabled, setDistributionEnabled] = useState(false);
   const [slots, setSlots] = useState<FoodSlot[]>([
     { id: 'snacks', name: 'Snacks', max_servings: 1 },
@@ -90,12 +169,15 @@ export const FoodManagementSection: React.FC<FoodManagementSectionProps> = ({
   const [newSlotName, setNewSlotName] = useState('');
   const [newSlotMaxServings, setNewSlotMaxServings] = useState(1);
 
+  // Active members list used for calculations and query matching (falls back to props)
+  const activeMembersList = localMembers.length > 0 ? localMembers : (members || []);
+
   // Responsive Search Filtering for Manual Lookup Fallback
   const matchingMembers = useMemo(() => {
     const query = manualId.trim().toLowerCase();
     if (!query) return [];
 
-    return (members || []).filter(m => {
+    return (activeMembersList || []).filter(m => {
       const mId = (m.member_id || '').toLowerCase();
       // Only general member and EC member's code can be input; the other 5-digit code is blocked.
       if (/^\d{5}$/.test(mId)) {
@@ -120,7 +202,7 @@ export const FoodManagementSection: React.FC<FoodManagementSectionProps> = ({
 
       return true;
     });
-  }, [manualId, members]);
+  }, [manualId, activeMembersList]);
 
   const showToast = (msg: string, type: 'success' | 'error' | 'info' = 'info') => {
     // Rely on console / local visual feedback for scan panels
@@ -135,6 +217,7 @@ export const FoodManagementSection: React.FC<FoodManagementSectionProps> = ({
     }
     setLoading(true);
     try {
+      // 1. Fetch site_content settings first
       const { data, error } = await supabase
         .from('site_content')
         .select('data')
@@ -185,6 +268,38 @@ export const FoodManagementSection: React.FC<FoodManagementSectionProps> = ({
           });
         if (seedError) console.warn("Failed seeding food distribution data store:", seedError);
       }
+
+      // 2. Refresh members list locally to ensure metrics are not 0 under any tabs
+      try {
+        const { data: standardData, error: standardError } = await supabase
+          .from('member')
+          .select('*');
+        
+        let standardMembers = standardData || [];
+
+        let ecMembers: any[] = [];
+        const { data: ecRes, error: ecError } = await supabase
+          .from('ec_member')
+          .select('*');
+        if (!ecError && ecRes) {
+          ecMembers = ecRes.map(m => ({ ...m, is_ec: true }));
+        }
+
+        // Deduplicate standard members
+        const ecIds = new Set(ecMembers.map(m => (m.id || '').toLowerCase()));
+        const ecMemberIds = new Set(ecMembers.map(m => (m.member_id || '').toLowerCase()));
+        const filteredStandard = standardMembers.filter(m => {
+          const idLower = (m.id || '').toLowerCase();
+          const mIdLower = (m.member_id || '').toLowerCase();
+          return !ecIds.has(idLower) && !ecMemberIds.has(mIdLower);
+        });
+
+        const combined = [...filteredStandard, ...ecMembers];
+        setLocalMembers(combined);
+      } catch (memErr) {
+        console.error("Failed to query members list locally inside food management:", memErr);
+      }
+
     } catch (err) {
       console.error("Error fetching food distribution settings:", err);
     } finally {
@@ -241,7 +356,7 @@ export const FoodManagementSection: React.FC<FoodManagementSectionProps> = ({
       return;
     }
     
-    const formattedId = decodedText.trim().toUpperCase();
+    const formattedId = cleanToUniqueCode(decodedText);
 
     // Block any 5-digit Event/Spot registration code immediately as they are not General/EC Members
     if (/^\d{5}$/.test(formattedId)) {
@@ -256,43 +371,52 @@ export const FoodManagementSection: React.FC<FoodManagementSectionProps> = ({
     }
 
     try {
-      // 1. Fetch matching member (try direct, JMC prefix, or suffix match)
+      // 1. Fetch matching member (try direct, JMC prefix, or suffix match in both member and ec_member tables)
       let member = null;
       
-      const { data: exactMember, error: exactError } = await supabase
-        .from('member')
-        .select('id, full_name, verified, member_id, is_ec')
-        .eq('member_id', formattedId)
-        .maybeSingle();
+      const lookupId = async (tableName: 'member' | 'ec_member') => {
+        let { data, error } = await supabase
+          .from(tableName)
+          .select('id, full_name, verified, member_id')
+          .eq('member_id', formattedId)
+          .maybeSingle();
 
-      if (exactError) throw exactError;
+        if (error) throw error;
+        if (data) return data;
 
-      if (exactMember) {
-        member = exactMember;
-      } else {
         const prependedId = `JMC-${formattedId}`;
-        const { data: prependedMember, error: prependedError } = await supabase
-          .from('member')
-          .select('id, full_name, verified, member_id, is_ec')
+        let { data: prependedData, error: prependedError } = await supabase
+          .from(tableName)
+          .select('id, full_name, verified, member_id')
           .eq('member_id', prependedId)
           .maybeSingle();
 
         if (prependedError) throw prependedError;
+        if (prependedData) return prependedData;
 
-        if (prependedMember) {
-          member = prependedMember;
-        } else if (formattedId.length >= 3) {
+        if (formattedId.length >= 3) {
           const { data: suffixMatches, error: suffixError } = await supabase
-            .from('member')
-            .select('id, full_name, verified, member_id, is_ec')
+            .from(tableName)
+            .select('id, full_name, verified, member_id')
             .ilike('member_id', `%${formattedId}`);
 
           if (suffixError) throw suffixError;
 
           if (suffixMatches && suffixMatches.length > 0) {
-            const perfectSub = suffixMatches.find(m => m.member_id.endsWith(`-${formattedId}`));
-            member = perfectSub || suffixMatches[0];
+            const perfectSub = suffixMatches.find(m => (m.member_id || '').toUpperCase().endsWith(`-${formattedId}`));
+            return perfectSub || suffixMatches[0];
           }
+        }
+        return null;
+      };
+
+      const memData = await lookupId('member');
+      if (memData) {
+        member = { ...memData, is_ec: false };
+      } else {
+        const ecData = await lookupId('ec_member');
+        if (ecData) {
+          member = { ...ecData, is_ec: true };
         }
       }
 
@@ -490,8 +614,8 @@ export const FoodManagementSection: React.FC<FoodManagementSectionProps> = ({
   const totalRegularScanned = logs.filter(l => l.slot_id === activeSlotId && !l.is_ec).length;
   const totalEcScanned = logs.filter(l => l.slot_id === activeSlotId && l.is_ec).length;
 
-  const totalMembersCount = members.filter(m => !(m.is_ec === true || (m.member_id && /^\d{3}$/.test(m.member_id)))).length;
-  const totalEcMembersCount = members.filter(m => m.is_ec === true || (m.member_id && /^\d{3}$/.test(m.member_id))).length;
+  const totalMembersCount = activeMembersList.filter(m => !(m.is_ec === true || (m.member_id && /^\d{3}$/.test(m.member_id)))).length;
+  const totalEcMembersCount = activeMembersList.filter(m => m.is_ec === true || (m.member_id && /^\d{3}$/.test(m.member_id))).length;
 
   // Filter logs for the table
   const filteredLogs = logs.filter(l => {
@@ -557,7 +681,7 @@ export const FoodManagementSection: React.FC<FoodManagementSectionProps> = ({
             <Users className="w-4 h-4 text-zinc-500" />
           </div>
           <p className="text-2xl font-black text-white tracking-tight">{totalMembersCount}</p>
-          <div className="text-[9px] text-zinc-650 font-medium uppercase tracking-wider">verified in database</div>
+          <div className="text-[9px] text-zinc-500 font-medium uppercase tracking-wider">verified in database</div>
         </div>
 
         <div className="p-5 rounded-2xl bg-zinc-950/40 border border-white/5 space-y-2">
@@ -566,7 +690,7 @@ export const FoodManagementSection: React.FC<FoodManagementSectionProps> = ({
             <Award className="w-4 h-4 text-amber-500/80" />
           </div>
           <p className="text-2xl font-black text-amber-500 tracking-tight">{totalEcMembersCount}</p>
-          <div className="text-[9px] text-zinc-650 font-medium uppercase tracking-wider">unique 3-digit identifiers</div>
+          <div className="text-[9px] text-zinc-500 font-medium uppercase tracking-wider">unique 3-digit identifiers</div>
         </div>
 
         {/* Current Scan Metrics - General */}
@@ -592,7 +716,7 @@ export const FoodManagementSection: React.FC<FoodManagementSectionProps> = ({
           <p className="text-2xl font-black text-amber-500 tracking-tight">
             {totalEcScanned} <span className="text-xs font-semibold text-amber-700">EC Users</span>
           </p>
-          <p className="text-[9px] text-zinc-505 font-bold uppercase tracking-wider">
+          <p className="text-[9px] text-zinc-500 font-bold uppercase tracking-wider">
             Lim: {slots.find(s => s.id === activeSlotId)?.max_servings} serving(s) max
           </p>
         </div>
@@ -764,7 +888,7 @@ export const FoodManagementSection: React.FC<FoodManagementSectionProps> = ({
                   })}
                 </div>
                 {!isSuperAdmin && (
-                  <p className="text-[8.5px] text-zinc-650 uppercase tracking-wide text-center pt-1 font-semibold leading-normal">
+                  <p className="text-[8.5px] text-zinc-500 uppercase tracking-wide text-center pt-1 font-semibold leading-normal">
                     (Select among the food slots made available by the Super Admin above)
                   </p>
                 )}
@@ -843,9 +967,10 @@ export const FoodManagementSection: React.FC<FoodManagementSectionProps> = ({
                       <div className="space-y-1 pt-1 max-h-44 overflow-y-auto">
                         {matchingMembers.map(m => {
                           const isEcMember = m.is_ec === true || (m.member_id && /^\d{3}$/.test(m.member_id));
+                          const uniqueKey = `${m.id || ''}-${m.member_id || ''}-${isEcMember ? 'ec' : 'member'}`;
                           return (
                             <button
-                              key={m.id || m.member_id}
+                              key={uniqueKey}
                               type="button"
                               onClick={() => {
                                 handleScan(m.member_id);
@@ -898,7 +1023,7 @@ export const FoodManagementSection: React.FC<FoodManagementSectionProps> = ({
                   value={logSearchQuery}
                   onChange={(e) => setLogSearchQuery(e.target.value)}
                   placeholder="SEARCH SCAN"
-                  className="w-full pl-9 pr-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white font-bold text-[10px] uppercase focus:outline-none focus:border-amber-500/50 transition-all placeholder:text-zinc-650"
+                  className="w-full pl-9 pr-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white font-bold text-[10px] uppercase focus:outline-none focus:border-amber-500/50 transition-all placeholder:text-zinc-500"
                 />
               </div>
             </div>

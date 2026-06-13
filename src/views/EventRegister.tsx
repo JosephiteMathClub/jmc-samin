@@ -133,6 +133,12 @@ const EventRegister = () => {
   const [showConfirmSegmentModal, setShowConfirmSegmentModal] = useState(false);
   const [hasConfirmedSegments, setHasConfirmedSegments] = useState(false);
 
+  // EC member check states
+  const [isCurrentUserEc, setIsCurrentUserEc] = useState(false);
+  const [currentUserEcId, setCurrentUserEcId] = useState<string | null>(null);
+  const [isProxyUserEc, setIsProxyUserEc] = useState(false);
+  const [proxyUserEcId, setProxyUserEcId] = useState<string | null>(null);
+
   // Admin Proxy/Spot Registration States
   const [isProxyRegistration, setIsProxyRegistration] = useState(false);
   const [proxyEmail, setProxyEmail] = useState('');
@@ -164,6 +170,11 @@ const EventRegister = () => {
 
         const activeData = ecData || memberData;
 
+        if (ecData) {
+          setIsCurrentUserEc(true);
+          setCurrentUserEcId(ecData.member_id || null);
+        }
+
         if (activeData) {
           setRegisteredMemberData(activeData);
           setFullName(activeData.full_name || '');
@@ -188,10 +199,21 @@ const EventRegister = () => {
             .eq('user_id', user.id);
           
           if (evData && evData.length > 0) {
-            const mapped = evData.map((item: any) => ({
-              ...item,
-              tableName: tb
-            }));
+            const mapped = evData.map((item: any) => {
+              let normalizedVerified = 'no';
+              if (item.verified === true || item.verified === 'yes') {
+                normalizedVerified = 'yes';
+              } else if (item.verified === 'rejected') {
+                normalizedVerified = 'rejected';
+              } else if (item.verified === false || item.verified === 'no') {
+                normalizedVerified = 'no';
+              }
+              return {
+                ...item,
+                tableName: tb,
+                verified: normalizedVerified
+              };
+            });
             allReg = [...allReg, ...mapped];
 
             for (const r of evData) {
@@ -358,33 +380,20 @@ const EventRegister = () => {
     const N = selectedEvents.length;
     if (N === 0) return 0;
 
-    if (!isGeneralMember) {
-      // If they have registered once before, registering for more events later costs another 100 BDT as a fine
-      if (userRegisteredEvents.length > 0) {
-        return 100;
-      }
-
-      // First-time registration:
-      // If only Math Olympiad is selected, it is completely free
-      const isOnlyMathOlympiad = N === 1 && selectedEvents[0].toLowerCase() === "math olympiad";
-      if (isOnlyMathOlympiad) {
-        return 0;
-      }
-
-      // Otherwise, flat fee of 100 BDT
-      return 100;
-    } else {
-      // General members use original price rules
-      const allSelected = N === soloEventsList.length;
-      if (allSelected) {
-        return formConfig.allEventsSoloPriceMember;
-      } else {
-        const paidSoloEvents = selectedEvents.filter(
-          (evt) => evt.toLowerCase() !== "math olympiad"
-        );
-        return paidSoloEvents.length * formConfig.perEventPriceSolo;
-      }
+    // If only Math Olympiad is selected, it is completely free under all circumstances!
+    const isOnlyMathOlympiad = N === 1 && selectedEvents[0].trim().toLowerCase() === "math olympiad";
+    if (isOnlyMathOlympiad) {
+      return 0;
     }
+
+    // Both general members and non-members follow the same simplified flat charge:
+    // If they have registered once before, registering for more events later costs another 100 BDT
+    if (userRegisteredEvents.length > 0) {
+      return 100;
+    }
+
+    // Otherwise, flat fee of 100 BDT (selecting either one, some, or all events is 100tk total)
+    return 100;
   };
 
   const handleSwitchTab = (tab: 'solo' | 'team') => {
@@ -484,6 +493,8 @@ const EventRegister = () => {
     setProxyVerified(false);
     setProxyUserExists(false);
     setProxyResolvedUserId(null);
+    setIsProxyUserEc(false);
+    setProxyUserEcId(null);
 
     if (!checked) {
       if (registeredMemberData) {
@@ -539,6 +550,14 @@ const EventRegister = () => {
 
       const activeMember = ecCheck || memberCheck;
       
+      if (ecCheck) {
+        setIsProxyUserEc(true);
+        setProxyUserEcId(ecCheck.member_id || null);
+      } else {
+        setIsProxyUserEc(false);
+        setProxyUserEcId(null);
+      }
+      
       if (profileCheck || activeMember) {
         const matchedName = activeMember?.full_name || profileCheck?.full_name || '';
         const matchedClass = activeMember?.class || '';
@@ -567,6 +586,8 @@ const EventRegister = () => {
         setRoll('');
         setProxyPhoneNumber('');
         setIsGeneralMember(false);
+        setIsProxyUserEc(false);
+        setProxyUserEcId(null);
         showToast("Email address not registered. Manual spot registration mode activated.", "info");
       }
     } catch (err: any) {
@@ -699,12 +720,18 @@ const EventRegister = () => {
     }
 
     const finalPrice = calculateAmount();
-    const isOnlyFreeMathOlympiad = finalPrice === 0 && selectedEvents.length === 1 && selectedEvents[0]?.trim().toLowerCase() === "math olympiad";
+    const isOnlyFreeMathOlympiad = selectedEvents.length === 1 && selectedEvents[0]?.trim().toLowerCase() === "math olympiad";
 
     let finalBkashNumber = bkashNumber.trim();
     let finalTrxnid = trxnid.trim();
 
-    if (isOnlyFreeMathOlympiad) {
+    const isEc = isProxyRegistration ? isProxyUserEc : isCurrentUserEc;
+    const ecId = isProxyRegistration ? proxyUserEcId : currentUserEcId;
+
+    if (isEc && ecId) {
+      finalBkashNumber = "N/A - EC OFFICER";
+      finalTrxnid = ecId;
+    } else if (isOnlyFreeMathOlympiad) {
       if (!finalBkashNumber) {
         finalBkashNumber = "N/A - FREE ENTRY";
       }
@@ -767,7 +794,7 @@ const EventRegister = () => {
         trxnid: finalTrxnid,
         amount: finalPrice,
         selected_events: selectedEvents.join(', '),
-        verified: isOnlyFreeMathOlympiad ? 'yes' : 'no'
+        verified: (isOnlyFreeMathOlympiad || isEc) ? 'yes' : 'no'
       };
 
       const { error } = await supabase
@@ -830,13 +857,26 @@ const EventRegister = () => {
       try {
         const { data: memberData, error: memberCheckError } = await supabase
           .from('member')
-          .select('id, member_id')
+          .select('id, verified, member_id')
           .eq('id', finalUserId)
           .maybeSingle();
         
         if (!memberCheckError && memberData) {
           isUserRegisteredGeneral = true;
           existingMemberId = memberData.member_id || '';
+
+          // If they selected the free Math Olympiad and are not verified yet, auto-verify their membership!
+          if (isOnlyFreeMathOlympiad && memberData.verified !== 'yes') {
+            const { error: updateVerError } = await supabase
+              .from('member')
+              .update({ verified: 'yes' })
+              .eq('id', finalUserId);
+            if (updateVerError) {
+              console.error("Failed to auto-verify existing member for free event:", updateVerError);
+            } else {
+              console.log("Successfully auto-verified existing member for free Math Olympiad event.");
+            }
+          }
         }
       } catch (err) {
         console.error("Failed to query member table during event registration check:", err);
@@ -1073,7 +1113,9 @@ const EventRegister = () => {
             </p>
 
             <button
-              onClick={() => router.push('/profile')}
+              onClick={() => {
+                window.location.href = '/profile';
+              }}
               className="py-5 px-12 rounded-2xl bg-green-500 hover:bg-green-400 text-black font-black text-xs uppercase tracking-[0.2em] transition-all shadow-[0_0_40px_rgba(34,197,94,0.3)]"
             >
               Go to Profile
@@ -1452,35 +1494,17 @@ const EventRegister = () => {
                           <div className="p-6 rounded-2xl bg-white/[0.02] border border-white/5 flex flex-col sm:flex-row items-center justify-between gap-4">
                             <div>
                               <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider">Dynamic Valuation</p>
-                              {!isGeneralMember ? (
-                                <p className="text-xs text-amber-500 font-bold mt-1">
-                                  {userRegisteredEvents.length > 0 ? (
-                                    <span className="text-red-400 font-black uppercase">⚠️ Subsequent Registration Charge (Fine): 100 BDT applies!</span>
-                                  ) : selectedEvents.length === 1 && selectedEvents[0].toLowerCase() === "math olympiad" ? (
-                                    <span className="text-emerald-400 font-black uppercase">Math Olympiad is completely FREE. Grab your ticket now!</span>
-                                  ) : (
-                                    <span>
-                                      🏅 Flat Participation Fee: Only <strong className="text-white">100 BDT</strong> total for all your selected events.
-                                    </span>
-                                  )}
-                                </p>
-                              ) : selectedEvents.length === soloEventsList.length ? (
-                                <p className="text-xs text-amber-500 font-bold mt-1">
-                                  🏆 Package discount loaded! {isGeneralMember ? `General Member ALL-EXCLUSIVE rate of ${formConfig.allEventsSoloPriceMember}tk.` : `Special bundle rate of ${formConfig.allEventsSoloPriceGeneral}tk.`}
-                                </p>
-                              ) : (
-                                <p className="text-xs text-zinc-400 mt-1">
-                                  {selectedEvents.some(e => e.toLowerCase() === "math olympiad") ? (
-                                    <span>
-                                      {selectedEvents.filter(e => e.toLowerCase() !== "math olympiad").length} paid event(s) at {formConfig.perEventPriceSolo}tk each + <strong className="text-amber-500 uppercase">Math Olympiad (FREE)</strong>
-                                    </span>
-                                  ) : (
-                                    <span>
-                                      {selectedEvents.length} event(s) at {formConfig.perEventPriceSolo}tk each.
-                                    </span>
-                                  )}
-                                </p>
-                              )}
+                              <p className="text-xs text-amber-500 font-bold mt-1">
+                                {selectedEvents.length === 1 && selectedEvents[0].toLowerCase() === "math olympiad" ? (
+                                  <span className="text-emerald-400 font-black uppercase">Math Olympiad is completely FREE. Grab your ticket now!</span>
+                                ) : userRegisteredEvents.length > 0 ? (
+                                  <span className="text-red-400 font-black uppercase">⚠️ Subsequent Registration Charge: 100 BDT applies!</span>
+                                ) : (
+                                  <span>
+                                    🏅 Flat Participation Fee: Only <strong className="text-white">100 BDT</strong> total for selecting any number of solo events.
+                                  </span>
+                                )}
+                              </p>
                             </div>
                             <div className="text-right">
                               <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider">Estimated Cost</p>
@@ -1928,13 +1952,7 @@ const EventRegister = () => {
                           </div>
                         </div>
 
-                        {/* Discount Tracker */}
-                        {selectedEvents.length === soloEventsList.length && isGeneralMember && (
-                          <div className="p-4 rounded-xl bg-green-500/10 border border-green-500/20 flex items-center justify-between">
-                            <span className="text-xs font-bold text-green-400">General Member Discount:</span>
-                            <span className="px-2.5 py-1 rounded bg-green-500 text-black text-[10px] font-black uppercase tracking-wide">-50%</span>
-                          </div>
-                        )}
+
 
                         <div className="pt-6 border-t border-white/5 flex justify-between items-center">
                           <span className="text-sm font-bold text-zinc-400">Amount Due:</span>

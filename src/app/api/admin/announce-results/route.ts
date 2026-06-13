@@ -106,6 +106,32 @@ export async function POST(req: Request) {
 
     await Promise.all(emailPromises);
 
+    try {
+      const { data: currentSettings } = await supabase
+        .from('system_settings')
+        .select('value')
+        .eq('key', 'announced_results')
+        .maybeSingle();
+
+      let announcedList: string[] = [];
+      if (currentSettings && currentSettings.value && Array.isArray(currentSettings.value)) {
+        announcedList = currentSettings.value as string[];
+      }
+
+      const itemToAnnounce = `${eventName} - ${category}`.trim();
+      if (!announcedList.some(item => item.toLowerCase() === itemToAnnounce.toLowerCase())) {
+        announcedList.push(itemToAnnounce);
+        await supabase
+          .from('system_settings')
+          .upsert({
+            key: 'announced_results',
+            value: announcedList
+          });
+      }
+    } catch (settingError) {
+      console.error('Failed to update system_settings for announced_results:', settingError);
+    }
+
     return NextResponse.json({ success: true, sentCount, errors });
   } catch (error: any) {
     console.error('Announce Results API error:', error);

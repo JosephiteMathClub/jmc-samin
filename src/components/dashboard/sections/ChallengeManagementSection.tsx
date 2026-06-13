@@ -4,6 +4,8 @@ import { DashboardSection } from '../DashboardSection';
 import { DashboardFormField } from '../DashboardFormField';
 import { MathJaxNode } from '../../MathJaxNode';
 import { useAuth } from '../../../context/AuthContext';
+import { LatexCheatsheetTrigger } from '../../LatexCheatsheetTrigger';
+import { useMathJax } from '../../../hooks/useMathJax';
 
 interface ChallengeManagementSectionProps {
   data: any;
@@ -17,6 +19,8 @@ export const ChallengeManagementSection: React.FC<ChallengeManagementSectionProp
   shouldReduceGfx = false
 }) => {
   const { isSuperAdmin } = useAuth();
+  
+  useMathJax();
   
   // List of all challenges in DB
   const [challengesList, setChallengesList] = useState<any[]>([]);
@@ -921,6 +925,7 @@ export const ChallengeManagementSection: React.FC<ChallengeManagementSectionProp
             )}
           </div>
 
+          {selectedChallenge && <LatexCheatsheetTrigger />}
         </div>
       </DashboardSection>
     </div>

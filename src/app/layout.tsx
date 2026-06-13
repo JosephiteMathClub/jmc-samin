@@ -75,9 +75,19 @@ export default function RootLayout({
                 },
                 tex: {
                   packages: {'[+]': ['physics', 'mhchem', 'ams', 'newcommand']},
-                  inlineMath: [['$', '$'], ['\\\\(', '\\\\)']],
-                  displayMath: [['$$', '$$'], ['\\\\[', '\\\\]']],
-                  processEscapes: true
+                  inlineMath: [['$', '$'], ['\\\\(', '\\\\)'], ['\\(', '\\)']],
+                  displayMath: [['$$', '$$'], ['\\\\[', '\\\\]'], ['\\[', '\\]']],
+                  processEscapes: true,
+                  macros: {
+                    dd: '{\\\\mathrm{d}}',
+                    dv: ['\\\\frac{\\\\mathrm{d}#1}{\\\\mathrm{d}#2}', 2],
+                    diff: ['\\\\frac{\\\\mathrm{d}#1}{\\\\mathrm{d}#2}', 2],
+                    pd: ['\\\\frac{\\\\partial #1}{\\\\partial #2}', 2],
+                    pdv: ['\\\\frac{\\\\partial #1}{\\\\partial #2}', 2],
+                    grad: '\\\\mathbf{\\\\nabla}',
+                    div: '\\\\mathbf{\\\\nabla}\\\\cdot',
+                    curl: '\\\\mathbf{\\\\nabla}\\\\times'
+                  }
                 },
                 options: {
                   enableMenu: false

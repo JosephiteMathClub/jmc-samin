@@ -75,6 +75,12 @@ export async function POST(req: Request) {
       }
     }
 
+    // Safeguard: Ensure the main record is always included in the list
+    const isMainIncluded = allLinkedRecords.some(r => r.id === recordId && r.tableName === tableName);
+    if (!isMainIncluded) {
+      allLinkedRecords.push({ ...record, tableName });
+    }
+
     if (action === 'reject') {
       // Reject all linked records
       for (const linkedRec of allLinkedRecords) {
@@ -162,8 +168,28 @@ export async function POST(req: Request) {
           linkedEmail = emailAddress;
         }
 
-        if (existingMember && existingMember.verified === 'yes' && existingMember.member_id && existingMember.member_id.startsWith('JMC-')) {
+        if (existingMember && existingMember.member_id && existingMember.member_id.startsWith('JMC-')) {
           memberIdToUse = existingMember.member_id;
+          
+          // CRITICAL BUG FIX: Ensure the general member record is marked verified as yes.
+          const { error: updateGeneralVerifiedError } = await supabaseAdmin
+            .from('member')
+            .update({ verified: 'yes' })
+            .eq('id', existingMember.id);
+            
+          if (updateGeneralVerifiedError) {
+            console.error("Failed to update general member verification:", updateGeneralVerifiedError);
+          }
+
+          // In case they are an EC officer, update ec_member table as well
+          const { error: updateEcVerifiedError } = await supabaseAdmin
+            .from('ec_member')
+            .update({ verified: 'yes' })
+            .eq('id', existingMember.id);
+
+          if (updateEcVerifiedError) {
+            console.log("No matching EC profile updated (expected for standard members)");
+          }
         } else {
           // They are a non-general member. Grant a 5 digit unique ID!
           let resolvedMemberId = '';
@@ -228,7 +254,7 @@ export async function POST(req: Request) {
         }
 
         // Insert event_participation lines for each linked teammate's selections
-        if (memberIdToUse) {
+        if (memberIdToUse && linkedRec.user_id) {
           const eventsList = linkedRec.selected_events
             ? linkedRec.selected_events.split(',').map((e: string) => e.trim())
             : [];
@@ -275,6 +301,8 @@ export async function POST(req: Request) {
           console.error(`Failed to verify registration in table ${linkedRec.tableName}:`, eventUpdateError);
           throw new Error(`Failed to verify event registration state: ${eventUpdateError.message}`);
         }
+
+        console.log(`[API] Successfully updated ${linkedRec.tableName} record ${linkedRec.id} to verified='yes'`);
 
         // Send confirmation email
         if (linkedEmail) {

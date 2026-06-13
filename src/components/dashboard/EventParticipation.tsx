@@ -137,14 +137,16 @@ const getTicketCode = (reg: any, isGeneralMember: boolean, isEc: boolean, member
 const CATEGORIES = ["Primary", "Junior", "Secondary", "Higher Secondary"];
 
 const extractMemberId = (input: string): string => {
-  const cleaned = input.trim();
+  let cleaned = (input || "").trim();
   if (!cleaned) return "";
 
   // 1. Try to parse as JSON first
   try {
     const data = JSON.parse(cleaned);
-    const resolved = data.id || data.member_id || "";
-    return resolved.toString().trim().toUpperCase();
+    if (data && typeof data === "object") {
+      const resolved = data.id || data.member_id || data.code || "";
+      cleaned = resolved.toString().trim();
+    }
   } catch (err) {
     // 2. Not JSON. Check standard string line-by-line / keywords
     // Sift for "PassId:", "MemberId:", "id:", "member_id:"
@@ -154,25 +156,63 @@ const extractMemberId = (input: string): string => {
       const idMatch = line.match(/\bid:\s*([A-Za-z0-9-]+)/i);
       const mIdMatch = line.match(/member[-_]id:\s*([A-Za-z0-9-]+)/i);
 
-      if (passIdMatch) return passIdMatch[1].toUpperCase();
-      if (idMatch) return idMatch[1].toUpperCase();
-      if (mIdMatch) return mIdMatch[1].toUpperCase();
-    }
-
-    // 3. Fallback: If there are multiple lines, grab the first line and check if it contains colon `:`
-    const firstLine = lines[0].trim();
-    if (firstLine.includes(":")) {
-      const parts = firstLine.split(":");
-      const val = parts[parts.length - 1].trim();
-      // Ensure we don't return an empty string or header label if not matching expected formats
-      if (/^[A-Za-z0-9-]+$/.test(val)) {
-        return val.toUpperCase();
+      if (passIdMatch) {
+        cleaned = passIdMatch[1];
+        break;
+      }
+      if (idMatch) {
+        cleaned = idMatch[1];
+        break;
+      }
+      if (mIdMatch) {
+        cleaned = mIdMatch[1];
+        break;
       }
     }
-
-    // Default fallback: return the cleaned input entirely upper-cased
-    return cleaned.toUpperCase();
   }
+
+  // 3. Try to parse as HTTP/HTTPS URL
+  if (cleaned.toLowerCase().startsWith("http://") || cleaned.toLowerCase().startsWith("https://")) {
+    try {
+      const url = new URL(cleaned);
+      const idParam = url.searchParams.get("id") || url.searchParams.get("code") || url.searchParams.get("member_id");
+      if (idParam) {
+        cleaned = idParam.trim();
+      } else {
+        // Check path segments
+        const paths = url.pathname.split("/").map(p => p.trim()).filter(Boolean);
+        const matchedSegment = paths.find(p => /^\d{3}$|^\d{5}$|^\d{6}$/.test(p));
+        if (matchedSegment) {
+          cleaned = matchedSegment;
+        }
+      }
+    } catch (e) {
+      // Ignore URL parse error
+    }
+  }
+
+  // Strip "JMC-" prefix
+  let code = cleaned.replace(/JMC-/i, "").trim();
+
+  // Extract digits only!
+  const digitsOnly = code.replace(/\D/g, "");
+
+  // If we have mapped a 3-digit, 5-digit, or 6-digit number, return it!
+  if (digitsOnly.length === 3 || digitsOnly.length === 5 || digitsOnly.length === 6) {
+    return digitsOnly;
+  }
+
+  // Fallback: match largest group of digits
+  const match6 = digitsOnly.match(/\d{6}/);
+  if (match6) return match6[0];
+
+  const match5 = digitsOnly.match(/\d{5}/);
+  if (match5) return match5[0];
+
+  const match3 = digitsOnly.match(/\d{3}/);
+  if (match3) return match3[0];
+
+  return digitsOnly || cleaned.toUpperCase();
 };
 
 export const EventParticipation = ({
@@ -365,41 +405,68 @@ export const EventParticipation = ({
       "higher_secondary_events",
     ];
     let allPending: any[] = [];
-    try {
-      for (const tb of tables) {
-        const { data, error } = await supabase
+    
+    for (const tb of tables) {
+      try {
+        let data: any[] | null = null;
+        let error: any = null;
+
+        // Try querying with boolean false first (since db_schema says they are boolean)
+        const boolRes = await supabase
           .from(tb)
           .select("*")
-          .eq("verified", "no");
+          .eq("verified", false);
+
+        if (boolRes.error) {
+          // Fall back to querying with string 'no' (for text column)
+          const strRes = await supabase
+            .from(tb)
+            .select("*")
+            .eq("verified", "no");
+          data = strRes.data;
+          error = strRes.error;
+        } else {
+          data = boolRes.data;
+          error = boolRes.error;
+        }
+
+        if (error) {
+          console.error(`Error querying pending from ${tb}:`, error);
+          showToast(`Database error loading ${tb.split('_').join(' ')}: ${error.message}`, "error");
+          continue;
+        }
 
         if (data && data.length > 0) {
           const userIds = data.map((d: any) => d.user_id).filter(Boolean);
           let emailsMap: Record<string, string> = {};
           if (userIds.length > 0) {
-            const { data: profs } = await supabase
+            const { data: profs, error: profError } = await supabase
               .from("profiles")
               .select("id, email")
               .in("id", userIds);
-            profs?.forEach((p: any) => {
-              emailsMap[p.id] = p.email;
-            });
+            
+            if (profError) {
+              console.error(`Error querying profiles for ${tb}:`, profError);
+            } else {
+              profs?.forEach((p: any) => {
+                emailsMap[p.id] = p.email;
+              });
+            }
           }
 
-          const mapped = data
-            .map((item: any) => ({
-              ...item,
-              tableName: tb,
-              email: emailsMap[item.user_id] || "",
-            }))
-            .filter((item: any) => isValidClassForTable(item.class, tb));
+          const mapped = data.map((item: any) => ({
+            ...item,
+            tableName: tb,
+            email: emailsMap[item.user_id] || "",
+          }));
           allPending = [...allPending, ...mapped];
         }
+      } catch (err: any) {
+        console.error(`Unexpected error loading pending events for ${tb}:`, err);
       }
-      setPendingList(allPending);
-    } catch (err) {
-      console.error("Error loading pending events transactions:", err);
     }
-  }, []);
+    setPendingList(allPending);
+  }, [showToast]);
 
   useEffect(() => {
     fetchPendingRegistrations();
@@ -643,7 +710,7 @@ export const EventParticipation = ({
                 if (mem) {
                   regMemberId = mem.member_id;
                   isRegEc = mem.is_ec === true || mem.is_ec === 'yes';
-                  isRegMember = mem.verified === 'yes';
+                  isRegMember = mem.verified === 'yes' || mem.verified === true;
                 }
               }
               const calculatedCode = getTicketCode(reg, isRegMember, isRegEc, regMemberId);
@@ -749,7 +816,7 @@ export const EventParticipation = ({
                 isEventRegisteredAtAll = true;
                 matchedRegRecord = reg;
                 matchedRegTable = tb;
-                if (reg.verified === "yes") {
+                if (reg.verified === "yes" || reg.verified === true) {
                   hasVerifiedRegistration = true;
                 }
               }
@@ -781,7 +848,7 @@ export const EventParticipation = ({
                 isEventRegisteredAtAll = true;
                 matchedRegRecord = reg;
                 matchedRegTable = tb;
-                if (reg.verified === "yes") {
+                if (reg.verified === "yes" || reg.verified === true) {
                   hasVerifiedRegistration = true;
                 }
               }

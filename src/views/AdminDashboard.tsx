@@ -251,7 +251,16 @@ const AdminDashboard = () => {
         console.error("Failed to fetch from ec_member table:", e);
       }
 
-      const combined = [...(standardData || []), ...ecData];
+      // Deduplicate standard members by checking if they already exist in ecData to prevent React key collisions and multiple portions/records
+      const ecIds = new Set(ecData.map(m => (m.id || '').toLowerCase()));
+      const ecMemberIds = new Set(ecData.map(m => (m.member_id || '').toLowerCase()));
+      const filteredStandard = (standardData || []).filter(m => {
+        const idLower = (m.id || '').toLowerCase();
+        const mIdLower = (m.member_id || '').toLowerCase();
+        return !ecIds.has(idLower) && !ecMemberIds.has(mIdLower);
+      });
+
+      const combined = [...filteredStandard, ...ecData];
       setMembers(combined);
     } catch (err: any) {
       setMemberError(err.message || 'Failed to fetch members');
@@ -543,9 +552,46 @@ const AdminDashboard = () => {
       
       if (data && memberData.is_ec) {
         data = { ...data, is_ec: true };
+        
+        // AUTOMATICALLY DELETE normal/general member credentials if they are promoted to EC, as requested.
+        try {
+          const { error: delErr } = await supabase
+            .from('member')
+            .delete()
+            .eq('id', tempId);
+          if (delErr) {
+            console.error("Non-fatal error: failed to auto-delete general member record during EC promotion:", delErr);
+          } else {
+            console.log(`Successfully auto-deleted general member details for ${tempId} to prevent multiple food portions claim.`);
+          }
+        } catch (delCatch) {
+          console.error("Failed to delete standard general member during EC promotion:", delCatch);
+        }
+      } else if (data && !memberData.is_ec) {
+        // AUTOMATICALLY DELETE EC details if they are demoted back to standard
+        try {
+          const { error: delErr } = await supabase
+            .from('ec_member')
+            .delete()
+            .eq('id', tempId);
+          if (delErr) {
+            console.error("Non-fatal error: failed to auto-delete EC member record during demotion:", delErr);
+          }
+        } catch (delCatch) {
+          console.error("Failed to delete EC member during demotion:", delCatch);
+        }
       }
 
-      setMembers(prev => [data, ...prev]);
+      setMembers(prev => {
+        // Remove standard/old records with standard or same ID or member_id to prevent duplicates!
+        const filtered = (prev || []).filter(m => {
+          if (!m) return false;
+          const isSameId = String(m.id || '').toLowerCase() === String(tempId || '').toLowerCase();
+          const isSameMemberId = String(m.member_id || '').toLowerCase() === String(memberIdToUse || '').toLowerCase();
+          return !isSameId && !isSameMemberId;
+        });
+        return [data, ...filtered];
+      });
       showToast("Member registered and verified successfully!", "success");
 
       // Log action
@@ -670,7 +716,7 @@ const AdminDashboard = () => {
   };
 
   useEffect(() => {
-    if (activeTab === 'members') {
+    if (activeTab === 'members' || activeTab === 'ec_members' || activeTab === 'food') {
       fetchMembers();
     }
   }, [activeTab, fetchMembers]);

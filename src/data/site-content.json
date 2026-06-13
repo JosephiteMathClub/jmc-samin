@@ -1492,7 +1492,7 @@
       "published": true
     }
   ],
-  "lastUpdated": "2026-06-11T14:54:10.137Z",
+  "lastUpdated": "2026-06-07T16:03:25.753Z",
   "_instruction": "Update 'lastUpdated' whenever you manually edit this file to ensure changes take precedence over the admin panel.",
   "gallery_page": {
     "images": [
@@ -1518,6 +1518,5 @@
     "cashInstructions": "Please pay your registration fee to the club treasurer.",
     "registrationOpen": false,
     "registrationClosedMessage": "Registration for the current intra-events is currently closed. Please stay tuned for future updates."
-  },
-  "challengePaper": null
+  }
 }

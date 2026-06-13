@@ -5,12 +5,15 @@ import { motion } from "framer-motion";
 import { ArrowLeft, User, Calendar, BookOpen } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
+import { useMathJax } from "../hooks/useMathJax";
 
 const ArticleDetailView = () => {
   const { slug } = useParams();
   const { content } = useContent();
   const articles = (content as any)?.articles || [];
   const article = articles.find((a: any) => a.slug === slug);
+
+  useMathJax();
 
   if (!article) {
     return (

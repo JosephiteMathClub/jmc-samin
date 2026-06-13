@@ -42,6 +42,7 @@ import confetti from 'canvas-confetti';
 
 import { usePerformance } from '../hooks/usePerformance';
 import { resolveImageUrl } from '../lib/utils';
+import { useMathJax } from '../hooks/useMathJax';
 
 const isValidClassForTable = (className: string, tableName: string): boolean => {
   if (!className) return false;
@@ -163,6 +164,8 @@ const Profile = () => {
   const { shouldReduceGfx } = usePerformance();
   const fileInputRef = useRef<HTMLInputElement>(null);
   
+  useMathJax();
+  
   const [isEditing, setIsEditing] = useState(false);
   const [fullName, setFullName] = useState('');
   const [isMember, setIsMember] = useState(false);
@@ -173,6 +176,7 @@ const Profile = () => {
   const [loadingAchievements, setLoadingAchievements] = useState(false);
   const [registeredEventsList, setRegisteredEventsList] = useState<any[]>([]);
   const [loadingRegisteredEvents, setLoadingRegisteredEvents] = useState(false);
+  const [announcedResults, setAnnouncedResults] = useState<string[]>([]);
   const [checkingMember, setCheckingMember] = useState(true);
   const [loading, setLoading] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
@@ -483,21 +487,81 @@ const Profile = () => {
     try {
       const tables = ['primary_events', 'junior_events', 'secondary_events', 'higher_secondary_events'];
       let allReg: any[] = [];
+      let hasOnlyMathOlympiadReg = false;
+      let hasAnyVerifiedEvent = false;
       for (const tb of tables) {
         const { data, error } = await supabase
           .from(tb)
           .select('*')
           .eq('user_id', user.id);
         
+        if (error) {
+          console.error(`Error loading events from ${tb}:`, error);
+          throw error;
+        }
+        
         if (data && data.length > 0) {
-          const mapped = data.map((item: any) => ({
-            ...item,
-            tableName: tb
-          }));
+          console.log(`[Profile] Fetched ${data.length} records from ${tb}`);
+          const mapped = data.map((item: any) => {
+            console.log(`[Profile] ${tb} record:`, {id: item.id, verified: item.verified, trxnid: item.trxnid});
+            const isOnlyMO = (item.selected_events || '').split(',').map((s: string) => s.trim().toLowerCase()).filter(Boolean).length === 1 && 
+                             (item.selected_events || '').toLowerCase().includes('math olympiad');
+            if (isOnlyMO) {
+              hasOnlyMathOlympiadReg = true;
+            }
+
+            // Normalize verified to string 'yes', 'no', or 'rejected'
+            let normalizedVerified = 'no';
+            if (item.verified === true || item.verified === 'yes') {
+              normalizedVerified = 'yes';
+            } else if (item.verified === 'rejected') {
+              normalizedVerified = 'rejected';
+            } else if (item.verified === false || item.verified === 'no') {
+              normalizedVerified = 'no';
+            }
+
+            // CRITICAL FIX: Check if ANY event registration is verified
+            if (normalizedVerified === 'yes') {
+              console.log(`[Profile] Found verified event in ${tb}:`, item.trxnid);
+              hasAnyVerifiedEvent = true;
+            }
+            return {
+              ...item,
+              tableName: tb,
+              verified: isOnlyMO ? 'yes' : normalizedVerified
+            };
+          });
           allReg = [...allReg, ...mapped];
         }
       }
       setRegisteredEventsList(allReg);
+      console.log(`[Profile] Total registered events: ${allReg.length}, hasAnyVerifiedEvent: ${hasAnyVerifiedEvent}`);
+
+      // CRITICAL FIX: Ensure database member record is synced when events are verified
+      if (hasOnlyMathOlympiadReg || hasAnyVerifiedEvent) {
+        try {
+          // Attempt database synchronization for the member record so it persists as verified
+          await supabase
+            .from('member')
+            .update({ verified: 'yes' })
+            .eq('id', user.id);
+        } catch (syncErr) {
+          console.warn("Could not auto-verify member row in DB:", syncErr);
+        }
+      }
+
+      try {
+        const { data: systemData } = await supabase
+          .from('system_settings')
+          .select('value')
+          .eq('key', 'announced_results')
+          .maybeSingle();
+        if (systemData && systemData.value && Array.isArray(systemData.value)) {
+          setAnnouncedResults(systemData.value as string[]);
+        }
+      } catch (e) {
+        console.warn("Could not load announced results list from system_settings", e);
+      }
     } catch (err) {
       console.error("Error loading registered events list:", err);
     } finally {
@@ -527,6 +591,9 @@ const Profile = () => {
                        (ecData?.member_id ? /^\d{3}$/.test(ecData.member_id) : false) || 
                        (memberData?.member_id ? /^\d{3}$/.test(memberData.member_id) : false);
 
+      // Store member verification status for use in event list verification
+      let memberVerificationStatus = 'no';
+
       if (isUserEc) {
         setIsMember(true);
         setIsEc(true);
@@ -534,8 +601,10 @@ const Profile = () => {
         let resolvedVerified = 'no';
         if (ecData?.verified === 'yes' || memberData?.verified === 'yes') {
           resolvedVerified = 'yes';
+          memberVerificationStatus = 'yes';
         } else if (ecData?.verified === 'rejected' || memberData?.verified === 'rejected') {
           resolvedVerified = 'rejected';
+          memberVerificationStatus = 'rejected';
         } else {
           resolvedVerified = 'no';
         }
@@ -554,8 +623,10 @@ const Profile = () => {
         let resolvedVerified = 'no';
         if (memberData.verified === 'yes') {
           resolvedVerified = 'yes';
+          memberVerificationStatus = 'yes';
         } else if (memberData.verified === 'rejected') {
           resolvedVerified = 'rejected';
+          memberVerificationStatus = 'rejected';
         } else {
           resolvedVerified = 'no';
         }
@@ -568,6 +639,7 @@ const Profile = () => {
         setMemberRoll(memberData.roll || '');
         if (mId) fetchAchievements(mId);
       } else {
+        // No member record found
         setIsMember(false);
         setIsEc(false);
         setVerified('no');
@@ -591,9 +663,15 @@ const Profile = () => {
 
     let isMounted = true;
 
+    // Force immediate refresh on mount
+    if (isMounted) {
+      fetchRegisteredEventsList();
+      checkMemberStatus();
+    }
+
     // Listen to changes in standard member table for this user
     const memberChannel = supabase
-      .channel(`member-sync-${user.id}`)
+      .channel(`member-sync-${user.id}-${Date.now()}`)
       .on(
         'postgres_changes',
         {
@@ -602,17 +680,24 @@ const Profile = () => {
           table: 'member',
           filter: `id=eq.${user.id}`
         },
-        () => {
+        (payload) => {
           if (isMounted) {
+            console.log('Member table changed:', payload);
             checkMemberStatus();
           }
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          console.log('Subscribed to member table changes');
+        } else if (status === 'CHANNEL_ERROR') {
+          console.error('Failed to subscribe to member changes, will rely on polling');
+        }
+      });
 
     // Listen to changes in ec_member table for this user
     const ecChannel = supabase
-      .channel(`ec_member-sync-${user.id}`)
+      .channel(`ec_member-sync-${user.id}-${Date.now()}`)
       .on(
         'postgres_changes',
         {
@@ -621,19 +706,24 @@ const Profile = () => {
           table: 'ec_member',
           filter: `id=eq.${user.id}`
         },
-        () => {
+        (payload) => {
           if (isMounted) {
+            console.log('EC member table changed:', payload);
             checkMemberStatus();
           }
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          console.log('Subscribed to ec_member table changes');
+        }
+      });
 
     // Listen to changes in event registration tables for this user
     const eventTables = ['primary_events', 'junior_events', 'secondary_events', 'higher_secondary_events'];
     const eventChannels = eventTables.map(tb => {
       return supabase
-        .channel(`${tb}-sync-${user.id}`)
+        .channel(`${tb}-sync-${user.id}-${Date.now()}`)
         .on(
           'postgres_changes',
           {
@@ -642,18 +732,33 @@ const Profile = () => {
             table: tb,
             filter: `user_id=eq.${user.id}`
           },
-          () => {
+          (payload) => {
             if (isMounted) {
+              console.log(`Event table ${tb} changed:`, payload);
               fetchRegisteredEventsList();
               checkMemberStatus();
             }
           }
         )
-        .subscribe();
+        .subscribe((status) => {
+          if (status === 'SUBSCRIBED') {
+            console.log(`Subscribed to ${tb} changes`);
+          }
+        });
     });
+
+    // Aggressive polling fallback - check every 1 second to ensure instant updates
+    // This is the PRIMARY mechanism since real-time may not be available in all contexts
+    const fallbackPollInterval = setInterval(() => {
+      if (isMounted) {
+        fetchRegisteredEventsList();
+        checkMemberStatus();
+      }
+    }, 1000);
 
     return () => {
       isMounted = false;
+      clearInterval(fallbackPollInterval);
       memberChannel.unsubscribe();
       ecChannel.unsubscribe();
       eventChannels.forEach(ch => ch.unsubscribe());
@@ -766,14 +871,18 @@ const Profile = () => {
   const pending = filteredAchievements.filter(a => !isActualWin(a.position));
 
   const isGeneralMember = React.useMemo(() => {
-    return isMember && verified === 'yes' && (isEc || (memberId && (memberId.startsWith('JMC-') || /^\d{3}$/.test(memberId))));
-  }, [isMember, verified, isEc, memberId]);
+    // Someone is a general member if they have ANY verified event registration
+    // Show buttons as soon as they have a verified event (member record may sync later)
+    const hasVerifiedEvent = registeredEventsList.some(reg => reg.verified === 'yes');
+    if (hasVerifiedEvent) {
+      return true; // Show ID/Ticket buttons immediately upon approval
+    }
+    // Also show if they're a verified member in database
+    return isMember && (verified === 'yes' || isEc);
+  }, [isMember, registeredEventsList, verified, isEc]);
 
   const unverifiedRegistrations = React.useMemo(() => {
-    return registeredEventsList.filter(reg => {
-      const v = String(reg.verified || '').toLowerCase().trim();
-      return v !== 'yes';
-    });
+    return registeredEventsList;
   }, [registeredEventsList]);
 
   const allPendingParticipations = React.useMemo(() => {
@@ -2169,8 +2278,34 @@ const Profile = () => {
                           </div>
                           <div className="p-8 rounded-3xl bg-white/5 border border-white/5">
                             <p className="text-xs font-bold uppercase tracking-widest text-zinc-500 mb-2">Member Status</p>
-                            <p className={isMember ? `${verified === 'yes' ? (isEc ? 'text-amber-500' : 'text-[var(--c-6-start)]') : 'text-amber-400 animate-pulse'} font-bold` : "text-zinc-550 font-medium"}>
-                              {isMember ? (verified === 'yes' ? (isEc ? "EC Committee Officer" : "Verified Member") : (verified === 'rejected' ? "Registration Rejected" : "Verification Pending")) : "Not Registered"}
+                            <p className={(() => {
+                              const hasVerifiedEvent = registeredEventsList.some(reg => reg.verified === 'yes');
+                              if (isMember && verified === 'yes') {
+                                return isEc ? 'text-amber-500 font-bold' : 'text-[var(--c-6-start)] font-bold';
+                              } else if (hasVerifiedEvent) {
+                                return 'text-[var(--c-6-start)] font-bold';
+                              } else if (verified === 'rejected' || registeredEventsList.some(reg => reg.verified === 'rejected')) {
+                                return 'text-red-500 font-bold';
+                              } else if (registeredEventsList.length > 0) {
+                                return 'text-amber-400 animate-pulse font-bold';
+                              } else {
+                                return 'text-zinc-550 font-medium';
+                              }
+                            })()}>
+                              {(() => {
+                                const hasVerifiedEvent = registeredEventsList.some(reg => reg.verified === 'yes');
+                                if (isMember && verified === 'yes') {
+                                  return isEc ? "EC Committee Officer" : "Verified Member";
+                                } else if (hasVerifiedEvent) {
+                                  return "Verified Member";
+                                } else if (verified === 'rejected' || registeredEventsList.some(reg => reg.verified === 'rejected')) {
+                                  return "Registration Rejected";
+                                } else if (registeredEventsList.length > 0) {
+                                  return "Verification Pending";
+                                } else {
+                                  return "Not Registered";
+                                }
+                              })()}
                             </p>
                           </div>
                           <div className="p-8 rounded-3xl bg-white/5 border border-white/5">
@@ -2203,13 +2338,45 @@ const Profile = () => {
                                       </div>
                                       <div className="flex items-center justify-between mt-2 pt-2 border-t border-white/5">
                                         <span className="text-[9px] uppercase font-bold tracking-widest text-zinc-500">Status</span>
-                                        <span className={`text-[10px] font-bold uppercase tracking-wider ${
-                                          reg.verified === 'yes' ? 'text-green-400' :
-                                          reg.verified === 'rejected' ? 'text-red-400' : 'text-amber-400 animate-pulse'
-                                        }`}>
-                                          {reg.verified === 'yes' ? 'Verified (Welcome!)' :
-                                           reg.verified === 'rejected' ? 'Rejected' : 'Verification Pending'}
-                                        </span>
+                                        <div className="flex flex-col items-end gap-0.5">
+                                          <span className={`text-[10px] font-bold uppercase tracking-wider ${
+                                            reg.verified === 'yes' ? 'text-green-400' :
+                                            reg.verified === 'rejected' ? 'text-red-400' : 'text-amber-400 animate-pulse'
+                                          }`}>
+                                            {reg.verified === 'yes' ? 'Verified (Welcome!)' :
+                                             reg.verified === 'rejected' ? 'Rejected' : 'Verification Pending'}
+                                          </span>
+                                          {reg.verified === 'yes' && (() => {
+                                            const ach = achievements.find(a => String(a.event_name || '').trim().toLowerCase() === evt.trim().toLowerCase());
+                                            if (ach) {
+                                              const matchText = `${String(ach.event_name || '').trim()} - ${String(ach.category || '').trim()}`.toLowerCase();
+                                              const isAnnounced = announcedResults.some(announced => String(announced || '').trim().toLowerCase() === matchText);
+                                              
+                                              let resultLabel = "Result Pending";
+                                              let resultColorClass = "text-indigo-400";
+                                              
+                                              if (isActualWin(ach.position)) {
+                                                const rank = getRankInfo(ach.position);
+                                                resultLabel = rank.label;
+                                                resultColorClass = "text-amber-400 font-extrabold";
+                                              } else if (isAnnounced) {
+                                                resultLabel = "Participation Certificate";
+                                                resultColorClass = "text-emerald-400";
+                                              }
+                                              
+                                              return (
+                                                <span className={`text-[10px] uppercase font-bold tracking-wider ${resultColorClass}`}>
+                                                  {resultLabel}
+                                                </span>
+                                              );
+                                            }
+                                            return (
+                                              <span className="text-[10px] uppercase font-bold tracking-wider text-indigo-400/80">
+                                                Result Pending
+                                              </span>
+                                            );
+                                          })()}
+                                        </div>
                                       </div>
                                     </div>
                                   ));
@@ -2275,13 +2442,45 @@ const Profile = () => {
                                         
                                         <div className="flex items-center justify-between mt-6 pt-4 border-t border-white/5 px-2">
                                           <span className="text-[8px] uppercase font-bold tracking-widest text-zinc-500">Verification</span>
-                                          <span className={`text-[10px] font-black uppercase tracking-widest ${
-                                            reg.verified === 'yes' ? 'text-emerald-400' :
-                                            reg.verified === 'rejected' ? 'text-rose-400' : 'text-amber-400 animate-pulse'
-                                          }`}>
-                                            {reg.verified === 'yes' ? 'Verified' :
-                                             reg.verified === 'rejected' ? 'Rejected' : 'Pending Approval'}
-                                          </span>
+                                          <div className="flex flex-col items-end gap-0.5">
+                                            <span className={`text-[10px] font-black uppercase tracking-widest ${
+                                              reg.verified === 'yes' ? 'text-emerald-400' :
+                                              reg.verified === 'rejected' ? 'text-rose-400' : 'text-amber-400 animate-pulse'
+                                            }`}>
+                                              {reg.verified === 'yes' ? 'Verified' :
+                                               reg.verified === 'rejected' ? 'Rejected' : 'Pending Approval'}
+                                            </span>
+                                            {reg.verified === 'yes' && (() => {
+                                              const ach = achievements.find(a => String(a.event_name || '').trim().toLowerCase() === evt.trim().toLowerCase());
+                                              if (ach) {
+                                                const matchText = `${String(ach.event_name || '').trim()} - ${String(ach.category || '').trim()}`.toLowerCase();
+                                                const isAnnounced = announcedResults.some(announced => String(announced || '').trim().toLowerCase() === matchText);
+                                                
+                                                let resultLabel = "Result Pending";
+                                                let resultColorClass = "text-indigo-400";
+                                                
+                                                if (isActualWin(ach.position)) {
+                                                  const rank = getRankInfo(ach.position);
+                                                  resultLabel = rank.label;
+                                                  resultColorClass = "text-amber-400 font-extrabold";
+                                                } else if (isAnnounced) {
+                                                  resultLabel = "Participation Certificate";
+                                                  resultColorClass = "text-emerald-400";
+                                                }
+                                                
+                                                return (
+                                                  <span className={`text-[10px] uppercase font-bold tracking-wider ${resultColorClass}`}>
+                                                    {resultLabel}
+                                                  </span>
+                                                );
+                                              }
+                                              return (
+                                                <span className="text-[10px] uppercase font-bold tracking-wider text-indigo-400/85">
+                                                  Result Pending
+                                                </span>
+                                              );
+                                            })()}
+                                          </div>
                                         </div>
                                       </div>
                                     );
@@ -2343,44 +2542,86 @@ const Profile = () => {
                                 </div>
                               )}
 
-                              {/* Pending Participations */}
+                              {/* Pending / Concluded Participations */}
                               {allPendingParticipations.length > 0 && (
                                 <div className="p-8 rounded-3xl bg-white/5 border border-white/10 space-y-6">
                                   <div className="flex items-center gap-4">
                                     <Briefcase className="w-6 h-6 text-indigo-400" />
-                                    <h3 className="text-xl font-bold text-white uppercase tracking-wider">Active Participations</h3>
+                                    <h3 className="text-xl font-bold text-white uppercase tracking-wider">Participations & Event Status</h3>
                                   </div>
                                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                    {allPendingParticipations.map((ach) => (
-                                      <motion.div 
-                                        key={ach.id}
-                                        initial={{ opacity: 0, y: 10 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        className="p-5 rounded-2xl bg-white/5 border border-white/5 flex items-center gap-4 relative"
-                                      >
-                                        <div className="p-3 rounded-xl bg-indigo-500/10 text-indigo-400">
-                                          <Loader2 className="w-5 h-5 animate-spin" />
-                                        </div>
-                                        <div className="flex-1">
-                                          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-400">Result Pending</p>
-                                          <p className="text-sm font-bold text-white">{ach.event_name}</p>
-                                          <p className="text-[10px] text-zinc-600 font-bold uppercase tracking-widest">{ach.category}</p>
-                                        </div>
-                                      </motion.div>
-                                    ))}
+                                    {allPendingParticipations.map((ach) => {
+                                      // Check if results are announced for this event-category
+                                      const matchText = `${String(ach.event_name || '').trim()} - ${String(ach.category || '').trim()}`.toLowerCase();
+                                      const isAnnounced = announcedResults.some(announced => String(announced || '').trim().toLowerCase() === matchText);
+                                      const isAutoVerified = String(ach.id || '').startsWith('AUTO-VERIFIED-');
+
+                                      let statusLabel = "Result Pending";
+                                      let statusColorClass = "text-indigo-400";
+                                      let iconBgClass = "bg-indigo-500/10 text-indigo-400";
+                                      let showLoader = true;
+
+                                      if (isAnnounced) {
+                                        showLoader = false;
+                                        if (isAutoVerified) {
+                                          statusLabel = "Absent / No participation record";
+                                          statusColorClass = "text-zinc-500";
+                                          iconBgClass = "bg-zinc-505/10 text-zinc-500";
+                                        } else {
+                                          statusLabel = "Participation Certificate (Concluded)";
+                                          statusColorClass = "text-emerald-400";
+                                          iconBgClass = "bg-emerald-500/10 text-emerald-400";
+                                        }
+                                      } else if (isAutoVerified) {
+                                        // results not announced, and only registration is found
+                                        statusLabel = "Registered (Results Pending)";
+                                        statusColorClass = "text-indigo-400/80";
+                                        iconBgClass = "bg-indigo-505/5 text-indigo-400/80";
+                                      }
+
+                                      return (
+                                        <motion.div 
+                                          key={ach.id}
+                                          initial={{ opacity: 0, y: 10 }}
+                                          animate={{ opacity: 1, y: 0 }}
+                                          className="p-5 rounded-2xl bg-white/5 border border-white/5 flex items-center gap-4 relative"
+                                        >
+                                          <div className={`p-3 rounded-xl ${iconBgClass}`}>
+                                            {showLoader ? (
+                                              <Loader2 className="w-5 h-5 animate-spin" />
+                                            ) : isAutoVerified ? (
+                                              <X className="w-5 h-5" />
+                                            ) : (
+                                              <CheckCircle2 className="w-5 h-5" />
+                                            )}
+                                          </div>
+                                          <div className="flex-1">
+                                            <p className={`text-[10px] font-black uppercase tracking-[0.2em] ${statusColorClass}`}>
+                                              {statusLabel}
+                                            </p>
+                                            <p className="text-sm font-bold text-white mt-1">{ach.event_name}</p>
+                                            <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest mt-0.5">{ach.category}</p>
+                                          </div>
+                                        </motion.div>
+                                      );
+                                    })}
                                   </div>
                                 </div>
                               )}
                             </div>
                           )}
-                          {isMember && (
-                            <div className="p-8 rounded-3xl bg-white/5 border border-white/5">
-                              <p className="text-xs font-bold uppercase tracking-widest text-zinc-500 mb-2">Payment Status</p>
-                              <p className={`font-bold ${verified === 'yes' ? 'text-green-500' : 'text-[var(--c-6-start)]'}`}>
-                                {verified === 'yes' ? 'Paid' : 'Verifying'}
-                              </p>
-                            </div>
-                          )}
+                          {isMember && (() => {
+                            const hasVerifiedEvent = registeredEventsList.some(reg => reg.verified === 'yes');
+                            const isPaid = (verified === 'yes') || hasVerifiedEvent;
+                            return (
+                              <div className="p-8 rounded-3xl bg-white/5 border border-white/5">
+                                <p className="text-xs font-bold uppercase tracking-widest text-zinc-500 mb-2">Payment Status</p>
+                                <p className={`font-bold ${isPaid ? 'text-emerald-400 font-bold' : 'text-amber-400 animate-pulse font-bold'}`}>
+                                  {isPaid ? 'Paid' : 'Verifying'}
+                                </p>
+                              </div>
+                            );
+                          })()}
                         </div>
                       </motion.div>
                     )}

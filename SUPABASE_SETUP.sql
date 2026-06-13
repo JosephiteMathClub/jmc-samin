@@ -611,82 +611,90 @@ CREATE POLICY "Allow users to view own higher_secondary_events" ON public.higher
 CREATE POLICY "Allow users to insert own higher_secondary_events" ON public.higher_secondary_events FOR INSERT TO authenticated WITH CHECK (auth.uid() = user_id);
 CREATE POLICY "Allow admins to manage higher_secondary_events" ON public.higher_secondary_events FOR ALL TO authenticated USING (public.is_admin());
 
--- ==========================================
--- 10. System Settings Table
--- ==========================================
-CREATE TABLE IF NOT EXISTS public.system_settings (
-    key TEXT PRIMARY KEY,
-    value JSONB NOT NULL,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
-);
+-- Public SELECT policies for service role and verification (CRITICAL for admin approval verification)
+DROP POLICY IF EXISTS "Allow public read primary_events" ON public.primary_events;
+CREATE POLICY "Allow public read primary_events" ON public.primary_events FOR SELECT USING (true);
 
--- Trigger for system_settings updated_at
-DROP TRIGGER IF EXISTS on_system_settings_updated ON public.system_settings;
-CREATE TRIGGER on_system_settings_updated 
-  BEFORE UPDATE ON public.system_settings 
-  FOR EACH ROW EXECUTE FUNCTION handle_updated_at();
+DROP POLICY IF EXISTS "Allow public read junior_events" ON public.junior_events;
+CREATE POLICY "Allow public read junior_events" ON public.junior_events FOR SELECT USING (true);
 
--- Insert initial values for system settings if not exists
-INSERT INTO public.system_settings (key, value) 
-VALUES ('event_registration_enabled', 'true'::jsonb)
-ON CONFLICT (key) DO NOTHING;
+DROP POLICY IF EXISTS "Allow public read secondary_events" ON public.secondary_events;
+CREATE POLICY "Allow public read secondary_events" ON public.secondary_events FOR SELECT USING (true);
 
-INSERT INTO public.system_settings (key, value)
-VALUES (
-  'event_registration_config', 
-  '{
-    "formDescription": "Specify the category format. Standard events are priced at 50tk each. Select all to enjoy premium package bundles.",
-    "perEventPriceSolo": 50,
-    "allEventsSoloPriceGeneral": 100,
-    "allEventsSoloPriceMember": 50,
-    "bkashNumber": "01712345678",
-    "soloEvents": [
-      "Math Olympiad",
-      "IQ",
-      "Probability Pressure",
-      "Code Break",
-      "Human Calculator",
-      "Calc Bee",
-      "Geo Dash",
-      "Rubik''s Cube",
-      "Sudoku",
-      "Cryptomania",
-      "Principia",
-      "Math Relay"
-    ],
-    "teamEvents": [
-      {
-        "name": "Tic-Tac-Toe",
-        "price": 300,
-        "memberCount": 3,
-        "eligibleCategories": "primary_junior",
-        "description": "Class 3 to 8 (Primary & Junior) Team Showdown. Includes 3 members."
-      },
-      {
-        "name": "Escape Room",
-        "price": 200,
-        "memberCount": 2,
-        "eligibleCategories": "secondary_higher_secondary",
-        "description": "Class 9 to 12 (Secondary & Higher Secondary) strategic room puzzles. Includes 2 members."
-      }
-    ]
-  }'::jsonb
-)
-ON CONFLICT (key) DO NOTHING;
-
--- Enable RLS
-ALTER TABLE public.system_settings ENABLE ROW LEVEL SECURITY;
-
--- Policies for system settings
-DROP POLICY IF EXISTS "Allow public read access to system settings" ON public.system_settings;
-CREATE POLICY "Allow public read access to system settings" ON public.system_settings FOR SELECT USING (true);
-
-DROP POLICY IF EXISTS "Allow admins to insert/update system settings" ON public.system_settings;
-CREATE POLICY "Allow admins to insert/update system settings" ON public.system_settings FOR ALL TO authenticated USING (
-    EXISTS (SELECT 1 FROM public.profiles WHERE profiles.id = auth.uid() AND (profiles.role = 'admin' OR profiles.role = 'super_admin'))
-);
+DROP POLICY IF EXISTS "Allow public read higher_secondary_events" ON public.higher_secondary_events;
+CREATE POLICY "Allow public read higher_secondary_events" ON public.higher_secondary_events FOR SELECT USING (true);
 
 -- STORAGE BUCKETS (Run these in the SQL Editor if buckets are missing)
 -- NOTE: Supabase storage buckets cannot always be created via public SQL schema commands depending on permissions.
 -- Better to create them in the Supabase Dashboard -> Storage -> New Bucket.
 -- Create 'avatars' and 'images' buckets and set them to PUBLIC.
+
+
+-- ==========================================
+-- 10. Challenges & Submissions Tables
+-- ==========================================
+
+-- Challenges table
+CREATE TABLE IF NOT EXISTS public.challenges (
+    id TEXT PRIMARY KEY DEFAULT 'active',
+    title TEXT NOT NULL,
+    description TEXT,
+    questions JSONB NOT NULL DEFAULT '[]'::jsonb,
+    published BOOLEAN DEFAULT FALSE,
+    deadline TIMESTAMP WITH TIME ZONE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Enable RLS for challenges
+ALTER TABLE public.challenges ENABLE ROW LEVEL SECURITY;
+
+-- Triggers for challenges updated_at
+DROP TRIGGER IF EXISTS on_challenges_updated ON public.challenges;
+CREATE TRIGGER on_challenges_updated BEFORE UPDATE ON public.challenges FOR EACH ROW EXECUTE FUNCTION handle_updated_at();
+
+-- Policies for challenges
+DROP POLICY IF EXISTS "Allow public read challenges" ON public.challenges;
+CREATE POLICY "Allow public read challenges" ON public.challenges FOR SELECT USING (true);
+
+DROP POLICY IF EXISTS "Allow admins to manage challenges" ON public.challenges;
+CREATE POLICY "Allow admins to manage challenges" ON public.challenges FOR ALL TO authenticated USING (public.is_admin());
+
+
+-- Challenge Submissions table
+CREATE TABLE IF NOT EXISTS public.challenge_submissions (
+    id TEXT PRIMARY KEY,
+    full_name TEXT NOT NULL,
+    email TEXT NOT NULL,
+    member_id TEXT,
+    answers JSONB NOT NULL DEFAULT '{}'::jsonb,
+    auto_score INTEGER NOT NULL DEFAULT 0,
+    total_questions INTEGER NOT NULL DEFAULT 0,
+    graded_breakdown JSONB NOT NULL DEFAULT '[]'::jsonb,
+    status TEXT DEFAULT 'pending', -- pending, published
+    final_score INTEGER DEFAULT 0,
+    feedback TEXT DEFAULT '',
+    submitted_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    published_at TIMESTAMP WITH TIME ZONE
+);
+
+CREATE INDEX IF NOT EXISTS idx_challenge_submissions_email ON public.challenge_submissions(email);
+CREATE INDEX IF NOT EXISTS idx_challenge_submissions_status ON public.challenge_submissions(status);
+
+-- Enable RLS for submissions
+ALTER TABLE public.challenge_submissions ENABLE ROW LEVEL SECURITY;
+
+-- Policies for submissions
+DROP POLICY IF EXISTS "Allow public / users to insert submissions" ON public.challenge_submissions;
+CREATE POLICY "Allow public / users to insert submissions" ON public.challenge_submissions FOR INSERT TO authenticated WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Allow users to view own submissions" ON public.challenge_submissions;
+CREATE POLICY "Allow users to view own submissions" ON public.challenge_submissions FOR SELECT USING (
+    lower(email) = lower(auth.jwt() ->> 'email') OR public.is_admin()
+);
+
+DROP POLICY IF EXISTS "Allow admins to update submissions" ON public.challenge_submissions;
+CREATE POLICY "Allow admins to update submissions" ON public.challenge_submissions FOR UPDATE TO authenticated USING (public.is_admin());
+
+DROP POLICY IF EXISTS "Allow super admins to delete submissions" ON public.challenge_submissions;
+CREATE POLICY "Allow super admins to delete submissions" ON public.challenge_submissions FOR DELETE TO authenticated USING (public.is_super_admin());
