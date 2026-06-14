@@ -31,43 +31,24 @@ export function useMathJax(ref?: React.RefObject<HTMLElement | null>, active = t
             });
           }
         }
-      }, 100); // Debounce to allow multiple DOM changes to settle
+      }, 200); // 200ms debounce to allow multi-element dynamic renders to pool together
     };
 
     // Run initial typesetting on activation
     runTypeset();
 
-    // Setup MutationObserver to watch DOM subtree additions
+    // Setup highly optimized MutationObserver - no textContent reading to prevent layout thrashing
     const observer = new MutationObserver((mutations) => {
       let shouldTypeset = false;
 
       for (const mutation of mutations) {
-        if (mutation.type === "childList" && mutation.addedNodes.length > 0) {
-          for (let i = 0; i < mutation.addedNodes.length; i++) {
-            const node = mutation.addedNodes[i];
-            if (node.nodeType === Node.ELEMENT_NODE) {
-              const el = node as HTMLElement;
-              const text = el.textContent || "";
-              // Typical LaTeX indicators: $, \[, \(, \begin{
-              if (text.includes("$") || text.includes("\\(") || text.includes("\\[") || text.includes("\\begin{")) {
-                shouldTypeset = true;
-                break;
-              }
-            } else if (node.nodeType === Node.TEXT_NODE) {
-              const text = node.textContent || "";
-              if (text.includes("$") || text.includes("\\(") || text.includes("\\[") || text.includes("\\begin{")) {
-                shouldTypeset = true;
-                break;
-              }
-            }
-          }
-        } else if (mutation.type === "characterData") {
-          const text = mutation.target.textContent || "";
-          if (text.includes("$") || text.includes("\\(") || text.includes("\\[") || text.includes("\\begin{")) {
-            shouldTypeset = true;
-          }
+        if (
+          (mutation.type === "childList" && mutation.addedNodes.length > 0) ||
+          mutation.type === "characterData"
+        ) {
+          shouldTypeset = true;
+          break;
         }
-        if (shouldTypeset) break;
       }
 
       if (shouldTypeset) {

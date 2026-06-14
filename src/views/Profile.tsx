@@ -2490,7 +2490,7 @@ const Profile = () => {
                             </div>
                           )}
                    
-                          {(achievements.length > 0 || allPendingParticipations.length > 0) && (
+                          {wins.length > 0 && (
                             <div className="md:col-span-2 space-y-8">
                               {/* Major Achievements (Wins) */}
                               {wins.length > 0 && (
@@ -2542,72 +2542,7 @@ const Profile = () => {
                                 </div>
                               )}
 
-                              {/* Pending / Concluded Participations */}
-                              {allPendingParticipations.length > 0 && (
-                                <div className="p-8 rounded-3xl bg-white/5 border border-white/10 space-y-6">
-                                  <div className="flex items-center gap-4">
-                                    <Briefcase className="w-6 h-6 text-indigo-400" />
-                                    <h3 className="text-xl font-bold text-white uppercase tracking-wider">Participations & Event Status</h3>
-                                  </div>
-                                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                    {allPendingParticipations.map((ach) => {
-                                      // Check if results are announced for this event-category
-                                      const matchText = `${String(ach.event_name || '').trim()} - ${String(ach.category || '').trim()}`.toLowerCase();
-                                      const isAnnounced = announcedResults.some(announced => String(announced || '').trim().toLowerCase() === matchText);
-                                      const isAutoVerified = String(ach.id || '').startsWith('AUTO-VERIFIED-');
 
-                                      let statusLabel = "Result Pending";
-                                      let statusColorClass = "text-indigo-400";
-                                      let iconBgClass = "bg-indigo-500/10 text-indigo-400";
-                                      let showLoader = true;
-
-                                      if (isAnnounced) {
-                                        showLoader = false;
-                                        if (isAutoVerified) {
-                                          statusLabel = "Absent / No participation record";
-                                          statusColorClass = "text-zinc-500";
-                                          iconBgClass = "bg-zinc-505/10 text-zinc-500";
-                                        } else {
-                                          statusLabel = "Participation Certificate (Concluded)";
-                                          statusColorClass = "text-emerald-400";
-                                          iconBgClass = "bg-emerald-500/10 text-emerald-400";
-                                        }
-                                      } else if (isAutoVerified) {
-                                        // results not announced, and only registration is found
-                                        statusLabel = "Registered (Results Pending)";
-                                        statusColorClass = "text-indigo-400/80";
-                                        iconBgClass = "bg-indigo-505/5 text-indigo-400/80";
-                                      }
-
-                                      return (
-                                        <motion.div 
-                                          key={ach.id}
-                                          initial={{ opacity: 0, y: 10 }}
-                                          animate={{ opacity: 1, y: 0 }}
-                                          className="p-5 rounded-2xl bg-white/5 border border-white/5 flex items-center gap-4 relative"
-                                        >
-                                          <div className={`p-3 rounded-xl ${iconBgClass}`}>
-                                            {showLoader ? (
-                                              <Loader2 className="w-5 h-5 animate-spin" />
-                                            ) : isAutoVerified ? (
-                                              <X className="w-5 h-5" />
-                                            ) : (
-                                              <CheckCircle2 className="w-5 h-5" />
-                                            )}
-                                          </div>
-                                          <div className="flex-1">
-                                            <p className={`text-[10px] font-black uppercase tracking-[0.2em] ${statusColorClass}`}>
-                                              {statusLabel}
-                                            </p>
-                                            <p className="text-sm font-bold text-white mt-1">{ach.event_name}</p>
-                                            <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest mt-0.5">{ach.category}</p>
-                                          </div>
-                                        </motion.div>
-                                      );
-                                    })}
-                                  </div>
-                                </div>
-                              )}
                             </div>
                           )}
                           {isMember && (() => {

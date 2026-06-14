@@ -638,6 +638,55 @@ export const EventParticipation = ({
     const formattedId = extractMemberId(mId);
     if (!formattedId || !activeEvent || !activeCategory) return;
 
+    const ensureMemberRegistration = async (m: { id?: string; member_id: string; full_name: string; is_ec?: boolean }) => {
+      if (!m || !m.member_id) return;
+      
+      const { data: dbMem } = await supabase
+        .from("member")
+        .select("id")
+        .eq("member_id", m.member_id)
+        .maybeSingle();
+        
+      if (dbMem) return; // Already synced and exists
+
+      let ecDetails = null;
+      if (m.is_ec || (m.member_id && m.member_id.length <= 4)) {
+        const { data: ecData } = await supabase
+          .from("ec_member")
+          .select("*")
+          .eq("member_id", m.member_id)
+          .maybeSingle();
+        if (ecData) {
+          ecDetails = ecData;
+        }
+      }
+
+      const userUUID = m.id && !m.id.startsWith("DUMMY-") ? m.id : (ecDetails?.id || null);
+
+      const insertPayload: any = {
+        member_id: m.member_id,
+        full_name: ecDetails?.full_name || m.full_name || "Guest Participant",
+        class: ecDetails?.class || "N/A",
+        section: ecDetails?.section || "N/A",
+        roll: ecDetails?.roll || "N/A",
+        phone: ecDetails?.phone || "N/A",
+        email: ecDetails?.email || "",
+        email_address: ecDetails?.email || "",
+        verified: "yes",
+        is_ec: m.is_ec || (ecDetails ? true : false),
+        payment_method: "Sync (Event Check-In)",
+        school: "St Joseph",
+        updated_at: new Date().toISOString()
+      };
+
+      if (userUUID) {
+        insertPayload.id = userUUID;
+        await supabase.from("member").upsert(insertPayload);
+      } else {
+        await supabase.from("member").insert(insertPayload);
+      }
+    };
+
     try {
       // 1. Check if member exists (try direct, JMC prefix, suffix, computed ticket code match, or fallback scan)
       let member = null;
@@ -651,8 +700,17 @@ export const EventParticipation = ({
 
       if (exactError) throw exactError;
 
+      // Check ec_member table exact
+      const { data: exactEcMember } = await supabase
+        .from("ec_member")
+        .select("id, full_name, verified, member_id, is_ec")
+        .eq("member_id", formattedId)
+        .maybeSingle();
+
       if (exactMember) {
         member = exactMember;
+      } else if (exactEcMember) {
+        member = { ...exactEcMember, is_ec: true };
       } else {
         const prependedId = `JMC-${formattedId}`;
         const { data: prependedMember, error: prependedError } = await supabase
@@ -663,8 +721,16 @@ export const EventParticipation = ({
 
         if (prependedError) throw prependedError;
 
+        const { data: prependedEcMember } = await supabase
+          .from("ec_member")
+          .select("id, full_name, verified, member_id, is_ec")
+          .eq("member_id", prependedId)
+          .maybeSingle();
+
         if (prependedMember) {
           member = prependedMember;
+        } else if (prependedEcMember) {
+          member = { ...prependedEcMember, is_ec: true };
         } else if (formattedId.length >= 3) {
           const { data: suffixMatches, error: suffixError } = await supabase
             .from("member")
@@ -673,11 +739,21 @@ export const EventParticipation = ({
 
           if (suffixError) throw suffixError;
 
-          if (suffixMatches && suffixMatches.length > 0) {
-            const perfectSub = suffixMatches.find((m) =>
+          const { data: suffixEcMatches } = await supabase
+            .from("ec_member")
+            .select("id, full_name, verified, member_id, is_ec")
+            .ilike("member_id", `%${formattedId}`);
+
+          const combinedSuffix = [
+            ...(suffixMatches || []),
+            ...(suffixEcMatches || []).map((m) => ({ ...m, is_ec: true }))
+          ];
+
+          if (combinedSuffix.length > 0) {
+            const perfectSub = combinedSuffix.find((m) =>
               m.member_id.endsWith(`-${formattedId}`),
             );
-            member = perfectSub || suffixMatches[0];
+            member = perfectSub || combinedSuffix[0];
           }
         }
       }
@@ -711,6 +787,18 @@ export const EventParticipation = ({
                   regMemberId = mem.member_id;
                   isRegEc = mem.is_ec === true || mem.is_ec === 'yes';
                   isRegMember = mem.verified === 'yes' || mem.verified === true;
+                } else {
+                  // Fallback: check ec_member table
+                  const { data: ecMem } = await supabase
+                    .from("ec_member")
+                    .select("id, full_name, verified, member_id, is_ec")
+                    .eq("id", reg.user_id)
+                    .maybeSingle();
+                  if (ecMem) {
+                    regMemberId = ecMem.member_id;
+                    isRegEc = true;
+                    isRegMember = ecMem.verified === 'yes' || ecMem.verified === true;
+                  }
                 }
               }
               const calculatedCode = getTicketCode(reg, isRegMember, isRegEc, regMemberId);
@@ -766,6 +854,15 @@ export const EventParticipation = ({
               .maybeSingle();
             if (linkedMem) {
               member = linkedMem;
+            } else {
+              const { data: linkedEcMem } = await supabase
+                .from("ec_member")
+                .select("id, full_name, verified, member_id, is_ec")
+                .eq("id", foundReg.user_id)
+                .maybeSingle();
+              if (linkedEcMem) {
+                member = { ...linkedEcMem, is_ec: true };
+              }
             }
           }
 
@@ -816,7 +913,7 @@ export const EventParticipation = ({
                 isEventRegisteredAtAll = true;
                 matchedRegRecord = reg;
                 matchedRegTable = tb;
-                if (reg.verified === "yes" || reg.verified === true) {
+                if (reg.verified === "yes" || reg.verified === true || member.verified === "yes" || member.verified === true || member.is_ec === true || member.is_ec === "yes") {
                   hasVerifiedRegistration = true;
                 }
               }
@@ -848,7 +945,7 @@ export const EventParticipation = ({
                 isEventRegisteredAtAll = true;
                 matchedRegRecord = reg;
                 matchedRegTable = tb;
-                if (reg.verified === "yes" || reg.verified === true) {
+                if (reg.verified === "yes" || reg.verified === true || member.verified === "yes" || member.verified === true || member.is_ec === true || member.is_ec === "yes") {
                   hasVerifiedRegistration = true;
                 }
               }
@@ -858,6 +955,10 @@ export const EventParticipation = ({
       }
 
       // Handle bypass conditions with exact requirements
+      if (member.verified === "yes" || member.verified === true || member.is_ec === true || member.is_ec === "yes") {
+        hasVerifiedRegistration = true;
+      }
+
       if (!isEventRegisteredAtAll) {
         if (isSuperAdmin) {
           const confirmBypass = window.confirm(
@@ -914,25 +1015,49 @@ export const EventParticipation = ({
         });
 
         // Resolve each teammate to canonical member_id and full_name
-        const teamMembersToRegister: { member_id: string; full_name: string }[] = [];
+        const teamMembersToRegister: { member_id: string; full_name: string; id?: string }[] = [];
         for (const tr of teamRegRecords) {
           let canonicalMemberId = tr.trxnid;
           let rName = tr.full_name;
+          let uId = tr.user_id;
 
           if (tr.user_id) {
             const { data: mem } = await supabase
               .from("member")
-              .select("member_id, full_name")
+              .select("member_id, full_name, id")
               .eq("id", tr.user_id)
               .maybeSingle();
             if (mem) {
               canonicalMemberId = mem.member_id || tr.trxnid;
               rName = mem.full_name || tr.full_name;
+              uId = mem.id;
+            } else {
+              const { data: ecMem } = await supabase
+                .from("ec_member")
+                .select("member_id, full_name, id")
+                .eq("id", tr.user_id)
+                .maybeSingle();
+              if (ecMem) {
+                canonicalMemberId = ecMem.member_id || tr.trxnid;
+                rName = ecMem.full_name || tr.full_name;
+                uId = ecMem.id;
+              }
             }
           }
           teamMembersToRegister.push({
             member_id: canonicalMemberId,
-            full_name: rName
+            full_name: rName,
+            id: uId
+          });
+        }
+
+        // Ensure each team member has a verified record in the 'member' table to meet the foreign key requirement
+        for (const tm of teamMembersToRegister) {
+          await ensureMemberRegistration({
+            id: tm.id,
+            member_id: tm.member_id,
+            full_name: tm.full_name,
+            is_ec: tm.member_id ? (tm.member_id.length <= 4) : false
           });
         }
 
@@ -974,6 +1099,14 @@ export const EventParticipation = ({
         return true;
       } else {
         // Solo Event participation
+        // Ensure solo member exists in standard member table to prevent foreign keys breaking
+        await ensureMemberRegistration({
+          id: member.id,
+          member_id: member.member_id,
+          full_name: member.full_name,
+          is_ec: member.is_ec === true || member.is_ec === 'yes'
+        });
+
         // 3. Check if already participating in THIS event and category
         const { data: existing, error: checkError } = await supabase
           .from("event_participation")

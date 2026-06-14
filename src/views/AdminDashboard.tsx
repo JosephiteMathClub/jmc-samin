@@ -553,19 +553,36 @@ const AdminDashboard = () => {
       if (data && memberData.is_ec) {
         data = { ...data, is_ec: true };
         
-        // AUTOMATICALLY DELETE normal/general member credentials if they are promoted to EC, as requested.
+        // Instead of deleting the member record completely (which breaks foreign key constraints on event_participation),
+        // we replace their general member unique ID (the 6-digit JMC ID) with the new 3-digit EC unique ID in the member table.
+        // This effectively "deletes/replaces" their general member unique ID as requested, while keeping database integrity perfectly!
         try {
-          const { error: delErr } = await supabase
+          const { error: syncError } = await supabase
             .from('member')
-            .delete()
-            .eq('id', tempId);
-          if (delErr) {
-            console.error("Non-fatal error: failed to auto-delete general member record during EC promotion:", delErr);
+            .upsert({
+              id: tempId,
+              full_name: memberData.full_name,
+              class: memberData.class,
+              section: memberData.section,
+              roll: memberData.roll,
+              email: memberData.email,
+              email_address: memberData.email,
+              phone: memberData.phone || 'N/A',
+              member_id: memberIdToUse, // the 3-digit ID
+              verified: 'yes',
+              is_ec: true,
+              payment_method: 'Manual (Admin)',
+              school: 'St Joseph',
+              updated_at: new Date().toISOString()
+            });
+            
+          if (syncError) {
+            console.error("Failed to sync EC member to member table:", syncError);
           } else {
-            console.log(`Successfully auto-deleted general member details for ${tempId} to prevent multiple food portions claim.`);
+            console.log("Successfully synced 3-digit EC member details to the member table to preserve integrity.");
           }
-        } catch (delCatch) {
-          console.error("Failed to delete standard general member during EC promotion:", delCatch);
+        } catch (syncCatch) {
+          console.error("Failed syncing EC details to standard member table:", syncCatch);
         }
       } else if (data && !memberData.is_ec) {
         // AUTOMATICALLY DELETE EC details if they are demoted back to standard

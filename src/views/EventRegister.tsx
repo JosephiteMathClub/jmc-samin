@@ -851,35 +851,47 @@ const EventRegister = () => {
         }
       }
 
-      // Ensure the student gets a member ID automatically if they are not already listed in the 'member' table
+      // Ensure the student gets a member ID automatically if they are not already listed in the 'member' or 'ec_member' table
       let isUserRegisteredGeneral = false;
       let existingMemberId = '';
       try {
-        const { data: memberData, error: memberCheckError } = await supabase
-          .from('member')
+        const { data: ecData, error: ecCheckError } = await supabase
+          .from('ec_member')
           .select('id, verified, member_id')
           .eq('id', finalUserId)
           .maybeSingle();
-        
-        if (!memberCheckError && memberData) {
-          isUserRegisteredGeneral = true;
-          existingMemberId = memberData.member_id || '';
 
-          // If they selected the free Math Olympiad and are not verified yet, auto-verify their membership!
-          if (isOnlyFreeMathOlympiad && memberData.verified !== 'yes') {
-            const { error: updateVerError } = await supabase
-              .from('member')
-              .update({ verified: 'yes' })
-              .eq('id', finalUserId);
-            if (updateVerError) {
-              console.error("Failed to auto-verify existing member for free event:", updateVerError);
-            } else {
-              console.log("Successfully auto-verified existing member for free Math Olympiad event.");
+        if (!ecCheckError && ecData) {
+          isUserRegisteredGeneral = true;
+          existingMemberId = ecData.member_id || '';
+          console.log("User is an EC member, skipping 5-digit general member ID generation. EC ID is:", existingMemberId);
+        } else {
+          const { data: memberData, error: memberCheckError } = await supabase
+            .from('member')
+            .select('id, verified, member_id')
+            .eq('id', finalUserId)
+            .maybeSingle();
+          
+          if (!memberCheckError && memberData) {
+            isUserRegisteredGeneral = true;
+            existingMemberId = memberData.member_id || '';
+
+            // If they selected the free Math Olympiad and are not verified yet, auto-verify their membership!
+            if (isOnlyFreeMathOlympiad && memberData.verified !== 'yes') {
+              const { error: updateVerError } = await supabase
+                .from('member')
+                .update({ verified: 'yes' })
+                .eq('id', finalUserId);
+              if (updateVerError) {
+                console.error("Failed to auto-verify existing member for free event:", updateVerError);
+              } else {
+                console.log("Successfully auto-verified existing member for free Math Olympiad event.");
+              }
             }
           }
         }
       } catch (err) {
-        console.error("Failed to query member table during event registration check:", err);
+        console.error("Failed to query member or ec_member table during event registration check:", err);
       }
 
       // If they are not registered in the member table at all, automatically register them as a non-general member & provide a 5-digit unique ID

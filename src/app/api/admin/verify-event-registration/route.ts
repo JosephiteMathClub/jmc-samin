@@ -139,16 +139,36 @@ export async function POST(req: Request) {
                               linkedRec.tableName === 'junior_events' ? 'Junior' :
                               linkedRec.tableName === 'secondary_events' ? 'Secondary' : 'Higher Secondary';
 
+        let isEcUser = false;
         if (linkedRec.user_id) {
-          const { data: memData, error: memErr } = await supabaseAdmin
-            .from('member')
+          // Check if they are in ec_member first
+          const { data: ecMem, error: ecMemErr } = await supabaseAdmin
+            .from('ec_member')
             .select('*')
             .eq('id', linkedRec.user_id)
             .maybeSingle();
-          if (memErr) {
-            console.error("Error checking member profile:", memErr);
+
+          if (!ecMemErr && ecMem) {
+            isEcUser = true;
+            existingMember = ecMem;
+            memberIdToUse = ecMem.member_id;
+            
+            // Update ec_member verified status to 'yes'
+            await supabaseAdmin
+              .from('ec_member')
+              .update({ verified: 'yes' })
+              .eq('id', ecMem.id);
+          } else {
+            const { data: memData, error: memErr } = await supabaseAdmin
+              .from('member')
+              .select('*')
+              .eq('id', linkedRec.user_id)
+              .maybeSingle();
+            if (memErr) {
+              console.error("Error checking member profile:", memErr);
+            }
+            existingMember = memData;
           }
-          existingMember = memData;
         }
 
         let linkedEmail = '';
@@ -168,7 +188,30 @@ export async function POST(req: Request) {
           linkedEmail = emailAddress;
         }
 
-        if (existingMember && existingMember.member_id && existingMember.member_id.startsWith('JMC-')) {
+        if (isEcUser) {
+          // EC user resolved. Sync their 3-digit EC ID to the standard member table to prevent event_participation foreign key violations
+          try {
+            await supabaseAdmin
+              .from('member')
+              .upsert({
+                id: linkedRec.user_id,
+                full_name: existingMember.full_name,
+                class: existingMember.class,
+                section: existingMember.section,
+                roll: existingMember.roll,
+                email: linkedEmail || existingMember.email,
+                email_address: linkedEmail || existingMember.email,
+                phone: existingMember.phone || 'N/A',
+                member_id: memberIdToUse, // the 3-digit ID
+                verified: 'yes',
+                is_ec: true,
+                school: 'St Joseph',
+                updated_at: new Date().toISOString()
+              });
+          } catch (syncErr) {
+            console.error("Error syncing EC member to member table during event registration verification:", syncErr);
+          }
+        } else if (existingMember && existingMember.member_id && existingMember.member_id.startsWith('JMC-')) {
           memberIdToUse = existingMember.member_id;
           
           // CRITICAL BUG FIX: Ensure the general member record is marked verified as yes.

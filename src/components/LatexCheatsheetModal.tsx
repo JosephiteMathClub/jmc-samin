@@ -1,9 +1,8 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Search, Copy, Check, Calculator, Sigma, BookOpen, AlertCircle } from "lucide-react";
-import { MathJaxNode } from "./MathJaxNode";
 
 interface CheatsheetItem {
   code: string;
@@ -24,8 +23,65 @@ export const LatexCheatsheetModal: React.FC<{ isOpen: boolean; onClose: () => vo
   onClose,
 }) => {
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState("macros");
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
+
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [mathJaxLoaded, setMathJaxLoaded] = useState(false);
+
+  // Debounce search query to prevent constant rendering and typesetting on every keypress
+  useEffect(() => {
+    if (!searchQuery.trim()) {
+      setDebouncedSearchQuery("");
+      return;
+    }
+    const handler = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+    }, 280); // 280ms offers perfect typing response with zero render/typeset lag
+
+    return () => clearTimeout(handler);
+  }, [searchQuery]);
+
+  // Poll for MathJax availability
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if ((window as any).MathJax && (window as any).MathJax.typesetPromise) {
+      setMathJaxLoaded(true);
+      return;
+    }
+    const interval = setInterval(() => {
+      if ((window as any).MathJax && (window as any).MathJax.typesetPromise) {
+        setMathJaxLoaded(true);
+        clearInterval(interval);
+      }
+    }, 100);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Single debounced typeset of the entire right content container on change
+  useEffect(() => {
+    if (typeof window === "undefined" || !isOpen) return;
+    const mj = (window as any).MathJax;
+    if (!mj || !mj.typesetPromise) return;
+
+    const timer = setTimeout(() => {
+      if (containerRef.current) {
+        try {
+          if (mj.typesetClear) {
+            mj.typesetClear([containerRef.current]);
+          }
+          mj.typesetPromise([containerRef.current]).catch((err: any) => {
+            console.warn("Cheatsheet global typeset error:", err);
+          });
+        } catch (e) {
+          console.warn("Cheatsheet typesetting execution error:", e);
+        }
+      }
+    }, 100);
+
+    return () => clearTimeout(timer);
+  }, [activeTab, debouncedSearchQuery, isOpen, mathJaxLoaded]);
 
   const categories: CheatsheetCategory[] = useMemo(() => [
     {
@@ -184,20 +240,81 @@ export const LatexCheatsheetModal: React.FC<{ isOpen: boolean; onClose: () => vo
         {
           code: "\\begin{pmatrix} a & b \\\\ c & d \\end{pmatrix}",
           renderText: "$$\\begin{pmatrix} a & b \\\\ c & d \\end{pmatrix}$$",
-          name: "Parenthesis Matrix",
+          name: "2x2 Parenthesis Matrix",
           description: "A standard 2x2 matrix with parenthesized edges.",
         },
         {
           code: "\\begin{bmatrix} a & b \\\\ c & d \\end{bmatrix}",
           renderText: "$$\\begin{bmatrix} a & b \\\\ c & d \\end{bmatrix}$$",
-          name: "Bracket Matrix",
+          name: "2x2 Bracket Matrix",
           description: "A standard 2x2 matrix with bracketed edges.",
+        },
+        {
+          code: "\\begin{pmatrix} a & b & c \\\\ d & e & f \\\\ g & h & i \\end{pmatrix}",
+          renderText: "$$\\begin{pmatrix} a & b & c \\\\ d & e & f \\\\ g & h & i \\end{pmatrix}$$",
+          name: "3x3 Parenthesis Matrix",
+          description: "A standard 3x3 matrix with parenthesized edges.",
+        },
+        {
+          code: "\\begin{bmatrix} a & b & c \\\\ d & e & f \\\\ g & h & i \\end{bmatrix}",
+          renderText: "$$\\begin{bmatrix} a & b & c \\\\ d & e & f \\\\ g & h & i \\end{bmatrix}$$",
+          name: "3x3 Bracket Matrix",
+          description: "A standard 3x3 matrix with bracketed edges.",
         },
         {
           code: "f(x) = \\begin{cases} x & x \\ge 0 \\\\ -x & x < 0 \\end{cases}",
           renderText: "$$f(x) = \\begin{cases} x & x \\ge 0 \\\\ -x & x < 0 \\end{cases}$$",
           name: "Piecewise Function",
           description: "Define split piecewise logic systems.",
+        },
+      ],
+    },
+    {
+      id: "vectors",
+      name: "Vectors & Algebra",
+      icon: <Sigma className="w-4 h-4" />,
+      items: [
+        {
+          code: "\\vec{v} = v_x \\hat{\\imath} + v_y \\hat{\\jmath} + v_z \\hat{k}",
+          renderText: "$\\vec{v} = v_x \\hat{\\imath} + v_y \\hat{\\jmath} + v_z \\hat{k}$",
+          name: "Standard Unit Vectors",
+          description: "Vector representation in 3D space using the unit orthonormal basis vectors (i, j, k) with hats.",
+        },
+        {
+          code: "\\vec{a} \\cdot \\vec{b} = a_x b_x + a_y b_y + a_z b_z",
+          renderText: "$\\vec{a} \\cdot \\vec{b} = a_x b_x + a_y b_y + a_z b_z$",
+          name: "Vector Dot Product",
+          description: "Standard algebraic definition of dot product in Cartesian coordinates.",
+        },
+        {
+          code: "\\vec{a} \\times \\vec{b} = \\begin{vmatrix} \\hat{\\imath} & \\hat{\\jmath} & \\hat{k} \\\\ a_x & a_y & a_z \\\\ b_x & b_y & b_z \\end{vmatrix}",
+          renderText: "$$\\vec{a} \\times \\vec{b} = \\begin{vmatrix} \\hat{\\imath} & \\hat{\\jmath} & \\hat{k} \\\\ a_x & a_y & a_z \\\\ b_x & b_y & b_z \\end{vmatrix}$$",
+          name: "Vector Cross Product",
+          description: "Calculates the orthogonal cross product using a 3x3 matrix determinant layout.",
+        },
+        {
+          code: "\\hat{u} = \\frac{\\vec{v}}{\\|\\vec{v}\\|}",
+          renderText: "$\\hat{u} = \\frac{\\vec{v}}{\\|\\vec{v}\\|}$",
+          name: "Unit Vector Formula",
+          description: "Normalization of a non-zero vector into a standard unit vector.",
+        },
+        {
+          code: "\\theta = \\arccos\\left(\\frac{\\vec{a} \\cdot \\vec{b}}{\\|\\vec{a}\\| \\|\\vec{b}\\|}\\right)",
+          renderText: "$\\theta = \\arccos\\left(\\frac{\\vec{a} \\cdot \\vec{b}}{\\|\\vec{a}\\| \\|\\vec{b}\\|}\\right)$",
+          name: "Angle Between Vectors",
+          description: "Computes the inner angle between two vectors using their magnitudes and dot product.",
+        },
+        {
+          code: "x = \\frac{-b \\pm \\sqrt{b^2 - 4ac}}{2a}",
+          renderText: "$x = \\frac{-b \\pm \\sqrt{b^2 - 4ac}}{2a}$",
+          name: "Quadratic Formula",
+          description: "Standard equation to solve quadratic algebraic systems.",
+        },
+        {
+          code: "e^{i\\pi} + 1 = 0",
+          renderText: "$e^{i\\pi} + 1 = 0$",
+          name: "Euler's Identity",
+          description: "Beautiful mathematical identity linking five fundamental constants.",
         },
       ],
     },
@@ -212,8 +329,8 @@ export const LatexCheatsheetModal: React.FC<{ isOpen: boolean; onClose: () => vo
   };
 
   const filteredItems = useMemo(() => {
-    if (!searchQuery.trim()) return null;
-    const q = searchQuery.toLowerCase();
+    if (!debouncedSearchQuery.trim()) return null;
+    const q = debouncedSearchQuery.toLowerCase();
     const results: CheatsheetItem[] = [];
     categories.forEach((cat) => {
       cat.items.forEach((item) => {
@@ -227,7 +344,7 @@ export const LatexCheatsheetModal: React.FC<{ isOpen: boolean; onClose: () => vo
       });
     });
     return results;
-  }, [searchQuery, categories]);
+  }, [debouncedSearchQuery, categories]);
 
   if (!isOpen) return null;
 
@@ -321,9 +438,9 @@ export const LatexCheatsheetModal: React.FC<{ isOpen: boolean; onClose: () => vo
             )}
 
             {/* Right Items Grid */}
-            <div className="flex-1 overflow-y-auto pr-2 scrollbar-thin">
+            <div ref={containerRef} className="flex-1 overflow-y-auto pr-2 scrollbar-thin">
               <AnimatePresence mode="wait">
-                {filteredItems ? (
+                {searchQuery ? (
                   /* Search Results block */
                   <motion.div
                     key="searchResults"
@@ -332,10 +449,27 @@ export const LatexCheatsheetModal: React.FC<{ isOpen: boolean; onClose: () => vo
                     exit={{ opacity: 0, y: 10 }}
                     className="space-y-4"
                   >
-                    <div className="text-[10px] uppercase tracking-widest text-emerald-400 font-bold mb-2">
-                      Search Results ({filteredItems.length})
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="text-[10px] uppercase tracking-widest text-emerald-400 font-bold">
+                        {debouncedSearchQuery !== searchQuery ? "Searching..." : `Search Results (${filteredItems?.length || 0})`}
+                      </div>
+                      {debouncedSearchQuery !== searchQuery && (
+                        <div className="w-3 h-3 border-2 border-emerald-400/30 border-t-emerald-400 rounded-full animate-spin" />
+                      )}
                     </div>
-                    {filteredItems.length === 0 ? (
+                    {debouncedSearchQuery !== searchQuery && (!filteredItems || filteredItems.length === 0) ? (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {[1, 2, 3, 4].map((n) => (
+                          <div key={n} className="border border-white/5 bg-zinc-900/10 rounded-2xl p-4 h-[140px] animate-pulse flex flex-col justify-between">
+                            <div className="space-y-2">
+                              <div className="h-4 bg-white/5 rounded w-1/3" />
+                              <div className="h-3 bg-white/5 rounded w-2/3" />
+                            </div>
+                            <div className="h-10 bg-white/5 rounded w-full mt-auto" />
+                          </div>
+                        ))}
+                      </div>
+                    ) : !filteredItems || filteredItems.length === 0 ? (
                       <div className="text-zinc-500 text-sm py-12 text-center font-light">
                         No macros or symbols match your search. Try looking in the categories!
                       </div>
@@ -403,7 +537,7 @@ const ItemCard: React.FC<{
   return (
     <motion.div
       onClick={() => onCopy(item.code)}
-      className="group relative bg-zinc-9003/30 border border-white/5 hover:border-emerald-500/30 rounded-2xl p-4 cursor-pointer flex flex-col justify-between hover:bg-white/[0.02] transition-all min-h-[140px]"
+      className="group relative bg-zinc-900/30 border border-white/5 hover:border-emerald-500/30 rounded-2xl p-4 cursor-pointer flex flex-col justify-between hover:bg-white/[0.02] transition-all min-h-[140px]"
     >
       <div className="mb-3">
         <div className="flex items-center justify-between mb-1">
@@ -421,8 +555,8 @@ const ItemCard: React.FC<{
 
       <div className="mt-auto space-y-2">
         {/* Render Preview */}
-        <div className="p-3 bg-black/45 rounded-xl border border-white/5 flex items-center justify-center min-h-[50px] overflow-x-auto scrollbar-thin">
-          <MathJaxNode content={item.renderText} inline />
+        <div className="p-3 bg-black/45 rounded-xl border border-white/5 flex items-center justify-center min-h-[50px] overflow-x-auto scrollbar-thin text-center text-zinc-100">
+          <div>{item.renderText}</div>
         </div>
 
         {/* Technical code copy banner */}
