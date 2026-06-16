@@ -146,7 +146,7 @@ export const Hero: React.FC<HeroProps> = ({ home, shouldReduceGfx }) => {
             initial={shouldReduceGfx ? { opacity: 1 } : { opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 1.8, duration: 1.2, ease: [0.16, 1, 0.3, 1] }}
-            className="flex flex-col sm:flex-row justify-center items-center gap-12"
+            className="flex flex-col sm:flex-row justify-center items-center gap-6 sm:gap-8"
           >
             <div className="group relative">
               <div className="absolute inset-0 bg-[var(--c-6-start)]/30 blur-[80px] rounded-full scale-0 group-hover:scale-150 transition-transform duration-1000 pointer-events-none" />
@@ -161,10 +161,24 @@ export const Hero: React.FC<HeroProps> = ({ home, shouldReduceGfx }) => {
                 </span>
               </Link>
             </div>
+
+            <div className="group relative">
+              <div className="absolute inset-0 bg-indigo-500/25 blur-[80px] rounded-full scale-0 group-hover:scale-150 transition-transform duration-1000 pointer-events-none" />
+              <Link
+                href="/events/register"
+                className="relative z-10 px-12 py-5 rounded-full font-black uppercase tracking-[0.3em] text-[11px] bg-gradient-to-r from-indigo-600 to-indigo-500 text-white shadow-[0_10px_40px_-10px_rgba(99,102,241,0.5)] hover:shadow-[0_20px_50px_-10px_rgba(99,102,241,0.7)] hover:scale-105 active:scale-95 transition-all duration-500 flex items-center justify-center gap-3 overflow-hidden"
+              >
+                Register Events
+                <span className="relative overflow-hidden w-5 h-5 flex items-center justify-center font-bold">
+                  <ArrowRight className="w-5 h-5 group-hover:translate-x-full transition-transform duration-500 absolute" />
+                  <ArrowRight className="w-5 h-5 -translate-x-full group-hover:translate-x-0 transition-transform duration-500 absolute" />
+                </span>
+              </Link>
+            </div>
             
             <Link
               href="/about"
-              className="group flex items-center gap-5 text-xs font-mono font-black tracking-[0.5em] uppercase text-zinc-500 hover:text-white transition-all duration-500"
+              className="group flex items-center gap-5 text-xs font-mono font-black tracking-[0.5em] uppercase text-zinc-500 hover:text-white transition-all duration-500 sm:ml-4"
             >
               <div className="relative w-16 h-[1px] bg-zinc-800 overflow-hidden group-hover:w-24 transition-all duration-700">
                 <div className="absolute inset-0 bg-gradient-to-r from-transparent via-[var(--c-6-start)] to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />

@@ -25,6 +25,7 @@ import {
   Upload,
   FileSpreadsheet,
   Edit,
+  Mail,
 } from "lucide-react";
 import { supabase, isSupabaseConfigured } from "../../lib/supabase";
 import { useToast } from "../../context/ToastContext";
@@ -264,11 +265,52 @@ export const EventParticipation = ({
   };
 
   // State for sub-tab and verifier
-  const [adminSubTab, setAdminSubTab] = useState<"standard" | "verifier">(
+  const [adminSubTab, setAdminSubTab] = useState<"standard" | "verifier" | "email_confirmations">(
     "standard",
   );
   const [pendingList, setPendingList] = useState<any[]>([]);
   const [verifyingId, setVerifyingId] = useState<string | null>(null);
+
+  // States for Email Confirmations Log Sub-tab
+  const [emailLogs, setEmailLogs] = useState<any[]>([]);
+  const [isLoadingEmails, setIsLoadingEmails] = useState(false);
+  const [emailsError, setEmailsError] = useState<string | null>(null);
+  const [emailsSearch, setEmailsSearch] = useState("");
+  const [selectedLogPreview, setSelectedLogPreview] = useState<any | null>(null);
+
+  const fetchEmailLogs = useCallback(async () => {
+    if (!isSupabaseConfigured) return;
+    setIsLoadingEmails(true);
+    setEmailsError(null);
+    try {
+      const { data, error } = await supabase
+        .from("email_confirmations_sent")
+        .select("*")
+        .order("sent_at", { ascending: false });
+
+      if (error) {
+        if (error.code === "42P01") {
+          setEmailsError("The 'email_confirmations_sent' table does not exist in your database yet. It has been successfully declared in SUPABASE_SETUP.sql for the next schema deployment.");
+        } else {
+          setEmailsError(error.message);
+        }
+        setEmailLogs([]);
+      } else {
+        setEmailLogs(data || []);
+      }
+    } catch (err: any) {
+      console.error("Error fetching email logs:", err);
+      setEmailsError(err.message || "An unexpected error occurred while fetching email logs.");
+    } finally {
+      setIsLoadingEmails(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (adminSubTab === "email_confirmations") {
+      fetchEmailLogs();
+    }
+  }, [adminSubTab, fetchEmailLogs]);
 
   // States for Editing in Transactions Verifier (Super Admin only)
   const [editRecordId, setEditRecordId] = useState<string | null>(null);
@@ -359,15 +401,29 @@ export const EventParticipation = ({
 
       if (record && record.trxnid) {
         const rootTrxnid = record.trxnid.replace(/-T\d+$/, "");
-        // 2. Delete all records matching rootTrxnid, rootTrxnid-T2, rootTrxnid-T3 to clear all teammates
-        const { error } = await supabase
-          .from(deleteTxTable)
-          .delete()
-          .or(
-            `trxnid.eq.${rootTrxnid},trxnid.eq.${rootTrxnid}-T2,trxnid.eq.${rootTrxnid}-T3`,
-          );
+        const isPlaceholder = !rootTrxnid || 
+                              rootTrxnid.trim().length < 4 || 
+                              ['n/a', 'na', 'none', 'pending', 'null', 'nil', 'test', '0', 'bkash', 'b-kash', 'payment', 'unpaid', 'placeholder'].includes(rootTrxnid.trim().toLowerCase());
 
-        if (error) throw error;
+        if (isPlaceholder) {
+          // Delete just this single transaction
+          const { error } = await supabase
+            .from(deleteTxTable)
+            .delete()
+            .eq("id", deleteTxId);
+
+          if (error) throw error;
+        } else {
+          // 2. Delete all records matching rootTrxnid, rootTrxnid-T2, rootTrxnid-T3 to clear all teammates
+          const { error } = await supabase
+            .from(deleteTxTable)
+            .delete()
+            .or(
+              `trxnid.eq.${rootTrxnid},trxnid.eq.${rootTrxnid}-T2,trxnid.eq.${rootTrxnid}-T3`,
+            );
+
+          if (error) throw error;
+        }
       } else {
         // Fallback: Delete just this single transaction
         const { error } = await supabase
@@ -480,10 +536,20 @@ export const EventParticipation = ({
   ) => {
     setVerifyingId(recordId);
     try {
+      let verifiedBy = "Admin";
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          verifiedBy = user.email || user.id;
+        }
+      } catch (authErr) {
+        console.warn("Could not retrieve logged-in admin auth for verifiedBy:", authErr);
+      }
+
       const res = await fetch("/api/admin/verify-event-registration", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ recordId, tableName, action, emailAddress }),
+        body: JSON.stringify({ recordId, tableName, action, emailAddress, verifiedBy }),
       });
 
       const data = await res.json();
@@ -496,12 +562,20 @@ export const EventParticipation = ({
         const matchedRec = pendingList.find((p) => p.id === recordId);
         if (matchedRec) {
           const matchedRoot = matchedRec.trxnid.replace(/-T\d+$/, "");
-          setPendingList((prev) =>
-            prev.filter((p) => {
-              const root = p.trxnid.replace(/-T\d+$/, "");
-              return root !== matchedRoot && p.id !== recordId;
-            })
-          );
+          const isPlaceholder = !matchedRoot || 
+                                matchedRoot.trim().length < 4 || 
+                                ['n/a', 'na', 'none', 'pending', 'null', 'nil', 'test', '0', 'bkash', 'b-kash', 'payment', 'unpaid', 'placeholder'].includes(matchedRoot.trim().toLowerCase());
+
+          if (isPlaceholder) {
+            setPendingList((prev) => prev.filter((p) => p.id !== recordId));
+          } else {
+            setPendingList((prev) =>
+              prev.filter((p) => {
+                const root = p.trxnid.replace(/-T\d+$/, "");
+                return root !== matchedRoot && p.id !== recordId;
+              })
+            );
+          }
         } else {
           setPendingList((prev) => prev.filter((p) => p.id !== recordId));
         }
@@ -991,6 +1065,9 @@ export const EventParticipation = ({
       if (isTeam && matchedRegRecord) {
         // Get the root Transaction ID for this team
         const rootTrxnid = matchedRegRecord.trxnid.replace(/-T\d+$/, '');
+        const isPlaceholder = !rootTrxnid || 
+                              rootTrxnid.trim().length < 4 || 
+                              ['n/a', 'na', 'none', 'pending', 'null', 'nil', 'test', '0', 'bkash', 'b-kash', 'payment', 'unpaid', 'placeholder'].includes(rootTrxnid.trim().toLowerCase());
 
         // Fetch all team registration entries sharing this rootTrxnid across all tables
         const tables = [
@@ -1000,14 +1077,18 @@ export const EventParticipation = ({
           "higher_secondary_events",
         ];
         let teamRegRecords: any[] = [];
-        for (const tb of tables) {
-          const { data } = await supabase
-            .from(tb)
-            .select("user_id, trxnid, full_name, selected_events, verified")
-            .or(`trxnid.eq.${rootTrxnid},trxnid.eq.${rootTrxnid}-T2,trxnid.eq.${rootTrxnid}-T3`);
-          if (data && data.length > 0) {
-            teamRegRecords = [...teamRegRecords, ...data.map((d: any) => ({ ...d, tableName: tb }))];
+        if (!isPlaceholder) {
+          for (const tb of tables) {
+            const { data } = await supabase
+              .from(tb)
+              .select("user_id, trxnid, full_name, selected_events, verified")
+              .or(`trxnid.eq.${rootTrxnid},trxnid.eq.${rootTrxnid}-T2,trxnid.eq.${rootTrxnid}-T3`);
+            if (data && data.length > 0) {
+              teamRegRecords = [...teamRegRecords, ...data.map((d: any) => ({ ...d, tableName: tb }))];
+            }
           }
+        } else {
+          teamRegRecords = [matchedRegRecord];
         }
 
         // Keep only records that contain the activeEvent
@@ -1384,7 +1465,7 @@ export const EventParticipation = ({
   return (
     <div className="space-y-12">
       {/* Sub-tabs bar */}
-      <div className="flex bg-white/5 rounded-2xl p-1.5 border border-white/10 max-w-lg">
+      <div className="flex bg-white/5 rounded-2xl p-1.5 border border-white/10 max-w-2xl">
         <button
           onClick={() => setAdminSubTab("standard")}
           className={`flex-1 py-3.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
@@ -1407,6 +1488,16 @@ export const EventParticipation = ({
           {pendingList.length > 0 && (
             <span className="w-2 h-2 bg-red-500 rounded-full animate-bounce absolute top-2 right-2" />
           )}
+        </button>
+        <button
+          onClick={() => setAdminSubTab("email_confirmations")}
+          className={`flex-1 py-3.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 relative ${
+            adminSubTab === "email_confirmations"
+              ? "bg-amber-500 text-black font-black shadow-lg shadow-amber-500/25"
+              : "text-zinc-500 hover:text-white"
+          }`}
+        >
+          Email Confirmations Sent
         </button>
       </div>
 
@@ -1710,6 +1801,221 @@ export const EventParticipation = ({
                   </div>
                 );
               })}
+            </div>
+          )}
+        </div>
+      ) : adminSubTab === "email_confirmations" ? (
+        <div className="space-y-8 animate-fade-in text-left">
+          <div>
+            <h2 className="text-3xl font-black text-white uppercase tracking-tight flex items-center gap-4">
+              <Mail className="w-8 h-8 text-amber-500" />
+              Email Confirmations Log
+            </h2>
+            <p className="text-xs text-zinc-500 font-medium">
+              Monitor verification receipts and automatic email notifications dispatched to Club member team-captains and participants.
+            </p>
+          </div>
+
+          <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
+            {/* Search Input */}
+            <div className="relative w-full md:max-w-md">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
+              <input
+                type="text"
+                value={emailsSearch}
+                onChange={(e) => setEmailsSearch(e.target.value)}
+                placeholder="Search by name, email, or subject..."
+                className="w-full pl-11 pr-4 py-3 bg-white/5 border border-white/10 rounded-2xl text-white outline-none focus:border-amber-500/50 transition-all text-xs font-bold"
+              />
+            </div>
+
+            {/* Actions */}
+            <button
+              onClick={fetchEmailLogs}
+              disabled={isLoadingEmails}
+              className="px-6 py-3 rounded-xl bg-white/5 border border-white/10 text-[10px] font-bold text-zinc-300 uppercase tracking-widest hover:bg-white/10 hover:text-white transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
+            >
+              {isLoadingEmails ? (
+                <>
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  Refreshing...
+                </>
+              ) : (
+                <>
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                  Refresh logs
+                </>
+              )}
+            </button>
+          </div>
+
+          {emailsError && (
+            <div className="p-6 rounded-2xl bg-red-500/5 border border-red-500/10 text-red-400 text-xs flex gap-3 items-center">
+              <AlertCircle className="w-5 h-5 shrink-0" />
+              <div className="space-y-1">
+                <p className="font-bold">Database Tables Status</p>
+                <p className="text-zinc-400">{emailsError}</p>
+              </div>
+            </div>
+          )}
+
+          {isLoadingEmails ? (
+            <div className="space-y-4">
+              {[1, 2, 3].map((n) => (
+                <div key={n} className="p-6 bg-white/[0.02] border border-white/5 rounded-3xl animate-pulse flex flex-col gap-3">
+                  <div className="h-4 bg-zinc-800 rounded w-1/4" />
+                  <div className="h-3 bg-zinc-800 rounded w-1/2" />
+                </div>
+              ))}
+            </div>
+          ) : emailLogs.length === 0 ? (
+            <div className="glass-card p-16 text-center rounded-[2.5rem] border border-dashed border-white/10 max-w-3xl">
+              <Mail className="w-16 h-16 text-zinc-800 mx-auto mb-6 opacity-30 animate-pulse" />
+              <p className="text-sm font-bold text-zinc-500 uppercase tracking-wide">
+                No email confirmations dispatched yet
+              </p>
+              <p className="text-xs text-zinc-600 mt-2 font-medium">
+                Log entries will populate automatically upon verifying registration transactions.
+              </p>
+            </div>
+          ) : (
+            <div className="glass-card overflow-hidden rounded-[2rem] border border-white/10 bg-black/20">
+              <div className="overflow-x-auto p-1">
+                <table className="w-full min-w-[800px] border-collapse text-left">
+                  <thead>
+                    <tr className="border-b border-white/5 bg-white/[0.01]">
+                      <th className="p-5 text-[9px] font-black uppercase tracking-widest text-zinc-500">Recipient</th>
+                      <th className="p-5 text-[9px] font-black uppercase tracking-widest text-zinc-500">Subject</th>
+                      <th className="p-5 text-[9px] font-black uppercase tracking-widest text-zinc-500">Verified By</th>
+                      <th className="p-5 text-[9px] font-black uppercase tracking-widest text-zinc-500">Dispatched At</th>
+                      <th className="p-5 text-[9px] font-black uppercase tracking-widest text-zinc-500">Status</th>
+                      <th className="p-5 text-[9px] font-black uppercase tracking-widest text-zinc-400 text-right">Details</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-white/5">
+                    {emailLogs
+                      .filter((log) => {
+                        if (!emailsSearch) return true;
+                        const s = emailsSearch.toLowerCase();
+                        return (
+                          log.recipient_name?.toLowerCase().includes(s) ||
+                          log.recipient_email?.toLowerCase().includes(s) ||
+                          log.subject?.toLowerCase().includes(s) ||
+                          log.verified_by?.toLowerCase().includes(s)
+                        );
+                      })
+                      .map((log) => (
+                        <tr key={log.id} className="hover:bg-white/[0.01] transition-colors">
+                          <td className="p-5">
+                            <div className="font-bold text-white text-xs">{log.recipient_name || "N/A"}</div>
+                            <div className="font-mono text-[10px] text-zinc-500">{log.recipient_email}</div>
+                          </td>
+                          <td className="p-5">
+                            <div className="text-xs text-zinc-300 font-medium max-w-xs truncate">{log.subject}</div>
+                          </td>
+                          <td className="p-5">
+                            <span className="px-2.5 py-1 rounded bg-white/5 border border-white/10 text-zinc-400 text-[10px] font-mono">
+                              {log.verified_by || "System"}
+                            </span>
+                          </td>
+                          <td className="p-5 text-xs text-zinc-400 font-medium">
+                            {log.sent_at ? new Date(log.sent_at).toLocaleString() : "N/A"}
+                          </td>
+                          <td className="p-5">
+                            {log.status === "sent" ? (
+                              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-green-500/10 text-green-400 text-[10px] font-bold border border-green-500/20">
+                                <span className="w-1.5 h-1.5 rounded-full bg-green-400" />
+                                DISPATCHED
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-red-500/10 text-red-400 text-[10px] font-bold border border-red-500/20" title={log.error_message}>
+                                <span className="w-1.5 h-1.5 rounded-full bg-red-400" />
+                                FAILED
+                              </span>
+                            )}
+                          </td>
+                          <td className="p-5 text-right">
+                            <button
+                              onClick={() => setSelectedLogPreview(log)}
+                              className="px-3 py-1.5 rounded bg-zinc-800 text-zinc-400 text-[9px] hover:bg-zinc-700 hover:text-white transition-all font-bold uppercase tracking-widest cursor-pointer"
+                            >
+                              View Preview
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* Email Preview Modal */}
+          {selectedLogPreview && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
+              <div className="glass-card max-w-2xl w-full p-8 rounded-[2.5rem] border border-white/10 bg-[#0c0c0c] space-y-6 text-left relative shadow-2xl">
+                <div className="flex items-center justify-between border-b border-white/5 pb-4">
+                  <div className="flex items-center gap-3">
+                    <Mail className="w-5 h-5 text-amber-500" />
+                    <h3 className="text-lg font-bold text-white uppercase tracking-wider">
+                      Verification Email Dispatch Details
+                    </h3>
+                  </div>
+                  <button
+                    onClick={() => setSelectedLogPreview(null)}
+                    className="p-2 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 text-zinc-400 hover:text-white transition-all text-xs font-bold uppercase tracking-widest cursor-pointer"
+                  >
+                    Close
+                  </button>
+                </div>
+
+                <div className="space-y-4 text-xs">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-zinc-500 text-[10px] font-black uppercase tracking-wider">Recipient Name</p>
+                      <p className="text-white font-bold mt-1">{selectedLogPreview.recipient_name || "N/A"}</p>
+                    </div>
+                    <div>
+                      <p className="text-zinc-500 text-[10px] font-black uppercase tracking-wider">Recipient Email</p>
+                      <p className="text-white font-mono mt-1">{selectedLogPreview.recipient_email}</p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-zinc-500 text-[10px] font-black uppercase tracking-wider">Verified By (Admin)</p>
+                      <p className="text-amber-500 font-mono mt-1">{selectedLogPreview.verified_by || "System"}</p>
+                    </div>
+                    <div>
+                      <p className="text-zinc-500 text-[10px] font-black uppercase tracking-wider">Dispatched At</p>
+                      <p className="text-zinc-300 font-medium mt-1">
+                        {selectedLogPreview.sent_at ? new Date(selectedLogPreview.sent_at).toLocaleString() : "N/A"}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div>
+                    <p className="text-zinc-500 text-[10px] font-black uppercase tracking-wider mb-2">Subject</p>
+                    <p className="text-white font-medium bg-white/5 px-4 py-2.5 rounded-xl border border-white/5">
+                      {selectedLogPreview.subject}
+                    </p>
+                  </div>
+
+                  <div>
+                    <p className="text-zinc-500 text-[10px] font-black uppercase tracking-wider mb-2">Log Content/Payload</p>
+                    <div className="bg-black/60 font-mono text-[11px] p-5 rounded-2xl border border-white/5 text-zinc-300 whitespace-pre-wrap max-h-48 overflow-y-auto leading-relaxed custom-scrollbar">
+                      {selectedLogPreview.body_text || "No preview body logged."}
+                    </div>
+                  </div>
+
+                  {selectedLogPreview.status !== "sent" && selectedLogPreview.error_message && (
+                    <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400">
+                      <p className="text-[10px] font-black uppercase tracking-wider mb-1">Dispatch Error</p>
+                      <p className="font-mono text-[10px]">{selectedLogPreview.error_message}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
           )}
         </div>

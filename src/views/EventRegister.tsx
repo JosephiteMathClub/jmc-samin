@@ -757,7 +757,7 @@ const EventRegister = () => {
     const ecId = isProxyRegistration ? proxyUserEcId : currentUserEcId;
 
     if (isProxyRegistration) {
-      finalBkashNumber = "N/A - PROXY INSTANT";
+      finalBkashNumber = "PROXY: " + (user?.email || "Admin");
       finalTrxnid = "PROXY-" + Math.floor(100000 + Math.random() * 900000).toString();
     } else if (isEc && ecId) {
       finalBkashNumber = "N/A - EC OFFICER";
@@ -815,7 +815,7 @@ const EventRegister = () => {
 
       const targetTable = getTargetTable(className);
       
-      const payload = {
+      const payload: any = {
         user_id: finalUserId,
         full_name: fullName,
         class: className,
@@ -828,10 +828,35 @@ const EventRegister = () => {
         verified: (isOnlyFreeMathOlympiad || isEc) ? 'yes' : 'no'
       };
 
-      const { data: insertedData, error } = await supabase
+      if (isProxyRegistration) {
+        payload.registered_by = user?.email || 'Admin';
+        payload.verified_by = user?.email || 'Admin';
+      }
+
+      let insertedData: any[] | null = null;
+      let error: any = null;
+
+      const res = await supabase
         .from(targetTable)
         .insert([payload])
         .select('*');
+
+      insertedData = res.data;
+      error = res.error;
+
+      // Graceful fallback for older database versions without registered_by / verified_by column
+      if (error && (error.code === '42703' || String(error.message).includes('registered_by') || String(error.message).includes('verified_by'))) {
+        console.warn("registered_by or verified_by column does not exist yet. Falling back to insert without them...");
+        const fallbackPayload = { ...payload };
+        delete fallbackPayload.registered_by;
+        delete fallbackPayload.verified_by;
+        const retryRes = await supabase
+          .from(targetTable)
+          .insert([fallbackPayload])
+          .select('*');
+        insertedData = retryRes.data;
+        error = retryRes.error;
+      }
 
       if (error) {
         if (error.code === '23505') {
@@ -991,7 +1016,8 @@ const EventRegister = () => {
               recordId: insertedRow.id,
               tableName: targetTable,
               action: 'approve',
-              emailAddress: proxyEmail.trim().toLowerCase()
+              emailAddress: proxyEmail.trim().toLowerCase(),
+              verifiedBy: user?.email || 'Admin'
             })
           });
           if (!verifyRes.ok) {

@@ -131,6 +131,24 @@ CREATE TABLE IF NOT EXISTS public.admin_audit_logs (
 
 CREATE INDEX IF NOT EXISTS idx_admin_audit_logs_created_at ON public.admin_audit_logs(created_at);
 
+-- Create the email_confirmations_sent table
+CREATE TABLE IF NOT EXISTS public.email_confirmations_sent (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  recipient_email TEXT NOT NULL,
+  recipient_name TEXT,
+  recipient_class TEXT,
+  recipient_section TEXT,
+  recipient_roll TEXT,
+  subject TEXT NOT NULL,
+  body_text TEXT,
+  verified_by TEXT, -- email or identifier of the admin who verified
+  sent_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  status TEXT DEFAULT 'sent',
+  error_message TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_email_confirmations_sent_at ON public.email_confirmations_sent(sent_at);
+
 -- Create the event_participation table
 CREATE TABLE IF NOT EXISTS public.event_participation (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -361,6 +379,17 @@ CREATE POLICY "Allow super admins to delete audit logs" ON public.admin_audit_lo
   FOR DELETE TO authenticated 
   USING (public.is_super_admin());
 
+-- --- Policies for email_confirmations_sent ---
+ALTER TABLE public.email_confirmations_sent ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Allow admins to select email confirmations" ON public.email_confirmations_sent;
+CREATE POLICY "Allow admins to select email confirmations" ON public.email_confirmations_sent 
+  FOR SELECT TO authenticated USING (public.is_admin());
+
+DROP POLICY IF EXISTS "Allow admins to insert email confirmations" ON public.email_confirmations_sent;
+CREATE POLICY "Allow admins to insert email confirmations" ON public.email_confirmations_sent 
+  FOR INSERT TO authenticated WITH CHECK (public.is_admin());
+
 -- ==========================================
 -- 6. Storage Setup
 -- ==========================================
@@ -459,7 +488,8 @@ CREATE TABLE IF NOT EXISTS public.primary_events (
     trxnid TEXT NOT NULL UNIQUE,
     amount INTEGER NOT NULL,
     selected_events TEXT NOT NULL, -- comma-separated list of selected events
-    verified TEXT DEFAULT 'no', -- 'no' or 'yes'
+    verified TEXT DEFAULT 'no', -- 'no' or 'yes',
+    registered_by TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -477,6 +507,7 @@ CREATE TABLE IF NOT EXISTS public.junior_events (
     amount INTEGER NOT NULL,
     selected_events TEXT NOT NULL,
     verified TEXT DEFAULT 'no',
+    registered_by TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -494,6 +525,7 @@ CREATE TABLE IF NOT EXISTS public.secondary_events (
     amount INTEGER NOT NULL,
     selected_events TEXT NOT NULL,
     verified TEXT DEFAULT 'no',
+    registered_by TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -511,6 +543,7 @@ CREATE TABLE IF NOT EXISTS public.higher_secondary_events (
     amount INTEGER NOT NULL,
     selected_events TEXT NOT NULL,
     verified TEXT DEFAULT 'no',
+    registered_by TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -528,6 +561,9 @@ BEGIN
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='primary_events' AND column_name='verified') THEN
         ALTER TABLE public.primary_events ADD COLUMN verified TEXT DEFAULT 'no';
     END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='primary_events' AND column_name='registered_by') THEN
+        ALTER TABLE public.primary_events ADD COLUMN registered_by TEXT;
+    END IF;
 
     -- junior_events
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='junior_events' AND column_name='user_id') THEN
@@ -538,6 +574,9 @@ BEGIN
     END IF;
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='junior_events' AND column_name='verified') THEN
         ALTER TABLE public.junior_events ADD COLUMN verified TEXT DEFAULT 'no';
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='junior_events' AND column_name='registered_by') THEN
+        ALTER TABLE public.junior_events ADD COLUMN registered_by TEXT;
     END IF;
 
     -- secondary_events
@@ -550,6 +589,9 @@ BEGIN
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='secondary_events' AND column_name='verified') THEN
         ALTER TABLE public.secondary_events ADD COLUMN verified TEXT DEFAULT 'no';
     END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='secondary_events' AND column_name='registered_by') THEN
+        ALTER TABLE public.secondary_events ADD COLUMN registered_by TEXT;
+    END IF;
 
     -- higher_secondary_events
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='higher_secondary_events' AND column_name='user_id') THEN
@@ -560,6 +602,9 @@ BEGIN
     END IF;
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='higher_secondary_events' AND column_name='verified') THEN
         ALTER TABLE public.higher_secondary_events ADD COLUMN verified TEXT DEFAULT 'no';
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='higher_secondary_events' AND column_name='registered_by') THEN
+        ALTER TABLE public.higher_secondary_events ADD COLUMN registered_by TEXT;
     END IF;
 END $$;
 

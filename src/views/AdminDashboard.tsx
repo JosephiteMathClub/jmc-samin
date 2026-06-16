@@ -18,7 +18,8 @@ import {
   BookOpen,
   Utensils,
   History,
-  HelpCircle
+  HelpCircle,
+  Mail
 } from 'lucide-react';
 import { useContent } from '../context/ContentContext';
 import { useAuth } from '../context/AuthContext';
@@ -50,6 +51,7 @@ const DashboardEcMemberManagementSection = dynamic(() => import('../components/d
 const FoodManagementSection = dynamic(() => import('../components/dashboard/sections/FoodManagementSection').then(mod => mod.FoodManagementSection), { loading: () => <Skeleton className="h-64 w-full rounded-3xl" /> });
 const ChallengeManagementSection = dynamic(() => import('../components/dashboard/sections/ChallengeManagementSection').then(mod => mod.ChallengeManagementSection), { loading: () => <Skeleton className="h-64 w-full rounded-3xl" /> });
 const DashboardAuditLogsSection = dynamic(() => import('../components/dashboard/sections/DashboardAuditLogsSection').then(mod => mod.DashboardAuditLogsSection), { loading: () => <Skeleton className="h-64 w-full rounded-3xl" /> });
+const EmailConfirmationsSection = dynamic(() => import('../components/dashboard/sections/EmailConfirmationsSection').then(mod => mod.EmailConfirmationsSection), { loading: () => <Skeleton className="h-64 w-full rounded-3xl" /> });
 
 import ConfirmModal from '../components/ConfirmModal';
 import Image from 'next/image';
@@ -943,6 +945,7 @@ const AdminDashboard = () => {
     { id: 'gallery', label: 'Gallery', icon: LayoutDashboard },
     { id: 'food', label: 'Food Management', icon: Utensils },
     { id: 'challenge', label: 'Challenge Problems', icon: HelpCircle },
+    { id: 'email_confirmations', label: 'Email Logs', icon: Mail },
     ...(isSuperAdmin ? [
       { id: 'home', label: 'Home', icon: LayoutDashboard },
       { id: 'about', label: 'About', icon: FileText },
@@ -1119,6 +1122,10 @@ const AdminDashboard = () => {
             }}
             shouldReduceGfx={shouldReduceGfx}
           />
+        )}
+
+        {activeTab === 'email_confirmations' && (
+          <EmailConfirmationsSection />
         )}
 
         {activeTab === 'support' && (

@@ -914,6 +914,8 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ isSuperAdmin =
       "Transaction ID",
       "Amount (BDT)",
       "Registered Segments",
+      "Registered By",
+      "Verified By",
       "Verification Time"
     ];
 
@@ -931,6 +933,22 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ isSuperAdmin =
       headers.join(','),
       ...verifiedTransactions.map(tx => {
         const category = getCategoryName(tx.tableName);
+        
+        let registeredBy = "Self (Online)";
+        let bKashField = tx.bkash_number || '';
+
+        if (tx.registered_by) {
+          registeredBy = tx.registered_by;
+        } else if (bKashField.startsWith("PROXY: ")) {
+          registeredBy = bKashField.replace("PROXY: ", "");
+          bKashField = "N/A - PROXY INSTANT";
+        }
+
+        let verifiedBy = tx.verified_by || "System/Auto";
+        if (!tx.verified_by && registeredBy && registeredBy !== "Self (Online)") {
+          verifiedBy = registeredBy;
+        }
+
         const values = [
           tx.id || '',
           category,
@@ -939,10 +957,12 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ isSuperAdmin =
           tx.class || '',
           tx.section || '',
           tx.roll || '',
-          tx.bkash_number || '',
+          bKashField,
           tx.trxnid || '',
           tx.amount || '0',
           tx.selected_events || '',
+          registeredBy,
+          verifiedBy,
           tx.created_at || ''
         ];
 

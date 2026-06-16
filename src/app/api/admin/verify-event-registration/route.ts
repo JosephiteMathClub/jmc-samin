@@ -26,7 +26,7 @@ function getSupabaseAdmin() {
 
 export async function POST(req: Request) {
   try {
-    const { recordId, tableName, action, emailAddress } = await req.json();
+    const { recordId, tableName, action, emailAddress, verifiedBy } = await req.json();
 
     if (!recordId || !tableName || !action) {
       return NextResponse.json({ error: 'Missing recordId, tableName, or action' }, { status: 400 });
@@ -57,21 +57,27 @@ export async function POST(req: Request) {
     }
 
     // Find all linked teammate records under the same transaction ID space
-    const rootTrxnid = record.trxnid.replace(/-T\d+$/, '');
+    const rootTrxnid = (record.trxnid || '').replace(/-T\d+$/, '');
+    const isPlaceholder = !rootTrxnid || 
+                          rootTrxnid.trim().length < 4 || 
+                          ['n/a', 'na', 'none', 'pending', 'null', 'nil', 'test', '0', 'bkash', 'b-kash', 'payment', 'unpaid', 'placeholder'].includes(rootTrxnid.trim().toLowerCase());
+
     const tables = ['primary_events', 'junior_events', 'secondary_events', 'higher_secondary_events'];
     let allLinkedRecords: any[] = [];
     
-    for (const tb of tables) {
-      const { data, error: linkedFetchError } = await supabaseAdmin
-        .from(tb)
-        .select('*')
-        .or(`trxnid.eq.${rootTrxnid},trxnid.eq.${rootTrxnid}-T2,trxnid.eq.${rootTrxnid}-T3`);
-      
-      if (linkedFetchError) {
-        console.error(`Error fetching linked records for table ${tb}:`, linkedFetchError);
-      }
-      if (data && data.length > 0) {
-        allLinkedRecords = [...allLinkedRecords, ...data.map(d => ({ ...d, tableName: tb }))];
+    if (!isPlaceholder) {
+      for (const tb of tables) {
+        const { data, error: linkedFetchError } = await supabaseAdmin
+          .from(tb)
+          .select('*')
+          .or(`trxnid.eq.${rootTrxnid},trxnid.eq.${rootTrxnid}-T2,trxnid.eq.${rootTrxnid}-T3`);
+        
+        if (linkedFetchError) {
+          console.error(`Error fetching linked records for table ${tb}:`, linkedFetchError);
+        }
+        if (data && data.length > 0) {
+          allLinkedRecords = [...allLinkedRecords, ...data.map(d => ({ ...d, tableName: tb }))];
+        }
       }
     }
 
@@ -118,8 +124,44 @@ export async function POST(req: Request) {
                 <p>Best regards,<br/>The Josephite Math Club Admin Panel</p>
               </div>
             `
-          }).catch(emailErr => {
+          }).then(async () => {
+            try {
+              await supabaseAdmin
+                .from('email_confirmations_sent')
+                .insert([{
+                  recipient_email: linkedEmail,
+                  recipient_name: linkedRec.full_name || '',
+                  recipient_class: String(linkedRec.class || ''),
+                  recipient_section: String(linkedRec.section || ''),
+                  recipient_roll: String(linkedRec.roll || ''),
+                  subject: 'Event Registration Verification Update - Josephite Math Club',
+                  body_text: `We couldn't verify your group/team bKash payment transaction with TrxID ${rootTrxnid} for your selected Events (${linkedRec.selected_events}).`,
+                  verified_by: verifiedBy || 'Admin',
+                  status: 'sent'
+                }]);
+            } catch (dbErr) {
+              console.warn('[DB] Failed to log rejection email confirmation', dbErr);
+            }
+          }).catch(async (emailErr) => {
             console.warn('Rejection email delivery background error:', emailErr);
+            try {
+              await supabaseAdmin
+                .from('email_confirmations_sent')
+                .insert([{
+                  recipient_email: linkedEmail,
+                  recipient_name: linkedRec.full_name || '',
+                  recipient_class: String(linkedRec.class || ''),
+                  recipient_section: String(linkedRec.section || ''),
+                  recipient_roll: String(linkedRec.roll || ''),
+                  subject: 'Event Registration Verification Update - Josephite Math Club',
+                  body_text: `We couldn't verify your group/team bKash payment transaction with TrxID ${rootTrxnid} for your selected Events (${linkedRec.selected_events}).`,
+                  verified_by: verifiedBy || 'Admin',
+                  status: 'failed',
+                  error_message: String(emailErr?.message || emailErr)
+                }]);
+            } catch (e) {
+              console.warn('[DB] Failed to log failed rejection email', e);
+            }
           });
         }
       }
@@ -333,10 +375,25 @@ export async function POST(req: Request) {
         }
 
         // Mark as yes in the specific events registration table
-        const { error: eventUpdateError } = await supabaseAdmin
+        const updatePayload: any = { verified: 'yes' };
+        if (verifiedBy) {
+          updatePayload.verified_by = verifiedBy;
+        }
+
+        let { error: eventUpdateError } = await supabaseAdmin
           .from(linkedRec.tableName)
-          .update({ verified: 'yes' })
+          .update(updatePayload)
           .eq('id', linkedRec.id);
+
+        if (eventUpdateError && (eventUpdateError.code === '42703' || String(eventUpdateError.message).includes('verified_by'))) {
+          console.warn("verified_by column does not exist yet. Falling back to update without it...");
+          const fallbackPayload = { verified: 'yes' };
+          const retryRes = await supabaseAdmin
+            .from(linkedRec.tableName)
+            .update(fallbackPayload)
+            .eq('id', linkedRec.id);
+          eventUpdateError = retryRes.error;
+        }
 
         if (eventUpdateError) {
           console.error(`Failed to verify registration in table ${linkedRec.tableName}:`, eventUpdateError);
@@ -367,8 +424,44 @@ export async function POST(req: Request) {
                 <p style="font-size: 11px; color: #64748b; line-height: 1.5;">This email was automatically dispatched by the JMC Verification Engine. If you encounter any bugs, please reach out to JMC support.</p>
               </div>
             `
-          }).catch(emailErr => {
+          }).then(async () => {
+            try {
+              await supabaseAdmin
+                .from('email_confirmations_sent')
+                .insert([{
+                  recipient_email: linkedEmail,
+                  recipient_name: linkedRec.full_name || '',
+                  recipient_class: String(linkedRec.class || ''),
+                  recipient_section: String(linkedRec.section || ''),
+                  recipient_roll: String(linkedRec.roll || ''),
+                  subject: `Event Registration Approved! - ${linkedRec.selected_events}`,
+                  body_text: `Your team/group registration of ${linkedRec.selected_events} has been successfully verified and approved!`,
+                  verified_by: verifiedBy || 'Admin',
+                  status: 'sent'
+                }]);
+            } catch (dbErr) {
+              console.warn('[DB] Failed to log success email confirmation', dbErr);
+            }
+          }).catch(async (emailErr) => {
             console.warn('Teammate email dispatch background error:', emailErr);
+            try {
+              await supabaseAdmin
+                .from('email_confirmations_sent')
+                .insert([{
+                  recipient_email: linkedEmail,
+                  recipient_name: linkedRec.full_name || '',
+                  recipient_class: String(linkedRec.class || ''),
+                  recipient_section: String(linkedRec.section || ''),
+                  recipient_roll: String(linkedRec.roll || ''),
+                  subject: `Event Registration Approved! - ${linkedRec.selected_events}`,
+                  body_text: `Your team/group registration of ${linkedRec.selected_events} has been successfully verified and approved!`,
+                  verified_by: verifiedBy || 'Admin',
+                  status: 'failed',
+                  error_message: String(emailErr?.message || emailErr)
+                }]);
+            } catch (e) {
+              console.warn('[DB] Failed to log failed success email', e);
+            }
           });
         }
       }
