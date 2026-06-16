@@ -51,9 +51,15 @@
     min-height: 100%;
     overflow-x: hidden;
     scroll-behavior: smooth;
-    -webkit-tap-highlight-color: transparent;
+    -webkit-tap-highlight-color: transparent !important;
     -webkit-overflow-scrolling: touch;
     touch-action: manipulation;
+  }
+
+  /* Universal extremely robust tap highlight removal to prevent gray overlays on touch devices */
+  *, *:focus, *:active, button, input, textarea, select, a {
+    -webkit-tap-highlight-color: transparent !important;
+    -webkit-tap-highlight-color: rgba(0,0,0,0) !important;
   }
 
   body {
@@ -61,11 +67,34 @@
     padding-bottom: env(safe-area-inset-bottom);
   }
 
-  /* Prevent auto-zoom on iOS and handle layout shift Better */
-  @media (max-width: 768px) {
+  /* Prevent auto-zoom on iOS to stop layout shifting, viewport scaling, and gray background cover glitches */
+  @media (max-width: 1024px) {
     input, textarea, select {
       font-size: 16px !important;
     }
+  }
+
+  /* Force highly readable text contrast for all placeholders, preventing gray/invisible placeholders on mobile focus */
+  input::placeholder,
+  textarea::placeholder {
+    color: #a1a1aa !important; /* text-zinc-400 equivalent for crisp visibility */
+    opacity: 1 !important;
+  }
+
+  /* Prevent Google/mobile browser Autofill from masking text box fields with default dark gray/dirty yellow screens */
+  input:-webkit-autofill,
+  input:-webkit-autofill:hover, 
+  input:-webkit-autofill:focus,
+  textarea:-webkit-autofill,
+  textarea:-webkit-autofill:hover,
+  textarea:-webkit-autofill:focus,
+  select:-webkit-autofill,
+  select:-webkit-autofill:hover,
+  select:-webkit-autofill:focus {
+    -webkit-text-fill-color: #ffffff !important;
+    -webkit-box-shadow: 0 0 0px 1000px #0a0a0c inset !important;
+    box-shadow: 0 0 0px 1000px #0a0a0c inset !important;
+    transition: background-color 5000s ease-in-out 0s !important;
   }
 
   /* Mobile Safe Area Padding */

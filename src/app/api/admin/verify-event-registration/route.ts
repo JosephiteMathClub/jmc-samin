@@ -104,25 +104,23 @@ export async function POST(req: Request) {
         const linkedEmail = prof?.email || (linkedRec.user_id === record.user_id ? emailAddress : null);
 
         if (linkedEmail) {
-          try {
-            await sendEmail({
-              to: linkedEmail,
-              subject: 'Event Registration Verification Update - Josephite Math Club',
-              html: `
-                <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; color: #333; padding: 20px; border: 1px solid #f1f5f9; border-radius: 8px;">
-                  <h1 style="color: #ef4444; font-size: 24px;">Registration Correction Needed</h1>
-                  <p>Hello <strong>${linkedRec.full_name}</strong>,</p>
-                  <p>We couldn't verify your group/team bKash payment transaction with TrxID <strong>${rootTrxnid}</strong> for your selected Events (<strong>${linkedRec.selected_events}</strong>).</p>
-                  <p>Please coordinate with your team captain to verify the bKash Sender wallet phone number and Transaction ID (TrxID) and submit a correction.</p>
-                  <p>If you have any questions, please reply to this email or submit a help ticket on the platform.</p>
-                  <br/>
-                  <p>Best regards,<br/>The Josephite Math Club Admin Panel</p>
-                </div>
-              `
-            });
-          } catch (emailErr) {
-            console.warn('Rejection email delivery warning:', emailErr);
-          }
+          sendEmail({
+            to: linkedEmail,
+            subject: 'Event Registration Verification Update - Josephite Math Club',
+            html: `
+              <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; color: #333; padding: 20px; border: 1px solid #f1f5f9; border-radius: 8px;">
+                <h1 style="color: #ef4444; font-size: 24px;">Registration Correction Needed</h1>
+                <p>Hello <strong>${linkedRec.full_name}</strong>,</p>
+                <p>We couldn't verify your group/team bKash payment transaction with TrxID <strong>${rootTrxnid}</strong> for your selected Events (<strong>${linkedRec.selected_events}</strong>).</p>
+                <p>Please coordinate with your team captain to verify the bKash Sender wallet phone number and Transaction ID (TrxID) and submit a correction.</p>
+                <p>If you have any questions, please reply to this email or submit a help ticket on the platform.</p>
+                <br/>
+                <p>Best regards,<br/>The Josephite Math Club Admin Panel</p>
+              </div>
+            `
+          }).catch(emailErr => {
+            console.warn('Rejection email delivery background error:', emailErr);
+          });
         }
       }
 
@@ -347,33 +345,31 @@ export async function POST(req: Request) {
 
         console.log(`[API] Successfully updated ${linkedRec.tableName} record ${linkedRec.id} to verified='yes'`);
 
-        // Send confirmation email
+        // Send confirmation email asynchronously (non-blocking)
         if (linkedEmail) {
-          try {
-            await sendEmail({
-              to: linkedEmail,
-              subject: '🎉 Event Registration Approved! - Josephite Math Club',
-              html: `
-                <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; color: #333; padding: 25px; border: 1px solid #e2e8f0; border-radius: 12px; background-color: #fafbfc;">
-                  <h1 style="color: #0284c7; font-size: 26px; margin-bottom: 20px;">Welcome to the Event Arena!</h1>
-                  <p>Hello <strong>${linkedRec.full_name}</strong>,</p>
-                  <p>Your team/group registration of <strong>${linkedRec.selected_events}</strong> has been successfully verified and approved!</p>
-                  <div style="background-color: #f1f5f9; border-left: 4px solid #0284c7; padding: 15px; margin: 20px 0; border-radius: 4px;">
-                    <h3 style="margin: 0 0 10px 0; color: #0f172a; font-size: 14px; text-transform: uppercase; letter-spacing: 0.05em;">Registered Team Event:</h3>
-                    <p style="margin: 0; font-size: 15px; font-weight: bold; color: #334155;">${linkedRec.selected_events}</p>
-                    <p style="margin: 8px 0 0 0; font-size: 12px; color: #64748b;">Category: <strong>${categoryToUse} (Class ${linkedRec.class})</strong></p>
-                  </div>
-                  <p>This participation is associated with your unique ID: <strong>${memberIdToUse}</strong>. You can view it live on your <strong>Profile Dashboard</strong> anytime.</p>
-                  <p>Get ready to test your mathematical boundaries and best of luck!</p>
-                  <br/>
-                  <hr style="border: 0; border-top: 1px solid #e2e8f0; margin-bottom: 20px;" />
-                  <p style="font-size: 11px; color: #64748b; line-height: 1.5;">This email was automatically dispatched by the JMC Verification Engine. If you encounter any bugs, please reach out to JMC support.</p>
+          sendEmail({
+            to: linkedEmail,
+            subject: '🎉 Event Registration Approved! - Josephite Math Club',
+            html: `
+              <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; color: #333; padding: 25px; border: 1px solid #e2e8f0; border-radius: 12px; background-color: #fafbfc;">
+                <h1 style="color: #0284c7; font-size: 26px; margin-bottom: 20px;">Welcome to the Event Arena!</h1>
+                <p>Hello <strong>${linkedRec.full_name}</strong>,</p>
+                <p>Your team/group registration of <strong>${linkedRec.selected_events}</strong> has been successfully verified and approved!</p>
+                <div style="background-color: #f1f5f9; border-left: 4px solid #0284c7; padding: 15px; margin: 20px 0; border-radius: 4px;">
+                  <h3 style="margin: 0 0 10px 0; color: #0f172a; font-size: 14px; text-transform: uppercase; letter-spacing: 0.05em;">Registered Team Event:</h3>
+                  <p style="margin: 0; font-size: 15px; font-weight: bold; color: #334155;">${linkedRec.selected_events}</p>
+                  <p style="margin: 8px 0 0 0; font-size: 12px; color: #64748b;">Category: <strong>${categoryToUse} (Class ${linkedRec.class})</strong></p>
                 </div>
-              `
-            });
-          } catch (emailErr) {
-            console.warn('Teammate email dispatch warning:', emailErr);
-          }
+                <p>This participation is associated with your unique ID: <strong>${memberIdToUse}</strong>. You can view it live on your <strong>Profile Dashboard</strong> anytime.</p>
+                <p>Get ready to test your mathematical boundaries and best of luck!</p>
+                <br/>
+                <hr style="border: 0; border-top: 1px solid #e2e8f0; margin-bottom: 20px;" />
+                <p style="font-size: 11px; color: #64748b; line-height: 1.5;">This email was automatically dispatched by the JMC Verification Engine. If you encounter any bugs, please reach out to JMC support.</p>
+              </div>
+            `
+          }).catch(emailErr => {
+            console.warn('Teammate email dispatch background error:', emailErr);
+          });
         }
       }
 

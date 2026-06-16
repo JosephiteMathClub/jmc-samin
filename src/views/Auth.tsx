@@ -108,25 +108,26 @@ const Auth = () => {
 
     try {
       if (mode === 'signup') {
-        const { data, error: signUpError } = await supabase.auth.signUp({
-          email,
-          password,
-          options: {
-            data: { 
-              full_name: fullName,
-            }
-          }
+        const signupRes = await fetch('/api/auth/signup', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password, fullName })
         });
         
-        if (signUpError) throw signUpError;
+        const signupData = await signupRes.json();
+        if (!signupRes.ok) {
+          throw new Error(signupData.error || 'Registration failed.');
+        }
 
-        if (data.session) {
-          showToast('Welcome to the Josephite Math Club!', 'success');
-          const redirect = searchParams?.get('redirect') || '/profile';
-          router.push(redirect);
-        } else {
+        // Programmatically sign in immediately on successful signup
+        const { error: signInErr } = await supabase.auth.signInWithPassword({ email, password });
+        if (signInErr) {
           showToast('Registration successful! You can now sign in.', 'success');
           setMode('login');
+        } else {
+          showToast('Welcome to the Josephite Math Club! Registered successfully.', 'success');
+          const redirect = searchParams?.get('redirect') || '/profile';
+          router.push(redirect);
         }
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password });

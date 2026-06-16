@@ -148,7 +148,7 @@ const EventRegister = () => {
   const [proxyResolvedUserId, setProxyResolvedUserId] = useState<string | null>(null);
   const [checkingProxyEmail, setCheckingProxyEmail] = useState(false);
 
-  // General Member and Team Registration Check on Load
+  // General Member Check on Load
   useEffect(() => {
     const fetchMemberInfo = async () => {
       if (!user || !isSupabaseConfigured) {
@@ -186,8 +186,36 @@ const EventRegister = () => {
             setIsGeneralMember(true);
           }
         }
+      } catch (err) {
+        console.error("Error fetching member info:", err);
+      } finally {
+        setFetchingMemberStatus(false);
+      }
+    };
 
-        // Check if user has already registered for any team events & load all registrations
+    if (user) {
+      fetchMemberInfo();
+    } else if (!authLoading) {
+      setFetchingMemberStatus(false);
+    }
+  }, [user, authLoading]);
+
+  // Reactive Registered Events Check for active student (supports Proxy and Spot mode)
+  useEffect(() => {
+    const fetchRegisteredEvents = async () => {
+      // Determine actual active user ID we are preparing registration for
+      const targetUserId = isProxyRegistration
+        ? (proxyUserExists ? proxyResolvedUserId : null)
+        : user?.id;
+
+      if (!targetUserId || !isSupabaseConfigured) {
+        setUserRegisteredEvents([]);
+        setAlreadyRegisteredTeam(false);
+        setUserRegisteredTeamEventName(null);
+        return;
+      }
+
+      try {
         const tables = ['primary_events', 'junior_events', 'secondary_events', 'higher_secondary_events'];
         let matchedTeamEvent = null;
         let allReg: any[] = [];
@@ -196,7 +224,7 @@ const EventRegister = () => {
           const { data: evData } = await supabase
             .from(tb)
             .select('*')
-            .eq('user_id', user.id);
+            .eq('user_id', targetUserId);
           
           if (evData && evData.length > 0) {
             const mapped = evData.map((item: any) => {
@@ -232,20 +260,17 @@ const EventRegister = () => {
         if (matchedTeamEvent) {
           setAlreadyRegisteredTeam(true);
           setUserRegisteredTeamEventName(matchedTeamEvent);
+        } else {
+          setAlreadyRegisteredTeam(false);
+          setUserRegisteredTeamEventName(null);
         }
       } catch (err) {
-        console.error("Error fetching member info:", err);
-      } finally {
-        setFetchingMemberStatus(false);
+        console.error("Error fetching registered events reactive check:", err);
       }
     };
 
-    if (user) {
-      fetchMemberInfo();
-    } else if (!authLoading) {
-      setFetchingMemberStatus(false);
-    }
-  }, [user, authLoading, teamEventsList]);
+    fetchRegisteredEvents();
+  }, [isProxyRegistration, proxyUserExists, proxyResolvedUserId, user, teamEventsList]);
 
   // Route protection & configuration loader
   useEffect(() => {
@@ -495,6 +520,9 @@ const EventRegister = () => {
     setProxyResolvedUserId(null);
     setIsProxyUserEc(false);
     setProxyUserEcId(null);
+    setUserRegisteredEvents([]);
+    setAlreadyRegisteredTeam(false);
+    setUserRegisteredTeamEventName(null);
 
     if (!checked) {
       if (registeredMemberData) {
@@ -728,7 +756,10 @@ const EventRegister = () => {
     const isEc = isProxyRegistration ? isProxyUserEc : isCurrentUserEc;
     const ecId = isProxyRegistration ? proxyUserEcId : currentUserEcId;
 
-    if (isEc && ecId) {
+    if (isProxyRegistration) {
+      finalBkashNumber = "N/A - PROXY INSTANT";
+      finalTrxnid = "PROXY-" + Math.floor(100000 + Math.random() * 900000).toString();
+    } else if (isEc && ecId) {
       finalBkashNumber = "N/A - EC OFFICER";
       finalTrxnid = ecId;
     } else if (isOnlyFreeMathOlympiad) {
@@ -797,9 +828,10 @@ const EventRegister = () => {
         verified: (isOnlyFreeMathOlympiad || isEc) ? 'yes' : 'no'
       };
 
-      const { error } = await supabase
+      const { data: insertedData, error } = await supabase
         .from(targetTable)
-        .insert([payload]);
+        .insert([payload])
+        .select('*');
 
       if (error) {
         if (error.code === '23505') {
@@ -807,6 +839,8 @@ const EventRegister = () => {
         }
         throw error;
       }
+
+      const insertedRow = insertedData && insertedData[0];
 
       // If team events, save teammate records to database server-side
       if (eventTab === 'team') {
@@ -876,16 +910,16 @@ const EventRegister = () => {
             isUserRegisteredGeneral = true;
             existingMemberId = memberData.member_id || '';
 
-            // If they selected the free Math Olympiad and are not verified yet, auto-verify their membership!
-            if (isOnlyFreeMathOlympiad && memberData.verified !== 'yes') {
+            // If they selected the free Math Olympiad or was registered via proxy, and are not verified yet, auto-verify their membership!
+            if ((isOnlyFreeMathOlympiad || isProxyRegistration) && memberData.verified !== 'yes') {
               const { error: updateVerError } = await supabase
                 .from('member')
                 .update({ verified: 'yes' })
                 .eq('id', finalUserId);
               if (updateVerError) {
-                console.error("Failed to auto-verify existing member for free event:", updateVerError);
+                console.error("Failed to auto-verify existing member for special event:", updateVerError);
               } else {
-                console.log("Successfully auto-verified existing member for free Math Olympiad event.");
+                console.log("Successfully auto-verified existing member for proxy/free Math Olympiad event.");
               }
             }
           }
@@ -933,7 +967,7 @@ const EventRegister = () => {
             payment_method: 'bkash',
             trxnid: finalTrxnid,
             bkash_number: finalBkashNumber,
-            verified: isOnlyFreeMathOlympiad ? 'yes' : 'no', // mark as pending verification, but they officially have their 5-digit ID!
+            verified: (isOnlyFreeMathOlympiad || isProxyRegistration) ? 'yes' : 'no', // mark as verified instantly if proxy
             member_id: resolvedMemberId
           });
 
@@ -948,16 +982,36 @@ const EventRegister = () => {
 
       // Also trigger a notification email to the user
       try {
-        await fetch('/api/admin/bulk-verification-email', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            members: [{
-              email: isProxyRegistration ? proxyEmail.trim().toLowerCase() : user?.email,
-              fullName: fullName
-            }]
-          })
-        });
+        if (isProxyRegistration && insertedRow) {
+          // Trigger instant admin-level verification to auto-create participation rows, verify, and email their UNIQUE 5-digit ID!
+          const verifyRes = await fetch('/api/admin/verify-event-registration', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              recordId: insertedRow.id,
+              tableName: targetTable,
+              action: 'approve',
+              emailAddress: proxyEmail.trim().toLowerCase()
+            })
+          });
+          if (!verifyRes.ok) {
+            const errData = await verifyRes.json();
+            console.error("Auto approval error for proxy registration:", errData);
+          } else {
+            console.log("Successfully auto-approved and cataloged proxy registration.");
+          }
+        } else {
+          await fetch('/api/admin/bulk-verification-email', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              members: [{
+                email: user?.email,
+                fullName: fullName
+              }]
+            })
+          });
+        }
       } catch (emailErr) {
         console.warn("Could not fire automatic warning/registration email:", emailErr);
       }
@@ -1976,7 +2030,14 @@ const EventRegister = () => {
 
                       {/* Payment inputs */}
                       <form onSubmit={handleSubmitRegistration} className="space-y-6">
-                        {finalAmount === 0 ? (
+                        {isProxyRegistration ? (
+                          <div className="bg-indigo-500/10 p-6 rounded-3xl border border-indigo-500/20 text-indigo-400 space-y-3">
+                            <p className="text-[10px] font-black uppercase tracking-widest text-indigo-400">ADMINISTRATOR PROXY MODE ACTIVE</p>
+                            <p className="text-xs leading-relaxed text-zinc-400 font-medium">
+                              You are executing a proxy registration for this student. No bKash mobile number or transaction ID is required. All chosen events will be automatically verified and approved instantly.
+                            </p>
+                          </div>
+                        ) : finalAmount === 0 ? (
                           <div className="bg-green-500/5 p-6 rounded-3xl border border-green-500/20 text-green-400 space-y-3">
                             <p className="text-[10px] font-black uppercase tracking-widest text-emerald-400">FREE CO-PARTICIPATION BENEFITS</p>
                             <p className="text-xs leading-relaxed text-zinc-400 font-medium">

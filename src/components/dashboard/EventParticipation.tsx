@@ -786,7 +786,8 @@ export const EventParticipation = ({
                 if (mem) {
                   regMemberId = mem.member_id;
                   isRegEc = mem.is_ec === true || mem.is_ec === 'yes';
-                  isRegMember = mem.verified === 'yes' || mem.verified === true;
+                  const is5Digit = regMemberId && /^\d{5}$/.test(String(regMemberId).trim());
+                  isRegMember = (mem.verified === 'yes' || mem.verified === true) && !is5Digit;
                 } else {
                   // Fallback: check ec_member table
                   const { data: ecMem } = await supabase
@@ -797,7 +798,8 @@ export const EventParticipation = ({
                   if (ecMem) {
                     regMemberId = ecMem.member_id;
                     isRegEc = true;
-                    isRegMember = ecMem.verified === 'yes' || ecMem.verified === true;
+                    const is5Digit = regMemberId && /^\d{5}$/.test(String(regMemberId).trim());
+                    isRegMember = (ecMem.verified === 'yes' || ecMem.verified === true) && !is5Digit;
                   }
                 }
               }

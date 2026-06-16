@@ -127,38 +127,35 @@ export async function POST(req: Request) {
       // We don't rollback user creation, but we log the error
     }
 
-    // 4. Send Welcome Email
-    try {
-      await sendEmail({
-        to: email,
-        subject: 'Welcome to Josephite Math Club!',
-        html: `
-          <div style="font-family: sans-serif; padding: 20px; color: #333; border: 1px solid #e5e7eb; border-radius: 8px; max-width: 600px; margin: 0 auto;">
-            <h1 style="color: #0c4a6e; margin-bottom: 20px;">Welcome to JMC, ${fullName}!</h1>
-            <p style="font-size: 16px; line-height: 1.5;">Your account has been successfully created. We are excited to have you as a member of the Josephite Math Club.</p>
-            
-            <div style="background-color: #f0f9ff; padding: 15px; border-radius: 6px; margin: 20px 0;">
-              <h2 style="font-size: 14px; color: #0369a1; margin-top: 0;">Login Credentials:</h2>
-              <p style="margin: 5px 0;"><strong>Email:</strong> ${email}</p>
-              <p style="margin: 5px 0;"><strong>Password:</strong> Your provided phone number</p>
-            </div>
-            
-            <p style="font-size: 16px; line-height: 1.5;">You can now sign in to your dashboard to view your profile and participate in upcoming events.</p>
-            
-            <div style="text-align: center; margin: 30px 0;">
-              <a href="${process.env.NEXT_PUBLIC_APP_URL || ''}/auth?mode=login" style="background-color: #0c4a6e; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">Sign In Now</a>
-            </div>
-            
-            <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;" />
-            <p style="font-size: 12px; color: #6b7280; text-align: center;">Josephite Math Club Automated System</p>
+    // 4. Send Welcome Email in background
+    sendEmail({
+      to: email,
+      subject: 'Your Account Creation Has Been Successful!',
+      html: `
+        <div style="font-family: sans-serif; padding: 20px; color: #333; border: 1px solid #e5e7eb; border-radius: 8px; max-width: 600px; margin: 0 auto;">
+          <h1 style="color: #0c4a6e; margin-bottom: 20px;">Account Creation Successful, ${fullName}!</h1>
+          <p style="font-size: 16px; line-height: 1.5;">Your account has been successfully created for Josephite Math Club event registration.</p>
+          
+          <div style="background-color: #f0f9ff; padding: 15px; border-radius: 6px; margin: 20px 0;">
+            <h2 style="font-size: 14px; color: #0369a1; margin-top: 0;">Login Credentials:</h2>
+            <p style="margin: 5px 0;"><strong>Email:</strong> ${email}</p>
+            <p style="margin: 5px 0;"><strong>Password:</strong> Your provided phone number (${password})</p>
           </div>
-        `,
-        text: `Welcome to Josephite Math Club, ${fullName}!\n\nYour account has been successfully created.\n\nLogin Credentials:\nEmail: ${email}\nPassword: Your provided phone number\n\nYou can sign in at: ${process.env.NEXT_PUBLIC_APP_URL || ''}/auth?mode=login`,
-      });
-    } catch (emailErr) {
-      console.error('Failed to send welcome email:', emailErr);
-      // We don't fail the request if email fails
-    }
+          
+          <p style="font-size: 16px; line-height: 1.5;">You can now sign in to your dashboard to view your profile and participate in upcoming events using your phone number as password.</p>
+          
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${process.env.NEXT_PUBLIC_APP_URL || ''}/auth?mode=login" style="background-color: #0c4a6e; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">Sign In Now</a>
+          </div>
+          
+          <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;" />
+          <p style="font-size: 12px; color: #6b7280; text-align: center;">Josephite Math Club Automated System</p>
+        </div>
+      `,
+      text: `Your Account Creation Has Been Successful!\n\nWelcome to Josephite Math Club, ${fullName}!\n\nYour account has been successfully created. We are excited to have you.\n\nLogin Credentials:\nEmail: ${email}\nPassword: Your provided phone number (${password})\n\nYou can sign in at: ${process.env.NEXT_PUBLIC_APP_URL || ''}/auth?mode=login`,
+    }).catch(emailErr => {
+      console.error('Failed to send welcome email in background:', emailErr);
+    });
 
     return NextResponse.json({ userId: newUser.user.id });
   } catch (err: any) {

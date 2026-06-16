@@ -871,15 +871,19 @@ const Profile = () => {
   const pending = filteredAchievements.filter(a => !isActualWin(a.position));
 
   const isGeneralMember = React.useMemo(() => {
-    // Someone is a general member if they have ANY verified event registration
-    // Show buttons as soon as they have a verified event (member record may sync later)
+    // A user is NOT a general member if they have a 5-digit member_id (which is auto-generated for non-general event registrants)
+    if (memberId && /^\d{5}$/.test(String(memberId).trim())) {
+      return false;
+    }
+
+    // Someone is a general member if they have ANY verified event registration and are not a non-general 5-digit member
     const hasVerifiedEvent = registeredEventsList.some(reg => reg.verified === 'yes');
     if (hasVerifiedEvent) {
       return true; // Show ID/Ticket buttons immediately upon approval
     }
     // Also show if they're a verified member in database
     return isMember && (verified === 'yes' || isEc);
-  }, [isMember, registeredEventsList, verified, isEc]);
+  }, [isMember, registeredEventsList, verified, isEc, memberId]);
 
   const unverifiedRegistrations = React.useMemo(() => {
     return registeredEventsList;
