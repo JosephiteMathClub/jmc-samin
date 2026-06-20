@@ -86,13 +86,13 @@
     "logoUrl": "/images/logo.png",
     "clubName": "Josephite Math Club",
     "established": "EST. 2015",
-    "announcements": [
-      "Online registration live.",
-      "Intra fest on july 2nd and 3rd.",
-      "Booth registration is live."
-    ],
     "maintenanceMode": false,
     "showAnnouncements": true,
+    "announcements": [
+      "Welcome to Josephite Math Club!",
+      "National Math Olympiad Registration is now open!",
+      "Join us in our upcoming weekly math discussions."
+    ],
     "maintenanceMessage": "The site is currently under maintenance"
   },
   "about": {
@@ -1265,7 +1265,7 @@
         "title": "Singularity",
         "category": "Competition",
         "location": "St. Joseph Higher Secondary School",
-        "description": "Participate in the exciting Principia competition.",
+        "description": "Participate in the exciting Singularity competition.",
         "isTeamEvent": false,
         "registrationLink": "#"
       },
@@ -1370,88 +1370,10 @@
   },
   "articles": [
     {
-      "id": "article-1781450630870",
-      "date": "14 Jun 2026",
-      "slug": "new-math-article",
-      "title": "Warp Drive & Faster than Light Travel",
-      "author": "Tawhid Bin Omar",
-      "pdfUrl": "https://ikciatrploqznijspyuk.supabase.co/storage/v1/object/public/images/1781450808436-bgcdhkz9r.pdf",
-      "content": "",
-      "excerpt": "What first appears as a violation of nature’s absolute speed limit becomes a masterful dance with gravity when viewed through the lens of general relativity. Rather than moving through space faster than light, a warp drive dynamically compresses the fabric of spacetime ahead of a vessel while expanding it behind, allowing humanity to outrun photons by manipulating the geometry of the universe itself.",
-      "category": "Mathematics",
-      "imageUrl": "",
-      "published": true
-    },
-    {
-      "id": "article-1781450535285",
-      "date": "14 Jun 2026",
-      "slug": "new-math-article",
-      "title": "Graph Theory",
-      "author": "Tawhid Bin Omar",
-      "pdfUrl": "https://ikciatrploqznijspyuk.supabase.co/storage/v1/object/public/images/1781450545122-h0iv7aiad.pdf",
-      "content": "",
-      "excerpt": "Graph Theory maps the invisible architecture of relationships. What first appears as a chaotic web of tangled networks, sprawling data points, and isolated entities becomes beautifully simple when stripped down to its core elements: vertices and edges. It reveals that whether we are tracing the neural pathways of the brain, the vast infrastructure of the internet, or the delicate social bonds of humanity, the underlying geometry of connection obeys a steadfast, universal order.",
-      "category": "Mathematics",
-      "imageUrl": "",
-      "published": true
-    },
-    {
-      "id": "article-1781450321532",
-      "date": "14 Jun 2026",
-      "slug": "new-math-article",
-      "title": "Tensors",
-      "author": "Tawhid Bin Omar",
-      "pdfUrl": "https://ikciatrploqznijspyuk.supabase.co/storage/v1/object/public/images/1781450331180-853zgwjnp.pdf",
-      "content": "",
-      "excerpt": "Among the most expressive languages in modern mathematics and physics, Tensors reveal the profound geometric truths that remain completely unchanged by our choice of perspective. What first appears as a terrifying maze of multi-dimensional arrays, upper and lower indices, and complex coordinate shifts becomes beautifully simple when viewed as a singular, invariant entity slicing through space and time.\n",
-      "category": "Mathematics",
-      "imageUrl": "",
-      "published": true
-    },
-    {
-      "id": "article-1781361795485",
-      "date": "13 Jun 2026",
-      "slug": "new-math-article",
-      "title": "Functional Equations: Theory and Practice",
-      "author": "Tawhid Bin Omar",
-      "pdfUrl": "https://ikciatrploqznijspyuk.supabase.co/storage/v1/object/public/images/1781362017722-l20f2mi6i.pdf",
-      "content": "",
-      "excerpt": "The most profoundly foundational enigmas in algebra, **Functional Equations** invert our traditional understanding of variables to question the very nature of mathematical mappings. What first appears as a chaotic puzzle of unconstrained conditions and elusive expressions becomes beautifully orderly when subjected to the laws of symmetry, injectivity, and substitution. Instead of searching for a hidden number, we hunt for an entire steadfast mathematical identity.",
-      "category": "Mathematics",
-      "imageUrl": "",
-      "published": true
-    },
-    {
-      "id": "article-1781361494267",
-      "date": "13 Jun 2026",
-      "slug": "new-math-article",
-      "title": "Permutations, Combinations and the  Art of Counting",
-      "author": "Tawhid Bin Omar",
-      "pdfUrl": "https://ikciatrploqznijspyuk.supabase.co/storage/v1/object/public/images/1781361583086-usrmstna8.pdf",
-      "content": "",
-      "excerpt": "“The study of mathematics is a continual discovery of order within chaos, where the complex is reduced to the elegant.”\n\nAmong the most captivating realms of mathematics, Elementary Combinatorics reveals the hidden architecture of possibility. What first appears as a chaotic sea of random arrangements and overwhelming choices becomes beautifully structured when we uncover the fundamental rules of counting, permutations, and combinations. It is the art of seeing the invisible patterns that govern how our world can be organized, grouped, and chosen.",
-      "category": "Mathematics",
-      "imageUrl": "",
-      "published": true
-    },
-    {
-      "id": "article-1781360496133",
-      "date": "13 Jun 2026",
-      "slug": "new-math-article",
-      "title": "Analytic Continuation and the Limits of Generalization",
-      "author": "Tawhid Bin Omar",
-      "pdfUrl": "https://ikciatrploqznijspyuk.supabase.co/storage/v1/object/public/images/1781360584964-wd75jgn08.pdf",
-      "content": "",
-      "excerpt": "“The shortest path between two truths in the real domain passes through the complex domain.” - Jacques Hadamard\n\nAmong the most breathtaking intellectual triumphs of mathematical analysis, Analytic Continuation unveils the hidden unity of the complex plane. Through this profound process, mathematicians can push past the apparent limits of generalization, mapping the infinite and breathing meaning into divergent realms where logic seemingly breaks down.",
-      "category": "Mathematics",
-      "imageUrl": "",
-      "published": true
-    },
-    {
       "id": "article-1779776879938",
       "date": "26 May 2026",
       "slug": "new-math-article",
-      "title": "Eigenvalues & Eigenvectors",
+      "title": "Eigen Vectors",
       "author": "Tawhid BIn Omar",
       "pdfUrl": "https://ikciatrploqznijspyuk.supabase.co/storage/v1/object/public/images/1779776935673-fmmpxv35n.pdf",
       "content": "",
@@ -1552,7 +1474,7 @@
       "published": true
     }
   ],
-  "lastUpdated": "2026-06-20T11:53:07.774Z",
+  "lastUpdated": "2026-06-07T16:03:25.753Z",
   "_instruction": "Update 'lastUpdated' whenever you manually edit this file to ensure changes take precedence over the admin panel.",
   "gallery_page": {
     "images": [
@@ -1578,6 +1500,5 @@
     "cashInstructions": "Please pay your registration fee to the club treasurer.",
     "registrationOpen": false,
     "registrationClosedMessage": "Registration for the current intra-events is currently closed. Please stay tuned for future updates."
-  },
-  "challengePaper": null
+  }
 }

@@ -1,7 +1,5 @@
 import { MetadataRoute } from 'next';
-import fs from 'fs/promises';
-import path from 'path';
-import { DEFAULT_CONTENT } from '@/data/default-content';
+import siteContent from '@/data/site-content.json';
 
 const BASE_URL = 'https://jmc-sjs.org';
 
@@ -19,17 +17,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   ];
 
   // Dynamically load articles slugs if available
-  let articles = (DEFAULT_CONTENT as any).articles || [];
-  try {
-    const filePath = path.join(process.cwd(), 'src/data/site-content.json');
-    const fileDataStr = await fs.readFile(filePath, 'utf-8');
-    if (fileDataStr) {
-      const parsed = JSON.parse(fileDataStr);
-      articles = parsed.articles || articles;
-    }
-  } catch (error) {
-    console.error('Failed to read articles in sitemap generation:', error);
-  }
+  const articles = (siteContent as any).articles || [];
 
   const dynamicArticleRoutes = articles.map((article: any) => ({
     url: `${BASE_URL}/articles/${article.slug}`,
@@ -38,5 +26,15 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.7,
   }));
 
-  return [...staticRoutes, ...dynamicArticleRoutes];
+  const allRoutes = [...staticRoutes, ...dynamicArticleRoutes];
+
+  // Safely deduplicate routes based on the 'url' property
+  const uniqueRoutesMap = new Map<string, typeof allRoutes[0]>();
+  for (const route of allRoutes) {
+    if (route.url) {
+      uniqueRoutesMap.set(route.url.toLowerCase(), route);
+    }
+  }
+
+  return Array.from(uniqueRoutesMap.values());
 }
