@@ -182,7 +182,7 @@ const About = () => {
                 className="group relative bg-[#0a0a0a] border border-white/5 p-10 flex flex-col items-start text-left overflow-hidden transition-all duration-500 hover:border-[var(--c-6-start)]/30 hover:bg-white/[0.01]"
               >
                 {/* ID Label */}
-                <span className="font-mono text-[9px] text-zinc-600 uppercase tracking-[0.3em] mb-8">Objective_0{i+1}</span>
+                <span className="font-mono text-[9px] text-zinc-500 uppercase tracking-[0.3em] mb-8">Objective 0{i+1}</span>
                 
                 {/* Icon with background glow */}
                 <div className={`relative mb-8 p-4 rounded-xl bg-white/5 ${obj.color} group-hover:scale-110 transition-transform duration-500`}>
@@ -272,7 +272,7 @@ const About = () => {
 
                   <div className="mt-auto pt-8 flex items-center gap-3">
                     <div className="h-[2px] w-8 bg-[var(--c-6-start)]/30" />
-                    <span className="font-mono text-[9px] text-zinc-600 uppercase tracking-widest">Active_Phase</span>
+                    <span className="font-mono text-[9px] text-zinc-500 uppercase tracking-widest">Active Phase</span>
                   </div>
 
                   {/* Hover Scanner */}

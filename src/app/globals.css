@@ -311,7 +311,7 @@
   }
 
   .btn-premium-glow {
-    @apply relative px-12 py-5 rounded-full font-black uppercase tracking-[0.3em] text-[11px]
+    @apply relative px-8 py-4 sm:px-12 sm:py-5 rounded-full font-black uppercase tracking-[0.3em] text-[10px] sm:text-[11px]
     bg-gradient-to-r from-[var(--c-6-start)] to-[var(--c-4-start)]
     text-white shadow-[0_10px_40px_-10px_rgba(0,180,219,0.5)]
     hover:shadow-[0_20px_50px_-10px_rgba(0,180,219,0.7)]

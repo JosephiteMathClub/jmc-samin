@@ -336,43 +336,7 @@ export async function POST(req: Request) {
           }
         }
 
-        // Insert event_participation lines for each linked teammate's selections
-        if (memberIdToUse && linkedRec.user_id) {
-          const eventsList = linkedRec.selected_events
-            ? linkedRec.selected_events.split(',').map((e: string) => e.trim())
-            : [];
-
-          for (const eventName of eventsList) {
-            if (!eventName) continue;
-            
-            const { data: dupCheck, error: dupCheckError } = await supabaseAdmin
-              .from('event_participation')
-              .select('*')
-              .eq('member_id', memberIdToUse)
-              .eq('event_name', eventName)
-              .maybeSingle();
-
-            if (dupCheckError) {
-              console.error("Error checking duplicate event participation:", dupCheckError);
-            }
-
-            if (!dupCheck) {
-              const { error: partError } = await supabaseAdmin
-                .from('event_participation')
-                .insert({
-                  member_id: memberIdToUse,
-                  event_name: eventName,
-                  category: categoryToUse,
-                  position: null
-                });
-
-              if (partError) {
-                console.warn(`Could not seed event participation row for teammate event ${eventName}:`, partError.message);
-                throw new Error(`Failed to create event participation row: ${partError.message}`);
-              }
-            }
-          }
-        }
+        // Automatic insertion into event_participation table is disabled so that admins can manually check in / input unique IDs.
 
         // Mark as yes in the specific events registration table
         const updatePayload: any = { verified: 'yes' };

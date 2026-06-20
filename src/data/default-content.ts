@@ -176,12 +176,12 @@ export const DEFAULT_CONTENT = {
         },
         {
           "id": "event-solo-2",
-          "title": "IQ",
+          "title": "IQ Test",
           "date": "TBA",
           "time": "TBA",
           "location": "TBA",
           "category": "Competition",
-          "description": "Participate in the exciting IQ competition.",
+          "description": "Participate in the exciting IQ Test competition.",
           "registrationLink": "#",
           "isTeamEvent": false
         },
@@ -193,17 +193,6 @@ export const DEFAULT_CONTENT = {
           "location": "TBA",
           "category": "Competition",
           "description": "Participate in the exciting Probability Pressure competition.",
-          "registrationLink": "#",
-          "isTeamEvent": false
-        },
-        {
-          "id": "event-solo-4",
-          "title": "Code Break",
-          "date": "TBA",
-          "time": "TBA",
-          "location": "TBA",
-          "category": "Competition",
-          "description": "Participate in the exciting Code Break competition.",
           "registrationLink": "#",
           "isTeamEvent": false
         },
@@ -220,23 +209,23 @@ export const DEFAULT_CONTENT = {
         },
         {
           "id": "event-solo-6",
-          "title": "Calc Bee",
+          "title": "Calculus Bee",
           "date": "TBA",
           "time": "TBA",
           "location": "TBA",
           "category": "Competition",
-          "description": "Participate in the exciting Calc Bee competition.",
+          "description": "Participate in the exciting Calculus Bee competition.",
           "registrationLink": "#",
           "isTeamEvent": false
         },
         {
           "id": "event-solo-7",
-          "title": "Geo Dash",
+          "title": "Geometry Dash",
           "date": "TBA",
           "time": "TBA",
           "location": "TBA",
           "category": "Competition",
-          "description": "Participate in the exciting Geo Dash competition.",
+          "description": "Participate in the exciting Geometry Dash competition.",
           "registrationLink": "#",
           "isTeamEvent": false
         },
@@ -275,12 +264,12 @@ export const DEFAULT_CONTENT = {
         },
         {
           "id": "event-solo-11",
-          "title": "Principia",
+          "title": "Singularity",
           "date": "TBA",
           "time": "TBA",
           "location": "TBA",
           "category": "Competition",
-          "description": "Participate in the exciting Principia competition.",
+          "description": "Participate in the exciting Singularity competition.",
           "registrationLink": "#",
           "isTeamEvent": false
         },
@@ -295,17 +284,6 @@ export const DEFAULT_CONTENT = {
           "registrationLink": "#",
           "isTeamEvent": true,
           "teamSize": 3
-        },
-        {
-          "id": "event-solo-14",
-          "title": "Math Relay",
-          "date": "TBA",
-          "time": "TBA",
-          "location": "TBA",
-          "category": "Competition",
-          "description": "An intense solo relay of numerical speeds and sequence operations.",
-          "registrationLink": "#",
-          "isTeamEvent": false
         },
         {
           "id": "event-team-15",

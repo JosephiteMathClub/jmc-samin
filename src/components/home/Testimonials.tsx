@@ -125,26 +125,34 @@ export const Testimonials: React.FC<TestimonialsProps> = ({ home, duplicatedTest
               transform: "translateX(-40px)",
             }}
           >
-            <Marquee pauseOnHover vertical className="[--duration:30s]">
-              {firstRow.map((review, i) => (
-                <ReviewCard key={`r1-${i}`} {...review} />
-              ))}
-            </Marquee>
-            <Marquee reverse pauseOnHover className="[--duration:30s]" vertical>
-              {secondRow.map((review, i) => (
-                <ReviewCard key={`r2-${i}`} {...review} />
-              ))}
-            </Marquee>
-            <Marquee reverse pauseOnHover className="[--duration:30s]" vertical>
-              {thirdRow.map((review, i) => (
-                <ReviewCard key={`r3-${i}`} {...review} />
-              ))}
-            </Marquee>
-            <Marquee pauseOnHover className="[--duration:30s]" vertical>
-              {fourthRow.map((review, i) => (
-                <ReviewCard key={`r4-${i}`} {...review} />
-              ))}
-            </Marquee>
+            <div className="block">
+              <Marquee pauseOnHover vertical className="[--duration:30s]">
+                {firstRow.map((review, i) => (
+                  <ReviewCard key={`r1-${i}`} {...review} />
+                ))}
+              </Marquee>
+            </div>
+            <div className="hidden sm:block">
+              <Marquee reverse pauseOnHover className="[--duration:30s]" vertical>
+                {secondRow.map((review, i) => (
+                  <ReviewCard key={`r2-${i}`} {...review} />
+                ))}
+              </Marquee>
+            </div>
+            <div className="hidden md:block">
+              <Marquee reverse pauseOnHover className="[--duration:30s]" vertical>
+                {thirdRow.map((review, i) => (
+                  <ReviewCard key={`r3-${i}`} {...review} />
+                ))}
+              </Marquee>
+            </div>
+            <div className="hidden lg:block">
+              <Marquee pauseOnHover className="[--duration:30s]" vertical>
+                {fourthRow.map((review, i) => (
+                  <ReviewCard key={`r4-${i}`} {...review} />
+                ))}
+              </Marquee>
+            </div>
           </div>
 
           <div className="pointer-events-none absolute inset-x-0 top-0 h-[15%] bg-gradient-to-b from-[#130801] to-transparent"></div>

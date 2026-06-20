@@ -243,17 +243,15 @@ export function EventRegistrationConfigEditor({ showToast }: { showToast: (msg: 
     bkashNumber: "01712345678",
     soloEvents: [
       "Math Olympiad",
-      "IQ",
+      "IQ Test",
       "Probability Pressure",
-      "Code Break",
       "Human Calculator",
-      "Calc Bee",
-      "Geo Dash",
+      "Calculus Bee",
+      "Geometry Dash",
       "Rubik's Cube",
       "Sudoku",
       "Cryptomania",
-      "Principia",
-      "Math Relay"
+      "Singularity"
     ],
     teamEvents: [
       {
@@ -693,7 +691,7 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ isSuperAdmin =
   const [loading, setLoading] = useState(true);
   const [promoting, setPromoting] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [activeSubTab, setActiveSubTab] = useState<'users' | 'database' | 'positions' | 'support' | 'email' | 'food' | 'cards' | 'transactions' | 'registration'>('users');
+  const [activeSubTab, setActiveSubTab] = useState<'users' | 'database' | 'positions' | 'support' | 'email' | 'food' | 'cards' | 'transactions' | 'registration' | 'manual_announce'>('users');
   
   // Member ID Cards state
   const [members, setMembers] = useState<any[]>([]);
@@ -716,6 +714,152 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ isSuperAdmin =
   const [emailConfig, setEmailConfig] = useState<any>(null);
   const [loadingEmailConfig, setLoadingEmailConfig] = useState(false);
   const [testingEmail, setTestingEmail] = useState(false);
+
+  // Manual Email Announcements state
+  const [announcementSubject, setAnnouncementSubject] = useState('');
+  const [announcementBody, setAnnouncementBody] = useState('');
+  const [sendingAnnouncement, setSendingAnnouncement] = useState(false);
+  const [confirmBroadcast, setConfirmBroadcast] = useState(false);
+  const [announcementTargetType, setAnnouncementTargetType] = useState<'all' | 'individual'>('all');
+  const [announcementIndividualEmail, setAnnouncementIndividualEmail] = useState('');
+
+  const [emailSuggestions, setEmailSuggestions] = useState<{ email: string; full_name: string }[]>([]);
+  const [suggestionsLoading, setSuggestionsLoading] = useState(false);
+  const [showSuggestionsDropdown, setShowSuggestionsDropdown] = useState(false);
+
+  const fetchEmailSuggestions = async (val: string) => {
+    if (!val || val.trim().length < 2) {
+      setEmailSuggestions([]);
+      return;
+    }
+    setSuggestionsLoading(true);
+    try {
+      const mergedMap = new Map<string, string>();
+
+      // Fetch profiles
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('email, full_name')
+          .ilike('email', `%${val}%`)
+          .limit(8);
+        if (!error && data) {
+          data.forEach(item => {
+            if (item.email) mergedMap.set(item.email.trim().toLowerCase(), item.full_name || '');
+          });
+        }
+      } catch (e) {
+        console.warn('Profiles fetch failed:', e);
+      }
+
+      // Fetch from member table
+      try {
+        const { data, error } = await supabase
+          .from('member')
+          .select('email, full_name')
+          .ilike('email', `%${val}%`)
+          .limit(8);
+        if (!error && data) {
+          data.forEach(item => {
+            if (item.email) mergedMap.set(item.email.trim().toLowerCase(), item.full_name || '');
+          });
+        }
+      } catch (e) {
+        console.warn('Member fetch failed:', e);
+      }
+
+      // Fetch ec_member
+      try {
+        const { data, error } = await supabase
+          .from('ec_member')
+          .select('email, full_name')
+          .ilike('email', `%${val}%`)
+          .limit(8);
+        if (!error && data) {
+          data.forEach(item => {
+            if (item.email) mergedMap.set(item.email.trim().toLowerCase(), item.full_name || '');
+          });
+        }
+      } catch (e) {
+        console.warn('EC member fetch failed:', e);
+      }
+
+      const list = Array.from(mergedMap.entries()).map(([email, full_name]) => ({
+        email,
+        full_name
+      }));
+
+      setEmailSuggestions(list);
+    } catch (err) {
+      console.error('Error fetching email suggestions:', err);
+    } finally {
+      setSuggestionsLoading(false);
+    }
+  };
+
+  // Debounced search for email suggestions
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      fetchEmailSuggestions(announcementIndividualEmail);
+    }, 250);
+    return () => clearTimeout(handler);
+  }, [announcementIndividualEmail]);
+
+  const sendManualAnnouncement = async () => {
+    if (!announcementSubject.trim() || !announcementBody.trim()) {
+      showToast('Subject and Body are required.', 'error');
+      return;
+    }
+
+    if (announcementTargetType === 'individual' && (!announcementIndividualEmail.trim() || !announcementIndividualEmail.includes('@'))) {
+      showToast('Please provide a valid individual email address.', 'error');
+      return;
+    }
+
+    if (!confirmBroadcast) {
+      showToast('Please confirm the broadcast safety checkbox.', 'error');
+      return;
+    }
+
+    setSendingAnnouncement(true);
+    showToast(announcementTargetType === 'individual' ? 'Sending targeted email...' : 'Broadcasting email announcement...', 'info');
+
+    try {
+      const res = await fetch('/api/admin/send-manual-announcement', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          subject: announcementSubject,
+          body: announcementBody,
+          targetType: announcementTargetType,
+          individualEmail: announcementTargetType === 'individual' ? announcementIndividualEmail.trim() : undefined,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        showToast(
+          announcementTargetType === 'individual' 
+            ? `Email sent successfully to ${announcementIndividualEmail}!` 
+            : `Successfully broadcasted! Sent: ${data.sentCount} emails, Failed: ${data.failedCount}`, 
+          'success'
+        );
+        setAnnouncementSubject('');
+        setAnnouncementBody('');
+        setAnnouncementIndividualEmail('');
+        setConfirmBroadcast(false);
+      } else {
+        throw new Error(data.error || 'Failed to send announcement email');
+      }
+    } catch (err: any) {
+      showToast(err.message, 'error');
+    } finally {
+      setSendingAnnouncement(false);
+    }
+  };
 
   // Database Explorer state
   const [tables] = useState([
@@ -1592,6 +1736,7 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ isSuperAdmin =
           { id: 'positions', label: 'Event Positions', icon: Award },
           { id: 'support', label: 'Support Issues', icon: ShieldAlert },
           { id: 'email', label: 'Email Status', icon: Mail },
+          { id: 'manual_announce', label: 'Email Announcements Manually', icon: Mail },
           { id: 'food', label: 'Food Management', icon: Utensils },
           { id: 'cards', label: 'Member ID Cards', icon: QrCode },
           { id: 'transactions', label: 'Verified Transactions', icon: CheckCircle2 },
@@ -1896,6 +2041,160 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ isSuperAdmin =
                   </div>
                 </div>
               ) : null}
+            </DashboardSection>
+          </motion.div>
+        )}
+
+        {activeSubTab === 'manual_announce' && (
+          <motion.div
+            key="manual_announce"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+          >
+            <DashboardSection 
+              title="Manual Email Announcements" 
+              description="Craft and broadcast custom emails directly to every registered member in our database."
+              icon={Mail}
+            >
+              <div className="space-y-6 max-w-4xl">
+                <div className="p-6 rounded-3xl border border-amber-500/10 bg-amber-500/[0.02] flex items-start gap-4">
+                  <div className="p-3 rounded-2xl bg-amber-500/10 text-amber-400">
+                    <ShieldAlert className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-bold text-white uppercase tracking-wider">Super Admin Override Center</h4>
+                    <p className="text-xs text-zinc-400 mt-1 leading-relaxed">
+                      This system bypasses all non-critical filters to email every registered account (member, EC member, student, admin, etc.) in the database. Please exercise high caution.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <DashboardFormField 
+                    label="Recipient Selection" 
+                    type="select"
+                    value={announcementTargetType} 
+                    onChange={(val) => setAnnouncementTargetType(val as any)} 
+                    options={[
+                      { value: 'all', label: 'All Registered Members & Profiles' },
+                      { value: 'individual', label: 'Send to Individual Email Address' }
+                    ]}
+                    description="Decide whether to broadcast this email to every single user or target a single direct email recipient."
+                  />
+
+                  {announcementTargetType === 'individual' && (
+                    <DashboardFormField 
+                      label="Target Email Address" 
+                      description="Enter the exact email address you want to target."
+                    >
+                      <div className="relative">
+                        <input
+                          type="text"
+                          value={announcementIndividualEmail}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setAnnouncementIndividualEmail(val);
+                            setShowSuggestionsDropdown(true);
+                          }}
+                          onFocus={() => {
+                            setShowSuggestionsDropdown(true);
+                          }}
+                          onBlur={() => {
+                            setShowSuggestionsDropdown(false);
+                          }}
+                          placeholder="e.g. member@example.com"
+                          className="w-full bg-white/[0.03] border border-white/10 rounded-2xl px-5 py-4 text-sm text-white placeholder:text-zinc-600 focus:outline-none focus:border-amber-500/50 focus:bg-white/[0.05] transition-all"
+                        />
+                        {suggestionsLoading && (
+                          <div className="absolute right-4 top-1/2 -translate-y-1/2">
+                            <Loader2 className="w-4 h-4 text-zinc-500 animate-spin" />
+                          </div>
+                        )}
+                        
+                        {showSuggestionsDropdown && emailSuggestions.length > 0 && (
+                          <div className="absolute left-0 right-0 top-full mt-2 z-50 max-h-[200px] overflow-y-auto rounded-xl bg-[#0a0a0a] border border-white/10 backdrop-blur-xl shadow-2xl py-1">
+                            {emailSuggestions.map((item, index) => (
+                              <button
+                                key={`${item.email}-${index}`}
+                                type="button"
+                                onMouseDown={() => {
+                                  setAnnouncementIndividualEmail(item.email);
+                                  setShowSuggestionsDropdown(false);
+                                }}
+                                className="w-full text-left px-5 py-3 hover:bg-white/[0.05] transition-colors flex flex-col gap-0.5 border-b border-white/[0.02] last:border-0"
+                              >
+                                {item.full_name && (
+                                  <span className="text-[10px] text-amber-400 font-bold uppercase tracking-wider">
+                                    {item.full_name}
+                                  </span>
+                                )}
+                                <span className="text-xs text-neutral-200 font-medium">
+                                  {item.email}
+                                </span>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </DashboardFormField>
+                  )}
+
+                  <DashboardFormField 
+                    label="Email Subject Line" 
+                    type="text"
+                    value={announcementSubject} 
+                    onChange={setAnnouncementSubject} 
+                    placeholder="e.g. Important Announcement: National Math Olympiad 2026 Registration"
+                    description="The main subject header of the recipient's email inbox."
+                  />
+
+                  <DashboardFormField 
+                    label="Email Material Body Text" 
+                    type="textarea"
+                    value={announcementBody} 
+                    onChange={setAnnouncementBody} 
+                    placeholder="Dear {{name}},&#10;&#10;We are proud to announce the next phase of Josephite Math Club events. Join us at...&#10;&#15;Sincerely,&#10;The JMC Committee"
+                    description="You can use the tag {{name}} to dynamically insert each recipient's full name, or {{email}} to inject their email address."
+                  />
+                  
+                  {/* Safety verification check */}
+                  <div className="p-6 rounded-2xl bg-white/[0.02] border border-white/5 flex items-start gap-3 select-none">
+                    <input
+                      type="checkbox"
+                      id="confirm-broadcast-checkbox"
+                      checked={confirmBroadcast}
+                      onChange={(e) => setConfirmBroadcast(e.target.checked)}
+                      className="mt-1 h-4 w-4 rounded border-zinc-700 bg-zinc-850 text-amber-500 focus:ring-amber-500/20 focus:ring-offset-0 cursor-pointer"
+                    />
+                    <label htmlFor="confirm-broadcast-checkbox" className="text-xs text-zinc-400 leading-relaxed cursor-pointer selection:bg-transparent">
+                      <strong className="text-white block font-semibold mb-0.5">
+                        {announcementTargetType === 'individual' ? "I certify that this email delivery is safe" : "I certify that this email broadcast is safe"}
+                      </strong>
+                      {announcementTargetType === 'individual' 
+                        ? "I confirm that the contents of this email subject and body are fully verified and contain no placeholder notations. I authorize sending this email to the targeted individual address."
+                        : "I confirm that the contents of this email subject and body are fully verified, contain no raw draft notations, and follow our club security policies. I authorize sending this email to all registered accounts."
+                      }
+                    </label>
+                  </div>
+
+                  <div className="flex items-center gap-4 pt-2">
+                    <DashboardButton 
+                      label={sendingAnnouncement ? "Sending..." : (announcementTargetType === 'individual' ? "Send Email to Recipient" : "Broadcast Announcement via Email")} 
+                      onClick={sendManualAnnouncement}
+                      disabled={
+                        sendingAnnouncement || 
+                        !confirmBroadcast || 
+                        !announcementSubject.trim() || 
+                        !announcementBody.trim() ||
+                        (announcementTargetType === 'individual' && (!announcementIndividualEmail.trim() || !announcementIndividualEmail.includes('@')))
+                      }
+                      icon={sendingAnnouncement ? Loader2 : Mail}
+                      variant="primary"
+                    />
+                  </div>
+                </div>
+              </div>
             </DashboardSection>
           </motion.div>
         )}

@@ -33,17 +33,15 @@ import ScrollReveal from '../components/ScrollReveal';
 // List of all solo events in the website as hardcoded fallbacks
 const SOLO_EVENTS = [
   "Math Olympiad",
-  "IQ",
+  "IQ Test",
   "Probability Pressure",
-  "Code Break",
   "Human Calculator",
-  "Calc Bee",
-  "Geo Dash",
+  "Calculus Bee",
+  "Geometry Dash",
   "Rubik's Cube",
   "Sudoku",
   "Cryptomania",
-  "Principia",
-  "Math Relay"
+  "Singularity"
 ];
 
 const DEFAULT_TEAM_EVENTS = [
@@ -329,7 +327,8 @@ const EventRegister = () => {
 
   useEffect(() => {
     if (!authLoading && !user) {
-      router.push('/login');
+      const currentPath = window.location.pathname + window.location.search;
+      router.push('/login?redirect=' + encodeURIComponent(currentPath));
     }
   }, [user, authLoading, router]);
 

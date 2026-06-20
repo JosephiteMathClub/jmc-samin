@@ -414,10 +414,10 @@ const ChallengeProblems = () => {
                 </div>
               ) : leaderboard.length === 0 ? (
                 <div className="glass-card p-16 text-center space-y-6">
-                  <Trophy className="w-12 h-12 text-zinc-650 mx-auto opacity-50" />
+                  <Trophy className="w-12 h-12 text-zinc-500 mx-auto opacity-50" />
                   <div className="space-y-2">
                     <h3 className="text-xl font-display font-medium uppercase text-zinc-300">Leaderboard is empty</h3>
-                    <p className="text-zinc-550 text-sm max-w-md mx-auto leading-relaxed">
+                    <p className="text-zinc-500 text-sm max-w-md mx-auto leading-relaxed">
                       No verified student submission results have been published for this particular round yet. Once scores are marked, rankings will instantly sync!
                     </p>
                   </div>
@@ -586,10 +586,10 @@ const ChallengeProblems = () => {
 
                 {publishedChallenges.length === 0 ? (
                   <div className="glass-card py-20 text-center space-y-6">
-                    <Clock className="w-12 h-12 text-zinc-750 mx-auto animate-pulse" />
+                    <Clock className="w-12 h-12 text-zinc-500 mx-auto animate-pulse" />
                     <div className="space-y-1">
                       <h3 className="text-zinc-400 font-display font-medium text-lg uppercase">All Quizzes Wrapped</h3>
-                      <p className="text-zinc-650 text-xs max-w-md mx-auto font-mono">
+                      <p className="text-zinc-500 text-xs max-w-md mx-auto font-mono">
                         No competition papers are available at this moment. Stay tuned for notices!
                       </p>
                     </div>
@@ -694,7 +694,7 @@ const ChallengeProblems = () => {
                     <div className="space-y-2">
                       <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest block font-mono">Full Name</label>
                       <div className="relative">
-                        <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-650" />
+                        <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
                         <input
                           type="text"
                           required
@@ -710,7 +710,7 @@ const ChallengeProblems = () => {
                     <div className="space-y-2">
                       <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest block font-mono">Email Address</label>
                       <div className="relative">
-                        <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-650" />
+                        <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
                         <input
                           type="email"
                           required
@@ -726,7 +726,7 @@ const ChallengeProblems = () => {
                     <div className="space-y-2 block">
                       <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest block font-mono">Member ID (Optional)</label>
                       <div className="relative">
-                        <Award className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-650" />
+                        <Award className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
                         <input
                           type="text"
                           value={studentDetails.memberId}
@@ -895,7 +895,7 @@ const ChallengeProblems = () => {
                   // B. If NO questions are set in selected paper yet
                   (selectedChallenge.questions || []).length === 0 ? (
                     <div className="glass-card p-12 text-center space-y-6">
-                      <HelpCircle className="w-12 h-12 text-zinc-650 mx-auto" />
+                      <HelpCircle className="w-12 h-12 text-zinc-500 mx-auto" />
                       <div className="space-y-2">
                         <h3 className="text-xl font-display font-medium uppercase">Prepping Challenge Questions</h3>
                         <p className="text-zinc-500 text-sm max-w-md mx-auto leading-relaxed">

@@ -48,20 +48,20 @@ const SplashScreen = ({ isLoaded, isAdminMode, logoUrl, onFinish }: SplashScreen
         let step = 1;
         
         if (prev < 40) {
-          step = Math.random() > 0.5 ? 2 : 1; // Faster initially
+          step = isLoaded ? (Math.random() > 0.5 ? 8 : 6) : (Math.random() > 0.5 ? 4 : 3);
         } else if (prev < 80) {
-          step = 1; // Slower in middle
+          step = isLoaded ? 5 : 2;
         } else if (prev < 95) {
           // Pause at 95% until loaded
-          step = isLoaded ? 1 : 0;
+          step = isLoaded ? 4 : 0;
         } else {
           // Final stretch
-          step = isLoaded ? 2 : 0;
+          step = isLoaded ? 8 : 0;
         }
         
         return Math.min(100, prev + step);
       });
-    }, 40);
+    }, 20);
 
     return () => clearInterval(interval);
   }, [isLoaded]);
@@ -70,8 +70,8 @@ const SplashScreen = ({ isLoaded, isAdminMode, logoUrl, onFinish }: SplashScreen
     if (progress === 100) {
       const timer = setTimeout(() => {
         setIsExiting(true);
-        setTimeout(onFinish, shouldReduceGfx ? 200 : 1000);
-      }, shouldReduceGfx ? 100 : 800);
+        setTimeout(onFinish, shouldReduceGfx ? 100 : 300);
+      }, shouldReduceGfx ? 50 : 150);
       return () => clearTimeout(timer);
     }
   }, [progress, onFinish, shouldReduceGfx]);
@@ -82,7 +82,7 @@ const SplashScreen = ({ isLoaded, isAdminMode, logoUrl, onFinish }: SplashScreen
         <motion.div
           initial={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          transition={{ duration: shouldReduceGfx ? 0.3 : 0.8, ease: "easeInOut" }}
+          transition={{ duration: shouldReduceGfx ? 0.2 : 0.35, ease: "easeInOut" }}
           className="fixed inset-0 z-[100] bg-[#050505] flex flex-col items-center justify-center overflow-hidden"
         >
           {/* Background Grid */}

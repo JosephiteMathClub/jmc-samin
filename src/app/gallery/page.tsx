@@ -1,12 +1,13 @@
 import { GalleryView } from "@/views/Gallery";
-import { metadata as layoutMetadata } from "../layout";
+import { Metadata } from "next";
 
-export const metadata = {
-  ...layoutMetadata,
-  title: "Gallery | Josephite Math Club",
-  description: "Experience the legacy of JMC through our immersive interactive 3D gallery.",
+export const metadata: Metadata = {
+  title: "Interactive Photo Gallery",
+  description: "Experience the history and beautiful memories of Josephite Math Club workshops, award ceremonies, and interactive math festival matches.",
+  keywords: ["JMC Gallery", "Math Club Photos", "St. Joseph Festivals", "Educational Match Dhaka Gallery", "Josephite Math Club Memories"],
 };
 
 export default function GalleryPage() {
   return <GalleryView />;
 }
+

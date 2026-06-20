@@ -141,7 +141,8 @@ const RegisterMember = () => {
 
     if (!user) {
       setCheckingMember(false);
-      router.push('/login');
+      const currentPath = window.location.pathname + window.location.search;
+      router.push('/login?redirect=' + encodeURIComponent(currentPath));
       return;
     }
 
@@ -665,7 +666,8 @@ const RegisterMember = () => {
                         required
                         value={fullName}
                         onChange={(e) => setFullName(e.target.value)}
-                        placeholder="YOUR FULL NAME"
+                        placeholder="John Doe"
+                        autoComplete="off"
                         className="w-full px-6 py-5 bg-white/5 border border-white/10 rounded-2xl focus:outline-none focus:border-amber-500/50 focus:ring-4 focus:ring-amber-500/10 transition-all text-white font-medium text-sm tracking-wide"
                       />
                     </div>
@@ -679,7 +681,11 @@ const RegisterMember = () => {
                         required
                         value={emailAddress}
                         onChange={(e) => setEmailAddress(e.target.value)}
-                        placeholder="YOUR EMAIL"
+                        placeholder="name@example.com"
+                        autoCapitalize="none"
+                        autoComplete="off"
+                        autoCorrect="off"
+                        spellCheck="false"
                         className="w-full px-6 py-5 bg-white/5 border border-white/10 rounded-2xl focus:outline-none focus:border-amber-500/50 transition-all text-white font-medium text-sm"
                       />
                     </div>

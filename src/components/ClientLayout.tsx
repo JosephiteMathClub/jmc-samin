@@ -24,6 +24,16 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   const { shouldReduceGfx, shouldStopFormulas } = usePerformance();
   const restoredRef = useRef(false);
 
+  // Check if splash screen was already shown in this session
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const seen = sessionStorage.getItem("jmc_splash_seen");
+      if (seen === "true") {
+        setSplashFinished(true);
+      }
+    }
+  }, []);
+
   // Allow access to login and password reset pages even in maintenance mode
   const isAuthPage = pathname?.startsWith('/login') || 
                      pathname?.startsWith('/forgot-password') || 
@@ -115,7 +125,12 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
           isLoaded={!contentLoading && !authLoading} 
           isAdminMode={isAdmin || isSuperAdmin}
           logoUrl={content?.site?.logoUrl}
-          onFinish={() => setSplashFinished(true)} 
+          onFinish={() => {
+            if (typeof window !== "undefined") {
+              sessionStorage.setItem("jmc_splash_seen", "true");
+            }
+            setSplashFinished(true);
+          }} 
         />
       ) : isMaintenance ? (
         <MaintenanceView 

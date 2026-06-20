@@ -101,8 +101,8 @@ const Navbar = () => {
         transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
         className={`${isAdminPage ? 'relative bg-[#080808] border-b border-white/5' : 'fixed top-0 left-0 w-full z-50'} transition-all duration-700 ${
           !isAdminPage && scrolled 
-            ? 'glass-nav py-3 border-b border-white/10 shadow-2xl' 
-            : !isAdminPage ? 'bg-transparent py-6 border-b border-transparent' : 'py-4'
+            ? 'glass-nav py-1 border-b border-white/10 shadow-2xl' 
+            : !isAdminPage ? 'bg-transparent py-2.5 border-b border-transparent' : 'py-2'
         }`}
       >
         {/* Scroll Progress Bar */}
@@ -117,16 +117,26 @@ const Navbar = () => {
 
         {/* Announcement Marquee System */}
         {!isAdminPage && showAnnouncements && announcements.length > 0 && !scrolled && (
-          <div className="w-full bg-white/[0.02] border-b border-white/5 py-2.5 relative overflow-hidden">
-            <MarqueeElement
-              scrollamount="4"
-              className="w-full block"
-              onMouseOver={(e: any) => e.currentTarget.stop()}
-              onMouseOut={(e: any) => e.currentTarget.start()}
-            >
-              <div className="inline-flex items-center gap-16 whitespace-nowrap px-6">
-                {announcements.map((text: string, i: number) => (
-                  <div key={i} className="inline-flex items-center gap-3">
+          <div className="w-full bg-white/[0.02] border-b border-white/5 py-2 relative overflow-hidden z-20">
+            <style dangerouslySetInnerHTML={{ __html: `
+              @keyframes marquee-infinite {
+                0% { transform: translateX(0); }
+                100% { transform: translateX(-50%); }
+              }
+              .animate-marquee-infinite {
+                display: inline-flex;
+                white-space: nowrap;
+                animation: marquee-infinite 30s linear infinite;
+              }
+              .animate-marquee-infinite:hover {
+                animation-play-state: paused;
+              }
+            `}} />
+            <div className="w-full overflow-hidden select-none whitespace-nowrap">
+              <div className="animate-marquee-infinite gap-16 py-0.5">
+                {/* Duplicate items for perfect seamless loop */}
+                {[...announcements, ...announcements].map((text: string, i: number) => (
+                  <div key={i} className="inline-flex items-center gap-3 mr-16">
                     <span className="relative flex h-2 w-2 shrink-0">
                       <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[var(--c-6-start)] opacity-75"></span>
                       <span className="relative inline-flex rounded-full h-2 w-2 bg-[var(--c-6-start)]"></span>
@@ -137,15 +147,15 @@ const Navbar = () => {
                   </div>
                 ))}
               </div>
-            </MarqueeElement>
+            </div>
           </div>
         )}
 
         <div className="max-w-7xl mx-auto px-6 lg:px-10">
-          <div className={`flex justify-between items-center transition-all duration-700 ${scrolled ? 'h-16' : 'h-24'}`}>
+          <div className={`flex justify-between items-center transition-all duration-700 ${scrolled ? 'h-11' : 'h-13'}`}>
             <div className="flex items-center">
-              <Link href="/" className="flex items-center gap-5 group relative">
-                <div className="relative w-12 h-12 transition-transform duration-700 group-hover:scale-110">
+              <Link href="/" className="flex items-center gap-4 group relative">
+                <div className="relative w-9 h-9 transition-transform duration-700 group-hover:scale-110">
                   <div className="absolute inset-0 bg-[var(--c-6-start)]/20 blur-xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity" />
                   <Image 
                     src={resolveImageUrl(logoUrl) || "/images/logo.png"} 
@@ -273,7 +283,7 @@ const Navbar = () => {
                     target={link.newTab ? "_blank" : undefined}
                     rel={link.newTab ? "noopener noreferrer" : undefined}
                     className={`text-3xl font-display font-black uppercase tracking-tighter transition-all block ${
-                      pathname === link.path ? 'text-[var(--c-6-start)]' : 'text-zinc-650 hover:text-white'
+                      pathname === link.path ? 'text-[var(--c-6-start)]' : 'text-zinc-500 hover:text-white'
                     }`}
                   >
                     {link.name}

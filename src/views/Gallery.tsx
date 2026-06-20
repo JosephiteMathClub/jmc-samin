@@ -160,7 +160,7 @@ export const GalleryView = () => {
                 placeholder="Search archive..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-11 pr-4 py-3 rounded-2xl bg-zinc-950/50 border border-white/5 text-xs text-white focus:outline-none focus:border-amber-500/55 focus:bg-zinc-950 transition-all font-medium placeholder:text-zinc-650"
+                className="w-full pl-11 pr-4 py-3 rounded-2xl bg-zinc-950/50 border border-white/5 text-xs text-white focus:outline-none focus:border-amber-500/55 focus:bg-zinc-950 transition-all font-medium placeholder:text-zinc-500"
               />
             </div>
 
@@ -198,10 +198,10 @@ export const GalleryView = () => {
                 className="flex flex-col items-center justify-center py-20 text-center space-y-4"
               >
                 <div className="w-16 h-16 rounded-full bg-zinc-900/50 border border-white/5 flex items-center justify-center">
-                  <Compass className="w-6 h-6 text-zinc-650 animate-spin" style={{ animationDuration: '10s' }} />
+                  <Compass className="w-6 h-6 text-zinc-500 animate-spin" style={{ animationDuration: '10s' }} />
                 </div>
                 <p className="text-zinc-500 font-bold tracking-tight text-sm">No archive items match search parameters</p>
-                <p className="text-xs text-zinc-750">Try selecting another category or check your spelling</p>
+                <p className="text-xs text-zinc-600">Try selecting another category or check your spelling</p>
               </motion.div>
             ) : (
               /* Bento Masonry Grid Mode */

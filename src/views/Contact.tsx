@@ -157,8 +157,9 @@ const Contact = () => {
                             name="name"
                             type="text"
                             required
-                            placeholder="JOHN DOE"
-                            className="w-full px-8 py-5 bg-white/5 border border-white/10 rounded-full focus:outline-none focus:border-[var(--c-6-start)]/50 focus:ring-4 focus:ring-[var(--c-6-start)]/10 transition-all text-white placeholder:text-zinc-800 font-medium text-sm"
+                            placeholder="John Doe"
+                            autoComplete="off"
+                            className="w-full px-8 py-5 bg-white/5 border border-white/10 rounded-full focus:outline-none focus:border-[var(--c-6-start)]/50 focus:ring-4 focus:ring-[var(--c-6-start)]/10 transition-all text-white placeholder:text-zinc-600 font-medium text-sm"
                           />
                         </div>
                         <div className="space-y-4">
@@ -167,8 +168,12 @@ const Contact = () => {
                             name="email"
                             type="email"
                             required
-                            placeholder="NAME@EXAMPLE.COM"
-                            className="w-full px-8 py-5 bg-white/5 border border-white/10 rounded-full focus:outline-none focus:border-[var(--c-6-start)]/50 focus:ring-4 focus:ring-[var(--c-6-start)]/10 transition-all text-white placeholder:text-zinc-800 font-medium text-sm"
+                            placeholder="name@example.com"
+                            autoCapitalize="none"
+                            autoComplete="off"
+                            autoCorrect="off"
+                            spellCheck="false"
+                            className="w-full px-8 py-5 bg-white/5 border border-white/10 rounded-full focus:outline-none focus:border-[var(--c-6-start)]/50 focus:ring-4 focus:ring-[var(--c-6-start)]/10 transition-all text-white placeholder:text-zinc-600 font-medium text-sm"
                           />
                         </div>
                       </div>
@@ -178,8 +183,8 @@ const Contact = () => {
                           name="subject"
                           type="text"
                           required
-                          placeholder="HOW CAN WE HELP?"
-                          className="w-full px-8 py-5 bg-white/5 border border-white/10 rounded-full focus:outline-none focus:border-[var(--c-6-start)]/50 focus:ring-4 focus:ring-[var(--c-6-start)]/10 transition-all text-white placeholder:text-zinc-800 font-medium text-sm"
+                          placeholder="How can we help?"
+                          className="w-full px-8 py-5 bg-white/5 border border-white/10 rounded-full focus:outline-none focus:border-[var(--c-6-start)]/50 focus:ring-4 focus:ring-[var(--c-6-start)]/10 transition-all text-white placeholder:text-zinc-600 font-medium text-sm"
                         />
                       </div>
                       <div className="space-y-4">
@@ -188,8 +193,8 @@ const Contact = () => {
                           name="message"
                           required
                           rows={6}
-                          placeholder="TELL US MORE ABOUT YOUR INQUIRY..."
-                          className="w-full px-8 py-6 bg-white/5 border border-white/10 rounded-[2rem] focus:outline-none focus:border-[var(--c-6-start)]/50 focus:ring-4 focus:ring-[var(--c-6-start)]/10 transition-all text-white placeholder:text-zinc-800 font-medium text-sm resize-none"
+                          placeholder="Tell us more about your inquiry..."
+                          className="w-full px-8 py-6 bg-white/5 border border-white/10 rounded-[2rem] focus:outline-none focus:border-[var(--c-6-start)]/50 focus:ring-4 focus:ring-[var(--c-6-start)]/10 transition-all text-white placeholder:text-zinc-600 font-medium text-sm resize-none"
                         />
                       </div>
 

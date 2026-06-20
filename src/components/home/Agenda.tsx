@@ -21,7 +21,7 @@ export const Agenda: React.FC<AgendaProps> = ({ home }) => {
   return (
     <section 
       id="agenda" 
-      className="py-32 md:py-64 relative overflow-hidden border-b border-white/[0.05] premium-3d-bg"
+      className="py-16 md:py-48 relative overflow-hidden border-b border-white/[0.05] premium-3d-bg"
       style={{
         '--bg-section-color': '#02041d',
         '--bg-dot-color': 'rgba(43, 50, 178, 0.32)',
@@ -39,7 +39,7 @@ export const Agenda: React.FC<AgendaProps> = ({ home }) => {
           <div className="inline-block px-4 py-1.5 mb-8 rounded-full bg-[var(--c-5-start)]/10 text-[var(--c-5-start)] text-[10px] font-mono font-black tracking-[0.5em] uppercase border border-[var(--c-5-start)]/20 shadow-[0_0_20px_rgba(106,48,147,0.1)]">
             {home?.agendaTagline || "OUR_MISSION_SCOPE"}
           </div>
-          <h2 className="text-6xl sm:text-8xl md:text-[10rem] font-bold tracking-[-0.07em] text-white font-display leading-[0.8] mb-12">
+          <h2 className="text-4xl sm:text-7xl md:text-8xl lg:text-[10rem] font-bold tracking-[-0.07em] text-white font-display leading-[0.8] mb-12">
             {home?.agendaTitle?.split(' ').map((word: string, i: number, arr: string[]) => (
               <span key={i} className={`block ${i === arr.length - 1 ? "blue-text italic font-serif font-light tracking-tighter" : ""}`}>
                 {word}
@@ -48,12 +48,12 @@ export const Agenda: React.FC<AgendaProps> = ({ home }) => {
               <>THE_CLUB <span className="blue-text italic font-serif font-light tracking-tighter">AGENDA</span></>
             )}
           </h2>
-          <p className="text-xl md:text-3xl text-zinc-500 font-light leading-relaxed max-w-3xl tracking-tight px-2">
+          <p className="text-sm sm:text-lg md:text-2xl text-zinc-500 font-light leading-relaxed max-w-3xl tracking-tight px-2">
             {home?.agendaDescription || "Bridging the gap between theoretical mathematics and practical innovation through elite structured programs."}
           </p>
         </Reveal>
         
-        <div className="grid grid-cols-1 md:grid-cols-6 gap-6 auto-rows-[300px]">
+        <div className="grid grid-cols-1 md:grid-cols-6 gap-4 sm:gap-6 auto-rows-auto md:auto-rows-[300px]">
           {items.map((item: any, i: number) => {
             const IconMap: any = { Zap, Trophy, Star, Lightbulb };
             const Icon = IconMap[item.icon] || Zap;
@@ -82,7 +82,7 @@ export const Agenda: React.FC<AgendaProps> = ({ home }) => {
               >
                 <motion.div 
                   whileHover={{ y: -5 }}
-                  className="group relative h-full w-full p-10 rounded-[2.5rem] glass border-white/[0.05] flex flex-col justify-between overflow-hidden transition-all duration-700 hover:border-white/20 shadow-2xl"
+                  className="group relative h-full w-full p-6 sm:p-10 rounded-[2rem] sm:rounded-[2.5rem] glass border-white/[0.05] flex flex-col justify-between overflow-hidden transition-all duration-700 hover:border-white/20 shadow-2xl"
                 >
                   <div className={`absolute inset-0 bg-gradient-to-br ${gradients[i % 4]} opacity-0 group-hover:opacity-100 transition-opacity duration-1000`} />
                   
@@ -108,15 +108,15 @@ export const Agenda: React.FC<AgendaProps> = ({ home }) => {
                   </div>
                   
                   <div className="relative">
-                    <div className="w-16 h-16 rounded-2xl bg-white/5 flex items-center justify-center mb-10 group-hover:scale-110 group-hover:bg-white/10 transition-all duration-700 hud-bracket hud-bracket-tl hud-bracket-br">
-                      <Icon className="w-8 h-8 text-white" />
+                    <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-2xl bg-white/5 flex items-center justify-center mb-6 sm:mb-10 group-hover:scale-110 group-hover:bg-white/10 transition-all duration-700 hud-bracket hud-bracket-tl hud-bracket-br">
+                      <Icon className="w-6 h-6 sm:w-8 sm:h-8 text-white" />
                     </div>
                   </div>
 
                   <div className="relative z-10">
-                    <div className="mono-label text-[10px] text-zinc-600 mb-4 tracking-[0.4em]">0{i + 1} {"//"} SEGMENT</div>
-                    <h4 className="text-4xl font-bold text-white mb-4 tracking-tighter group-hover:text-[var(--c-6-start)] transition-colors duration-500">{item.title}</h4>
-                    <p className="text-lg text-zinc-500 leading-relaxed font-light tracking-tight max-w-md">{item.desc || "Interactive sessions and systematic exploration."}</p>
+                    <div className="mono-label text-[10px] text-zinc-600 mb-2 tracking-[0.4em]">0{i + 1} {"//"} SEGMENT</div>
+                    <h4 className="text-2xl sm:text-4xl font-bold text-white mb-2 tracking-tighter group-hover:text-[var(--c-6-start)] transition-colors duration-500">{item.title}</h4>
+                    <p className="text-sm sm:text-lg text-zinc-500 leading-relaxed font-light tracking-tight max-w-md">{item.desc || "Interactive sessions and systematic exploration."}</p>
                   </div>
 
                   {/* Corner Accent */}

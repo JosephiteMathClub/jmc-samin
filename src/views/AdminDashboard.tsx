@@ -19,7 +19,8 @@ import {
   Utensils,
   History,
   HelpCircle,
-  Mail
+  Mail,
+  BadgeCheck
 } from 'lucide-react';
 import { useContent } from '../context/ContentContext';
 import { useAuth } from '../context/AuthContext';
@@ -52,6 +53,8 @@ const FoodManagementSection = dynamic(() => import('../components/dashboard/sect
 const ChallengeManagementSection = dynamic(() => import('../components/dashboard/sections/ChallengeManagementSection').then(mod => mod.ChallengeManagementSection), { loading: () => <Skeleton className="h-64 w-full rounded-3xl" /> });
 const DashboardAuditLogsSection = dynamic(() => import('../components/dashboard/sections/DashboardAuditLogsSection').then(mod => mod.DashboardAuditLogsSection), { loading: () => <Skeleton className="h-64 w-full rounded-3xl" /> });
 const EmailConfirmationsSection = dynamic(() => import('../components/dashboard/sections/EmailConfirmationsSection').then(mod => mod.EmailConfirmationsSection), { loading: () => <Skeleton className="h-64 w-full rounded-3xl" /> });
+const EventRegistrationsSection = dynamic(() => import('../components/dashboard/sections/EventRegistrationsSection').then(mod => mod.EventRegistrationsSection), { loading: () => <Skeleton className="h-64 w-full rounded-3xl" /> });
+const VerifiedEventParticipatorsSection = dynamic(() => import('../components/dashboard/sections/VerifiedEventParticipatorsSection').then(mod => mod.VerifiedEventParticipatorsSection), { loading: () => <Skeleton className="h-64 w-full rounded-3xl" /> });
 
 import ConfirmModal from '../components/ConfirmModal';
 import Image from 'next/image';
@@ -742,7 +745,8 @@ const AdminDashboard = () => {
 
   useEffect(() => {
     if (!authLoading && !user) {
-      router.push('/login?redirect=/admin');
+      const currentPath = window.location.pathname + window.location.search;
+      router.push('/login?redirect=' + encodeURIComponent(currentPath));
       return;
     }
     if (!authLoading && !isAdmin && user) {
@@ -797,7 +801,10 @@ const AdminDashboard = () => {
             {!user && (
               <DashboardButton 
                 label="Sign In" 
-                onClick={() => router.push('/login')}
+                onClick={() => {
+                  const currentPath = window.location.pathname + window.location.search;
+                  router.push('/login?redirect=' + encodeURIComponent(currentPath));
+                }}
               />
             )}
           </div>
@@ -946,6 +953,8 @@ const AdminDashboard = () => {
     { id: 'food', label: 'Food Management', icon: Utensils },
     { id: 'challenge', label: 'Challenge Problems', icon: HelpCircle },
     { id: 'email_confirmations', label: 'Email Logs', icon: Mail },
+    { id: 'event_registrations', label: 'Unique Registrants', icon: Users },
+    { id: 'verified_participators', label: 'Verified Participators', icon: BadgeCheck },
     ...(isSuperAdmin ? [
       { id: 'home', label: 'Home', icon: LayoutDashboard },
       { id: 'about', label: 'About', icon: FileText },
@@ -1126,6 +1135,14 @@ const AdminDashboard = () => {
 
         {activeTab === 'email_confirmations' && (
           <EmailConfirmationsSection />
+        )}
+
+        {activeTab === 'event_registrations' && (
+          <EventRegistrationsSection />
+        )}
+
+        {activeTab === 'verified_participators' && (
+          <VerifiedEventParticipatorsSection />
         )}
 
         {activeTab === 'support' && (

@@ -116,17 +116,15 @@ const DashboardSiteSectionComponent: React.FC<DashboardSiteSectionProps> = ({
           </div>
         </div>
 
-        {data?.showAnnouncements !== false && (
-          <div className="mt-6">
-            <DashboardFormField 
-              label="Marquee Announcements (One per line)" 
-              type="textarea"
-              value={Array.isArray(data?.announcements) ? data.announcements.join('\n') : ''} 
-              onChange={(val) => updateField('announcements', val.split('\n').filter((s: string) => s.trim()))} 
-              description="These announcements will scroll across the top of the site."
-            />
-          </div>
-        )}
+        <div className="mt-6">
+          <DashboardFormField 
+            label="Marquee Announcements (One per line)" 
+            type="textarea"
+            value={Array.isArray(data?.announcements) ? data.announcements.join('\n') : ''} 
+            onChange={(val) => updateField('announcements', val.split('\n').filter((s: string) => s.trim()))} 
+            description={`These announcements will scroll across the top of the site. Currently ${data?.showAnnouncements !== false ? 'VISIBLE' : 'HIDDEN (Show Announcements is disabled above)'}.`}
+          />
+        </div>
 
         {data?.maintenanceMode && (
           <div className="mt-4">
