@@ -818,6 +818,13 @@ const AdminDashboard = () => {
     setSaveStatus('idle');
     try {
       await saveAllContent(localContent);
+      
+      // Dispatch custom event to let sub-panels (like event registration editor) save their state too
+      if (typeof window !== 'undefined') {
+        const saveEvent = new CustomEvent('admin-dashboard-save');
+        window.dispatchEvent(saveEvent);
+      }
+
       setSaveStatus('success');
       setTimeout(() => setSaveStatus('idle'), 3000);
 

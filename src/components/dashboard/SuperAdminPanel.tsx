@@ -353,6 +353,21 @@ export function EventRegistrationConfigEditor({ showToast }: { showToast: (msg: 
     }
   };
 
+  const latestSaveRef = React.useRef(handleSave);
+  React.useEffect(() => {
+    latestSaveRef.current = handleSave;
+  });
+
+  React.useEffect(() => {
+    const handleGlobalSave = () => {
+      latestSaveRef.current();
+    };
+    window.addEventListener('admin-dashboard-save', handleGlobalSave);
+    return () => {
+      window.removeEventListener('admin-dashboard-save', handleGlobalSave);
+    };
+  }, []);
+
   const handleResetToDefault = () => {
     if (window.confirm("Are you sure you want to reset all registration configuration properties back to factory JMC defaults?")) {
       setFormDescription(DEFAULT_CONFIG.formDescription);

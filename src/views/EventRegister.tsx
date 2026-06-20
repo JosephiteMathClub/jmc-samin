@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   ArrowLeft, 
@@ -21,7 +21,8 @@ import {
   Hourglass, 
   Construction,
   Mail,
-  Calendar
+  Calendar,
+  RefreshCw
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useContent } from '../context/ContentContext';
@@ -145,130 +146,148 @@ const EventRegister = () => {
   const [proxyUserExists, setProxyUserExists] = useState(false);
   const [proxyResolvedUserId, setProxyResolvedUserId] = useState<string | null>(null);
   const [checkingProxyEmail, setCheckingProxyEmail] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   // General Member Check on Load
+  const fetchMemberInfo = useCallback(async () => {
+    if (!user || !isSupabaseConfigured) {
+      setFetchingMemberStatus(false);
+      return;
+    }
+    setFetchingMemberStatus(true);
+    try {
+      const { data: memberData } = await supabase
+        .from('member')
+        .select('*')
+        .eq('id', user.id)
+        .maybeSingle();
+
+      const { data: ecData } = await supabase
+        .from('ec_member')
+        .select('*')
+        .eq('id', user.id)
+        .maybeSingle();
+
+      const activeData = ecData || memberData;
+
+      if (ecData) {
+        setIsCurrentUserEc(true);
+        setCurrentUserEcId(ecData.member_id || null);
+      }
+
+      if (activeData) {
+        setRegisteredMemberData(activeData);
+        setFullName(activeData.full_name || '');
+        setClassName(activeData.class || '');
+        setSection(activeData.section || '');
+        setRoll(activeData.roll || '');
+        
+        if (activeData.verified === 'yes') {
+          setIsGeneralMember(true);
+        }
+      }
+    } catch (err) {
+      console.error("Error fetching member info:", err);
+    } finally {
+      setFetchingMemberStatus(false);
+    }
+  }, [user]);
+
   useEffect(() => {
-    const fetchMemberInfo = async () => {
-      if (!user || !isSupabaseConfigured) {
-        setFetchingMemberStatus(false);
-        return;
-      }
-      try {
-        const { data: memberData } = await supabase
-          .from('member')
-          .select('*')
-          .eq('id', user.id)
-          .maybeSingle();
-
-        const { data: ecData } = await supabase
-          .from('ec_member')
-          .select('*')
-          .eq('id', user.id)
-          .maybeSingle();
-
-        const activeData = ecData || memberData;
-
-        if (ecData) {
-          setIsCurrentUserEc(true);
-          setCurrentUserEcId(ecData.member_id || null);
-        }
-
-        if (activeData) {
-          setRegisteredMemberData(activeData);
-          setFullName(activeData.full_name || '');
-          setClassName(activeData.class || '');
-          setSection(activeData.section || '');
-          setRoll(activeData.roll || '');
-          
-          if (activeData.verified === 'yes') {
-            setIsGeneralMember(true);
-          }
-        }
-      } catch (err) {
-        console.error("Error fetching member info:", err);
-      } finally {
-        setFetchingMemberStatus(false);
-      }
-    };
-
     if (user) {
       fetchMemberInfo();
     } else if (!authLoading) {
       setFetchingMemberStatus(false);
     }
-  }, [user, authLoading]);
+  }, [user, authLoading, fetchMemberInfo]);
 
   // Reactive Registered Events Check for active student (supports Proxy and Spot mode)
-  useEffect(() => {
-    const fetchRegisteredEvents = async () => {
-      // Determine actual active user ID we are preparing registration for
-      const targetUserId = isProxyRegistration
-        ? (proxyUserExists ? proxyResolvedUserId : null)
-        : user?.id;
+  const fetchRegisteredEvents = useCallback(async () => {
+    // Determine actual active user ID we are preparing registration for
+    const targetUserId = isProxyRegistration
+      ? (proxyUserExists ? proxyResolvedUserId : null)
+      : user?.id;
 
-      if (!targetUserId || !isSupabaseConfigured) {
-        setUserRegisteredEvents([]);
-        setAlreadyRegisteredTeam(false);
-        setUserRegisteredTeamEventName(null);
-        return;
-      }
+    if (!targetUserId || !isSupabaseConfigured) {
+      setUserRegisteredEvents([]);
+      setAlreadyRegisteredTeam(false);
+      setUserRegisteredTeamEventName(null);
+      return;
+    }
 
-      try {
-        const tables = ['primary_events', 'junior_events', 'secondary_events', 'higher_secondary_events'];
-        let matchedTeamEvent = null;
-        let allReg: any[] = [];
+    try {
+      const tables = ['primary_events', 'junior_events', 'secondary_events', 'higher_secondary_events'];
+      let matchedTeamEvent = null;
+      let allReg: any[] = [];
+      
+      for (const tb of tables) {
+        const { data: evData } = await supabase
+          .from(tb)
+          .select('*')
+          .eq('user_id', targetUserId);
         
-        for (const tb of tables) {
-          const { data: evData } = await supabase
-            .from(tb)
-            .select('*')
-            .eq('user_id', targetUserId);
-          
-          if (evData && evData.length > 0) {
-            const mapped = evData.map((item: any) => {
-              let normalizedVerified = 'no';
-              if (item.verified === true || item.verified === 'yes') {
-                normalizedVerified = 'yes';
-              } else if (item.verified === 'rejected') {
-                normalizedVerified = 'rejected';
-              } else if (item.verified === false || item.verified === 'no') {
-                normalizedVerified = 'no';
-              }
-              return {
-                ...item,
-                tableName: tb,
-                verified: normalizedVerified
-              };
-            });
-            allReg = [...allReg, ...mapped];
+        if (evData && evData.length > 0) {
+          const mapped = evData.map((item: any) => {
+            let normalizedVerified = 'no';
+            if (item.verified === true || item.verified === 'yes') {
+              normalizedVerified = 'yes';
+            } else if (item.verified === 'rejected') {
+              normalizedVerified = 'rejected';
+            } else if (item.verified === false || item.verified === 'no') {
+              normalizedVerified = 'no';
+            }
+            return {
+              ...item,
+              tableName: tb,
+              verified: normalizedVerified
+            };
+          });
+          allReg = [...allReg, ...mapped];
 
-            for (const r of evData) {
-              const evts = (r.selected_events || '').split(',').map((s: string) => s.trim().toLowerCase());
-              const match = teamEventsList.find(tc => evts.includes(tc.name.toLowerCase())) 
-                || DEFAULT_TEAM_EVENTS.find(tc => evts.includes(tc.name.toLowerCase()));
-              if (match) {
-                matchedTeamEvent = match.name;
-              }
+          for (const r of evData) {
+            const evts = (r.selected_events || '').split(',').map((s: string) => s.trim().toLowerCase());
+            const match = teamEventsList.find(tc => evts.includes(tc.name.toLowerCase())) 
+              || DEFAULT_TEAM_EVENTS.find(tc => evts.includes(tc.name.toLowerCase()));
+            if (match) {
+              matchedTeamEvent = match.name;
             }
           }
         }
-
-        setUserRegisteredEvents(allReg);
-
-        if (matchedTeamEvent) {
-          setAlreadyRegisteredTeam(true);
-          setUserRegisteredTeamEventName(matchedTeamEvent);
-        } else {
-          setAlreadyRegisteredTeam(false);
-          setUserRegisteredTeamEventName(null);
-        }
-      } catch (err) {
-        console.error("Error fetching registered events reactive check:", err);
       }
-    };
 
-    fetchRegisteredEvents();
+      setUserRegisteredEvents(allReg);
+
+      if (matchedTeamEvent) {
+        setAlreadyRegisteredTeam(true);
+        setUserRegisteredTeamEventName(matchedTeamEvent);
+      } else {
+        setAlreadyRegisteredTeam(false);
+        setUserRegisteredTeamEventName(null);
+      }
+    } catch (err) {
+      console.error("Error fetching registered events reactive check:", err);
+    }
   }, [isProxyRegistration, proxyUserExists, proxyResolvedUserId, user, teamEventsList]);
+
+  useEffect(() => {
+    fetchRegisteredEvents();
+  }, [fetchRegisteredEvents]);
+
+  const handleManualRefresh = async () => {
+    if (isRefreshing) return;
+    setIsRefreshing(true);
+    try {
+      await Promise.all([
+        fetchMemberInfo(),
+        fetchRegisteredEvents()
+      ]);
+      showToast("Registration status and events synced successfully!", "success");
+    } catch (e) {
+      showToast("Failed to refresh database state.", "error");
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
 
   // Route protection & configuration loader
   useEffect(() => {
@@ -740,6 +759,28 @@ const EventRegister = () => {
   const handleSubmitRegistration = async (e?: React.FormEvent, bypassConfirm: boolean = false) => {
     if (e) e.preventDefault();
 
+    if (!selectedEvents || selectedEvents.length === 0) {
+      showToast("Please select at least one segment/event to register.", "error");
+      return;
+    }
+
+    if (!fullName || !fullName.trim()) {
+      showToast("Please enter your full name.", "error");
+      return;
+    }
+    if (!className || !className.trim()) {
+      showToast("Please select your class.", "error");
+      return;
+    }
+    if (!section || !section.trim()) {
+      showToast("Please enter your section.", "error");
+      return;
+    }
+    if (!roll || !roll.trim()) {
+      showToast("Please enter your roll number.", "error");
+      return;
+    }
+
     // Check if we need to confirm solo segments before submitting
     if (eventTab === 'solo' && !hasConfirmedSegments && !bypassConfirm) {
       setShowConfirmSegmentModal(true);
@@ -747,7 +788,7 @@ const EventRegister = () => {
     }
 
     const finalPrice = calculateAmount();
-    const isOnlyFreeMathOlympiad = selectedEvents.length === 1 && selectedEvents[0]?.trim().toLowerCase() === "math olympiad";
+    const isOnlyFreeMathOlympiad = selectedEvents.length === 1 && selectedEvents[0]?.trim().toLowerCase() === "math olympiad" && finalPrice === 0;
 
     let finalBkashNumber = bkashNumber.trim();
     let finalTrxnid = trxnid.trim();
@@ -770,11 +811,11 @@ const EventRegister = () => {
       }
     } else {
       if (!finalBkashNumber || finalBkashNumber.length < 11) {
-        showToast("Please enter a valid bKash Sender Phone Number.", "error");
+        showToast("Please enter a valid bKash Sender Phone Number (at least 11 digits).", "error");
         return;
       }
       if (!finalTrxnid || finalTrxnid.length < 8) {
-        showToast("Please enter a valid Transaction ID.", "error");
+        showToast("Please enter a valid Transaction ID (at least 8 characters).", "error");
         return;
       }
     }
@@ -1112,12 +1153,24 @@ const EventRegister = () => {
         
         {/* Main Title Section */}
         <div className="text-center mb-12">
-          <button 
-            onClick={() => router.push('/events')}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10 text-xs font-bold text-zinc-400 hover:text-white transition-all mb-6"
-          >
-            <ArrowLeft className="w-3.5 h-3.5" /> Back to Event Listing
-          </button>
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
+            <button 
+              onClick={() => router.push('/events')}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10 text-xs font-bold text-zinc-400 hover:text-white transition-all self-start"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" /> Back to Event Listing
+            </button>
+
+            <button
+              id="btn-manual-refresh-db"
+              onClick={handleManualRefresh}
+              disabled={isRefreshing}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-amber-500/10 border border-amber-500/20 hover:bg-amber-500 hover:text-black text-xs font-bold text-amber-500 transition-all cursor-pointer self-center md:self-auto shadow-md shadow-amber-500/5 disabled:opacity-50"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
+              {isRefreshing ? 'Syncing...' : 'Sync Registration State'}
+            </button>
+          </div>
           
           <h1 className="text-4xl md:text-5xl font-display font-black uppercase tracking-tight mb-4">
             Event & Segment <span className="text-amber-500">Registration</span>
@@ -1130,12 +1183,23 @@ const EventRegister = () => {
         {/* Existing Registered Events for Non-general members */}
         {!isGeneralMember && userRegisteredEvents.length > 0 && (
           <div className="mb-8 p-6 md:p-8 rounded-[2rem] bg-white/[0.02] border border-white/10 backdrop-blur-xl">
-            <div className="flex items-center gap-3.5 mb-6 border-b border-white/5 pb-4">
-              <Calendar className="w-5 h-5 text-amber-500 animate-pulse" />
-              <div>
-                <h3 className="text-sm font-black uppercase tracking-wider text-white">Your Registered Events</h3>
-                <p className="text-[9px] text-[var(--c-6-start)] font-black uppercase tracking-widest mt-0.5">As a general registrant, your active transactions are displayed here</p>
+            <div className="flex items-center justify-between gap-4 mb-6 border-b border-white/5 pb-4">
+              <div className="flex items-center gap-3.5">
+                <Calendar className="w-5 h-5 text-amber-500 animate-pulse" />
+                <div>
+                  <h3 className="text-sm font-black uppercase tracking-wider text-white">Your Registered Events</h3>
+                  <p className="text-[9px] text-[var(--c-6-start)] font-black uppercase tracking-widest mt-0.5">As a general registrant, your active transactions are displayed here</p>
+                </div>
               </div>
+              <button
+                id="btn-registrations-refresh"
+                onClick={handleManualRefresh}
+                disabled={isRefreshing}
+                className="p-2 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 text-zinc-400 hover:text-white transition-all cursor-pointer flex items-center justify-center disabled:opacity-50"
+                title="Refresh registrations"
+              >
+                <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+              </button>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {userRegisteredEvents.map((reg) => {
@@ -1528,7 +1592,7 @@ const EventRegister = () => {
                           ) : (
                             /* Grid with Checkboxes */
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[360px] overflow-y-auto pr-2 custom-scrollbar">
-                              {SOLO_EVENTS.map((eventTitle) => {
+                              {soloEventsList.map((eventTitle) => {
                                 const isAlreadyRegistered = alreadyRegisteredSolos.has(eventTitle.toLowerCase());
                                 const isChecked = selectedEvents.includes(eventTitle);
                                 
