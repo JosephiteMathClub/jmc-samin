@@ -9,7 +9,6 @@
 
 [![Website](https://img.shields.io/badge/Website-jmc--sjs.org-blue?style=flat-square&logo=google-chrome)](https://jmc-sjs.org)
 [![Instagram](https://img.shields.io/badge/Instagram-@jmc_.official-E4405F?style=flat-square&logo=instagram)](https://www.instagram.com/jmc_.official/)
-[![YouTube](https://img.shields.io/badge/YouTube-Josephite%20Math%20Club-FF0000?style=flat-square&logo=youtube)](https://www.youtube.com/@josephitemc)
 [![License](https://img.shields.io/badge/License-All%20Rights%20Reserved-lightgrey?style=flat-square)](#license)
 
 *"Let infinity be your limit."*
