@@ -147,6 +147,8 @@ const DashboardEventsSectionComponent: React.FC<DashboardEventsSectionProps> = (
                 value={e.imageUrl} 
                 uploading={uploading === `events-events-${i}`}
                 onUpload={(ev) => handleFileUpload(ev, [`events`, `events`, i], (url) => updateListItem('events', i, { imageUrl: url }))} 
+                onChange={(path, val) => updateListItem('events', i, { imageUrl: val })}
+                onDelete={() => updateListItem('events', i, { imageUrl: '' })}
               />
             </div>
           ))}

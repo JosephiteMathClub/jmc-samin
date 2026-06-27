@@ -8,7 +8,7 @@ export type ToastType = 'success' | 'error' | 'info' | 'loading';
 
 export interface Toast {
   id: string;
-  message: string;
+  message: React.ReactNode;
   type: ToastType;
   duration?: number;
 }

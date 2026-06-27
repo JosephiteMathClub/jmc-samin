@@ -226,8 +226,11 @@ export function EventRegistrationConfigEditor({ showToast }: { showToast: (msg: 
   // Lists States
   const [soloEvents, setSoloEvents] = useState<string[]>([]);
   const [teamEvents, setTeamEvents] = useState<TeamEventConfig[]>([]);
+  const [classSectionsMap, setClassSectionsMap] = useState<Record<string, string[]>>({});
   
   // Inline addition helper states
+  const [selectedClassForSectionEdit, setSelectedClassForSectionEdit] = useState<string>('3');
+  const [newSectionName, setNewSectionName] = useState<string>('');
   const [newSoloName, setNewSoloName] = useState<string>('');
   const [newTeamName, setNewTeamName] = useState<string>('');
   const [newTeamPrice, setNewTeamPrice] = useState<number>(200);
@@ -268,7 +271,19 @@ export function EventRegistrationConfigEditor({ showToast }: { showToast: (msg: 
         eligibleCategories: "secondary_higher_secondary",
         description: "Class 9 to 12 (Secondary & Higher Secondary) strategic room puzzles. Includes 2 members."
       }
-    ]
+    ],
+    classSectionsMap: {
+      "3": ["Hawks", "Eagles", "Falcons"],
+      "4": ["Tigers", "Lions", "Mountain Lions"],
+      "5": ["Hornets", "Drones", "Wasps"],
+      "6": ["Wildcats", "Bears", "Polar Bears"],
+      "7": ["Leopards", "Jaguars"],
+      "8": ["Comets", "Meteors", "Asteroids"],
+      "9": ["Jets", "Concords", "Rockets"],
+      "10": ["Stars", "Giants", "Titans"],
+      "11": ["Venus", "Jupiter", "Mercury", "Haumea", "Eris", "Mars", "Saturn", "Vulcan"],
+      "12": ["Pluto", "Uranus", "Phobos", "Pollux", "Ceres", "Earth", "Neptune", "Diebos"]
+    }
   };
 
   useEffect(() => {
@@ -291,6 +306,7 @@ export function EventRegistrationConfigEditor({ showToast }: { showToast: (msg: 
           setAllEventsSoloPriceMember(typeof val.allEventsSoloPriceMember === 'number' ? val.allEventsSoloPriceMember : DEFAULT_CONFIG.allEventsSoloPriceMember);
           setSoloEvents(val.soloEvents || DEFAULT_CONFIG.soloEvents);
           setTeamEvents(val.teamEvents || DEFAULT_CONFIG.teamEvents);
+          setClassSectionsMap(val.classSectionsMap || DEFAULT_CONFIG.classSectionsMap);
         } else {
           // Initialize DB row
           await supabase
@@ -304,6 +320,7 @@ export function EventRegistrationConfigEditor({ showToast }: { showToast: (msg: 
           setAllEventsSoloPriceMember(DEFAULT_CONFIG.allEventsSoloPriceMember);
           setSoloEvents(DEFAULT_CONFIG.soloEvents);
           setTeamEvents(DEFAULT_CONFIG.teamEvents);
+          setClassSectionsMap(DEFAULT_CONFIG.classSectionsMap);
         }
       } catch (err: any) {
         console.warn("Failed to load custom settings row:", err);
@@ -315,6 +332,7 @@ export function EventRegistrationConfigEditor({ showToast }: { showToast: (msg: 
         setAllEventsSoloPriceMember(DEFAULT_CONFIG.allEventsSoloPriceMember);
         setSoloEvents(DEFAULT_CONFIG.soloEvents);
         setTeamEvents(DEFAULT_CONFIG.teamEvents);
+        setClassSectionsMap(DEFAULT_CONFIG.classSectionsMap);
       } finally {
         setLoading(false);
       }
@@ -331,7 +349,8 @@ export function EventRegistrationConfigEditor({ showToast }: { showToast: (msg: 
       allEventsSoloPriceGeneral: Number(allEventsSoloPriceGeneral),
       allEventsSoloPriceMember: Number(allEventsSoloPriceMember),
       soloEvents,
-      teamEvents
+      teamEvents,
+      classSectionsMap
     };
 
     try {
@@ -377,6 +396,7 @@ export function EventRegistrationConfigEditor({ showToast }: { showToast: (msg: 
       setAllEventsSoloPriceMember(DEFAULT_CONFIG.allEventsSoloPriceMember);
       setSoloEvents(DEFAULT_CONFIG.soloEvents);
       setTeamEvents(DEFAULT_CONFIG.teamEvents);
+      setClassSectionsMap(DEFAULT_CONFIG.classSectionsMap);
       showToast("Fields reverted locally. Make sure to click save to write changes permanently.", "info");
     }
   };
@@ -395,6 +415,30 @@ export function EventRegistrationConfigEditor({ showToast }: { showToast: (msg: 
 
   const removeSoloEvent = (indexToRemove: number) => {
     setSoloEvents(soloEvents.filter((_, idx) => idx !== indexToRemove));
+  };
+
+  // Sections helper actions
+  const addSectionForClass = () => {
+    const trimmed = newSectionName.trim();
+    if (!trimmed) return;
+    const currentSections = classSectionsMap[selectedClassForSectionEdit] || [];
+    if (currentSections.some(sec => sec.toLowerCase() === trimmed.toLowerCase())) {
+      showToast(`Section "${trimmed}" already exists for Class ${selectedClassForSectionEdit}.`, "error");
+      return;
+    }
+    setClassSectionsMap({
+      ...classSectionsMap,
+      [selectedClassForSectionEdit]: [...currentSections, trimmed]
+    });
+    setNewSectionName('');
+  };
+
+  const removeSectionFromClass = (sectionToRemove: string) => {
+    const currentSections = classSectionsMap[selectedClassForSectionEdit] || [];
+    setClassSectionsMap({
+      ...classSectionsMap,
+      [selectedClassForSectionEdit]: currentSections.filter(sec => sec !== sectionToRemove)
+    });
   };
 
   // Team events helper actions
@@ -551,12 +595,82 @@ export function EventRegistrationConfigEditor({ showToast }: { showToast: (msg: 
         </div>
       </div>
 
+      {/* Class Sections Configuration */}
+      <div className="space-y-4 pb-6 border-b border-white/5">
+        <div>
+          <h4 className="text-xs font-black uppercase tracking-wider text-zinc-300 flex items-center gap-2">
+            <Sliders className="w-4 h-4 text-indigo-400" />
+            2. Class-wise Section Dropdowns
+          </h4>
+          <p className="text-[10px] text-zinc-500 mt-1">Configure dropdown choices for sections based on the participant's Class. (Be sure to click Save below to persist your modifications!)</p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="space-y-2">
+            <label className="text-[9px] font-black uppercase tracking-wider text-zinc-500">Select Class to Configure</label>
+            <select
+              value={selectedClassForSectionEdit}
+              onChange={(e) => setSelectedClassForSectionEdit(e.target.value)}
+              className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-xs font-bold text-white focus:outline-none focus:border-indigo-500 transition-all cursor-pointer"
+            >
+              {[3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(n => (
+                <option key={n} value={String(n)} className="bg-zinc-950 text-white">Class {n}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="md:col-span-2 space-y-3">
+            <label className="text-[9px] font-black uppercase tracking-wider text-zinc-500">Current Sections for Class {selectedClassForSectionEdit}</label>
+            
+            <div className="flex flex-wrap gap-2.5 p-4 rounded-2xl bg-black/20 border border-white/5 min-h-[58px]">
+              {!(classSectionsMap[selectedClassForSectionEdit]) || classSectionsMap[selectedClassForSectionEdit].length === 0 ? (
+                <span className="text-[10px] font-bold text-zinc-600 uppercase tracking-wider py-1">No sections configured for Class {selectedClassForSectionEdit}.</span>
+              ) : (
+                classSectionsMap[selectedClassForSectionEdit].map((sec, idx) => (
+                  <span 
+                    key={idx} 
+                    className="inline-flex items-center gap-2 px-3 py-1.5 bg-white/5 border border-white/10 rounded-xl text-[10px] font-black uppercase tracking-wider text-white"
+                  >
+                    {sec}
+                    <button 
+                      type="button" 
+                      onClick={() => removeSectionFromClass(sec)} 
+                      className="text-zinc-500 hover:text-red-500 transition-colors shrink-0 cursor-pointer"
+                    >
+                      <XCircle className="w-3.5 h-3.5" />
+                    </button>
+                  </span>
+                ))
+              )}
+            </div>
+
+            <div className="flex gap-2 max-w-md">
+              <input
+                type="text"
+                value={newSectionName}
+                onChange={(e) => setNewSectionName(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addSectionForClass())}
+                placeholder="E.g. Hawks"
+                className="flex-1 bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-xs font-bold text-white focus:outline-none focus:border-indigo-500 transition-all"
+              />
+              <button
+                type="button"
+                onClick={addSectionForClass}
+                className="px-4 py-2 text-xs bg-indigo-500 hover:bg-indigo-400 text-white font-black rounded-xl uppercase tracking-wider transition-all flex items-center gap-1.5 cursor-pointer shadow-lg shadow-indigo-500/10"
+              >
+                <Plus className="w-3.5 h-3.5" /> ADD
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Team Events config */}
       <div className="space-y-4 pb-6">
         <div>
           <h4 className="text-xs font-black uppercase tracking-wider text-zinc-300 flex items-center gap-2">
             <Users className="w-4 h-4 text-indigo-400" />
-            2. Team Event Configurations ({teamEvents.length})
+            3. Team Event Configurations ({teamEvents.length})
           </h4>
           <p className="text-[10px] text-zinc-500 mt-1">Configure active team category registrations, including registration price and teammate caps.</p>
         </div>
@@ -712,11 +826,13 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ isSuperAdmin =
   const [members, setMembers] = useState<any[]>([]);
   const [loadingMembers, setLoadingMembers] = useState(false);
   const [memberSearchTerm, setMemberSearchTerm] = useState('');
+  const [memberRoleFilter, setMemberRoleFilter] = useState<'all' | 'general' | 'ec'>('all');
   const [selectedMembers, setSelectedMembers] = useState<Record<string, boolean>>({});
   const [printLayout, setPrintLayout] = useState<'single' | 'grid2x2'>('grid2x2');
   const [generatingPdf, setGeneratingPdf] = useState(false);
   const [pdfProgress, setPdfProgress] = useState(0);
   const [activePdfMember, setActivePdfMember] = useState<any | null>(null);
+  const [activePdfEcMember, setActivePdfEcMember] = useState<any | null>(null);
   
   // Food distribution management state
   const [foodConfig, setFoodConfig] = useState<any>(null);
@@ -994,6 +1110,31 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ isSuperAdmin =
     const tables = ['primary_events', 'junior_events', 'secondary_events', 'higher_secondary_events'];
     let allVerified: any[] = [];
     try {
+      // Fetch APPROVE_TRANSACTION audit logs to match with transactions
+      const { data: auditLogs, error: auditError } = await supabase
+        .from('admin_audit_logs')
+        .select('*')
+        .eq('action_type', 'APPROVE_TRANSACTION');
+
+      const auditMap: Record<string, string> = {};
+      if (!auditError && auditLogs) {
+        auditLogs.forEach((log: any) => {
+          if (log.target) {
+            auditMap[log.target] = log.admin_name || '';
+          }
+          try {
+            if (log.details) {
+              const detailsObj = typeof log.details === 'string' ? JSON.parse(log.details) : log.details;
+              if (detailsObj && detailsObj.trxnid) {
+                auditMap[`trxnid:${detailsObj.trxnid}`] = log.admin_name || '';
+              }
+            }
+          } catch (e) {
+            // ignore
+          }
+        });
+      }
+
       for (const tb of tables) {
         let data: any[] | null = null;
         let error: any = null;
@@ -1032,11 +1173,15 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ isSuperAdmin =
             });
           }
 
-          const mapped = data.map((item: any) => ({
-            ...item,
-            tableName: tb,
-            email: emailsMap[item.user_id] || ''
-          }));
+          const mapped = data.map((item: any) => {
+            const auditAdmin = auditMap[`${tb}:${item.id}`] || auditMap[`trxnid:${item.trxnid}`];
+            return {
+              ...item,
+              tableName: tb,
+              email: emailsMap[item.user_id] || '',
+              verified_by_audit: auditAdmin || ''
+            };
+          });
           allVerified = [...allVerified, ...mapped];
         }
       }
@@ -1103,8 +1248,8 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ isSuperAdmin =
           bKashField = "N/A - PROXY INSTANT";
         }
 
-        let verifiedBy = tx.verified_by || "System/Auto";
-        if (!tx.verified_by && registeredBy && registeredBy !== "Self (Online)") {
+        let verifiedBy = tx.verified_by || tx.verified_by_audit || "System/Auto";
+        if (!tx.verified_by && !tx.verified_by_audit && registeredBy && registeredBy !== "Self (Online)") {
           verifiedBy = registeredBy;
         }
 
@@ -1462,20 +1607,37 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ isSuperAdmin =
         console.error("Failed to fetch verified EC members:", e);
       }
 
-      // Deduplicate by member id to prevent React key collision warnings
+      // Deduplicate by email or member ID to prevent React key collision warnings and merge legacy duplicates
       const uniqueMembersMap = new Map<string, any>();
+      const emailToIdMap = new Map<string, string>(); // maps lowercase email to member uuid
+
       (standardData || []).forEach(m => {
         if (m.id) {
+          const emailKey = (m.email || m.email_address || '').toLowerCase().trim();
           uniqueMembersMap.set(m.id, { ...m, is_ec: m.is_ec || false });
+          if (emailKey) {
+            emailToIdMap.set(emailKey, m.id);
+          }
         }
       });
+
       ecData.forEach(m => {
         if (m.id) {
-          if (uniqueMembersMap.has(m.id)) {
-            const existing = uniqueMembersMap.get(m.id);
-            uniqueMembersMap.set(m.id, { ...existing, ...m, is_ec: true });
+          const emailKey = (m.email || m.email_address || '').toLowerCase().trim();
+          // Find if there is an existing standard member with either the same id or the same email
+          let existingId = m.id;
+          if (emailKey && emailToIdMap.has(emailKey)) {
+            existingId = emailToIdMap.get(emailKey)!;
+          }
+
+          if (uniqueMembersMap.has(existingId)) {
+            const existing = uniqueMembersMap.get(existingId);
+            uniqueMembersMap.set(existingId, { ...existing, ...m, id: existingId, is_ec: true });
           } else {
             uniqueMembersMap.set(m.id, m);
+            if (emailKey) {
+              emailToIdMap.set(emailKey, m.id);
+            }
           }
         }
       });
@@ -1585,6 +1747,78 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ isSuperAdmin =
     } finally {
       setGeneratingPdf(false);
       setActivePdfMember(null);
+      setPdfProgress(0);
+    }
+  };
+
+  const generateEcIdsPdf = async () => {
+    const ecList = members.filter(m => m.is_ec);
+    if (ecList.length === 0) {
+      showToast('No verified EC members found to generate ID cards.', 'error');
+      return;
+    }
+
+    setGeneratingPdf(true);
+    setPdfProgress(0);
+    showToast(`Generating print-ready double-sided cards for ${ecList.length} EC members...`, 'info');
+
+    try {
+      const { toPng } = await import('html-to-image');
+      const { jsPDF } = await import('jspdf');
+
+      const total = ecList.length;
+      const images: string[] = [];
+
+      for (let i = 0; i < total; i++) {
+        const member = ecList[i];
+        setActivePdfEcMember(member);
+        
+        // Pause to allow DOM paint and image loader
+        await new Promise((resolve) => setTimeout(resolve, 150));
+        
+        const node = document.getElementById('pdf-ec-sandbox-card');
+        if (!node) {
+          throw new Error('EC PDF Sandbox node not found in DOM.');
+        }
+
+        const dataUrl = await toPng(node, {
+          pixelRatio: 2, // Double DPI for crisp printing
+          skipFonts: false,
+          cacheBust: true,
+        });
+
+        images.push(dataUrl);
+        setPdfProgress(Math.round(((i + 1) / total) * 100));
+      }
+
+      // Clear sandbox state
+      setActivePdfEcMember(null);
+
+      const pdf = new jsPDF('p', 'mm', 'a4');
+
+      for (let i = 0; i < images.length; i++) {
+        if (i > 0) {
+          pdf.addPage();
+        }
+        
+        const imgData = images[i];
+        // Draw centered on portrait A4 page
+        const cardWidth = 180;
+        const cardHeight = 142;
+        const x = 15;
+        const y = (297 - cardHeight) / 2;
+
+        pdf.addImage(imgData, 'PNG', x, y, cardWidth, cardHeight, undefined, 'FAST');
+      }
+
+      pdf.save(`st-joseph-math-club-ec-id-cards-${new Date().toISOString().split('T')[0]}.pdf`);
+      showToast('Double-sided folding EC ID cards PDF downloaded successfully!', 'success');
+    } catch (err: any) {
+      console.error('EC PDF Export Error:', err);
+      showToast(err.message || 'Error occurred during EC PDF generation', 'error');
+    } finally {
+      setGeneratingPdf(false);
+      setActivePdfEcMember(null);
       setPdfProgress(0);
     }
   };
@@ -2639,7 +2873,7 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ isSuperAdmin =
                             : 'bg-purple-600 hover:bg-purple-500 shadow-lg shadow-purple-600/15'
                         }`}
                       >
-                        {generatingPdf ? (
+                        {generatingPdf && !activePdfEcMember ? (
                           <>
                             <Loader2 className="w-3.5 h-3.5 animate-spin text-purple-400" />
                             Rendering ({pdfProgress}%)
@@ -2651,12 +2885,130 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ isSuperAdmin =
                           </>
                         )}
                       </button>
+
+                      <button
+                        onClick={generateEcIdsPdf}
+                        disabled={generatingPdf}
+                        className={`w-full sm:w-auto px-5 py-3 rounded-xl text-[9px] font-black text-black uppercase tracking-widest cursor-pointer flex items-center justify-center gap-2 transition-all ${
+                          generatingPdf 
+                            ? 'bg-zinc-800 border border-zinc-700 text-zinc-500 cursor-not-allowed' 
+                            : 'bg-amber-500 hover:bg-amber-400 shadow-lg shadow-amber-500/15'
+                        }`}
+                      >
+                        {generatingPdf && activePdfEcMember ? (
+                          <>
+                            <Loader2 className="w-3.5 h-3.5 animate-spin text-black" />
+                            Generating EC ({pdfProgress}%)
+                          </>
+                        ) : (
+                          <>
+                            <QrCode className="w-3.5 h-3.5 text-black" />
+                            Download EC Cards (Print & Fold)
+                          </>
+                        )}
+                      </button>
                     </div>
+                  </div>
+
+                  {/* Member Stats Cards */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+                    <div 
+                      onClick={() => setMemberRoleFilter('general')}
+                      className={`p-5 rounded-2xl border transition-all cursor-pointer ${
+                        memberRoleFilter === 'general' 
+                          ? 'bg-purple-500/10 border-purple-500/50 shadow-lg shadow-purple-500/5' 
+                          : 'bg-white/[0.02] border-white/5 hover:border-white/10'
+                      }`}
+                    >
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <p className="text-[10px] text-zinc-400 font-bold uppercase tracking-widest mb-1">General Members</p>
+                          <h3 className="text-3xl font-black text-white font-mono">
+                            {members.filter(m => !m.is_ec).length}
+                          </h3>
+                        </div>
+                        <span className="px-2 py-0.5 text-[8px] font-black uppercase tracking-wider rounded-md bg-purple-500/20 text-purple-400 border border-purple-500/30">
+                          JMC ID (6-digit)
+                        </span>
+                      </div>
+                      <p className="text-[10px] text-zinc-500 mt-2 font-medium leading-relaxed">
+                        Click to filter and view standard verified club members, their names, classes, sections, rolls, and unique JMC IDs.
+                      </p>
+                    </div>
+
+                    <div 
+                      onClick={() => setMemberRoleFilter('ec')}
+                      className={`p-5 rounded-2xl border transition-all cursor-pointer ${
+                        memberRoleFilter === 'ec' 
+                          ? 'bg-amber-500/10 border-amber-500/50 shadow-lg shadow-amber-500/5' 
+                          : 'bg-white/[0.02] border-white/5 hover:border-white/10'
+                      }`}
+                    >
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <p className="text-[10px] text-zinc-400 font-bold uppercase tracking-widest mb-1">EC Officers</p>
+                          <h3 className="text-3xl font-black text-white font-mono">
+                            {members.filter(m => m.is_ec).length}
+                          </h3>
+                        </div>
+                        <span className="px-2 py-0.5 text-[8px] font-black uppercase tracking-wider rounded-md bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                          EC ID (3-digit)
+                        </span>
+                      </div>
+                      <p className="text-[10px] text-zinc-500 mt-2 font-medium leading-relaxed">
+                        Click to filter and view Executive Committee officers, their positions, classes, sections, rolls, and 3-digit IDs.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Filter Sub-Tabs */}
+                  <div className="flex items-center justify-between mb-4 border-b border-white/5 pb-4">
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => setMemberRoleFilter('all')}
+                        className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all cursor-pointer ${
+                          memberRoleFilter === 'all'
+                            ? 'bg-white/10 text-white border border-white/20'
+                            : 'text-zinc-500 hover:text-white border border-transparent'
+                        }`}
+                      >
+                        All ({members.length})
+                      </button>
+                      <button
+                        onClick={() => setMemberRoleFilter('general')}
+                        className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all cursor-pointer ${
+                          memberRoleFilter === 'general'
+                            ? 'bg-purple-600/20 text-purple-400 border border-purple-500/30'
+                            : 'text-zinc-500 hover:text-purple-400 border border-transparent'
+                        }`}
+                      >
+                        General ({members.filter(m => !m.is_ec).length})
+                      </button>
+                      <button
+                        onClick={() => setMemberRoleFilter('ec')}
+                        className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all cursor-pointer ${
+                          memberRoleFilter === 'ec'
+                            ? 'bg-amber-600/20 text-amber-400 border border-amber-500/30'
+                            : 'text-zinc-500 hover:text-amber-400 border border-transparent'
+                        }`}
+                      >
+                        EC ({members.filter(m => m.is_ec).length})
+                      </button>
+                    </div>
+                    
+                    <p className="text-[10px] text-zinc-500 font-mono tracking-widest uppercase hidden sm:block">
+                      Showing: {memberRoleFilter === 'all' ? 'All Club Members' : memberRoleFilter === 'general' ? 'General Members' : 'EC Officers'}
+                    </p>
                   </div>
 
                   {/* Grid list of members */}
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {members
+                      .filter(m => {
+                        if (memberRoleFilter === 'general' && m.is_ec) return false;
+                        if (memberRoleFilter === 'ec' && !m.is_ec) return false;
+                        return true;
+                      })
                       .filter(m => 
                         m.full_name?.toLowerCase().includes(memberSearchTerm.toLowerCase()) ||
                         m.member_id?.toLowerCase().includes(memberSearchTerm.toLowerCase()) ||
@@ -2761,11 +3113,25 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ isSuperAdmin =
                 </div>
               }
             >
-              <div className="p-4 bg-amber-500/5 border border-amber-500/10 rounded-2xl flex items-center gap-4 mb-6">
-                <AlertCircle className="w-5 h-5 text-amber-500 flex-shrink-0" />
-                <p className="text-[10px] text-amber-500 font-medium leading-relaxed uppercase tracking-widest">
-                  Showing authenticated, verified registrations only. These records have been confirmed, paid, and verified by administrators.
-                </p>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+                <div className="p-4 bg-amber-500/5 border border-amber-500/10 rounded-2xl flex items-center gap-4">
+                  <AlertCircle className="w-5 h-5 text-amber-500 flex-shrink-0" />
+                  <p className="text-[10px] text-amber-500 font-medium leading-relaxed uppercase tracking-widest">
+                    Showing authenticated, verified registrations only. These records have been confirmed, paid, and verified by administrators.
+                  </p>
+                </div>
+                <div className="p-4 bg-blue-500/5 border border-blue-500/10 rounded-2xl flex flex-col justify-center gap-1">
+                  <div className="flex items-center gap-2">
+                    <DatabaseZap className="w-4 h-4 text-blue-400" />
+                    <span className="text-[10px] text-blue-400 font-black uppercase tracking-wider">Database Optimization Option</span>
+                  </div>
+                  <p className="text-[9px] text-zinc-400 leading-normal uppercase tracking-wider">
+                    To store verifying admin emails directly in the event tables, run this SQL statement in your Supabase SQL Editor:
+                  </p>
+                  <code className="text-[9px] font-mono text-zinc-300 bg-black/40 p-1.5 rounded-lg border border-white/5 select-all overflow-x-auto whitespace-pre">
+                    {`ALTER TABLE public.primary_events ADD COLUMN IF NOT EXISTS verified_by TEXT;\nALTER TABLE public.junior_events ADD COLUMN IF NOT EXISTS verified_by TEXT;\nALTER TABLE public.secondary_events ADD COLUMN IF NOT EXISTS verified_by TEXT;\nALTER TABLE public.higher_secondary_events ADD COLUMN IF NOT EXISTS verified_by TEXT;`}
+                  </code>
+                </div>
               </div>
 
               <div className="overflow-x-auto">
@@ -2784,7 +3150,7 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ isSuperAdmin =
                         <th className="py-4 px-6 text-[10px] uppercase tracking-widest text-zinc-500 font-black">Full Name</th>
                         <th className="py-4 px-6 text-[10px] uppercase tracking-widest text-zinc-500 font-black">Table / Category</th>
                         <th className="py-4 px-6 text-[10px] uppercase tracking-widest text-zinc-500 font-black">Class / Sec / Roll</th>
-                        <th className="py-4 px-6 text-[10px] uppercase tracking-widest text-zinc-500 font-black">bKash Number</th>
+                        <th className="py-4 px-6 text-[10px] uppercase tracking-widest text-zinc-500 font-black">Verified By</th>
                         <th className="py-4 px-6 text-[10px] uppercase tracking-widest text-zinc-500 font-black">Transaction ID</th>
                         <th className="py-4 px-6 text-[10px] uppercase tracking-widest text-zinc-500 font-black">Amount</th>
                       </tr>
@@ -2809,7 +3175,9 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ isSuperAdmin =
                             </p>
                           </td>
                           <td className="py-4 px-6">
-                            <p className="text-xs font-mono text-zinc-400">{tx.bkash_number}</p>
+                            <p className="text-xs font-mono text-zinc-400">
+                              {tx.verified_by || tx.verified_by_audit || (tx.registered_by && tx.registered_by !== 'Self (Online)' ? tx.registered_by : '') || (tx.bkash_number?.startsWith("PROXY: ") ? tx.bkash_number.replace("PROXY: ", "") : '') || 'System/Auto'}
+                            </p>
                           </td>
                           <td className="py-4 px-6 font-mono text-xs font-black text-green-500 uppercase">
                             {tx.trxnid}
@@ -3338,6 +3706,102 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ isSuperAdmin =
                 </span>
               </div>
 
+            </div>
+          </div>
+        </div>
+      )}
+
+      {activePdfEcMember && (
+        <div 
+          id="pdf-ec-sandbox-container"
+          style={{
+            position: 'fixed',
+            left: '-9999px',
+            top: '-9999px',
+            width: '1282px',
+            height: '1012px',
+            zIndex: -9999,
+            pointerEvents: 'none',
+          }}
+        >
+          <div 
+            id="pdf-ec-sandbox-card"
+            className="relative flex items-center bg-[#090225]"
+            style={{
+              width: '1282px',
+              height: '1012px',
+              boxShadow: 'none',
+              WebkitPrintColorAdjust: 'exact',
+              printColorAdjust: 'exact',
+            }}
+          >
+            {/* FRONT SIDE (LEFT) */}
+            <div 
+              className="relative w-[638px] h-[1012px] overflow-hidden bg-[#000000] text-center text-white flex flex-col items-center flex-shrink-0"
+              style={{
+                borderRadius: '52px',
+                border: '4px solid #F59E0B66',
+              }}
+            >
+              <Image 
+                src="/images/ec_front.png" 
+                alt="EC ID Card Front" 
+                fill
+                className="absolute inset-0 w-full h-full object-fill rounded-[48px] pointer-events-none z-0"
+                referrerPolicy="no-referrer" 
+              />
+              {/* Overlaid 3-Digit ID */}
+              <div 
+                className="absolute flex items-center justify-center text-center pointer-events-auto font-mono font-black"
+                style={{
+                  top: '543px',
+                  left: '0',
+                  width: '638px',
+                  height: '120px',
+                }}
+              >
+                <div className="flex flex-col items-center">
+                  <span className="text-[12px] uppercase tracking-[0.25em] text-zinc-400 font-bold mb-1">EC Member ID</span>
+                  <span className="text-[52px] font-black text-[#F59E0B] tracking-wider leading-none drop-shadow-[0_0_15px_rgba(245,158,11,0.5)]">
+                    {(() => {
+                      const m = activePdfEcMember;
+                      if (!m.member_id) return '000';
+                      const match = m.member_id.match(/\d{3}/);
+                      if (match) return match[0];
+                      const numStr = String(m.member_id).replace(/\D/g, '');
+                      if (numStr.length >= 3) {
+                        return numStr.slice(-3);
+                      }
+                      return numStr.padStart(3, '0');
+                    })()}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* FOLDING CREASE / GUIDE LINE */}
+            <div className="w-[6px] h-full flex flex-col items-center justify-between py-10 relative z-20">
+              <div className="absolute inset-y-0 left-[2.5px] border-l-2 border-dashed border-amber-500/40" />
+              <span className="text-[8px] font-black tracking-widest text-amber-500/70 uppercase transform -rotate-90 origin-center whitespace-nowrap bg-[#090225] py-2 shrink-0">
+                ✂️ CUT & FOLD GUIDE
+              </span>
+            </div>
+
+            {/* BACK SIDE (RIGHT) */}
+            <div 
+              className="relative w-[638px] h-[1012px] overflow-hidden bg-[#000000] text-center text-white flex flex-col items-center flex-shrink-0"
+              style={{
+                borderRadius: '52px',
+                border: '4px solid #F59E0B66',
+              }}
+            >
+              <Image 
+                src="/images/ec_back.png" 
+                alt="EC ID Card Back" 
+                fill
+                className="absolute inset-0 w-full h-full object-fill rounded-[48px] pointer-events-none z-0"
+                referrerPolicy="no-referrer" 
+              />
             </div>
           </div>
         </div>

@@ -16,11 +16,58 @@ import {
   Loader2,
   Search,
   Filter,
-  RefreshCcw as HistoryIcon
+  RefreshCcw as HistoryIcon,
+  Award,
+  Sparkles
 } from 'lucide-react';
 import { useToast } from '@/context/ToastContext';
+import { useAuth } from '@/context/AuthContext';
 import { DashboardSection } from './DashboardSection';
 import { DashboardButton } from './DashboardButton';
+
+const REPLY_TEMPLATES = [
+  {
+    id: 'president',
+    name: 'Presidential Resolution',
+    title: 'President, Executive Committee',
+    designation: 'President, Executive Committee',
+    body: (userName: string, issueSubject: string) => `Dear ${userName},
+
+Thank you for contacting the Josephite Math Club Tech Support desk. We are pleased to inform you that the issue regarding "${issueSubject}" has been successfully investigated and resolved by our technical division.
+
+Our technical operations team identified the root cause of the error you described and has successfully deployed a permanent patch. All systems are now fully operational, and you should be able to resume using the platform normally.
+
+St. Joseph Higher Secondary School and the Josephite Math Club hold ourselves to the highest standards of digital excellence. Your proactive report was instrumental in helping us ensure a seamless experience for all students. We thank you for your vigilance.
+
+If you continue to experience any technical friction, please let us know immediately.`
+  },
+  {
+    id: 'tech_secretary',
+    name: 'Technical Fix Notice',
+    title: 'Tech & IT Secretary, Executive Committee',
+    designation: 'Tech & IT Secretary, Executive Committee',
+    body: (userName: string, issueSubject: string) => `Dear ${userName},
+
+I am writing to provide a technical update regarding the "${issueSubject}" ticket you submitted. The bug has been successfully resolved.
+
+We analyzed the system logs and runtime trace you provided. The anomalous behavior has been corrected, and a server-side patch has been deployed. Please clear your browser cache and refresh the platform to ensure the updates are fully synchronized.
+
+If you encounter any further technical friction or have suggestions for our digital infrastructure, please let me know. Thank you for supporting the technical operations of the Josephite Math Club.`
+  },
+  {
+    id: 'general_secretary',
+    name: 'Official Admin Response',
+    title: 'General Secretary, Executive Committee',
+    designation: 'General Secretary, Executive Committee',
+    body: (userName: string, issueSubject: string) => `Dear ${userName},
+
+On behalf of the Executive Committee of the Josephite Math Club, I would like to express our gratitude for your report on "${issueSubject}". This is to officially confirm that the problem has been fully resolved.
+
+Our team has addressed the disruption to ensure that your participation in the upcoming events and club activities is unimpeded. 
+
+Thank you for being an active and valued member of our math community. We wish you the very best of luck in your upcoming challenges!`
+  }
+];
 
 export const SupportManagement: React.FC = () => {
   const [tickets, setTickets] = useState<any[]>([]);
@@ -30,7 +77,11 @@ export const SupportManagement: React.FC = () => {
   const [isReplying, setIsReplying] = useState(false);
   const [filter, setFilter] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedDesignation, setSelectedDesignation] = useState('President, Executive Committee');
+  const [customAdminName, setCustomAdminName] = useState('');
+  
   const { showToast } = useToast();
+  const { user } = useAuth();
 
   const fetchTickets = React.useCallback(async () => {
     setLoading(true);
@@ -59,18 +110,34 @@ export const SupportManagement: React.FC = () => {
 
     setIsReplying(true);
     try {
-      const { error } = await supabase
-        .from('support_tickets')
-        .update({
-          admin_reply: reply,
-          status: 'resolved', // Auto-resolve on reply for simplicity, or we could have a toggle
-          updated_at: new Date().toISOString()
+      const response = await fetch('/api/support/reply', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          ticketId: selectedTicket.id,
+          userEmail: selectedTicket.user_email,
+          userName: selectedTicket.user_name,
+          subject: selectedTicket.subject,
+          originalMessage: selectedTicket.message,
+          replyMessage: reply,
+          adminName: customAdminName.trim() || user?.user_metadata?.full_name || 'Josephite Math Club Executive Committee',
+          designation: selectedDesignation
         })
-        .eq('id', selectedTicket.id);
+      });
 
-      if (error) throw error;
+      const resData = await response.json();
+      if (!response.ok) {
+        throw new Error(resData.error || 'Failed to dispatch resolution email');
+      }
 
-      showToast('Reply sent and ticket resolved', 'success');
+      if (resData.warning) {
+        showToast(resData.warning, 'info');
+      } else {
+        showToast('Official response sent and ticket resolved!', 'success');
+      }
+
       setTickets(tickets.map(t => t.id === selectedTicket.id ? { ...t, admin_reply: reply, status: 'resolved' } : t));
       setSelectedTicket({ ...selectedTicket, admin_reply: reply, status: 'resolved' });
       setReply('');
@@ -273,18 +340,27 @@ export const SupportManagement: React.FC = () => {
                 )}
 
                 {/* Reply Section */}
-                <div className="pt-8 border-t border-white/5 space-y-4">
-                   <div className="flex items-center gap-2 text-amber-500">
-                    <MessageSquare className="w-4 h-4" />
-                    <h6 className="text-[10px] font-black uppercase tracking-widest">Admin's Response</h6>
+                <div className="pt-8 border-t border-white/5 space-y-6">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-amber-500">
+                      <MessageSquare className="w-4 h-4" />
+                      <h6 className="text-[10px] font-black uppercase tracking-widest">Official Resolution Desk</h6>
+                    </div>
+                    <span className="text-[9px] bg-amber-500/10 text-amber-500 px-2 py-0.5 rounded-md font-bold uppercase tracking-wider">
+                      Executive Actions
+                    </span>
                   </div>
 
                   {selectedTicket.admin_reply ? (
-                    <div className="p-6 bg-zinc-800/50 border border-amber-500/20 rounded-3xl">
-                      <p className="text-sm text-amber-500/80">{selectedTicket.admin_reply}</p>
-                      <div className="mt-4 flex justify-end">
+                    <div className="p-6 bg-zinc-800/50 border border-amber-500/20 rounded-3xl space-y-3">
+                      <div className="flex items-center gap-1.5 text-xs text-amber-500/80 font-bold">
+                        <Award className="w-4 h-4" />
+                        <span>This issue has been formally resolved. Sent response:</span>
+                      </div>
+                      <p className="text-sm text-zinc-300 leading-relaxed whitespace-pre-line bg-black/20 p-4 rounded-xl border border-white/5">{selectedTicket.admin_reply}</p>
+                      <div className="flex justify-end pt-1">
                         <DashboardButton 
-                          label="Edit Reply"
+                          label="Formulate New Reply"
                           onClick={() => {
                             setReply(selectedTicket.admin_reply);
                             setSelectedTicket({ ...selectedTicket, admin_reply: null });
@@ -294,30 +370,120 @@ export const SupportManagement: React.FC = () => {
                       </div>
                     </div>
                   ) : (
-                    <form onSubmit={handleReply} className="space-y-4">
-                      <textarea
-                        required
-                        value={reply}
-                        onChange={(e) => setReply(e.target.value)}
-                        placeholder="Type your response to the member..."
-                        className="w-full bg-white/[0.03] border border-white/5 rounded-2xl p-4 py-3 h-32 text-sm text-white placeholder:text-zinc-600 focus:outline-none focus:border-amber-500/20 transition-all resize-none"
-                      />
-                      <div className="flex justify-end">
-                        <button
-                          disabled={isReplying || !reply.trim()}
-                          className="px-8 py-3 bg-amber-500 text-black rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-amber-400 transition-all flex items-center gap-2 group disabled:opacity-50"
-                        >
-                          {isReplying ? (
-                            <Loader2 className="w-4 h-4 animate-spin" />
-                          ) : (
-                            <>
-                              <Send className="w-4 h-4 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
-                              Send & Resolve
-                            </>
-                          )}
-                        </button>
+                    <div className="space-y-6">
+                      {/* Reply Email Templates Prompt */}
+                      <div className="p-4 bg-white/[0.02] border border-white/5 rounded-2xl space-y-3">
+                        <div className="flex items-center gap-2 text-indigo-400">
+                          <Sparkles className="w-3.5 h-3.5" />
+                          <span className="text-[10px] font-black uppercase tracking-wider">
+                            Executive Designation Templates
+                          </span>
+                        </div>
+                        <p className="text-[10px] text-zinc-500">
+                          Click any designation to load its corresponding pre-formatted, polite response. You can then edit it below.
+                        </p>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-1">
+                          {REPLY_TEMPLATES.map(tmpl => (
+                            <button
+                              key={tmpl.id}
+                              type="button"
+                              onClick={() => {
+                                setSelectedDesignation(tmpl.designation);
+                                setReply(tmpl.body(selectedTicket.user_name || 'Member', selectedTicket.subject || 'Technical Problem'));
+                                showToast(`Loaded "${tmpl.name}" Template`, 'success');
+                              }}
+                              className="p-3 bg-white/[0.02] hover:bg-indigo-500/10 border border-white/5 hover:border-indigo-500/30 rounded-xl text-left transition-all cursor-pointer group flex flex-col justify-between"
+                            >
+                              <h6 className="text-[10px] font-black uppercase text-zinc-300 group-hover:text-indigo-400 transition-colors">
+                                {tmpl.name}
+                              </h6>
+                              <span className="text-[8px] text-zinc-500 uppercase tracking-tighter mt-1 font-mono font-bold block">
+                                {tmpl.title}
+                              </span>
+                            </button>
+                          ))}
+                        </div>
                       </div>
-                    </form>
+
+                      <form onSubmit={handleReply} className="space-y-4">
+                        {/* Designation & Name details */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-white/[0.01] p-4 border border-white/5 rounded-2xl">
+                          <div className="space-y-1.5">
+                            <label className="text-[9px] font-black uppercase tracking-wider text-zinc-400">
+                              Sender Name (Sign-off)
+                            </label>
+                            <input
+                              type="text"
+                              value={customAdminName}
+                              onChange={(e) => setCustomAdminName(e.target.value)}
+                              placeholder={user?.user_metadata?.full_name || 'Executive Committee Member'}
+                              className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white placeholder:text-zinc-600 focus:outline-none focus:border-amber-500/30 transition-all"
+                            />
+                          </div>
+
+                          <div className="space-y-1.5">
+                            <label className="text-[9px] font-black uppercase tracking-wider text-zinc-400">
+                              High Designation Role
+                            </label>
+                            <select
+                              value={selectedDesignation}
+                              onChange={(e) => setSelectedDesignation(e.target.value)}
+                              className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-amber-500/30 transition-all cursor-pointer"
+                            >
+                              <option value="President, Executive Committee" className="bg-zinc-950 text-white">President, Executive Committee</option>
+                              <option value="Vice President, Executive Committee" className="bg-zinc-950 text-white">Vice President, Executive Committee</option>
+                              <option value="General Secretary, Executive Committee" className="bg-zinc-950 text-white">General Secretary, Executive Committee</option>
+                              <option value="Treasurer, Executive Committee" className="bg-zinc-950 text-white">Treasurer, Executive Committee</option>
+                              <option value="Tech & IT Secretary, Executive Committee" className="bg-zinc-950 text-white">Tech & IT Secretary, Executive Committee</option>
+                              <option value="Senior Coordinator, Executive Committee" className="bg-zinc-950 text-white">Senior Coordinator, Executive Committee</option>
+                              <option value="Executive Committee Member" className="bg-zinc-950 text-white">Executive Committee Member</option>
+                              <option value="Moderator, Josephite Math Club" className="bg-zinc-950 text-white">Moderator, Josephite Math Club</option>
+                            </select>
+                          </div>
+                        </div>
+
+                        <div className="space-y-1.5">
+                          <div className="flex justify-between items-center">
+                            <label className="text-[9px] font-black uppercase tracking-wider text-zinc-400">
+                              Email Message Body
+                            </label>
+                            {reply.length > 0 && (
+                              <button 
+                                type="button" 
+                                onClick={() => setReply('')} 
+                                className="text-[8px] text-red-500 hover:underline uppercase font-bold"
+                              >
+                                Clear Draft
+                              </button>
+                            )}
+                          </div>
+                          <textarea
+                            required
+                            value={reply}
+                            onChange={(e) => setReply(e.target.value)}
+                            placeholder="Type or load a high-designation email template to resolve this ticket..."
+                            className="w-full bg-white/[0.02] border border-white/10 rounded-2xl p-4 py-3 h-56 text-xs text-white placeholder:text-zinc-600 focus:outline-none focus:border-amber-500/30 transition-all font-sans leading-relaxed resize-none"
+                          />
+                        </div>
+
+                        <div className="flex justify-end gap-3 pt-2">
+                          <button
+                            disabled={isReplying || !reply.trim()}
+                            type="submit"
+                            className="px-8 py-3 bg-amber-500 text-black rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-amber-400 transition-all flex items-center gap-2 group disabled:opacity-50"
+                          >
+                            {isReplying ? (
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                              <>
+                                <Send className="w-4 h-4 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
+                                Send & Resolve
+                              </>
+                            )}
+                          </button>
+                        </div>
+                      </form>
+                    </div>
                   )}
                 </div>
               </div>

@@ -4,9 +4,9 @@ import React, { createContext, useContext, useState, useCallback } from 'react';
 import { Toast, ToastType, ToastContainer } from '../components/Toast';
 
 interface ToastContextType {
-  showToast: (message: string, type?: ToastType, duration?: number) => string;
+  showToast: (message: React.ReactNode, type?: ToastType, duration?: number) => string;
   removeToast: (id: string) => void;
-  updateToast: (id: string, message: string, type: ToastType, duration?: number) => void;
+  updateToast: (id: string, message: React.ReactNode, type: ToastType, duration?: number) => void;
 }
 
 const ToastContext = createContext<ToastContextType | undefined>(undefined);
@@ -18,13 +18,13 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setToasts((prev) => prev.filter((t) => t.id !== id));
   }, []);
 
-  const showToast = useCallback((message: string, type: ToastType = 'info', duration: number = 5000) => {
+  const showToast = useCallback((message: React.ReactNode, type: ToastType = 'info', duration: number = 5000) => {
     const id = Math.random().toString(36).substring(2, 9);
     setToasts((prev) => [...prev, { id, message, type, duration }]);
     return id;
   }, []);
 
-  const updateToast = useCallback((id: string, message: string, type: ToastType, duration: number = 5000) => {
+  const updateToast = useCallback((id: string, message: React.ReactNode, type: ToastType, duration: number = 5000) => {
     setToasts((prev) =>
       prev.map((t) => (t.id === id ? { ...t, message, type, duration } : t))
     );

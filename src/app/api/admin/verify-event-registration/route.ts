@@ -100,6 +100,24 @@ export async function POST(req: Request) {
           throw new Error(`Failed to reject registration: ${rejectError.message}`);
         }
 
+        // Write to admin_audit_logs
+        try {
+          await supabaseAdmin.from('admin_audit_logs').insert([{
+            admin_name: verifiedBy || 'Admin',
+            action_type: 'REJECT_TRANSACTION',
+            target: `${linkedRec.tableName}:${linkedRec.id}`,
+            details: JSON.stringify({
+              trxnid: linkedRec.trxnid,
+              full_name: linkedRec.full_name,
+              amount: linkedRec.amount,
+              selected_events: linkedRec.selected_events,
+              verified_by: verifiedBy
+            })
+          }]);
+        } catch (auditErr) {
+          console.error("Failed to log rejection to admin_audit_logs:", auditErr);
+        }
+
         // Send rejection email to anyone with an email
         const { data: prof } = await supabaseAdmin
           .from('profiles')
@@ -365,6 +383,24 @@ export async function POST(req: Request) {
         }
 
         console.log(`[API] Successfully updated ${linkedRec.tableName} record ${linkedRec.id} to verified='yes'`);
+
+        // Write to admin_audit_logs
+        try {
+          await supabaseAdmin.from('admin_audit_logs').insert([{
+            admin_name: verifiedBy || 'Admin',
+            action_type: 'APPROVE_TRANSACTION',
+            target: `${linkedRec.tableName}:${linkedRec.id}`,
+            details: JSON.stringify({
+              trxnid: linkedRec.trxnid,
+              full_name: linkedRec.full_name,
+              amount: linkedRec.amount,
+              selected_events: linkedRec.selected_events,
+              verified_by: verifiedBy
+            })
+          }]);
+        } catch (auditErr) {
+          console.error("Failed to log approval to admin_audit_logs:", auditErr);
+        }
 
         // Send confirmation email asynchronously (non-blocking)
         if (linkedEmail) {

@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { isSupabaseConfigured, supabase } from '../../../lib/supabase';
 import { Skeleton } from '../../Skeleton';
+import { matchesSearchWithFuzzy } from '../../../lib/utils';
 
 interface EventRegistrationRow {
   id: string;
@@ -35,6 +36,8 @@ interface EventRegistrationRow {
   amount: number;
   selected_events: string;
   verified: "yes" | "no" | "rejected";
+  registered_by?: string;
+  verified_by?: string;
   created_at: string;
   tableName: string;
   email?: string;
@@ -209,33 +212,55 @@ export function VerifiedEventParticipatorsSection() {
     return Array.from(participantsMap.values()).sort((a, b) => a.full_name.localeCompare(b.full_name));
   }, [registrations]);
 
-  // Filter List Dynamically
+  // Filter and Sort List Dynamically
   const filteredParticipants = useMemo(() => {
-    return verifiedParticipantsList.filter((p) => {
-      // 1. Search Query
-      const q = searchQuery.toLowerCase().trim();
-      const matchesSearch = !q || (
-        (p.full_name || "").toLowerCase().includes(q) ||
-        (p.member_id || "").toLowerCase().includes(q) ||
-        (p.email || "").toLowerCase().includes(q) ||
-        (p.phone || "").toLowerCase().includes(q) ||
-        (p.class || "").toLowerCase().includes(q)
-      );
+    const q = searchQuery.toLowerCase().trim();
+    if (!q) {
+      return verifiedParticipantsList.filter((p) => {
+        // ID Type Filter
+        let matchesIdType = true;
+        if (idTypeFilter !== "all") {
+          matchesIdType = p.idType === idTypeFilter;
+        }
+        // Class Filter
+        let matchesClass = true;
+        if (classFilter !== "all") {
+          matchesClass = (p.class || "").trim().toLowerCase() === classFilter.toLowerCase();
+        }
+        return matchesIdType && matchesClass;
+      });
+    }
 
-      // 2. ID Type Filter
-      let matchesIdType = true;
-      if (idTypeFilter !== "all") {
-        matchesIdType = p.idType === idTypeFilter;
-      }
+    // When there is a query, fuzzy match and sort by closeness score
+    const scoredList = verifiedParticipantsList
+      .map((p) => {
+        // ID Type Filter
+        let matchesIdType = true;
+        if (idTypeFilter !== "all") {
+          matchesIdType = p.idType === idTypeFilter;
+        }
+        // Class Filter
+        let matchesClass = true;
+        if (classFilter !== "all") {
+          matchesClass = (p.class || "").trim().toLowerCase() === classFilter.toLowerCase();
+        }
 
-      // 3. Class Filter
-      let matchesClass = true;
-      if (classFilter !== "all") {
-        matchesClass = (p.class || "").trim().toLowerCase() === classFilter.toLowerCase();
-      }
+        if (!matchesIdType || !matchesClass) {
+          return { item: p, matches: false, score: 999 };
+        }
 
-      return matchesSearch && matchesIdType && matchesClass;
-    });
+        const matchRes = matchesSearchWithFuzzy(p, q, {
+          nameField: 'full_name',
+          secondaryFields: ['email', 'member_id', 'phone', 'class']
+        });
+
+        return { item: p, matches: matchRes.matches, score: matchRes.score };
+      })
+      .filter((res) => res.matches);
+
+    // Sort by best score ascending (lower score = closer match)
+    scoredList.sort((a, b) => a.score - b.score);
+    return scoredList.map((res) => res.item);
   }, [verifiedParticipantsList, searchQuery, idTypeFilter, classFilter]);
 
   // Unique lists for dropdown filters
@@ -673,6 +698,17 @@ export function VerifiedEventParticipatorsSection() {
                             <div>
                               <p className="text-zinc-500 text-[8px] font-black uppercase tracking-wider">Transaction ID</p>
                               <p className="text-amber-500 font-mono mt-0.5 font-bold break-all">{reg.trxnid || "N/A"}</p>
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-4 border-t border-white/5 pt-2.5 mt-2.5 text-[11px]">
+                            <div>
+                              <p className="text-zinc-500 text-[8px] font-black uppercase tracking-wider">Registered By</p>
+                              <p className="text-zinc-300 font-mono mt-0.5 font-bold">{reg.registered_by || "Self (Online)"}</p>
+                            </div>
+                            <div>
+                              <p className="text-zinc-500 text-[8px] font-black uppercase tracking-wider">Verified/Approved By</p>
+                              <p className="text-emerald-400 font-mono mt-0.5 font-bold break-all">{reg.verified_by || "System / Auto"}</p>
                             </div>
                           </div>
                         </div>

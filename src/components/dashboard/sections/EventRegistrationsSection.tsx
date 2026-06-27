@@ -21,6 +21,7 @@ import {
   Sparkles
 } from "lucide-react";
 import { supabase, isSupabaseConfigured } from "../../../lib/supabase";
+import { matchesSearchWithFuzzy } from "../../../lib/utils";
 
 interface EventRegistrationRow {
   id: string;
@@ -35,6 +36,7 @@ interface EventRegistrationRow {
   selected_events: string;
   verified: "yes" | "no" | "rejected";
   registered_by: string;
+  verified_by?: string;
   created_at: string;
   tableName: string;
   email?: string;
@@ -206,40 +208,51 @@ export function EventRegistrationsSection() {
 
   // Filtered List execution
   const filteredRegistrants = useMemo(() => {
-    return activeDataset.filter((reg) => {
-      // 1. Status Filter
-      if (statusFilter !== "all" && reg.verified !== statusFilter) {
-        return false;
-      }
+    const q = searchQuery.toLowerCase().trim();
+    if (!q) {
+      return activeDataset.filter((reg) => {
+        // Status Filter
+        if (statusFilter !== "all" && reg.verified !== statusFilter) {
+          return false;
+        }
+        // Table Level Filter
+        if (tableFilter !== "all" && reg.tableName !== tableFilter) {
+          return false;
+        }
+        // Class Filter
+        if (classFilter !== "all" && reg.class !== classFilter) {
+          return false;
+        }
+        return true;
+      });
+    }
 
-      // 2. Table Level Filter
-      if (tableFilter !== "all" && reg.tableName !== tableFilter) {
-        return false;
-      }
+    const scoredList = activeDataset
+      .map((reg) => {
+        // Status Filter
+        if (statusFilter !== "all" && reg.verified !== statusFilter) {
+          return { item: reg, matches: false, score: 999 };
+        }
+        // Table Level Filter
+        if (tableFilter !== "all" && reg.tableName !== tableFilter) {
+          return { item: reg, matches: false, score: 999 };
+        }
+        // Class Filter
+        if (classFilter !== "all" && reg.class !== classFilter) {
+          return { item: reg, matches: false, score: 999 };
+        }
 
-      // 3. Class Filter
-      if (classFilter !== "all" && reg.class !== classFilter) {
-        return false;
-      }
+        const matchRes = matchesSearchWithFuzzy(reg, q, {
+          nameField: 'full_name',
+          secondaryFields: ['email', 'member_id', 'phone', 'class', 'section', 'roll', 'trxnid', 'bkash_number', 'selected_events']
+        });
 
-      // 4. Advanced Search Input Matcher
-      if (searchQuery.trim() !== "") {
-        const q = searchQuery.toLowerCase();
-        return (
-          (reg.full_name || "").toLowerCase().includes(q) ||
-          (reg.email || "").toLowerCase().includes(q) ||
-          (reg.class || "").toLowerCase().includes(q) ||
-          (reg.section || "").toLowerCase().includes(q) ||
-          (reg.roll || "").toLowerCase().includes(q) ||
-          (reg.trxnid || "").toLowerCase().includes(q) ||
-          (reg.bkash_number || "").toLowerCase().includes(q) ||
-          (reg.selected_events || "").toLowerCase().includes(q) ||
-          (reg.member_id || "").toLowerCase().includes(q)
-        );
-      }
+        return { item: reg, matches: matchRes.matches, score: matchRes.score };
+      })
+      .filter((res) => res.matches);
 
-      return true;
-    });
+    scoredList.sort((a, b) => a.score - b.score);
+    return scoredList.map((res) => res.item);
   }, [activeDataset, statusFilter, tableFilter, classFilter, searchQuery]);
 
   // Metric Summaries
@@ -795,6 +808,17 @@ export function EventRegistrationsSection() {
                 <div className="bg-white/[0.01] p-4 rounded-xl border border-white/5">
                   <p className="text-zinc-500 text-[9px] font-black uppercase tracking-wider">Amount Paid</p>
                   <p className="text-green-400 font-black mt-1">৳ {selectedRegistrant.amount}</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-white/[0.01] p-4 rounded-xl border border-white/5">
+                  <p className="text-zinc-500 text-[9px] font-black uppercase tracking-wider">Registered By</p>
+                  <p className="text-white font-bold font-mono mt-1">{selectedRegistrant.registered_by || "Self (Online)"}</p>
+                </div>
+                <div className="bg-white/[0.01] p-4 rounded-xl border border-white/5">
+                  <p className="text-zinc-500 text-[9px] font-black uppercase tracking-wider">Verified/Approved By</p>
+                  <p className="text-emerald-400 font-bold font-mono mt-1">{selectedRegistrant.verified_by || (selectedRegistrant.verified === "yes" ? "System / Auto" : "Pending Approval")}</p>
                 </div>
               </div>
 

@@ -63,19 +63,40 @@ export const TechSupportProvider: React.FC<{ children: React.ReactNode }> = ({ c
 
     setIsSending(true);
     try {
+      const ticketPayload = {
+        user_id: user.id,
+        user_email: user.email,
+        user_name: user.user_metadata?.full_name || user.email,
+        subject,
+        message,
+        error_context: lastError,
+        status: 'open'
+      };
+
       const { error } = await supabase
         .from('support_tickets')
-        .insert({
-          user_id: user.id,
-          user_email: user.email,
-          user_name: user.user_metadata?.full_name || user.email,
-          subject,
-          message,
-          error_context: lastError,
-          status: 'open'
-        });
+        .insert(ticketPayload);
 
       if (error) throw error;
+
+      // Trigger server-side mail notification to super admins in the background
+      try {
+        fetch('/api/support/report', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(ticketPayload),
+        }).then(res => {
+          if (!res.ok) {
+            console.warn('Super admin email notification returned non-ok status');
+          }
+        }).catch(err => {
+          console.error('Failed to dispatch super admin email notification:', err);
+        });
+      } catch (emailErr) {
+        console.error('Failed to trigger super admin email notification:', emailErr);
+      }
 
       showToast('Support ticket sent successfully', 'success');
       return true;

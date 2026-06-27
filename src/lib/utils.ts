@@ -17,15 +17,19 @@ export function resolveImageUrl(url: string | undefined): string {
   // If it's already a full URL (http/https), return it
   if (url.startsWith('http')) return url;
   
+  // Normalize local logo fallback paths to be absolute from root
+  if (url === 'images/logo.png' || url === 'logo.png') {
+    return '/images/logo.png';
+  }
+  
   // If it's a Supabase storage path that somehow got saved as a relative path
-  if (url.startsWith('avatars/') || url.startsWith('images/')) {
+  if ((url.startsWith('avatars/') || url.startsWith('images/')) && !url.includes('logo.png')) {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     if (supabaseUrl) {
       return encodeURI(`${supabaseUrl}/storage/v1/object/public/${url}`);
     }
   }
 
-  // Handle /uploads/ prefix explicitly
   if (url.startsWith('/uploads/')) {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     if (supabaseUrl) {
@@ -37,3 +41,120 @@ export function resolveImageUrl(url: string | undefined): string {
   // For local images, encode the URI to handle spaces in filenames
   return encodeURI(url);
 }
+
+/**
+ * Normalizes a name to treat "MD", "MD.", "Mohammad", "Mohammed", "Muhammad", "Muhammed" as the same ("md").
+ */
+export function normalizeName(str: string): string {
+  if (!str) return "";
+  return str
+    .toLowerCase()
+    .replace(/\b(md\b\.?|mhd\b\.?|mohammad\b|mohammed\b|muhammad\b|muhammed\b|mohamed\b|muhamed\b)/g, "md")
+    .replace(/[^a-z0-9\s]/g, "") // remove punctuation
+    .replace(/\s+/g, " ") // normalize spacing
+    .trim();
+}
+
+/**
+ * Calculates Levenshtein Distance between two strings.
+ */
+export function getLevenshteinDistance(a: string, b: string): number {
+  const tmp: number[][] = [];
+  for (let i = 0; i <= a.length; i++) {
+    tmp[i] = [i];
+  }
+  for (let j = 0; j <= b.length; j++) {
+    tmp[0][j] = j;
+  }
+  for (let i = 1; i <= a.length; i++) {
+    for (let j = 1; j <= b.length; j++) {
+      tmp[i][j] = Math.min(
+        tmp[i - 1][j] + 1, // deletion
+        tmp[i][j - 1] + 1, // insertion
+        tmp[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1) // substitution
+      );
+    }
+  }
+  return tmp[a.length][b.length];
+}
+
+/**
+ * Checks if target name matches a query string using fuzzy logic, handling typos and name abbreviations.
+ */
+export function isFuzzyMatch(targetName: string, query: string): { matches: boolean; score: number } {
+  const normalizedTarget = normalizeName(targetName);
+  const normalizedQuery = normalizeName(query);
+
+  if (!normalizedQuery) return { matches: true, score: 0 };
+  if (!normalizedTarget) return { matches: false, score: 999 };
+
+  // Substring match gets highest priority
+  if (normalizedTarget.includes(normalizedQuery)) {
+    return { matches: true, score: normalizedTarget.indexOf(normalizedQuery) };
+  }
+
+  const targetWords = normalizedTarget.split(" ").filter(Boolean);
+  const queryWords = normalizedQuery.split(" ").filter(Boolean);
+
+  if (queryWords.length === 0) return { matches: true, score: 0 };
+
+  let totalDistance = 0;
+  let matchedAllWords = true;
+
+  for (const qWord of queryWords) {
+    let minWordDistance = 999;
+    for (const tWord of targetWords) {
+      if (tWord.startsWith(qWord) || qWord.startsWith(tWord)) {
+        const diff = Math.abs(tWord.length - qWord.length);
+        minWordDistance = Math.min(minWordDistance, diff);
+        continue;
+      }
+      
+      const dist = getLevenshteinDistance(qWord, tWord);
+      minWordDistance = Math.min(minWordDistance, dist);
+    }
+
+    // Max allowed distance based on word length:
+    // 1-3 chars: 0 typos (exact or prefix/starts-with)
+    // 4-5 chars: 1 typo
+    // 6+ chars: 2 typos
+    const maxAllowedDistance = qWord.length <= 3 ? 0 : qWord.length <= 5 ? 1 : 2;
+
+    if (minWordDistance > maxAllowedDistance) {
+      matchedAllWords = false;
+      break;
+    }
+    totalDistance += minWordDistance;
+  }
+
+  return { matches: matchedAllWords, score: totalDistance + 10 }; // slight penalty compared to substring
+}
+
+/**
+ * Unified matching logic across name, email, member_id, phone, class, etc.
+ * Supports sorting search results by relevance score.
+ */
+export function matchesSearchWithFuzzy(
+  item: any,
+  query: string,
+  fields: { nameField?: string; secondaryFields?: string[] } = {}
+): { matches: boolean; score: number } {
+  const q = query.trim().toLowerCase();
+  if (!q) return { matches: true, score: 0 };
+
+  const nameField = fields.nameField || 'full_name';
+  const secondaryFields = fields.secondaryFields || ['email', 'member_id', 'phone', 'class'];
+
+  // Check secondary fields first (exact or substring match)
+  for (const field of secondaryFields) {
+    const val = String(item[field] || '').toLowerCase();
+    if (val.includes(q)) {
+      return { matches: true, score: -10 }; // negative score = higher priority/exact matching
+    }
+  }
+
+  // Fallback to fuzzy name matching
+  const nameValue = String(item[nameField] || '');
+  return isFuzzyMatch(nameValue, q);
+}
+

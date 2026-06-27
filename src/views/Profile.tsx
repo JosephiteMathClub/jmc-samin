@@ -31,6 +31,7 @@ import {
 import { toPng } from 'html-to-image';
 import dynamic from 'next/dynamic';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 
 const QRCode = dynamic(() => import('../components/QRCode'), { ssr: false });
 import { useContent } from '../context/ContentContext';
@@ -158,6 +159,7 @@ const formatSegments = (eventsStr: string | null) => {
 
 const Profile = () => {
   const { user, profile, loading: authLoading, isAdmin, signOut, refreshProfile } = useAuth();
+  const { theme, setTheme } = useTheme();
   const { content } = useContent();
   const { showToast } = useToast();
   const router = useRouter();
@@ -949,286 +951,81 @@ const Profile = () => {
                 onClick={(e) => e.stopPropagation()}
               >
                 {/* ID Card Wrapper scaled for on-screen view */}
-                <div className="scale-[0.48] xs:scale-[0.52] sm:scale-[0.58] md:scale-[0.7] lg:scale-[0.75] origin-center -my-48 sm:-my-36 md:-my-24 select-none">
+                <div className="scale-[0.24] xs:scale-[0.28] sm:scale-[0.35] md:scale-[0.45] lg:scale-[0.52] xl:scale-[0.58] origin-center -my-[360px] xs:-my-[320px] sm:-my-[280px] md:-my-[220px] lg:-my-[180px] xl:-my-[140px] select-none">
                   <div 
                     ref={cardRef}
                     id="printable-id-card-modal"
-                    className="relative w-[638px] h-[1012px] rounded-[52px] border-4 overflow-hidden bg-gradient-to-b from-[#11053D] via-[#090225] to-[#01000B] text-center text-white flex flex-col items-center"
+                    className="relative w-[1282px] h-[1012px] rounded-[52px] border border-zinc-800 bg-[#090225] text-center text-white flex items-center overflow-hidden"
                     style={{
-                      borderColor: '#F59E0B66',
-                      boxShadow: '0 0 100px rgba(245, 158, 11, 0.35), inset 0 0 30px rgba(245, 158, 11, 0.15)',
+                      boxShadow: '0 0 100px rgba(245, 158, 11, 0.25)',
                     }}
                   >
-                    {/* Blank Background Template Image */}
-                    <Image 
-                      src="/images/ec_id_card_bg.jpeg" 
-                      alt="ID Card Background" 
-                      fill
-                      className="absolute inset-0 w-full h-full object-fill rounded-[48px] pointer-events-none z-0"
-                      onError={() => {
-                        setImageFailed(true);
+                    {/* FRONT SIDE (LEFT) */}
+                    <div 
+                      className="relative w-[638px] h-[1012px] overflow-hidden bg-[#000000] text-center text-white flex flex-col items-center flex-shrink-0"
+                      style={{
+                        borderRadius: '52px',
+                        border: '4px solid #F59E0B66',
                       }}
-                      onLoad={() => {
-                        setImageFailed(false);
+                    >
+                      <Image 
+                        src="/images/ec_front.png" 
+                        alt="EC ID Card Front" 
+                        fill
+                        className="absolute inset-0 w-full h-full object-fill rounded-[48px] pointer-events-none z-0"
+                        referrerPolicy="no-referrer" 
+                      />
+                      {/* Overlaid 3-Digit ID */}
+                      <div 
+                        className="absolute flex items-center justify-center text-center pointer-events-auto font-mono font-black"
+                        style={{
+                          top: '543px',
+                          left: '0',
+                          width: '638px',
+                          height: '120px',
+                        }}
+                      >
+                        <div className="flex flex-col items-center">
+                          <span className="text-[12px] uppercase tracking-[0.25em] text-zinc-400 font-bold mb-1">EC Member ID</span>
+                          <span className="text-[52px] font-black text-[#F59E0B] tracking-wider leading-none drop-shadow-[0_0_15px_rgba(245,158,11,0.5)]">
+                            {(() => {
+                              if (!memberId) return '000';
+                              const match = String(memberId).match(/\d{3}/);
+                              if (match) return match[0];
+                              const numStr = String(memberId).replace(/\D/g, '');
+                              if (numStr.length >= 3) {
+                                return numStr.slice(-3);
+                              }
+                              return numStr.padStart(3, '0');
+                            })()}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* FOLDING CREASE / GUIDE LINE */}
+                    <div className="w-[6px] h-full flex flex-col items-center justify-between py-10 relative z-20">
+                      <div className="absolute inset-y-0 left-[2.5px] border-l-2 border-dashed border-amber-500/40" />
+                      <span className="text-[8px] font-black tracking-widest text-amber-500/70 uppercase transform -rotate-90 origin-center whitespace-nowrap bg-[#090225] py-2 shrink-0">
+                        ✂️ CUT & FOLD GUIDE
+                      </span>
+                    </div>
+
+                    {/* BACK SIDE (RIGHT) */}
+                    <div 
+                      className="relative w-[638px] h-[1012px] overflow-hidden bg-[#000000] text-center text-white flex flex-col items-center flex-shrink-0"
+                      style={{
+                        borderRadius: '52px',
+                        border: '4px solid #F59E0B66',
                       }}
-                      referrerPolicy="no-referrer" 
-                    />
-
-                    {/* HTML/CSS Fallback Graphics if image fails */}
-                    {imageFailed && (
-                      <div className="absolute inset-0 p-10 flex flex-col items-center pointer-events-none z-0">
-                        {/* Grid overlay */}
-                        <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.012)_1px,_transparent_1px),_linear-gradient(90deg,_rgba(255,255,255,0.012)_1px,_transparent_1px)] bg-[size:20px_20px] opacity-60" />
-                        
-                        {/* Ambient light glow */}
-                        <div className="absolute top-[-10%] left-[-20%] w-[140%] h-[60%] bg-[radial-gradient(circle_at_center,_rgba(58,31,241,0.25),_transparent_65%)] rotate-[-15deg]" />
-                        <div className="absolute bottom-0 right-[-30%] w-[100%] h-[50%] bg-[radial-gradient(circle_at_center,_rgba(162,89,255,0.12),_transparent_60%)]" />
-
-                        {/* Header Logo Row */}
-                        <div className="w-full flex items-center justify-between z-10 shrink-0">
-                          <div className="text-white flex items-center opacity-85 shrink-0">
-                            <svg className="h-10 w-auto text-white" viewBox="0 0 120 30" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-                              <path d="M 10 4 H 36 V 9 H 26 V 20 C 26 24, 23 26, 18 26 H 10 V 21 H 18 C 19.5 21, 21 20.5, 21 19 V 9 H 10 Z" />
-                              <path d="M 44 4 H 51 L 58 13 L 65 4 H 72 V 26 H 67 V 11.5 L 59.5 22.5 H 56.5 L 49 11.5 V 26 H 44 Z" />
-                              <path d="M 80 4 H 106 V 9 H 90 V 21 H 106 V 26 H 80 Z" />
-                            </svg>
-                          </div>
-
-                          <div className="relative w-16 h-16 rounded-full border-2 border-red-500/50 p-1 bg-[#090225] shadow-[0_0_20px_rgba(239,68,68,0.5)] flex items-center justify-center shrink-0">
-                            <Image 
-                              src="/images/logo.png" 
-                              alt="St. Joseph Crest" 
-                              width={54}
-                              height={54}
-                              className="object-contain rounded-full" 
-                              referrerPolicy="no-referrer" 
-                            />
-                          </div>
-                        </div>
-
-                        {/* Math Fiesta Text Logo */}
-                        <div className="w-full flex flex-col items-center z-10 mt-6 shrink-0">
-                          <div 
-                            className="px-8 py-1.5 text-[15px] font-black tracking-[0.25em] rounded uppercase shadow-lg leading-none mb-3 font-display text-white bg-[#4F39F5]"
-                            style={{ boxShadow: '0 0 25px rgba(79, 57, 245, 0.5)' }}
-                          >
-                            JOSEPHITE
-                          </div>
-
-                          <div className="flex items-end justify-center">
-                            <span className="text-[64px] font-black tracking-normal text-white leading-none mr-1 italic" style={{ fontStyle: 'oblique' }}>
-                              INTR
-                            </span>
-                            <span className="w-[50px] h-[60px] inline-block text-white mb-[-2px] relative">
-                              <svg viewBox="0 0 40 50" fill="currentColor" className="w-full h-full text-white">
-                                <circle cx="20" cy="4.5" r="3.5" stroke="currentColor" strokeWidth="2.5" fill="none" />
-                                <rect x="18.5" y="7.5" width="3" height="3" fill="currentColor" />
-                                <path d="M19 10 L6 48 L10 48 L20 18.5 Z" fill="currentColor" />
-                                <path d="M21 10 L34 48 L30 48 L20 18.5 Z" fill="currentColor" />
-                                <path d="M11.5 28 A 12 12 0 0 0 28.5 28" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
-                                <circle cx="20" cy="30.5" r="2" fill="currentColor" />
-                              </svg>
-                            </span>
-                          </div>
-
-                          <div className="text-[27px] font-black tracking-[0.22em] text-white uppercase text-center mt-1 leading-none flex items-center justify-center gap-1">
-                            MATH FI<span className="text-[#A259FF] font-sans drop-shadow-[0_0_8px_rgba(162,180,255,0.6)]">Σ</span>STA
-                          </div>
-
-                          <div className="flex items-center justify-between w-full max-w-[400px] mt-4 border-t border-white/15 pt-3 opacity-95">
-                            <div className="flex items-center gap-3">
-                              <span className="text-[#8B5CF6] text-2xl font-bold leading-none">∞</span>
-                              <div className="text-left text-[11px] leading-[1.1] font-black uppercase tracking-wider text-purple-200">
-                                <div>Let Infinity</div>
-                                <div>Be Your Limit</div>
-                              </div>
-                            </div>
-                            
-                            <div className="px-3 py-1 rounded border border-[#8B5CF6] text-[13px] font-black tracking-[0.1em] text-[#A259FF] bg-[#A259FF]/10 select-none">
-                              2026
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Designation Category Header */}
-                        <div className="text-center w-full z-10 select-none mt-20 mb-4 shrink-0">
-                          <p className="font-display text-[38px] font-black tracking-[0.2em] leading-none uppercase filter drop-shadow-[0_2px_4px_rgba(0,0,0,0.6)] text-[#F59E0B]">
-                            EXECUTIVE
-                          </p>
-                          <p className="font-display text-[38px] font-black tracking-[0.2em] mt-1 uppercase leading-none filter drop-shadow-[0_2px_4px_rgba(0,0,0,0.6)] text-[#F59E0B]">
-                            COMMITTEE
-                          </p>
-                        </div>
-
-                        {/* Personal Details Placeholders */}
-                        <div className="absolute inset-0 font-sans text-left pointer-events-none z-0">
-                          {/* Name Underline Label */}
-                          <div 
-                            className="absolute flex items-center text-[18px] leading-none"
-                            style={{ top: '825px', left: '50px', right: '50px' }}
-                          >
-                            <span className="font-bold tracking-[0.1em] w-[120px] uppercase shrink-0 text-zinc-500">NAME:</span>
-                            <span className="text-white/10 select-none flex-1 border-b border-white/15 h-[20px] -mt-[3px]" />
-                          </div>
-
-                          {/* Class Label */}
-                          <div 
-                            className="absolute flex items-center text-[17px] leading-none text-zinc-500"
-                            style={{ top: '876px', left: '50px', width: '150px' }}
-                          >
-                            <span className="font-bold tracking-[0.05em] shrink-0">Class:</span>
-                            <span className="text-white/10 select-none flex-1 border-b border-white/15 h-[18px] ml-2 -mt-[3px]" />
-                          </div>
-
-                          {/* Section Label */}
-                          <div 
-                            className="absolute flex items-center text-[17px] leading-none text-zinc-500"
-                            style={{ top: '876px', left: '220px', width: '180px' }}
-                          >
-                            <span className="font-bold tracking-[0.05em] shrink-0">Section:</span>
-                            <span className="text-white/10 select-none flex-1 border-b border-white/15 h-[18px] ml-2 -mt-[3px]" />
-                          </div>
-
-                          {/* Roll Label */}
-                          <div 
-                            className="absolute flex items-center text-[17px] leading-none text-zinc-500"
-                            style={{ top: '876px', left: '420px', width: '130px' }}
-                          >
-                            <span className="font-bold tracking-[0.05em] shrink-0">Roll:</span>
-                            <span className="text-white/10 select-none flex-1 border-b border-white/15 h-[18px] ml-2 -mt-[3px]" />
-                          </div>
-
-                          {/* ID no. Label */}
-                          <div 
-                            className="absolute flex items-center text-[18px] leading-none text-[#F59E0B]"
-                            style={{ top: '945px', left: '50px', right: '50px' }}
-                          >
-                            <span className="font-bold tracking-[0.05em] w-[120px] uppercase shrink-0">ID no.:</span>
-                            <span className="text-white/10 select-none flex-1 border-b border-white/15 h-[20px] -mt-[3px]" />
-                          </div>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Absolute Pixel-Perfect Overlay Layer for coordinates dynamic fields */}
-                    <div className="absolute inset-0 z-10 pointer-events-none">
-                      
-                      {/* QR Code */}
-                      <div 
-                        className="absolute bg-white rounded-[24px] flex items-center justify-center select-all pointer-events-auto"
-                        style={{
-                          top: '353px',
-                          left: '182px',
-                          width: '274px',
-                          height: '274px',
-                          padding: '17px',
-                          boxShadow: '0 0 40px rgba(245, 158, 11, 0.25)'
-                        }}
-                      >
-                        <QRCode 
-                          value={JSON.stringify({
-                            name: profile?.full_name || fullName,
-                            id: memberId,
-                            class: memberClass,
-                            section: memberSection,
-                            roll: memberRoll,
-                            role: 'EC Officer',
-                            is_ec: true,
-                            v: '1.0'
-                          })}
-                          size={240}
-                          level="H"
-                          includeMargin={false}
-                        />
-                      </div>
-
-                      {/* Name */}
-                      <div 
-                        className="absolute flex items-center justify-start pointer-events-auto"
-                        style={{
-                          top: '814px',
-                          left: '186px',
-                          width: '390px',
-                          height: '32px',
-                        }}
-                      >
-                        <span className={`font-black uppercase text-white tracking-widest truncate w-full block text-left leading-none ${
-                          (profile?.full_name || fullName || "").length > 20 
-                            ? 'text-[15px]' 
-                            : (profile?.full_name || fullName || "").length > 15 
-                              ? 'text-[17px]' 
-                              : 'text-[20px]'
-                        }`}>
-                          {profile?.full_name || fullName || "—"}
-                        </span>
-                      </div>
-
-                      {/* Class */}
-                      <div 
-                        className="absolute flex items-center justify-center text-center pointer-events-auto font-extrabold"
-                        style={{
-                          top: '870px',
-                          left: '183px',
-                          width: '80px',
-                          height: '24px',
-                        }}
-                      >
-                        <span className="text-[16px] text-white font-black leading-none select-all uppercase">
-                          {memberClass || "—"}
-                        </span>
-                      </div>
-
-                      {/* Section */}
-                      <div 
-                        className="absolute flex items-center justify-center text-center pointer-events-auto font-extrabold"
-                        style={{
-                          top: '870px',
-                          left: '423px',
-                          width: '60px',
-                          height: '24px',
-                        }}
-                      >
-                        <span className={`text-[#ffffff] font-black leading-none truncate select-all uppercase ${
-                          (memberSection || "").length > 5
-                            ? 'text-[12px] tracking-tight'
-                            : 'text-[16px]'
-                        }`}>
-                          {memberSection || "—"}
-                        </span>
-                      </div>
-
-                      {/* Roll */}
-                      <div 
-                        className="absolute flex items-center justify-center text-center pointer-events-auto font-extrabold"
-                        style={{
-                          top: '870px',
-                          left: '544px',
-                          width: '50px',
-                          height: '24px',
-                        }}
-                      >
-                        <span className="text-[16px] text-white font-black leading-none select-all">
-                          {memberRoll || "—"}
-                        </span>
-                      </div>
-
-                      {/* ID No */}
-                      <div 
-                        className="absolute flex items-center justify-start text-left pointer-events-auto font-mono font-bold"
-                        style={{
-                          top: '934px',
-                          left: '213px',
-                          width: '260px',
-                          height: '24px',
-                        }}
-                      >
-                        <span className={`text-white font-black tracking-widest leading-none select-all ${
-                          (memberId || "").length > 14 ? 'text-[14px]' : 'text-[17px]'
-                        }`}>
-                          {memberId || "—"}
-                        </span>
-                      </div>
-
+                    >
+                      <Image 
+                        src="/images/ec_back.png" 
+                        alt="EC ID Card Back" 
+                        fill
+                        className="absolute inset-0 w-full h-full object-fill rounded-[48px] pointer-events-none z-0"
+                        referrerPolicy="no-referrer" 
+                      />
                     </div>
                   </div>
                 </div>
@@ -2318,6 +2115,87 @@ const Profile = () => {
                             <p className="text-white font-mono font-bold tracking-wider">
                               {memberId || 'PENDING'}
                             </p>
+                          </div>
+
+                          {/* Accessibility Settings & High-Contrast Theme Switcher */}
+                          <div className="md:col-span-2 p-8 rounded-3xl bg-white/5 border border-white/10 space-y-6">
+                            <div className="flex items-center gap-4">
+                              <Settings className="w-6 h-6 text-[var(--c-6-start)]" />
+                              <div>
+                                <h3 className="text-xl font-bold text-white uppercase tracking-wider">Accessibility & Theme Preferences</h3>
+                                <p className="text-xs text-zinc-500 mt-1">Select a high-contrast mode optimized for your visual preferences and environmental lighting.</p>
+                              </div>
+                            </div>
+                            
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pt-2">
+                              {/* Option 1: Default */}
+                              <button
+                                type="button"
+                                onClick={() => setTheme("default")}
+                                className={`p-5 rounded-2xl border text-left transition-all cursor-pointer ${
+                                  theme === "default"
+                                    ? "bg-white/10 border-[var(--c-6-start)] shadow-[0_0_15px_rgba(0,180,219,0.3)]"
+                                    : "bg-black/20 border-white/5 hover:border-white/20"
+                                }`}
+                              >
+                                <div className="flex items-center justify-between">
+                                  <span className="text-sm font-bold text-white">Cosmic Dark</span>
+                                  <span className="w-3.5 h-3.5 rounded-full bg-[#050505] border border-white/30" />
+                                </div>
+                                <p className="text-[10px] text-zinc-500 mt-2 font-medium">Default deep space aesthetic with subtle teal accents.</p>
+                              </button>
+
+                              {/* Option 2: High Contrast Dark */}
+                              <button
+                                type="button"
+                                onClick={() => setTheme("contrast-dark")}
+                                className={`p-5 rounded-2xl border text-left transition-all cursor-pointer ${
+                                  theme === "contrast-dark"
+                                    ? "bg-white/10 border-white shadow-[0_0_15px_rgba(255,255,255,0.2)]"
+                                    : "bg-black/20 border-white/5 hover:border-white/20"
+                                }`}
+                              >
+                                <div className="flex items-center justify-between">
+                                  <span className="text-sm font-bold text-white">Contrast Dark</span>
+                                  <span className="w-3.5 h-3.5 rounded-full bg-black border border-white" />
+                                </div>
+                                <p className="text-[10px] text-zinc-500 mt-2 font-medium">Pure black canvas with maximum white text contrast.</p>
+                              </button>
+
+                              {/* Option 3: High Contrast Light */}
+                              <button
+                                type="button"
+                                onClick={() => setTheme("contrast-light")}
+                                className={`p-5 rounded-2xl border text-left transition-all cursor-pointer ${
+                                  theme === "contrast-light"
+                                    ? "bg-white/10 border-blue-500 shadow-[0_0_15px_rgba(0,85,255,0.2)]"
+                                    : "bg-black/20 border-white/5 hover:border-white/20"
+                                }`}
+                              >
+                                <div className="flex items-center justify-between">
+                                  <span className="text-sm font-bold text-white">Contrast Light</span>
+                                  <span className="w-3.5 h-3.5 rounded-full bg-white border border-black" />
+                                </div>
+                                <p className="text-[10px] text-zinc-500 mt-2 font-medium">Ultra-bright white backdrop with crisp black details.</p>
+                              </button>
+
+                              {/* Option 4: Retro Amber */}
+                              <button
+                                type="button"
+                                onClick={() => setTheme("terminal-amber")}
+                                className={`p-5 rounded-2xl border text-left transition-all cursor-pointer ${
+                                  theme === "terminal-amber"
+                                    ? "bg-white/10 border-amber-500 shadow-[0_0_15px_rgba(245,158,11,0.2)]"
+                                    : "bg-black/20 border-white/5 hover:border-white/20"
+                                }`}
+                              >
+                                <div className="flex items-center justify-between">
+                                  <span className="text-sm font-bold text-white">Retro Amber</span>
+                                  <span className="w-3.5 h-3.5 rounded-full bg-black border border-amber-500" />
+                                </div>
+                                <p className="text-[10px] text-zinc-500 mt-2 font-medium">Nostalgic console amber-on-black for low eye strain.</p>
+                              </button>
+                            </div>
                           </div>
 
                           {isGeneralMember && unverifiedRegistrations.length > 0 && (

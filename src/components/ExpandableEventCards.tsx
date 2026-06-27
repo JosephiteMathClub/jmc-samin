@@ -5,16 +5,62 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useOutsideClick } from "@/hooks/use-outside-click";
 import Image from "next/image";
 import { resolveImageUrl } from "@/lib/utils";
+import { DEFAULT_CONTENT } from "../data/default-content";
 import { Clock, MapPin, ArrowRight, X } from "lucide-react";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+
+const getLocalFallbackForTitle = (title: string, index: number = 0) => {
+  const t = (title || "").toLowerCase();
+  if (t.includes("geometry") || t.includes("dash")) return "/images/event_banner/Geo-Dash.jpg";
+  if (t.includes("sudoku")) return "/images/event_banner/Sudoku.jpg";
+  if (t.includes("singularity")) return "/images/event_banner/Singularity-segment.jpg";
+  if (t.includes("escape") || t.includes("room")) return "/images/event_banner/Escape-Room.jpg";
+  if (t.includes("tic") || t.includes("toe")) return "/images/event_banner/tic-tac-toe.jpg";
+  if (t.includes("probability") || t.includes("pressure") || t.includes("pr-pr") || t.includes("pr pr")) return "/images/event_banner/PR-PR.jpg";
+  if (t.includes("calculator") || t.includes("calc")) return "/images/event_banner/Human_Calc-segment.jpg";
+  if (t.includes("olympiad")) return "/images/event_banner/Geo-Dash.jpg";
+  if (t.includes("iq") || t.includes("intelligence")) return "/images/event_banner/Sudoku.jpg";
+  if (t.includes("calculus") || t.includes("bee")) return "/images/event_banner/Human_Calc-segment.jpg";
+  if (t.includes("rubik") || t.includes("cube")) return "/images/event_banner/Sudoku.jpg";
+  if (t.includes("crypto") || t.includes("mania")) return "/images/event_banner/Escape-Room.jpg";
+  
+  const fallbackList = [
+    "/images/event_banner/Geo-Dash.jpg",
+    "/images/event_banner/Sudoku.jpg",
+    "/images/event_banner/Singularity-segment.jpg",
+    "/images/event_banner/Escape-Room.jpg",
+    "/images/event_banner/tic-tac-toe.jpg",
+    "/images/event_banner/PR-PR.jpg",
+    "/images/event_banner/Human_Calc-segment.jpg"
+  ];
+  return fallbackList[index % fallbackList.length];
+};
+
+const getEventImageUrl = (event: any, index: number = 0) => {
+  if (event && event.imageUrl) return event.imageUrl;
+  try {
+    const defaultEvents = DEFAULT_CONTENT?.events?.events || [];
+    const matched = defaultEvents.find((e: any) => e.id === event?.id);
+    if (matched?.imageUrl) return matched.imageUrl;
+  } catch (err) {
+    console.error("Error in getEventImageUrl fallback:", err);
+  }
+  return getLocalFallbackForTitle(event?.title, index);
+};
 
 export function ExpandableEventCards({ events, shouldReduceGfx }: { events: any[], shouldReduceGfx: boolean }) {
   const [active, setActive] = useState<any | boolean | null>(
     null
   );
+  const [activeImageError, setActiveImageError] = useState(false);
+  const [failedImages, setFailedImages] = useState<Record<string, boolean>>({});
   const ref = useRef<HTMLDivElement>(null);
   const id = useId();
+
+  useEffect(() => {
+    setActiveImageError(false);
+  }, [active]);
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
@@ -76,9 +122,14 @@ export function ExpandableEventCards({ events, shouldReduceGfx }: { events: any[
               <motion.div layoutId={`image-${active.title}-${id}`} className="relative h-72 sm:h-96 w-full shrink-0">
                 <Image
                   fill
-                  src={resolveImageUrl(active.imageUrl) || `https://picsum.photos/seed/event-${active.id}/1200/800`}
+                  src={(() => {
+                    const resolvedImg = getEventImageUrl(active);
+                    return (resolvedImg && !activeImageError) ? resolveImageUrl(resolvedImg) : getLocalFallbackForTitle(active.title, 0);
+                  })()}
                   alt={active.title}
                   className="w-full h-full object-cover"
+                  onError={() => setActiveImageError(true)}
+                  referrerPolicy="no-referrer"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-[#050505] via-transparent to-transparent" />
               </motion.div>
@@ -137,6 +188,8 @@ export function ExpandableEventCards({ events, shouldReduceGfx }: { events: any[
         {events.map((event, index) => {
           const isPast = event.date?.toLowerCase().includes('2023') || event.date?.toLowerCase().includes('2024');
           const isLive = event.tag?.toLowerCase() === 'live' || event.category?.toLowerCase() === 'live';
+          const eventId = event.id || `event-${index}`;
+          const hasImageError = failedImages[eventId];
 
           return (
             <motion.div
@@ -152,9 +205,14 @@ export function ExpandableEventCards({ events, shouldReduceGfx }: { events: any[
               <motion.div layoutId={`image-${event.title}-${id}`} className="relative h-56 shrink-0 w-full overflow-hidden">
                 <Image
                   fill
-                  src={resolveImageUrl(event.imageUrl) || `https://picsum.photos/seed/event-${event.id || index}/800/600`}
+                  src={(() => {
+                    const resolvedImg = getEventImageUrl(event, index);
+                    return (resolvedImg && !hasImageError) ? resolveImageUrl(resolvedImg) : getLocalFallbackForTitle(event.title, index);
+                  })()}
                   alt={event.title}
                   className="w-full h-full object-cover object-top opacity-60 group-hover:opacity-100 transition-opacity duration-500"
+                  onError={() => setFailedImages(prev => ({ ...prev, [eventId]: true }))}
+                  referrerPolicy="no-referrer"
                 />
                 {/* Top Meta */}
                 <div className="absolute top-6 left-6 right-6 flex justify-between items-start z-20">

@@ -21,7 +21,7 @@ import {
 import { DashboardSection } from '../DashboardSection';
 import { DashboardButton } from '../DashboardButton';
 import Image from 'next/image';
-import { resolveImageUrl } from '../../../lib/utils';
+import { resolveImageUrl, matchesSearchWithFuzzy } from '../../../lib/utils';
 import ConfirmModal from '../../ConfirmModal';
 import { BatchMemberUpload } from './BatchMemberUpload';
 import { useToast } from '../../../context/ToastContext';
@@ -206,21 +206,46 @@ export const DashboardEcMemberManagementSection: React.FC<DashboardEcMemberManag
   };
 
   const filteredMembers = useMemo(() => {
-    return members.filter(m => {
-      // Filter ONLY EC members
-      const isEcMember = m.is_ec === true || (m.member_id && /^\d{3}$/.test(m.member_id));
-      if (!isEcMember) return false;
+    const q = memberSearch.toLowerCase().trim();
+    if (!q) {
+      return members.filter(m => {
+        // Filter ONLY EC members
+        const isEcMember = m.is_ec === true || (m.member_id && /^\d{3}$/.test(m.member_id));
+        if (!isEcMember) return false;
 
-      const name = m.full_name || '';
-      const email = m.email_address || m.email || '';
-      const id = m.member_id || '';
-      
-      const matchesSearch = name.toLowerCase().includes(memberSearch.toLowerCase()) || 
-                          email.toLowerCase().includes(memberSearch.toLowerCase()) ||
-                          id.toLowerCase().includes(memberSearch.toLowerCase());
-      const matchesFilter = memberFilter === 'all' || m.verified === memberFilter;
-      return matchesSearch && matchesFilter;
-    });
+        return memberFilter === 'all' || m.verified === memberFilter;
+      });
+    }
+
+    const scoredList = members
+      .map(m => {
+        // Filter ONLY EC members
+        const isEcMember = m.is_ec === true || (m.member_id && /^\d{3}$/.test(m.member_id));
+        if (!isEcMember) return { item: m, matches: false, score: 999 };
+
+        const matchesFilter = memberFilter === 'all' || m.verified === memberFilter;
+        if (!matchesFilter) return { item: m, matches: false, score: 999 };
+
+        const email = m.email_address || m.email || '';
+        const matchRes = matchesSearchWithFuzzy(m, q, {
+          nameField: 'full_name',
+          secondaryFields: ['email', 'member_id', 'phone', 'class', 'roll']
+        });
+
+        // Also check email since email can be m.email_address too
+        let finalMatches = matchRes.matches;
+        let finalScore = matchRes.score;
+        if (email.toLowerCase().includes(q)) {
+          finalMatches = true;
+          finalScore = -10;
+        }
+
+        return { item: m, matches: finalMatches, score: finalScore };
+      })
+      .filter(res => res.matches);
+
+    scoredList.sort((a, b) => a.score - b.score);
+    return scoredList.map(res => res.item);
   }, [members, memberSearch, memberFilter]);
 
   return (

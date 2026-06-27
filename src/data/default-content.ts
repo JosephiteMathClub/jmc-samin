@@ -172,7 +172,8 @@ export const DEFAULT_CONTENT = {
           "category": "Competition",
           "description": "Participate in the exciting Math Olympiad competition.",
           "registrationLink": "#",
-          "isTeamEvent": false
+          "isTeamEvent": false,
+          "imageUrl": ""
         },
         {
           "id": "event-solo-2",
@@ -183,7 +184,8 @@ export const DEFAULT_CONTENT = {
           "category": "Competition",
           "description": "Participate in the exciting IQ Test competition.",
           "registrationLink": "#",
-          "isTeamEvent": false
+          "isTeamEvent": false,
+          "imageUrl": ""
         },
         {
           "id": "event-solo-3",
@@ -194,7 +196,8 @@ export const DEFAULT_CONTENT = {
           "category": "Competition",
           "description": "Participate in the exciting Probability Pressure competition.",
           "registrationLink": "#",
-          "isTeamEvent": false
+          "isTeamEvent": false,
+          "imageUrl": "/images/event_banner/PR-PR.jpg"
         },
         {
           "id": "event-solo-5",
@@ -205,7 +208,8 @@ export const DEFAULT_CONTENT = {
           "category": "Competition",
           "description": "Participate in the exciting Human Calculator competition.",
           "registrationLink": "#",
-          "isTeamEvent": false
+          "isTeamEvent": false,
+          "imageUrl": "/images/event_banner/Human_Calc-segment.jpg"
         },
         {
           "id": "event-solo-6",
@@ -216,7 +220,8 @@ export const DEFAULT_CONTENT = {
           "category": "Competition",
           "description": "Participate in the exciting Calculus Bee competition.",
           "registrationLink": "#",
-          "isTeamEvent": false
+          "isTeamEvent": false,
+          "imageUrl": ""
         },
         {
           "id": "event-solo-7",
@@ -227,7 +232,8 @@ export const DEFAULT_CONTENT = {
           "category": "Competition",
           "description": "Participate in the exciting Geometry Dash competition.",
           "registrationLink": "#",
-          "isTeamEvent": false
+          "isTeamEvent": false,
+          "imageUrl": "/images/event_banner/Geo-Dash.jpg"
         },
         {
           "id": "event-solo-8",
@@ -238,7 +244,8 @@ export const DEFAULT_CONTENT = {
           "category": "Competition",
           "description": "Participate in the exciting Rubik's Cube competition.",
           "registrationLink": "#",
-          "isTeamEvent": false
+          "isTeamEvent": false,
+          "imageUrl": ""
         },
         {
           "id": "event-solo-9",
@@ -249,7 +256,8 @@ export const DEFAULT_CONTENT = {
           "category": "Competition",
           "description": "Participate in the exciting Sudoku competition.",
           "registrationLink": "#",
-          "isTeamEvent": false
+          "isTeamEvent": false,
+          "imageUrl": "/images/event_banner/Sudoku.jpg"
         },
         {
           "id": "event-solo-10",
@@ -260,7 +268,8 @@ export const DEFAULT_CONTENT = {
           "category": "Competition",
           "description": "Participate in the exciting Cryptomania competition.",
           "registrationLink": "#",
-          "isTeamEvent": false
+          "isTeamEvent": false,
+          "imageUrl": ""
         },
         {
           "id": "event-solo-11",
@@ -271,7 +280,8 @@ export const DEFAULT_CONTENT = {
           "category": "Competition",
           "description": "Participate in the exciting Singularity competition.",
           "registrationLink": "#",
-          "isTeamEvent": false
+          "isTeamEvent": false,
+          "imageUrl": "/images/event_banner/Singularity-segment.jpg"
         },
         {
           "id": "event-team-12",
@@ -283,7 +293,8 @@ export const DEFAULT_CONTENT = {
           "description": "A thrilling team event (Escape Room) where logic and teamwork matter.",
           "registrationLink": "#",
           "isTeamEvent": true,
-          "teamSize": 3
+          "teamSize": 3,
+          "imageUrl": "/images/event_banner/Escape-Room.jpg"
         },
         {
           "id": "event-team-15",
@@ -295,7 +306,8 @@ export const DEFAULT_CONTENT = {
           "description": "A tactical grid match where math formulas and patterns meet board-game maneuvers. Exclusive to Primary and Junior categories.",
           "registrationLink": "#",
           "isTeamEvent": true,
-          "teamSize": 3
+          "teamSize": 3,
+          "imageUrl": "/images/event_banner/tic-tac-toe.jpg"
         }
       ]
   },

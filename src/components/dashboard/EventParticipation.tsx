@@ -26,6 +26,7 @@ import {
   FileSpreadsheet,
   Edit,
   Mail,
+  Download,
 } from "lucide-react";
 import { supabase, isSupabaseConfigured } from "../../lib/supabase";
 import { useToast } from "../../context/ToastContext";
@@ -265,11 +266,411 @@ export const EventParticipation = ({
   };
 
   // State for sub-tab and verifier
-  const [adminSubTab, setAdminSubTab] = useState<"standard" | "verifier">(
+  const [adminSubTab, setAdminSubTab] = useState<"standard" | "verifier" | "attendance">(
     "standard",
   );
   const [pendingList, setPendingList] = useState<any[]>([]);
   const [verifyingId, setVerifyingId] = useState<string | null>(null);
+
+  // States for Fast Attendance / Check-In
+  const [attendanceEvent, setAttendanceEvent] = useState<string>("");
+  const [attendanceCategory, setAttendanceCategory] = useState<string>("Junior");
+  const [attendanceSearch, setAttendanceSearch] = useState<string>("");
+  const [attendanceStudents, setAttendanceStudents] = useState<any[]>([]);
+  const [loadingAttendance, setLoadingAttendance] = useState<boolean>(false);
+  const [isAbruptModalOpen, setIsAbruptModalOpen] = useState<boolean>(false);
+  const [validatingStudentId, setValidatingStudentId] = useState<string | null>(null);
+
+  // Abrupt additions form state
+  const [abruptName, setAbruptName] = useState<string>("");
+  const [abruptClass, setAbruptClass] = useState<string>("");
+  const [abruptSection, setAbruptSection] = useState<string>("");
+  const [abruptRoll, setAbruptRoll] = useState<string>("");
+  const [abruptId, setAbruptId] = useState<string>("");
+
+  const fetchAttendanceList = useCallback(async (event: string, category: string) => {
+    if (!event || !category || !isSupabaseConfigured) return;
+    setLoadingAttendance(true);
+    try {
+      let tableName = "";
+      if (category === "Primary") tableName = "primary_events";
+      else if (category === "Junior") tableName = "junior_events";
+      else if (category === "Secondary") tableName = "secondary_events";
+      else if (category === "Higher Secondary") tableName = "higher_secondary_events";
+
+      if (!tableName) {
+        setLoadingAttendance(false);
+        return;
+      }
+
+      // Query verified registrations using standard, reliable syntax
+      const { data: verifiedRegs, error: regError } = await supabase
+        .from(tableName)
+        .select("*")
+        .or("verified.eq.yes,verified.eq.true");
+
+      if (regError) throw regError;
+
+      const filtered = (verifiedRegs || []).filter((reg: any) => {
+        if (!reg.selected_events) return false;
+        const selectedList = reg.selected_events
+          .split(",")
+          .map((s: string) => s.trim().toLowerCase());
+        return selectedList.includes(event.trim().toLowerCase());
+      });
+
+      // Extract all userIds from the filtered registrations to bypass 1000-row limit in member table
+      const userIds = filtered.map((reg: any) => reg.user_id).filter(Boolean);
+
+      const userToMemberMap: Record<string, string> = {};
+
+      if (userIds.length > 0) {
+        // Query both member and ec_member only for these userIds in parallel
+        const [memberRes, ecMemberRes] = await Promise.all([
+          supabase
+            .from("member")
+            .select("id, member_id")
+            .in("id", userIds),
+          supabase
+            .from("ec_member")
+            .select("id, member_id")
+            .in("id", userIds)
+        ]);
+
+        if (memberRes.data) {
+          memberRes.data.forEach((m: any) => {
+            if (m.id && m.member_id) {
+              userToMemberMap[m.id] = m.member_id;
+            }
+          });
+        }
+
+        if (ecMemberRes.data) {
+          ecMemberRes.data.forEach((m: any) => {
+            if (m.id && m.member_id) {
+              userToMemberMap[m.id] = m.member_id;
+            }
+          });
+        }
+      }
+
+      // Fetch recorded participations for this specific event and category
+      const { data: partData, error: partError } = await supabase
+        .from("event_participation")
+        .select("member_id")
+        .eq("event_name", event)
+        .eq("category", category);
+
+      const participationSet = new Set<string>();
+      if (!partError && partData) {
+        partData.forEach((p: any) => {
+          if (p.member_id) {
+            participationSet.add(p.member_id.trim().toLowerCase());
+          }
+        });
+      }
+
+      const mapped = filtered.map((reg: any) => {
+        const memberId = userToMemberMap[reg.user_id];
+        const uniqueId = memberId || reg.trxnid || `REG-${reg.id.substring(0, 8)}`;
+        const participated = participationSet.has(uniqueId.trim().toLowerCase()) || (memberId ? participationSet.has(memberId.trim().toLowerCase()) : false);
+
+        return {
+          ...reg,
+          uniqueId,
+          participated,
+          memberId
+        };
+      });
+
+      // Get extra participations that were abruptly added
+      const registeredMemberIds = new Set(mapped.map(m => m.uniqueId.trim().toLowerCase()));
+      const extraParticipations = (partData || []).filter(p => {
+        return p.member_id && !registeredMemberIds.has(p.member_id.trim().toLowerCase());
+      });
+
+      if (extraParticipations.length > 0) {
+        const extraMemberIds = extraParticipations.map(p => p.member_id);
+        
+        // Fetch details from both member and ec_member to get full profile info for extras
+        const [extraMembersRes, extraEcMembersRes] = await Promise.all([
+          supabase
+            .from("member")
+            .select("member_id, full_name, class, section, roll")
+            .in("member_id", extraMemberIds),
+          supabase
+            .from("ec_member")
+            .select("member_id, full_name, class, section, roll")
+            .in("member_id", extraMemberIds)
+        ]);
+
+        const extraMembersMap: Record<string, any> = {};
+        if (extraMembersRes.data) {
+          extraMembersRes.data.forEach((m: any) => {
+            if (m.member_id) {
+              extraMembersMap[m.member_id.trim().toLowerCase()] = m;
+            }
+          });
+        }
+        if (extraEcMembersRes.data) {
+          extraEcMembersRes.data.forEach((m: any) => {
+            if (m.member_id) {
+              extraMembersMap[m.member_id.trim().toLowerCase()] = m;
+            }
+          });
+        }
+
+        const extraMapped = extraParticipations.map((p: any) => {
+          const key = p.member_id.trim().toLowerCase();
+          const mem = extraMembersMap[key];
+          return {
+            id: `extra-${p.member_id}`,
+            full_name: mem?.full_name || "Guest Participant",
+            class: mem?.class || "N/A",
+            section: mem?.section || "N/A",
+            roll: mem?.roll || "N/A",
+            uniqueId: p.member_id,
+            participated: true,
+            isAbrupt: true
+          };
+        });
+
+        setAttendanceStudents([...mapped, ...extraMapped]);
+      } else {
+        setAttendanceStudents(mapped);
+      }
+    } catch (err: any) {
+      console.error("Error fetching attendance list:", err);
+      showToast(err.message, "error");
+    } finally {
+      setLoadingAttendance(false);
+    }
+  }, [showToast]);
+
+  const validateStudentParticipation = async (student: any) => {
+    if (!attendanceEvent || !attendanceCategory || !isSupabaseConfigured) return;
+    setValidatingStudentId(student.uniqueId);
+    try {
+      const mId = student.uniqueId;
+      
+      const { data: dbMem } = await supabase
+        .from("member")
+        .select("member_id")
+        .eq("member_id", mId)
+        .maybeSingle();
+
+      if (!dbMem) {
+        const insertPayload: any = {
+          member_id: mId,
+          full_name: student.full_name || "Guest Participant",
+          class: student.class || "N/A",
+          section: student.section || "N/A",
+          roll: student.roll || "N/A",
+          phone: "N/A",
+          email: student.email || "",
+          email_address: student.email || "",
+          verified: "yes",
+          payment_method: "Sync (Fast Check-In)",
+          school: "St Joseph",
+          updated_at: new Date().toISOString()
+        };
+        
+        const { error: memberError } = await supabase.from("member").insert(insertPayload);
+        if (memberError) throw memberError;
+      }
+
+      const { error: partError } = await supabase
+        .from("event_participation")
+        .insert({
+          member_id: mId,
+          event_name: attendanceEvent,
+          category: attendanceCategory,
+          position: null
+        });
+
+      if (partError) throw partError;
+
+      showToast(`Successfully marked ${student.full_name} as participated!`, "success");
+      
+      await logAction(
+        "VALIDATE_EVENT_PARTICIPATION_FAST",
+        `${attendanceEvent}:${attendanceCategory}:${mId}`,
+        `Validated participation for ${student.full_name} (${mId}) in event ${attendanceEvent} (${attendanceCategory}).`
+      );
+
+      await fetchAttendanceList(attendanceEvent, attendanceCategory);
+    } catch (err: any) {
+      console.error("Error validating participation:", err);
+      showToast(err.message, "error");
+    } finally {
+      setValidatingStudentId(null);
+    }
+  };
+
+  const handleAbruptAdd = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!abruptId || !abruptName || !isSupabaseConfigured) {
+      showToast("ID and Name are required fields.", "error");
+      return;
+    }
+    setLoading(true);
+    try {
+      const formattedAbruptId = abruptId.trim();
+
+      // Check duplicate in event_participation
+      const { data: existing } = await supabase
+        .from("event_participation")
+        .select("id")
+        .eq("member_id", formattedAbruptId)
+        .eq("event_name", attendanceEvent)
+        .eq("category", attendanceCategory)
+        .maybeSingle();
+
+      if (existing) {
+        throw new Error(`Participant with ID ${formattedAbruptId} has already participated in this event/category.`);
+      }
+
+      // Upsert to member
+      const insertPayload: any = {
+        member_id: formattedAbruptId,
+        full_name: abruptName.trim(),
+        class: abruptClass.trim() || "N/A",
+        section: abruptSection.trim() || "N/A",
+        roll: abruptRoll.trim() || "N/A",
+        phone: "N/A",
+        email: "",
+        email_address: "",
+        verified: "yes",
+        payment_method: "Abrupt Add (Super Admin)",
+        school: "St Joseph",
+        updated_at: new Date().toISOString()
+      };
+
+      const { error: memError } = await supabase.from("member").upsert(insertPayload);
+      if (memError) throw memError;
+
+      // Insert to event_participation
+      const { error: partError } = await supabase
+        .from("event_participation")
+        .insert({
+          member_id: formattedAbruptId,
+          event_name: attendanceEvent,
+          category: attendanceCategory,
+          position: null
+        });
+
+      if (partError) throw partError;
+
+      showToast(`Abruptly added and validated ${abruptName.trim()}!`, "success");
+
+      await logAction(
+        "ABRUPT_ADD_PARTICIPATION",
+        `${attendanceEvent}:${attendanceCategory}:${formattedAbruptId}`,
+        `Abruptly added non-registered participant ${abruptName.trim()} (${formattedAbruptId}) in event ${attendanceEvent} (${attendanceCategory}).`
+      );
+
+      // Reset form & state
+      setAbruptName("");
+      setAbruptClass("");
+      setAbruptSection("");
+      setAbruptRoll("");
+      setAbruptId("");
+      setIsAbruptModalOpen(false);
+
+      // Refresh
+      await fetchAttendanceList(attendanceEvent, attendanceCategory);
+    } catch (err: any) {
+      console.error("Error abruptly adding participant:", err);
+      showToast(err.message, "error");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDownloadCSV = () => {
+    try {
+      const query = attendanceSearch.toLowerCase().trim();
+      const filteredList = attendanceStudents.filter((student) => {
+        if (!query) return true;
+        return (
+          (student.full_name || "").toLowerCase().includes(query) ||
+          (student.uniqueId || "").toLowerCase().includes(query) ||
+          (student.class || "").toLowerCase().includes(query) ||
+          (student.section || "").toLowerCase().includes(query) ||
+          (student.roll || "").toLowerCase().includes(query)
+        );
+      });
+
+      if (filteredList.length === 0) {
+        showToast("No records to export matching search criteria.", "error");
+        return;
+      }
+
+      // Helper to escape values for CSV compatibility
+      const escapeCSV = (val: any) => {
+        if (val === null || val === undefined) return '""';
+        let str = String(val).replace(/"/g, '""');
+        return `"${str}"`;
+      };
+
+      // Define columns
+      const headers = [
+        "Participant Name",
+        "Class",
+        "Section",
+        "Roll",
+        "Unique ID / Ticket",
+        "Status",
+        "Type",
+        "bKash Number",
+        "TrxnID",
+        "Amount (BDT)",
+        "Email"
+      ];
+
+      // Map rows
+      const rows = filteredList.map((student) => [
+        escapeCSV(student.full_name),
+        escapeCSV(student.class),
+        escapeCSV(student.section),
+        escapeCSV(student.roll),
+        escapeCSV(student.uniqueId),
+        escapeCSV(student.participated ? "Participated" : "Not Participated"),
+        escapeCSV(student.isAbrupt ? "Abrupt Addition" : "Registered Participant"),
+        escapeCSV(student.bkash_number || "N/A"),
+        escapeCSV(student.trxnid || "N/A"),
+        escapeCSV(student.amount !== undefined ? student.amount : "N/A"),
+        escapeCSV(student.email || "N/A")
+      ]);
+
+      // Create CSV content
+      const csvContent = [
+        headers.join(","),
+        ...rows.map(row => row.join(","))
+      ].join("\n");
+
+      // Formulate blob and trigger download with UTF-8 BOM for Excel compatibility
+      const blob = new Blob([new Uint8Array([0xEF, 0xBB, 0xBF]), csvContent], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      
+      const safeEventName = (attendanceEvent || "event").replace(/[^a-z0-9]/gi, "_").toLowerCase();
+      const safeCategoryName = (attendanceCategory || "category").replace(/[^a-z0-9]/gi, "_").toLowerCase();
+      const timestamp = new Date().toISOString().split("T")[0];
+      
+      link.setAttribute("href", url);
+      link.setAttribute("download", `attendance_${safeEventName}_${safeCategoryName}_${timestamp}.csv`);
+      link.style.visibility = "hidden";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      showToast("Successfully generated and downloaded CSV sheet!", "success");
+    } catch (err: any) {
+      console.error("Error generating CSV:", err);
+      showToast("Failed to generate CSV export.", "error");
+    }
+  };
 
   // States for Email Confirmations Log Sub-tab
   const [emailLogs, setEmailLogs] = useState<any[]>([]);
@@ -659,8 +1060,20 @@ export const EventParticipation = ({
       ) {
         setActiveEvent(updatedEvents[0].title);
       }
+      if (
+        updatedEvents.length > 0 &&
+        (!attendanceEvent || !updatedEvents.find((e: any) => e.title === attendanceEvent))
+      ) {
+        setAttendanceEvent(updatedEvents[0].title);
+      }
     }
-  }, [content, activeEvent]);
+  }, [content, activeEvent, attendanceEvent]);
+
+  useEffect(() => {
+    if (adminSubTab === "attendance" && attendanceEvent && attendanceCategory) {
+      fetchAttendanceList(attendanceEvent, attendanceCategory);
+    }
+  }, [adminSubTab, attendanceEvent, attendanceCategory, fetchAttendanceList]);
 
   // Fetch participations for current selection
   const fetchParticipations = useCallback(async () => {
@@ -1460,10 +1873,10 @@ export const EventParticipation = ({
   return (
     <div className="space-y-12">
       {/* Sub-tabs bar */}
-      <div className="flex bg-white/5 rounded-2xl p-1.5 border border-white/10 max-w-2xl">
+      <div className="flex bg-white/5 rounded-2xl p-1.5 border border-white/10 max-w-3xl flex-wrap gap-1 md:flex-nowrap">
         <button
           onClick={() => setAdminSubTab("standard")}
-          className={`flex-1 py-3.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
+          className={`flex-1 py-3.5 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${
             adminSubTab === "standard"
               ? "bg-amber-500 text-black font-black shadow-lg shadow-amber-500/25"
               : "text-zinc-500 hover:text-white"
@@ -1473,7 +1886,7 @@ export const EventParticipation = ({
         </button>
         <button
           onClick={() => setAdminSubTab("verifier")}
-          className={`flex-1 py-3.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 relative ${
+          className={`flex-1 py-3.5 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 relative whitespace-nowrap ${
             adminSubTab === "verifier"
               ? "bg-amber-500 text-black font-black shadow-lg shadow-amber-500/25"
               : "text-zinc-500 hover:text-white"
@@ -1483,6 +1896,16 @@ export const EventParticipation = ({
           {pendingList.length > 0 && (
             <span className="w-2 h-2 bg-red-500 rounded-full animate-bounce absolute top-2 right-2" />
           )}
+        </button>
+        <button
+          onClick={() => setAdminSubTab("attendance")}
+          className={`flex-1 py-3.5 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${
+            adminSubTab === "attendance"
+              ? "bg-amber-500 text-black font-black shadow-lg shadow-amber-500/25"
+              : "text-zinc-500 hover:text-white"
+          }`}
+        >
+          Fast Attendance Sheet
         </button>
       </div>
 
@@ -1518,130 +1941,107 @@ export const EventParticipation = ({
                     key={`${rec.tableName}-${rec.id}`}
                     className="glass-card p-8 rounded-3xl border border-amber-500/30 bg-[#030303]/90 flex flex-col gap-6 animate-fade-in text-left"
                   >
-                    <div className="flex flex-wrap items-center gap-3">
-                      <span className="px-3 py-1 rounded bg-amber-500/10 text-amber-500 text-[10px] font-bold uppercase tracking-widest border border-amber-500/20">
-                        Editing {rec.tableName.split("_").join(" ")}
-                      </span>
-                      <span className="text-zinc-600 font-bold">/</span>
-                      <span className="text-xs font-mono text-zinc-500">
-                        Record ID: {rec.id.substring(0, 8)}
-                      </span>
-                    </div>
-
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-[9px] text-zinc-500 uppercase font-black tracking-wider mb-1">
+                        <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">
                           Full Name
                         </label>
                         <input
                           type="text"
                           value={editFullName}
                           onChange={(e) => setEditFullName(e.target.value)}
-                          className="w-full px-4 py-2 bg-black/40 border border-white/10 rounded-xl text-white outline-none focus:border-amber-500/50 transition-all text-xs font-bold"
+                          className="w-full bg-white/5 text-white border border-white/10 rounded-2xl px-4 py-3 text-xs font-medium"
                         />
                       </div>
-                      <div className="grid grid-cols-3 gap-2">
-                        <div>
-                          <label className="block text-[9px] text-zinc-500 uppercase font-black tracking-wider mb-1">
-                            Class
-                          </label>
-                          <input
-                            type="text"
-                            value={editClass}
-                            onChange={(e) => setEditClass(e.target.value)}
-                            className="w-full px-3 py-2 bg-black/40 border border-white/10 rounded-xl text-white outline-none focus:border-amber-500/50 transition-all text-xs font-bold"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-[9px] text-zinc-500 uppercase font-black tracking-wider mb-1">
-                            Section
-                          </label>
-                          <input
-                            type="text"
-                            value={editSection}
-                            onChange={(e) => setEditSection(e.target.value)}
-                            className="w-full px-3 py-2 bg-black/40 border border-white/10 rounded-xl text-white outline-none focus:border-amber-500/50 transition-all text-xs font-bold"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-[9px] text-zinc-500 uppercase font-black tracking-wider mb-1">
-                            Roll
-                          </label>
-                          <input
-                            type="text"
-                            value={editRoll}
-                            onChange={(e) => setEditRoll(e.target.value)}
-                            className="w-full px-3 py-2 bg-black/40 border border-white/10 rounded-xl text-white outline-none focus:border-amber-500/50 transition-all text-xs font-bold"
-                          />
-                        </div>
+                      <div>
+                        <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">
+                          Class
+                        </label>
+                        <input
+                          type="text"
+                          value={editClass}
+                          onChange={(e) => setEditClass(e.target.value)}
+                          className="w-full bg-white/5 text-white border border-white/10 rounded-2xl px-4 py-3 text-xs font-medium"
+                        />
                       </div>
                       <div>
-                        <label className="block text-[9px] text-zinc-500 uppercase font-black tracking-wider mb-1">
-                          bKash wallet phone
+                        <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">
+                          Section
+                        </label>
+                        <input
+                          type="text"
+                          value={editSection}
+                          onChange={(e) => setEditSection(e.target.value)}
+                          className="w-full bg-white/5 text-white border border-white/10 rounded-2xl px-4 py-3 text-xs font-medium"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">
+                          Roll
+                        </label>
+                        <input
+                          type="text"
+                          value={editRoll}
+                          onChange={(e) => setEditRoll(e.target.value)}
+                          className="w-full bg-white/5 text-white border border-white/10 rounded-2xl px-4 py-3 text-xs font-medium"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">
+                          bKash Number
                         </label>
                         <input
                           type="text"
                           value={editBkashNumber}
                           onChange={(e) => setEditBkashNumber(e.target.value)}
-                          className="w-full px-4 py-2 bg-black/40 border border-white/10 rounded-xl text-white outline-none focus:border-amber-500/50 transition-all text-xs font-mono"
+                          className="w-full bg-white/5 text-white border border-white/10 rounded-2xl px-4 py-3 text-xs font-medium"
                         />
                       </div>
                       <div>
-                        <label className="block text-[9px] text-zinc-500 uppercase font-black tracking-wider mb-1">
-                          TrxID
+                        <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">
+                          TrxnID
                         </label>
                         <input
                           type="text"
                           value={editTrxnId}
                           onChange={(e) => setEditTrxnId(e.target.value)}
-                          className="w-full px-4 py-2 bg-black/40 border border-white/10 rounded-xl text-white outline-none focus:border-amber-500/50 transition-all text-xs font-mono uppercase"
+                          className="w-full bg-white/5 text-white border border-white/10 rounded-2xl px-4 py-3 text-xs font-medium"
                         />
                       </div>
                       <div>
-                        <label className="block text-[9px] text-zinc-500 uppercase font-black tracking-wider mb-1">
-                          Amount (BDT)
+                        <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">
+                          Amount
                         </label>
                         <input
                           type="number"
                           value={editAmount}
-                          onChange={(e) =>
-                            setEditAmount(Number(e.target.value))
-                          }
-                          className="w-full px-4 py-2 bg-black/40 border border-white/10 rounded-xl text-white outline-none focus:border-amber-500/50 transition-all text-xs font-bold"
+                          onChange={(e) => setEditAmount(parseInt(e.target.value) || 0)}
+                          className="w-full bg-white/5 text-white border border-white/10 rounded-2xl px-4 py-3 text-xs font-medium"
                         />
                       </div>
                       <div>
-                        <label className="block text-[9px] text-zinc-500 uppercase font-black tracking-wider mb-1">
-                          Registered Segments
+                        <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">
+                          Selected Events
                         </label>
                         <input
                           type="text"
                           value={editSelectedEvents}
-                          onChange={(e) =>
-                            setEditSelectedEvents(e.target.value)
-                          }
-                          className="w-full px-4 py-2 bg-black/40 border border-white/10 rounded-xl text-white outline-none focus:border-amber-500/50 transition-all text-xs font-bold"
+                          onChange={(e) => setEditSelectedEvents(e.target.value)}
+                          className="w-full bg-white/5 text-white border border-white/10 rounded-2xl px-4 py-3 text-xs font-medium"
                         />
                       </div>
                     </div>
-
-                    <div className="flex gap-3 justify-end mt-4">
+                    <div className="flex gap-4">
                       <button
-                        disabled={savingEdit}
                         onClick={() => handleSaveEdit(rec.id, rec.tableName)}
-                        className="px-5 py-2.5 rounded-xl bg-amber-500 text-black font-black text-[10px] uppercase tracking-wider transition-all disabled:opacity-50 flex items-center gap-2 shadow-[0_0_20px_rgba(245,158,11,0.15)] cursor-pointer"
+                        disabled={savingEdit}
+                        className="px-5 py-3 bg-amber-500 hover:bg-amber-400 text-black text-xs font-black uppercase tracking-widest rounded-2xl transition-all"
                       >
-                        {savingEdit ? (
-                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                        ) : (
-                          <CheckCircle2 className="w-3.5 h-3.5" />
-                        )}{" "}
-                        Save Details
+                        {savingEdit ? "Saving..." : "Save Changes"}
                       </button>
                       <button
-                        disabled={savingEdit}
                         onClick={() => setEditRecordId(null)}
-                        className="px-5 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white border border-white/10 font-black text-[10px] uppercase tracking-wider transition-all disabled:opacity-50 cursor-pointer"
+                        className="px-5 py-3 bg-white/5 hover:bg-white/10 border border-white/10 text-white text-xs font-black uppercase tracking-widest rounded-2xl transition-all"
                       >
                         Cancel
                       </button>
@@ -1650,78 +2050,76 @@ export const EventParticipation = ({
                 ) : (
                   <div
                     key={`${rec.tableName}-${rec.id}`}
-                    className="glass-card p-8 rounded-3xl border border-white/5 bg-[#030303]/80 flex flex-col md:flex-row items-start justify-between gap-8 hover:border-amber-500/20 transition-all text-left"
+                    className="glass-card p-8 rounded-3xl border border-white/5 hover:border-white/10 transition-all flex flex-col gap-6 text-left"
                   >
-                    <div className="space-y-4 flex-1">
-                      <div className="flex flex-wrap items-center gap-3">
-                        <span className="px-3 py-1 rounded bg-amber-500/10 text-amber-500 text-[10px] font-bold uppercase tracking-widest border border-amber-500/20">
-                          {rec.tableName.split("_").join(" ")}
-                        </span>
-                        <span className="text-zinc-600 font-bold">/</span>
-                        <span className="text-xs font-mono text-zinc-500">
-                          Record ID: {rec.id.substring(0, 8)}
-                        </span>
-                      </div>
-
+                    <div className="flex justify-between items-start flex-wrap gap-4">
                       <div>
+                        <p className="text-zinc-500 text-[10px] font-bold uppercase tracking-widest mb-1">
+                          {rec.tableName.replace("_events", " events")}
+                        </p>
                         <h3 className="text-xl font-black text-white uppercase tracking-tight">
                           {rec.full_name}
                         </h3>
-                        <p className="text-xs text-zinc-400 mt-1 font-bold">
-                          Academic Class: {rec.class}{" "}
-                          <span className="text-zinc-700 mx-1">|</span> Section:{" "}
-                          {rec.section}{" "}
-                          <span className="text-zinc-700 mx-1">|</span> Roll:{" "}
-                          {rec.roll}
+                      </div>
+                      <span className="px-4 py-2 bg-red-500/10 border border-red-500/20 text-red-500 text-[10px] font-black uppercase tracking-wider rounded-xl">
+                        Pending Verification
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 py-4 border-y border-white/5">
+                      <div>
+                        <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-1">
+                          Class / Sec / Roll
+                        </p>
+                        <p className="text-xs text-white font-mono">
+                          Class {rec.class} • Sec {rec.section} • Roll {rec.roll}
                         </p>
                       </div>
-
-                      <div className="bg-white/[0.01] p-4.5 rounded-2xl border border-white/5 grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div>
-                          <span className="block text-[9px] text-zinc-500 uppercase font-black tracking-wider">
-                            bKash Phone
-                          </span>
-                          <span className="text-xs font-mono text-white font-bold">
-                            {rec.bkash_number}
-                          </span>
-                        </div>
-                        <div>
-                          <span className="block text-[9px] text-zinc-500 uppercase font-black tracking-wider">
-                            TrxID
-                          </span>
-                          <span className="text-xs font-mono text-amber-400 font-extrabold uppercase tracking-wide">
-                            {rec.trxnid}
-                          </span>
-                        </div>
-                        <div>
-                          <span className="block text-[9px] text-zinc-500 uppercase font-black tracking-wider">
-                            Amount
-                          </span>
-                          <span className="text-sm font-display font-black text-white">
-                            {rec.amount} BDT
-                          </span>
-                        </div>
-                        <div>
-                          <span className="block text-[9px] text-zinc-500 uppercase font-black tracking-wider">
-                            Registrant Email
-                          </span>
-                          <span className="text-xs text-zinc-400 font-semibold truncate block max-w-[200px]">
-                            {rec.email || "N/A"}
-                          </span>
-                        </div>
+                      <div>
+                        <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-1">
+                          BKash No.
+                        </p>
+                        <p className="text-xs text-white font-mono">
+                          {rec.bkash_number}
+                        </p>
                       </div>
-
-                      <div className="space-y-1">
-                        <span className="block text-[9px] text-zinc-600 uppercase font-black tracking-wider">
-                          Registered Segments:
-                        </span>
-                        <p className="text-xs text-zinc-400 font-bold bg-white/5 px-4 py-2 rounded-xl border border-white/5 inline-block">
-                          {rec.selected_events}
+                      <div>
+                        <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-1">
+                          TrxnID
+                        </p>
+                        <p className="text-xs text-amber-500 font-mono font-bold">
+                          {rec.trxnid}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-1">
+                          Amount
+                        </p>
+                        <p className="text-xs text-white font-mono">
+                          ৳{rec.amount}
                         </p>
                       </div>
                     </div>
 
-                    <div className="flex flex-row md:flex-col gap-3 justify-end w-full md:w-auto">
+                    <div>
+                      <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">
+                        Registered Events
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        {(rec.selected_events || "")
+                          .split(",")
+                          .map((ev: string) => (
+                            <span
+                              key={ev}
+                              className="px-3 py-1.5 bg-white/5 border border-white/5 rounded-lg text-[10px] text-zinc-300 font-bold uppercase tracking-wider"
+                            >
+                              {ev.trim()}
+                            </span>
+                          ))}
+                      </div>
+                    </div>
+
+                    <div className="flex flex-row md:flex-row gap-3 justify-end pt-4 border-t border-white/5 flex-wrap w-full">
                       {verifyingId === rec.id ? (
                         <div className="flex items-center gap-2.5 text-zinc-400 bg-white/5 px-6 py-4 rounded-2xl border border-white/5 text-[10px] font-black uppercase tracking-widest animate-pulse max-w-xs justify-center">
                           <Loader2 className="w-4 h-4 animate-spin text-amber-500" />
@@ -1734,7 +2132,7 @@ export const EventParticipation = ({
                               <button
                                 disabled={verifyingId !== null}
                                 onClick={() => startEditing(rec)}
-                                className="flex-1 md:flex-initial py-3 px-5 rounded-xl bg-orange-500/10 hover:bg-orange-500 text-orange-400 hover:text-black border border-orange-500/20 font-black text-[10px] uppercase tracking-wider transition-all disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer shadow-sm"
+                                className="py-3 px-5 rounded-xl bg-orange-500/10 hover:bg-orange-500 text-orange-400 hover:text-black border border-orange-500/20 font-black text-[10px] uppercase tracking-wider transition-all disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer shadow-sm"
                               >
                                 <Edit className="w-3.5 h-3.5" /> Edit Details
                               </button>
@@ -1744,10 +2142,9 @@ export const EventParticipation = ({
                                   setDeleteTxId(rec.id);
                                   setDeleteTxTable(rec.tableName);
                                 }}
-                                className="flex-1 md:flex-initial py-3 px-5 rounded-xl bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white border border-red-500/20 font-black text-[10px] uppercase tracking-wider transition-all disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer shadow-sm"
+                                className="py-3 px-5 rounded-xl bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white border border-red-500/20 font-black text-[10px] uppercase tracking-wider transition-all disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer shadow-sm"
                               >
                                 <Trash2 className="w-3.5 h-3.5" /> Delete
-                                Transaction
                               </button>
                             </>
                           )}
@@ -1761,7 +2158,7 @@ export const EventParticipation = ({
                                 rec.email,
                               )
                             }
-                            className="flex-1 md:flex-initial py-3 px-5 rounded-xl bg-green-500 hover:bg-green-400 text-black font-black text-[10px] uppercase tracking-wider transition-all disabled:opacity-50 flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(34,197,94,0.1)] cursor-pointer"
+                            className="py-3 px-5 rounded-xl bg-green-500 hover:bg-green-400 text-black font-black text-[10px] uppercase tracking-wider transition-all disabled:opacity-50 flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(34,197,94,0.1)] cursor-pointer"
                           >
                             <CheckCircle2 className="w-3.5 h-3.5" />
                             Approve
@@ -1776,7 +2173,7 @@ export const EventParticipation = ({
                                 rec.email,
                               )
                             }
-                            className="flex-1 md:flex-initial py-3 px-5 rounded-xl bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white border border-red-500/20 font-black text-[10px] uppercase tracking-wider transition-all disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
+                            className="py-3 px-5 rounded-xl bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white border border-red-500/20 font-black text-[10px] uppercase tracking-wider transition-all disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
                           >
                             Reject
                           </button>
@@ -1789,7 +2186,463 @@ export const EventParticipation = ({
             </div>
           )}
         </div>
-      ) : eventMode ? (
+      ) : adminSubTab === "attendance" ? (() => {
+        const query = attendanceSearch.toLowerCase().trim();
+        const filteredList = attendanceStudents.filter((student) => {
+          if (!query) return true;
+          return (
+            (student.full_name || "").toLowerCase().includes(query) ||
+            (student.uniqueId || "").toLowerCase().includes(query) ||
+            (student.class || "").toLowerCase().includes(query) ||
+            (student.section || "").toLowerCase().includes(query) ||
+            (student.roll || "").toLowerCase().includes(query)
+          );
+        });
+
+        const verifiedCount = filteredList.filter((s) => s.participated).length;
+        const pendingCount = filteredList.length - verifiedCount;
+        const totalCount = filteredList.length;
+
+        const verifiedPercent = totalCount > 0 ? Math.round((verifiedCount / totalCount) * 100) : 0;
+        const pendingPercent = totalCount > 0 ? 100 - verifiedPercent : 0;
+
+        const r = 36;
+        const circumference = 2 * Math.PI * r;
+        const verifiedArc = totalCount > 0 ? (verifiedCount / totalCount) * circumference : 0;
+        const pendingArc = totalCount > 0 ? (pendingCount / totalCount) * circumference : 0;
+
+        return (
+          <div className="space-y-8 animate-fade-in">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div className="text-left">
+                <h2 className="text-3xl font-black text-white uppercase tracking-tight flex items-center gap-4">
+                  <Users className="w-8 h-8 text-amber-500" />
+                  Fast Event Attendance Sheet
+                </h2>
+                <p className="text-xs text-zinc-500 font-medium">
+                  Rapidly mark participant attendance and check-in status for large events.
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-3 self-start md:self-auto">
+                <button
+                  onClick={handleDownloadCSV}
+                  className="px-5 py-3 bg-amber-500 hover:bg-amber-400 text-black text-xs font-black uppercase tracking-widest rounded-2xl transition-all flex items-center gap-2 shadow-lg shadow-amber-500/10 cursor-pointer"
+                >
+                  <Download className="w-4 h-4" />
+                  Download CSV
+                </button>
+                {isSuperAdmin && (
+                  <button
+                    onClick={() => setIsAbruptModalOpen(true)}
+                    className="px-5 py-3 bg-amber-500/10 border border-amber-500/30 text-amber-500 text-xs font-black uppercase tracking-widest rounded-2xl hover:bg-amber-500 hover:text-black transition-all flex items-center gap-2 cursor-pointer"
+                  >
+                    <UserPlus className="w-4 h-4" />
+                    Abruptly Add Non-Participant
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Status Distribution Visualization Card */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 bg-white/[0.02] border border-white/5 rounded-[32px] p-6 lg:p-8">
+              {/* Column 1: Donut Chart and dynamic numbers */}
+              <div className="lg:col-span-1 bg-black/30 border border-white/5 rounded-2xl p-6 flex flex-col items-center justify-center text-center relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/5 rounded-full blur-3xl pointer-events-none" />
+                <div className="absolute bottom-0 left-0 w-32 h-32 bg-emerald-500/5 rounded-full blur-3xl pointer-events-none" />
+                
+                <div className="relative w-44 h-44 flex items-center justify-center">
+                  {/* SVG Donut Chart */}
+                  <svg viewBox="0 0 100 100" className="w-full h-full transform -rotate-90 animate-fade-in">
+                    {/* Background Track */}
+                    <circle
+                      cx={50}
+                      cy={50}
+                      r={36}
+                      fill="transparent"
+                      stroke="#18181b" /* zinc-900 */
+                      strokeWidth={8}
+                    />
+                    {totalCount > 0 ? (
+                      <>
+                        {/* Verified / Participated Segment (Emerald) */}
+                        <circle
+                          cx={50}
+                          cy={50}
+                          r={36}
+                          fill="transparent"
+                          stroke="#10b981"
+                          strokeWidth={8}
+                          strokeDasharray={`${verifiedArc} ${circumference}`}
+                          strokeDashoffset={0}
+                          strokeLinecap={verifiedCount > 0 && pendingCount > 0 ? "butt" : "round"}
+                          className="transition-all duration-1000 ease-out"
+                        />
+                        {/* Pending Segment (Amber) */}
+                        <circle
+                          cx={50}
+                          cy={50}
+                          r={36}
+                          fill="transparent"
+                          stroke="#f59e0b"
+                          strokeWidth={8}
+                          strokeDasharray={`${pendingArc} ${circumference}`}
+                          strokeDashoffset={-verifiedArc}
+                          strokeLinecap={verifiedCount > 0 && pendingCount > 0 ? "butt" : "round"}
+                          className="transition-all duration-1000 ease-out"
+                        />
+                      </>
+                    ) : (
+                      <circle
+                        cx={50}
+                        cy={50}
+                        r={36}
+                        fill="transparent"
+                        stroke="#3f3f46" /* zinc-700 empty state */
+                        strokeWidth={8}
+                        className="transition-all duration-500"
+                      />
+                    )}
+                  </svg>
+                  {/* Center text overlay */}
+                  <div className="absolute flex flex-col items-center justify-center">
+                    <span className="text-3xl font-black text-white tracking-tighter">
+                      {totalCount}
+                    </span>
+                    <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-widest mt-0.5">
+                      Total Listed
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Column 2 & 3: Detailed Metrics List and Legend */}
+              <div className="lg:col-span-2 flex flex-col justify-between gap-6">
+                <div className="text-left">
+                  <h3 className="text-sm font-black text-white uppercase tracking-wider mb-1">
+                    Attendance & Check-in Coverage
+                  </h3>
+                  <p className="text-xs text-zinc-500 font-medium">
+                    Real-time ratio of registered participants who have been checked in and verified at the venue gates.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {/* Metric 1: Verified (Checked In) */}
+                  <div className="bg-black/20 border border-white/5 rounded-2xl p-5 flex items-center justify-between gap-4 transition-all hover:border-emerald-500/20 group">
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-500 shadow-md group-hover:scale-105 transition-transform">
+                        <CheckCircle2 className="w-5 h-5" />
+                      </div>
+                      <div className="text-left">
+                        <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">
+                          Verified Check-in
+                        </p>
+                        <p className="text-2xl font-black text-white mt-1">
+                          {verifiedCount}
+                          <span className="text-xs font-bold text-zinc-500 ml-1">
+                            / {totalCount}
+                          </span>
+                        </p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <span className="px-3 py-1 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-black rounded-lg">
+                        {verifiedPercent}%
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Metric 2: Pending Verification */}
+                  <div className="bg-black/20 border border-white/5 rounded-2xl p-5 flex items-center justify-between gap-4 transition-all hover:border-amber-500/20 group">
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-500 shadow-md group-hover:scale-105 transition-transform">
+                        <AlertCircle className="w-5 h-5" />
+                      </div>
+                      <div className="text-left">
+                        <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">
+                          Pending Gate Check
+                        </p>
+                        <p className="text-2xl font-black text-white mt-1">
+                          {pendingCount}
+                          <span className="text-xs font-bold text-zinc-500 ml-1">
+                            / {totalCount}
+                          </span>
+                        </p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <span className="px-3 py-1 bg-amber-500/10 border border-amber-500/20 text-amber-400 text-xs font-black rounded-lg">
+                        {pendingPercent}%
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Progress Bar Visual Representation */}
+                <div className="w-full bg-zinc-900 h-2.5 rounded-full overflow-hidden flex">
+                  <div 
+                    className="bg-emerald-500 h-full transition-all duration-1000 ease-out"
+                    style={{ width: `${verifiedPercent}%` }}
+                  />
+                  <div 
+                    className="bg-amber-500 h-full transition-all duration-1000 ease-out"
+                    style={{ width: `${pendingPercent}%` }}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Controls Bar */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-white/5 p-6 rounded-3xl border border-white/10 text-left">
+            <div>
+              <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">
+                Event
+              </label>
+              <select
+                value={attendanceEvent}
+                onChange={(e) => setAttendanceEvent(e.target.value)}
+                className="w-full bg-black/40 text-amber-400 border border-white/10 rounded-2xl px-4 py-3 text-xs font-bold uppercase tracking-wider outline-none focus:border-amber-500/50"
+              >
+                {events.map((ev) => (
+                  <option key={ev.title} value={ev.title} className="bg-zinc-900 text-white font-medium">
+                    {ev.title}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">
+                Category
+              </label>
+              <select
+                value={attendanceCategory}
+                onChange={(e) => setAttendanceCategory(e.target.value)}
+                className="w-full bg-black/40 text-amber-400 border border-white/10 rounded-2xl px-4 py-3 text-xs font-bold uppercase tracking-wider outline-none focus:border-amber-500/50"
+              >
+                {["Primary", "Junior", "Secondary", "Higher Secondary"].map((cat) => (
+                  <option key={cat} value={cat} className="bg-zinc-900 text-white font-medium">
+                    {cat} Category
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">
+                Search Sheet
+              </label>
+              <div className="relative">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-600" />
+                <input
+                  type="text"
+                  value={attendanceSearch}
+                  onChange={(e) => setAttendanceSearch(e.target.value)}
+                  placeholder="Search by name, ID, class..."
+                  className="w-full bg-black/40 text-white placeholder-zinc-600 border border-white/10 rounded-2xl pl-12 pr-4 py-3 text-xs font-medium outline-none focus:border-amber-500/50 transition-all"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Attendance Sheet Table */}
+          <div className="overflow-hidden rounded-[32px] border border-white/5 bg-white/[0.01]">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="border-b border-white/5 bg-white/[0.02]">
+                  <th className="px-8 py-5 text-[10px] font-bold text-zinc-500 uppercase tracking-[0.2em]">
+                    Participant Name
+                  </th>
+                  <th className="px-8 py-5 text-[10px] font-bold text-zinc-500 uppercase tracking-[0.2em]">
+                    Class
+                  </th>
+                  <th className="px-8 py-5 text-[10px] font-bold text-zinc-500 uppercase tracking-[0.2em]">
+                    Section
+                  </th>
+                  <th className="px-8 py-5 text-[10px] font-bold text-zinc-500 uppercase tracking-[0.2em]">
+                    Roll
+                  </th>
+                  <th className="px-8 py-5 text-[10px] font-bold text-zinc-500 uppercase tracking-[0.2em]">
+                    Unique ID / Ticket
+                  </th>
+                  <th className="px-8 py-5 text-[10px] font-bold text-zinc-500 uppercase tracking-[0.2em] text-right">
+                    Participation Status & Action
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-white/5">
+                {loadingAttendance ? (
+                  [1, 2, 3].map((i) => (
+                    <tr key={i}>
+                      <td colSpan={6} className="px-8 py-6 text-center">
+                        <div className="h-4 bg-white/5 rounded-lg w-1/3 animate-pulse mx-auto" />
+                      </td>
+                    </tr>
+                  ))
+                ) : attendanceStudents.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="px-8 py-16 text-center text-zinc-600 italic text-sm">
+                      No registered students found for {attendanceEvent} ({attendanceCategory} Category).
+                    </td>
+                  </tr>
+                ) : (() => {
+                  if (filteredList.length === 0) {
+                    return (
+                      <tr>
+                        <td colSpan={6} className="px-8 py-16 text-center text-zinc-600 italic text-sm">
+                          No participants found matching "{attendanceSearch}".
+                        </td>
+                      </tr>
+                    );
+                  }
+
+                  return filteredList.map((student, idx) => (
+                    <tr key={student.uniqueId || idx} className="group hover:bg-white/[0.02] transition-colors">
+                      <td className="px-8 py-5 font-bold text-white text-xs flex items-center gap-2 text-left">
+                        {student.full_name}
+                        {student.isAbrupt && (
+                          <span className="px-2 py-0.5 bg-red-500/10 border border-red-500/20 text-red-500 text-[8px] font-black uppercase tracking-wider rounded">
+                            Abruptly Added
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-8 py-5 text-zinc-400 font-mono text-xs text-left">
+                        {student.class}
+                      </td>
+                      <td className="px-8 py-5 text-zinc-400 font-mono text-xs text-left">
+                        {student.section}
+                      </td>
+                      <td className="px-8 py-5 text-zinc-400 font-mono text-xs text-left">
+                        {student.roll}
+                      </td>
+                      <td className="px-8 py-5 text-left">
+                        <code className="text-[10px] text-amber-500 font-mono bg-amber-500/5 border border-amber-500/10 px-2 py-1 rounded">
+                          {student.uniqueId}
+                        </code>
+                      </td>
+                      <td className="px-8 py-5 text-right">
+                        {student.participated ? (
+                          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-green-500/10 border border-green-500/20 text-green-500 text-[10px] font-bold uppercase tracking-wider rounded-xl">
+                            <CheckCircle2 className="w-3.5 h-3.5" />
+                            Participated
+                          </span>
+                        ) : (
+                          <button
+                            disabled={validatingStudentId === student.uniqueId}
+                            onClick={() => validateStudentParticipation(student)}
+                            className="px-4 py-2 bg-amber-500 text-black hover:bg-amber-400 disabled:bg-zinc-800 disabled:text-zinc-500 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all shadow-lg shadow-amber-500/10 active:scale-95"
+                          >
+                            {validatingStudentId === student.uniqueId ? "Validating..." : "Validate Participation"}
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  ));
+                })()}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Abrupt addition modal */}
+          {isAbruptModalOpen && (
+            <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 z-50 animate-fade-in">
+              <div className="bg-zinc-950 border border-white/10 rounded-[2.5rem] w-full max-w-lg overflow-hidden shadow-2xl relative">
+                <div className="p-8 border-b border-white/5 bg-white/[0.02] text-left">
+                  <h3 className="text-xl font-black text-white uppercase tracking-tight">
+                    Abruptly Add Non-Participant
+                  </h3>
+                  <p className="text-xs text-zinc-500 mt-1 font-medium">
+                    Directly registers and validates participation for a non-registered student.
+                  </p>
+                </div>
+                <form onSubmit={handleAbruptAdd} className="p-8 space-y-4 text-left">
+                  <div>
+                    <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">
+                      Full Name *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={abruptName}
+                      onChange={(e) => setAbruptName(e.target.value)}
+                      placeholder="e.g. Abdullah Khan"
+                      className="w-full bg-white/5 text-white placeholder-zinc-700 border border-white/10 rounded-2xl px-4 py-3 text-xs font-medium outline-none focus:border-amber-500/50 transition-all"
+                    />
+                  </div>
+                  <div className="grid grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">
+                        Class
+                      </label>
+                      <input
+                        type="text"
+                        value={abruptClass}
+                        onChange={(e) => setAbruptClass(e.target.value)}
+                        placeholder="e.g. 10"
+                        className="w-full bg-white/5 text-white placeholder-zinc-700 border border-white/10 rounded-2xl px-4 py-3 text-xs font-medium outline-none focus:border-amber-500/50 transition-all"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">
+                        Section
+                      </label>
+                      <input
+                        type="text"
+                        value={abruptSection}
+                        onChange={(e) => setAbruptSection(e.target.value)}
+                        placeholder="e.g. A"
+                        className="w-full bg-white/5 text-white placeholder-zinc-700 border border-white/10 rounded-2xl px-4 py-3 text-xs font-medium outline-none focus:border-amber-500/50 transition-all"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">
+                        Roll
+                      </label>
+                      <input
+                        type="text"
+                        value={abruptRoll}
+                        onChange={(e) => setAbruptRoll(e.target.value)}
+                        placeholder="e.g. 42"
+                        className="w-full bg-white/5 text-white placeholder-zinc-700 border border-white/10 rounded-2xl px-4 py-3 text-xs font-medium outline-none focus:border-amber-500/50 transition-all"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">
+                      Unique ID / JMC ID *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={abruptId}
+                      onChange={(e) => setAbruptId(e.target.value)}
+                      placeholder="e.g. JMC-101010 or Custom ID"
+                      className="w-full bg-white/5 text-white placeholder-zinc-700 border border-white/10 rounded-2xl px-4 py-3 text-xs font-mono outline-none focus:border-amber-500/50 transition-all"
+                    />
+                  </div>
+                  <div className="flex gap-4 pt-4 border-t border-white/5">
+                    <button
+                      type="button"
+                      onClick={() => setIsAbruptModalOpen(false)}
+                      className="flex-1 py-3.5 bg-white/5 hover:bg-white/10 border border-white/10 text-white text-[10px] font-black uppercase tracking-widest rounded-2xl transition-all text-center"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={loading}
+                      className="flex-1 py-3.5 bg-amber-500 hover:bg-amber-400 disabled:bg-zinc-800 disabled:text-zinc-500 text-black text-[10px] font-black uppercase tracking-widest rounded-2xl transition-all shadow-lg shadow-amber-500/15 text-center"
+                    >
+                      {loading ? "Adding..." : "Add & Validate"}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    })() : eventMode ? (
         <div className="space-y-8">
           <div className="flex items-center justify-between">
             <div>

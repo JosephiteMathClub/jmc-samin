@@ -35,6 +35,15 @@ export async function GET(req: Request) {
       anonUrl,
       anonKey,
       {
+        global: {
+          fetch: (url, options) => {
+            return fetch(url, {
+              ...options,
+              signal: AbortSignal.timeout(2000),
+              cache: 'no-store'
+            });
+          }
+        },
         cookies: {
           getAll() {
             return cookieStore.getAll()

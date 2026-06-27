@@ -28,6 +28,7 @@ export async function middleware(request: NextRequest) {
         fetch: (url, options) => {
           return fetch(url, {
             ...options,
+            signal: AbortSignal.timeout(2000),
             cache: 'no-store'
           });
         }
@@ -60,74 +61,78 @@ export async function middleware(request: NextRequest) {
   );
 
     // IMPORTANT: DO NOT remove this getUser() call. It refreshes the session if needed.
-    const { data: { user } } = await supabase.auth.getUser();
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
 
-    if (request.nextUrl.pathname.startsWith('/admin')) {
-      if (!user) {
-        const url = request.nextUrl.clone();
-        url.pathname = '/login';
-        url.searchParams.set('redirect', request.nextUrl.pathname);
-        
-        // Return a response that includes the refreshed cookies
-        const redirectResponse = NextResponse.redirect(url);
-        supabaseResponse.cookies.getAll().forEach((cookie) => {
-          redirectResponse.cookies.set(cookie.name, cookie.value, {
-            path: cookie.path,
-            domain: cookie.domain,
-            secure: true,
-            sameSite: 'none',
-            maxAge: cookie.maxAge,
-          });
-        });
-        return redirectResponse;
-      }
-      
-      const adminEmailsEnv = (process.env.NEXT_PUBLIC_ADMIN_EMAILS || "").toLowerCase();
-      const envAdmins = adminEmailsEnv.split(',').map(e => e.trim()).filter(Boolean);
-      const allAdmins = [...envAdmins, ...DEFAULT_ADMINS.map(e => e.toLowerCase()), 'l47idkpro@gmail.com'];
-      
-      const userEmail = user.email?.toLowerCase() || "";
-      let isDbAdmin = false;
-      
-      // Check database profile for admin role
-      try {
-        const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-        let adminClient = supabase;
-        if (serviceRoleKey) {
-          adminClient = createServerClient(supabaseUrl, serviceRoleKey, {
-            cookies: {
-              getAll() { return request.cookies.getAll(); },
-              setAll() { } // Read-only in middleware
-            }
-          });
-        }
-        
-        const { data: profile } = await adminClient
-          .from('profiles')
-          .select('role')
-          .eq('id', user.id)
-          .maybeSingle();
+      if (request.nextUrl.pathname.startsWith('/admin')) {
+        if (!user) {
+          const url = request.nextUrl.clone();
+          url.pathname = '/login';
+          url.searchParams.set('redirect', request.nextUrl.pathname);
           
-        if (profile && (profile.role?.trim().toLowerCase() === 'admin' || profile.role?.trim().toLowerCase() === 'super_admin')) {
-          isDbAdmin = true;
-        }
-      } catch (e) {
-        console.error("Middleware profile fetch error:", e);
-      }
-      
-      if (!allAdmins.includes(userEmail) && !isDbAdmin) {
-        const homeResponse = NextResponse.redirect(new URL('/', request.url));
-        supabaseResponse.cookies.getAll().forEach((cookie) => {
-          homeResponse.cookies.set(cookie.name, cookie.value, {
-            path: cookie.path,
-            domain: cookie.domain,
-            secure: true,
-            sameSite: 'none',
-            maxAge: cookie.maxAge,
+          // Return a response that includes the refreshed cookies
+          const redirectResponse = NextResponse.redirect(url);
+          supabaseResponse.cookies.getAll().forEach((cookie) => {
+            redirectResponse.cookies.set(cookie.name, cookie.value, {
+              path: cookie.path,
+              domain: cookie.domain,
+              secure: true,
+              sameSite: 'none',
+              maxAge: cookie.maxAge,
+            });
           });
-        });
-        return homeResponse;
+          return redirectResponse;
+        }
+        
+        const adminEmailsEnv = (process.env.NEXT_PUBLIC_ADMIN_EMAILS || "").toLowerCase();
+        const envAdmins = adminEmailsEnv.split(',').map(e => e.trim()).filter(Boolean);
+        const allAdmins = [...envAdmins, ...DEFAULT_ADMINS.map(e => e.toLowerCase()), 'l47idkpro@gmail.com'];
+        
+        const userEmail = user.email?.toLowerCase() || "";
+        let isDbAdmin = false;
+        
+        // Check database profile for admin role
+        try {
+          const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+          let adminClient = supabase;
+          if (serviceRoleKey) {
+            adminClient = createServerClient(supabaseUrl, serviceRoleKey, {
+              cookies: {
+                getAll() { return request.cookies.getAll(); },
+                setAll() { } // Read-only in middleware
+              }
+            });
+          }
+          
+          const { data: profile } = await adminClient
+            .from('profiles')
+            .select('role')
+            .eq('id', user.id)
+            .maybeSingle();
+            
+          if (profile && (profile.role?.trim().toLowerCase() === 'admin' || profile.role?.trim().toLowerCase() === 'super_admin')) {
+            isDbAdmin = true;
+          }
+        } catch (e) {
+          console.error("Middleware profile fetch error:", e);
+        }
+        
+        if (!allAdmins.includes(userEmail) && !isDbAdmin) {
+          const homeResponse = NextResponse.redirect(new URL('/', request.url));
+          supabaseResponse.cookies.getAll().forEach((cookie) => {
+            homeResponse.cookies.set(cookie.name, cookie.value, {
+              path: cookie.path,
+              domain: cookie.domain,
+              secure: true,
+              sameSite: 'none',
+              maxAge: cookie.maxAge,
+            });
+          });
+          return homeResponse;
+        }
       }
+    } catch (err) {
+      console.warn("Supabase Auth/Network call failed in middleware, bypassing route checks:", err);
     }
   }
 

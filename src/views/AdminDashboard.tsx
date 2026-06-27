@@ -257,12 +257,14 @@ const AdminDashboard = () => {
       }
 
       // Deduplicate standard members by checking if they already exist in ecData to prevent React key collisions and multiple portions/records
+      const ecEmails = new Set(ecData.map(m => (m.email || m.email_address || '').toLowerCase().trim()).filter(Boolean));
       const ecIds = new Set(ecData.map(m => (m.id || '').toLowerCase()));
       const ecMemberIds = new Set(ecData.map(m => (m.member_id || '').toLowerCase()));
       const filteredStandard = (standardData || []).filter(m => {
         const idLower = (m.id || '').toLowerCase();
         const mIdLower = (m.member_id || '').toLowerCase();
-        return !ecIds.has(idLower) && !ecMemberIds.has(mIdLower);
+        const emailLower = (m.email || m.email_address || '').toLowerCase().trim();
+        return !ecIds.has(idLower) && !ecMemberIds.has(mIdLower) && !(emailLower && ecEmails.has(emailLower));
       });
 
       const combined = [...filteredStandard, ...ecData];
@@ -432,49 +434,98 @@ const AdminDashboard = () => {
     try {
       let userId: string | null = null;
 
-      // If user doesn't have an account, create one automatically
-      if (!memberData.hasAccount && memberData.email && memberData.phone) {
-        showToast("Creating user account...", "info");
-        const createRes = await fetch('/api/admin/create-user', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            email: memberData.email,
-            phone: memberData.phone,
-            password: memberData.phone, // Password is the phone number
-            fullName: memberData.full_name
-          }),
-        });
-
-        const createData = await createRes.json();
-        if (!createRes.ok) {
-          throw new Error(createData.error || 'Failed to create user account');
-        }
-        userId = createData.userId || createData.user?.id;
-        showToast("User account created!", "success");
-      } else if (memberData.hasAccount && memberData.email) {
-        // If user has an account, find their ID by email
-        // Gracefully handle missing email column in profiles
-        let userData = null;
+      // First, try to find an existing member record by email to reuse their ID
+      if (memberData.email) {
+        const normalizedEmail = memberData.email.toLowerCase().trim();
         try {
-          const { data, error: userError } = await supabase
-            .from('profiles')
+          const { data: memByEmail } = await supabase
+            .from('member')
             .select('id')
-            .eq('email', memberData.email.toLowerCase().trim())
+            .eq('email', normalizedEmail)
             .maybeSingle();
           
-          if (userError) throw userError;
-          userData = data;
+          if (memByEmail?.id) {
+            userId = memByEmail.id;
+          } else {
+            const { data: ecByEmail } = await supabase
+              .from('ec_member')
+              .select('id')
+              .eq('email', normalizedEmail)
+              .maybeSingle();
+            
+            if (ecByEmail?.id) {
+              userId = ecByEmail.id;
+            }
+          }
         } catch (e) {
-          console.error("Error fetching user from profiles by email:", e);
+          console.error("Error looking up existing member by email:", e);
         }
-        
-        if (!userData) {
-          throw new Error("Could not find an existing account with that email in our profiles database. Please ensure the user has signed up first.");
+      }
+
+      // Second, try to find an existing member record by class/section/roll if email lookup was not successful
+      if (!userId && memberData.class && memberData.section && memberData.roll) {
+        try {
+          const { data: memByClass } = await supabase
+            .from('member')
+            .select('id')
+            .eq('class', memberData.class)
+            .eq('section', memberData.section)
+            .eq('roll', memberData.roll)
+            .maybeSingle();
+          
+          if (memByClass?.id) {
+            userId = memByClass.id;
+          }
+        } catch (e) {
+          console.error("Error looking up existing member by class/section/roll:", e);
         }
-        userId = userData.id;
+      }
+
+      // If they don't exist yet as a member record, create/locate their auth account
+      if (!userId) {
+        if (!memberData.hasAccount && memberData.email && memberData.phone) {
+          showToast("Creating user account...", "info");
+          const createRes = await fetch('/api/admin/create-user', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              email: memberData.email,
+              phone: memberData.phone,
+              password: memberData.phone, // Password is the phone number
+              fullName: memberData.full_name
+            }),
+          });
+
+          const createData = await createRes.json();
+          if (!createRes.ok) {
+            throw new Error(createData.error || 'Failed to create user account');
+          }
+          userId = createData.userId || createData.user?.id;
+          showToast("User account created!", "success");
+        } else if (memberData.hasAccount && memberData.email) {
+          // If user has an account, find their ID by email
+          // Gracefully handle missing email column in profiles
+          let userData = null;
+          try {
+            const { data, error: userError } = await supabase
+              .from('profiles')
+              .select('id')
+              .eq('email', memberData.email.toLowerCase().trim())
+              .maybeSingle();
+            
+            if (userError) throw userError;
+            userData = data;
+          } catch (e) {
+            console.error("Error fetching user from profiles by email:", e);
+          }
+          
+          if (!userData) {
+            throw new Error("Could not find an existing account with that email in our profiles database. Please ensure the user has signed up first.");
+          }
+          userId = userData.id;
+        }
       }
 
       // Use crypto.randomUUID() if available, fallback to a manual UUID if not
@@ -483,6 +534,22 @@ const AdminDashboard = () => {
         : '00000000-0000-4000-8000-' + Math.random().toString(16).slice(2, 14).padStart(12, '0'));
 
       const targetTable = memberData.is_ec ? 'ec_member' : 'member';
+
+      let oldGeneralMemberId: string | null = null;
+      if (memberData.is_ec) {
+        try {
+          const { data: existingGeneral } = await supabase
+            .from('member')
+            .select('member_id')
+            .eq('id', tempId)
+            .maybeSingle();
+          if (existingGeneral) {
+            oldGeneralMemberId = existingGeneral.member_id;
+          }
+        } catch (e) {
+          console.error("Error checking existing general member ID:", e);
+        }
+      }
 
       // Check if member already exists to preserve their member_id
       const { data: existingMember } = await supabase
@@ -558,6 +625,47 @@ const AdminDashboard = () => {
       if (data && memberData.is_ec) {
         data = { ...data, is_ec: true };
         
+        // If they had an old general member ID (e.g. "JMC-XXXXXX"), migrate their event participations
+        // to the new 3-digit EC member ID before we overwrite/delete the old ID in the member table.
+        if (oldGeneralMemberId && oldGeneralMemberId !== memberIdToUse) {
+          try {
+            console.log(`Migrating participations for user ${tempId} from old general ID ${oldGeneralMemberId} to new EC ID ${memberIdToUse}`);
+            
+            // Check if they actually have event participations
+            const { data: participations } = await supabase
+              .from('event_participation')
+              .select('id')
+              .eq('member_id', oldGeneralMemberId);
+
+            if (participations && participations.length > 0) {
+              // Create a temporary dummy row in the member table to satisfy the foreign key constraint
+              // while we migrate event_participation rows to the new 3-digit ID
+              const tempDummyId = '00000000-0000-4000-a000-000000000000';
+              await supabase.from('member').upsert({
+                id: tempDummyId,
+                full_name: 'Temp Migration Dummy',
+                member_id: memberIdToUse,
+                verified: 'no'
+              }, { onConflict: 'id' });
+
+              // Perform the update of event_participation rows
+              const { error: updateEPError } = await supabase
+                .from('event_participation')
+                .update({ member_id: memberIdToUse })
+                .eq('member_id', oldGeneralMemberId);
+
+              if (updateEPError) {
+                console.error("Error updating event participations to new EC ID:", updateEPError);
+              }
+
+              // Delete the temporary dummy row from member table
+              await supabase.from('member').delete().eq('id', tempDummyId);
+            }
+          } catch (migrateErr) {
+            console.error("Failed migrating event participations to new EC ID:", migrateErr);
+          }
+        }
+
         // Instead of deleting the member record completely (which breaks foreign key constraints on event_participation),
         // we replace their general member unique ID (the 6-digit JMC ID) with the new 3-digit EC unique ID in the member table.
         // This effectively "deletes/replaces" their general member unique ID as requested, while keeping database integrity perfectly!

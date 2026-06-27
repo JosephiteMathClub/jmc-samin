@@ -22,7 +22,8 @@ import {
   Construction,
   Mail,
   Calendar,
-  RefreshCw
+  RefreshCw,
+  UserPlus
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useContent } from '../context/ContentContext';
@@ -62,6 +63,19 @@ const DEFAULT_TEAM_EVENTS = [
   }
 ];
 
+const DEFAULT_CLASS_SECTIONS: Record<string, string[]> = {
+  "3": ["Hawks", "Eagles", "Falcons"],
+  "4": ["Tigers", "Lions", "Mountain Lions"],
+  "5": ["Hornets", "Drones", "Wasps"],
+  "6": ["Wildcats", "Bears", "Polar Bears"],
+  "7": ["Leopards", "Jaguars"],
+  "8": ["Comets", "Meteors", "Asteroids"],
+  "9": ["Jets", "Concords", "Rockets"],
+  "10": ["Stars", "Giants", "Titans"],
+  "11": ["Venus", "Jupiter", "Mercury", "Haumea", "Eris", "Mars", "Saturn", "Vulcan"],
+  "12": ["Pluto", "Uranus", "Phobos", "Pollux", "Ceres", "Earth", "Neptune", "Diebos"]
+};
+
 const EventRegister = () => {
   const { user, profile, loading: authLoading, isAdmin, isSuperAdmin } = useAuth();
   const { content, loading: contentLoading } = useContent();
@@ -71,6 +85,7 @@ const EventRegister = () => {
   // Dynamic config states loaded from db
   const [soloEventsList, setSoloEventsList] = useState<string[]>(SOLO_EVENTS);
   const [teamEventsList, setTeamEventsList] = useState<any[]>(DEFAULT_TEAM_EVENTS);
+  const [classSectionsMap, setClassSectionsMap] = useState<Record<string, string[]>>(DEFAULT_CLASS_SECTIONS);
   const [formConfig, setFormConfig] = useState({
     formDescription: "Specify the category format. Standard events are priced at 100tk each. Select all to enjoy premium package bundles.",
     perEventPriceSolo: 100,
@@ -325,6 +340,9 @@ const EventRegister = () => {
           if (val.teamEvents && Array.isArray(val.teamEvents)) {
             setTeamEventsList(val.teamEvents);
           }
+          if (val.classSectionsMap && typeof val.classSectionsMap === 'object' && !Array.isArray(val.classSectionsMap)) {
+            setClassSectionsMap(val.classSectionsMap);
+          }
           setFormConfig({
             formDescription: val.formDescription || "Specify the category format. Standard events are priced at 100tk each. Select all to enjoy premium package bundles.",
             perEventPriceSolo: typeof val.perEventPriceSolo === 'number' ? val.perEventPriceSolo : 100,
@@ -433,6 +451,11 @@ const EventRegister = () => {
     // If they have registered once before, registering for more events later costs another 100 BDT
     if (userRegisteredEvents.length > 0) {
       return 100;
+    }
+
+    // Member bundle discount: if isGeneralMember is true and they select all solo events
+    if (isGeneralMember && N === soloEventsList.length) {
+      return formConfig.allEventsSoloPriceMember || 50;
     }
 
     // Otherwise, flat fee of 100 BDT (selecting either one, some, or all events is 100tk total)
@@ -1245,10 +1268,14 @@ const EventRegister = () => {
             </div>
             
             <h2 className="text-3xl font-black text-white uppercase tracking-tight mb-4">
-              {finalAmount === 0 ? "Entry Approved!" : "Successfully Submitted!"}
+              {isProxyRegistration ? "Proxy Registration Complete!" : finalAmount === 0 ? "Entry Approved!" : "Successfully Submitted!"}
             </h2>
             <p className="text-zinc-400 mb-8 text-sm leading-relaxed">
-              {finalAmount === 0 ? (
+              {isProxyRegistration ? (
+                <span>
+                  Student <strong>{fullName}</strong> has been successfully registered and automatically verified. Their unique Ticket ID / member ID has been generated, and email notifications have been dispatched.
+                </span>
+              ) : finalAmount === 0 ? (
                 <span>
                   Hey <strong>{fullName}</strong>, your free entry for <strong className="text-amber-500">Math Olympiad</strong> is approved! We have <strong>automatically verified</strong> your spot and generated your digital ticket instantly.
                 </span>
@@ -1259,22 +1286,81 @@ const EventRegister = () => {
               )}
             </p>
 
-            <p className="text-amber-400 text-xs font-bold mb-8 uppercase tracking-wider bg-amber-500/5 px-6 py-3 rounded-xl border border-amber-500/10">
-              {finalAmount === 0 ? (
-                "You can view your ticket on the profile page or register for more events later!"
-              ) : (
-                "A notification email was fired. Confirmed events will list in your Profile section."
-              )}
-            </p>
+            {isProxyRegistration ? (
+              <div className="p-6 bg-white/[0.02] border border-white/5 rounded-2xl w-full mb-8">
+                <p className="text-amber-400 text-xs font-bold mb-3 uppercase tracking-wider">
+                  ⚡ Proxy Actions
+                </p>
+                <p className="text-zinc-400 text-xs mb-6 leading-relaxed">
+                  Would you like to register another student using the Proxy Registration Mode? This will reset the form while keeping proxy mode active.
+                </p>
+                <div className="flex flex-col sm:flex-row gap-4 justify-center w-full">
+                  <button
+                    onClick={() => {
+                      // RESET ALL STATES FOR NEXT PROXY REGISTER
+                      handleToggleProxy(true);
+                      setStep(1);
+                      setSelectedEvents([]);
+                      setBkashNumber('');
+                      setTrxnid('');
+                      
+                      // Also reset teammate states just in case
+                      setTeamMember2Name('');
+                      setTeamMember2Class('');
+                      setTeamMember2Section('');
+                      setTeamMember2Roll('');
+                      setTeamMember2Email('');
+                      setMember2Profile(null);
 
-            <button
-              onClick={() => {
-                window.location.href = '/profile';
-              }}
-              className="py-5 px-12 rounded-2xl bg-green-500 hover:bg-green-400 text-black font-black text-xs uppercase tracking-[0.2em] transition-all shadow-[0_0_40px_rgba(34,197,94,0.3)]"
-            >
-              Go to Profile
-            </button>
+                      setTeamMember3Name('');
+                      setTeamMember3Class('');
+                      setTeamMember3Section('');
+                      setTeamMember3Roll('');
+                      setTeamMember3Email('');
+                      setMember3Profile(null);
+
+                      setAlreadyRegisteredTeam(false);
+                      setUserRegisteredTeamEventName(null);
+                      setHasConfirmedSegments(false);
+
+                      setIsSuccess(false);
+                      showToast("Proxy form reset. Ready for the next registration!", "success");
+                    }}
+                    className="py-4 px-8 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-black text-xs uppercase tracking-wider transition-all shadow-[0_0_20px_rgba(245,158,11,0.2)] flex items-center justify-center gap-2 cursor-pointer"
+                  >
+                    <UserPlus className="w-4 h-4" />
+                    Register Another User
+                  </button>
+                  <button
+                    onClick={() => {
+                      window.location.href = '/profile';
+                    }}
+                    className="py-4 px-8 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-white font-black text-xs uppercase tracking-wider transition-all border border-white/10 cursor-pointer"
+                  >
+                    Go to Dashboard
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <>
+                <p className="text-amber-400 text-xs font-bold mb-8 uppercase tracking-wider bg-amber-500/5 px-6 py-3 rounded-xl border border-amber-500/10">
+                  {finalAmount === 0 ? (
+                    "You can view your ticket on the profile page or register for more events later!"
+                  ) : (
+                    "A notification email was fired. Confirmed events will list in your Profile section."
+                  )}
+                </p>
+
+                <button
+                  onClick={() => {
+                    window.location.href = '/profile';
+                  }}
+                  className="py-5 px-12 rounded-2xl bg-green-500 hover:bg-green-400 text-black font-black text-xs uppercase tracking-[0.2em] transition-all shadow-[0_0_40px_rgba(34,197,94,0.3)]"
+                >
+                  Go to Profile
+                </button>
+              </>
+            )}
           </motion.div>
         ) : (
           /* MAIN STEPPED FORM */
@@ -1397,13 +1483,16 @@ const EventRegister = () => {
                       </div>
                     )}
 
-                    {isGeneralMember && !isProxyRegistration && (
+                    {isGeneralMember && (
                       <div className="p-5 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-500 flex items-start gap-4">
                         <Check className="w-5 h-5 flex-shrink-0 mt-0.5" />
                         <div>
                           <p className="text-xs font-black uppercase tracking-wider">JMC General Member Detected</p>
                           <p className="text-xs text-zinc-400 mt-1">
-                            Your Profile credentials are pre-populated. Selecting ALL events will qualify you for the exclusive <strong>50 BDT member bundle discount</strong>.
+                            {isProxyRegistration 
+                              ? "This student is verified as a General Member. Selecting ALL events will qualify them for the exclusive 50 BDT member bundle discount."
+                              : "Your Profile credentials are pre-populated. Selecting ALL events will qualify you for the exclusive 50 BDT member bundle discount."
+                            }
                           </p>
                         </div>
                       </div>
@@ -1454,7 +1543,10 @@ const EventRegister = () => {
                           <BookOpen className="absolute left-6 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500 group-focus-within:text-amber-500 transition-colors pointer-events-none" />
                           <select 
                             value={className}
-                            onChange={(e) => setClassName(e.target.value)}
+                            onChange={(e) => {
+                              setClassName(e.target.value);
+                              setSection('');
+                            }}
                             disabled={(!isProxyRegistration && isGeneralMember) || (isProxyRegistration && (!proxyVerified || proxyUserExists))}
                             className="w-full pl-14 pr-6 py-4.5 bg-white/5 border border-white/10 rounded-2xl focus:outline-none focus:border-amber-500/50 focus:ring-4 focus:ring-amber-500/10 transition-all text-sm font-bold text-white placeholder:text-zinc-600 disabled:opacity-60 appearance-none cursor-pointer"
                           >
@@ -1473,15 +1565,27 @@ const EventRegister = () => {
                       <div className="space-y-3">
                         <label className="text-[10px] font-black uppercase tracking-wider text-zinc-500">Section</label>
                         <div className="relative group">
-                          <Layers className="absolute left-6 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500 group-focus-within:text-amber-500 transition-colors" />
-                          <input 
-                            type="text"
-                            placeholder="YOUR SECTION (E.G. SC-A)"
+                          <Layers className="absolute left-6 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500 group-focus-within:text-amber-500 transition-colors pointer-events-none" />
+                          <select 
                             value={section}
                             onChange={(e) => setSection(e.target.value)}
                             disabled={(!isProxyRegistration && isGeneralMember) || (isProxyRegistration && (!proxyVerified || proxyUserExists))}
-                            className="w-full pl-14 pr-6 py-4.5 bg-white/5 border border-white/10 rounded-2xl focus:outline-none focus:border-amber-500/50 focus:ring-4 focus:ring-amber-500/10 transition-all text-sm font-bold text-white placeholder:text-zinc-600 disabled:opacity-60"
-                          />
+                            className="w-full pl-14 pr-12 py-4.5 bg-white/5 border border-white/10 rounded-2xl focus:outline-none focus:border-amber-500/50 focus:ring-4 focus:ring-amber-500/10 transition-all text-sm font-bold text-white placeholder:text-zinc-600 disabled:opacity-60 appearance-none cursor-pointer"
+                          >
+                            {!className ? (
+                              <option value="" className="bg-zinc-950 text-zinc-500 font-extrabold uppercase tracking-wider">SELECT CLASS FIRST</option>
+                            ) : (
+                              <>
+                                <option value="" className="bg-zinc-950 text-zinc-500 font-extrabold uppercase tracking-wider">SELECT SECTION</option>
+                                {(section && !(classSectionsMap[className] || []).includes(section)
+                                  ? [...(classSectionsMap[className] || []), section]
+                                  : (classSectionsMap[className] || [])
+                                ).map((sec: string) => (
+                                  <option key={sec} value={sec} className="bg-zinc-950 text-white font-extrabold uppercase">{sec}</option>
+                                ))}
+                              </>
+                            )}
+                          </select>
                         </div>
                       </div>
 
@@ -1654,6 +1758,10 @@ const EventRegister = () => {
                                   <span className="text-emerald-400 font-black uppercase">Math Olympiad is completely FREE. Grab your ticket now!</span>
                                 ) : userRegisteredEvents.length > 0 ? (
                                   <span className="text-red-400 font-black uppercase">⚠️ Subsequent Registration Charge: 100 BDT applies!</span>
+                                ) : isGeneralMember && selectedEvents.length === soloEventsList.length ? (
+                                  <span className="text-emerald-400 font-black uppercase">🎉 Member Bundle Discount Applied! Total: {formConfig.allEventsSoloPriceMember || 50} BDT for selecting all solo events!</span>
+                                ) : isGeneralMember ? (
+                                  <span className="text-emerald-400 font-black uppercase">⚡ JMC General Member: Select ALL {soloEventsList.length} events to activate the {formConfig.allEventsSoloPriceMember || 50} BDT Bundle Discount! (Currently selected: {selectedEvents.length})</span>
                                 ) : (
                                   <span>
                                     🏅 Flat Participation Fee: Only <strong className="text-white">100 BDT</strong> total for selecting any number of solo events.
@@ -1837,7 +1945,10 @@ const EventRegister = () => {
                                           <select
                                             disabled={!member2Profile || member2Profile.isGeneralMember}
                                             value={teamMember2Class}
-                                            onChange={(e) => setTeamMember2Class(e.target.value)}
+                                            onChange={(e) => {
+                                              setTeamMember2Class(e.target.value);
+                                              setTeamMember2Section('');
+                                            }}
                                             className={`w-full bg-black/40 border border-white/5 rounded-xl py-3 px-4 text-xs font-bold transition-all focus:outline-none focus:border-indigo-500 appearance-none cursor-pointer ${
                                               (!member2Profile || member2Profile.isGeneralMember)
                                                 ? 'text-zinc-500 cursor-not-allowed opacity-60' 
@@ -1852,18 +1963,31 @@ const EventRegister = () => {
                                         </div>
                                         <div className="space-y-1">
                                           <label className="text-[10px] font-black uppercase tracking-wider text-zinc-500">Section</label>
-                                          <input
-                                            type="text"
-                                            placeholder="Section"
+                                          <select
                                             disabled={!member2Profile || member2Profile.isGeneralMember}
                                             value={teamMember2Section}
                                             onChange={(e) => setTeamMember2Section(e.target.value)}
-                                            className={`w-full bg-black/40 border border-white/5 rounded-xl py-3 px-4 text-xs font-bold transition-all focus:outline-none focus:border-indigo-500 ${
+                                            className={`w-full bg-black/40 border border-white/5 rounded-xl py-3 px-4 text-xs font-bold transition-all focus:outline-none focus:border-indigo-500 appearance-none cursor-pointer ${
                                               (!member2Profile || member2Profile.isGeneralMember)
                                                 ? 'text-zinc-500 cursor-not-allowed opacity-60' 
                                                 : 'text-white border-white/15'
                                             }`}
-                                          />
+                                          >
+                                            {!teamMember2Class ? (
+                                              <option value="" className="bg-zinc-950 text-zinc-500 font-extrabold uppercase">SELECT CLASS FIRST</option>
+                                            ) : (
+                                              <>
+                                                <option value="" className="bg-zinc-950 text-zinc-500 font-extrabold uppercase">SELECT SECTION</option>
+                                                {(teamMember2Section && !(classSectionsMap[teamMember2Class] || []).includes(teamMember2Section)
+                                                  ? [...(classSectionsMap[teamMember2Class] || []), teamMember2Section]
+                                                  : (classSectionsMap[teamMember2Class] || [])
+                                                ).map((sec: string) => (
+                                                  <option key={sec} value={sec} className="bg-zinc-950 text-white font-extrabold uppercase">{sec}</option>
+                                                ))}
+                                                <option value="Other" className="bg-zinc-950 text-zinc-400 font-extrabold uppercase">Other</option>
+                                              </>
+                                            )}
+                                          </select>
                                         </div>
                                         <div className="space-y-1">
                                           <label className="text-[10px] font-black uppercase tracking-wider text-zinc-500">Roll Number</label>
@@ -1973,7 +2097,10 @@ const EventRegister = () => {
                                             <select
                                               disabled={!member3Profile || member3Profile.isGeneralMember}
                                               value={teamMember3Class}
-                                              onChange={(e) => setTeamMember3Class(e.target.value)}
+                                              onChange={(e) => {
+                                                setTeamMember3Class(e.target.value);
+                                                setTeamMember3Section('');
+                                              }}
                                               className={`w-full bg-black/40 border border-white/5 rounded-xl py-3 px-4 text-xs font-bold transition-all focus:outline-none focus:border-indigo-500 appearance-none cursor-pointer ${
                                                 (!member3Profile || member3Profile.isGeneralMember)
                                                   ? 'text-zinc-500 cursor-not-allowed opacity-60' 
@@ -1988,18 +2115,31 @@ const EventRegister = () => {
                                           </div>
                                           <div className="space-y-1">
                                             <label className="text-[10px] font-black uppercase tracking-wider text-zinc-500">Section</label>
-                                            <input
-                                              type="text"
-                                              placeholder="Section"
+                                            <select
                                               disabled={!member3Profile || member3Profile.isGeneralMember}
                                               value={teamMember3Section}
                                               onChange={(e) => setTeamMember3Section(e.target.value)}
-                                              className={`w-full bg-black/40 border border-white/5 rounded-xl py-3 px-4 text-xs font-bold transition-all focus:outline-none focus:border-indigo-500 ${
+                                              className={`w-full bg-black/40 border border-white/5 rounded-xl py-3 px-4 text-xs font-bold transition-all focus:outline-none focus:border-indigo-500 appearance-none cursor-pointer ${
                                                 (!member3Profile || member3Profile.isGeneralMember)
                                                   ? 'text-zinc-500 cursor-not-allowed opacity-60' 
                                                   : 'text-white border-white/15'
                                               }`}
-                                            />
+                                            >
+                                              {!teamMember3Class ? (
+                                                <option value="" className="bg-zinc-950 text-zinc-500 font-extrabold uppercase">SELECT CLASS FIRST</option>
+                                              ) : (
+                                                <>
+                                                  <option value="" className="bg-zinc-950 text-zinc-500 font-extrabold uppercase">SELECT SECTION</option>
+                                                  {(teamMember3Section && !(classSectionsMap[teamMember3Class] || []).includes(teamMember3Section)
+                                                    ? [...(classSectionsMap[teamMember3Class] || []), teamMember3Section]
+                                                    : (classSectionsMap[teamMember3Class] || [])
+                                                  ).map((sec: string) => (
+                                                    <option key={sec} value={sec} className="bg-zinc-950 text-white font-extrabold uppercase">{sec}</option>
+                                                  ))}
+                                                  <option value="Other" className="bg-zinc-950 text-zinc-400 font-extrabold uppercase">Other</option>
+                                                </>
+                                              )}
+                                            </select>
                                           </div>
                                           <div className="space-y-1">
                                             <label className="text-[10px] font-black uppercase tracking-wider text-zinc-500">Roll Number</label>

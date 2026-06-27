@@ -4,6 +4,7 @@ import { AuthProvider } from "@/context/AuthContext";
 import { ContentProvider } from "@/context/ContentContext";
 import { ToastProvider } from "@/context/ToastContext";
 import { TechSupportProvider } from "@/context/TechSupportContext";
+import { ThemeProvider } from "@/context/ThemeContext";
 import ClientLayout from "@/components/ClientLayout";
 import { SmoothScroll } from "@/components/SmoothScroll";
 import React from "react";
@@ -255,17 +256,19 @@ export default function RootLayout({
           src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"
           strategy="afterInteractive"
         />
-        <AuthProvider>
-          <ToastProvider>
-            <TechSupportProvider>
-              <ContentProvider>
-                <SmoothScroll>
-                  <ClientLayout>{children}</ClientLayout>
-                </SmoothScroll>
-              </ContentProvider>
-            </TechSupportProvider>
-          </ToastProvider>
-        </AuthProvider>
+        <ThemeProvider>
+          <AuthProvider>
+            <ToastProvider>
+              <TechSupportProvider>
+                <ContentProvider>
+                  <SmoothScroll>
+                    <ClientLayout>{children}</ClientLayout>
+                  </SmoothScroll>
+                </ContentProvider>
+              </TechSupportProvider>
+            </ToastProvider>
+          </AuthProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

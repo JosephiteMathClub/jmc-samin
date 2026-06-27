@@ -14,8 +14,12 @@ import Footer from "@/components/Footer";
 import MaintenanceView from "@/components/MaintenanceView";
 import { SupportTrigger } from "@/components/SupportTrigger";
 import { usePerformance } from "@/hooks/usePerformance";
+import { useVersionCheck } from "@/hooks/useVersionCheck";
 
 export default function ClientLayout({ children }: { children: React.ReactNode }) {
+  // Poll version manifest for automatic hot-reloading updates
+  useVersionCheck();
+
   const { loading: contentLoading, content } = useContent();
   const { isAdmin, isSuperAdmin, loading: authLoading } = useAuth();
   const pathname = usePathname();
