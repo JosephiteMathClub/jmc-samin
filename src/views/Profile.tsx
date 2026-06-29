@@ -2127,7 +2127,7 @@ const Profile = () => {
                               </div>
                             </div>
                             
-                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pt-2">
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
                               {/* Option 1: Default */}
                               <button
                                 type="button"
@@ -2162,24 +2162,7 @@ const Profile = () => {
                                 <p className="text-[10px] text-zinc-500 mt-2 font-medium">Pure black canvas with maximum white text contrast.</p>
                               </button>
 
-                              {/* Option 3: High Contrast Light */}
-                              <button
-                                type="button"
-                                onClick={() => setTheme("contrast-light")}
-                                className={`p-5 rounded-2xl border text-left transition-all cursor-pointer ${
-                                  theme === "contrast-light"
-                                    ? "bg-white/10 border-blue-500 shadow-[0_0_15px_rgba(0,85,255,0.2)]"
-                                    : "bg-black/20 border-white/5 hover:border-white/20"
-                                }`}
-                              >
-                                <div className="flex items-center justify-between">
-                                  <span className="text-sm font-bold text-white">Contrast Light</span>
-                                  <span className="w-3.5 h-3.5 rounded-full bg-white border border-black" />
-                                </div>
-                                <p className="text-[10px] text-zinc-500 mt-2 font-medium">Ultra-bright white backdrop with crisp black details.</p>
-                              </button>
-
-                              {/* Option 4: Retro Amber */}
+                              {/* Option 3: Retro Amber */}
                               <button
                                 type="button"
                                 onClick={() => setTheme("terminal-amber")}

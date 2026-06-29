@@ -70,7 +70,7 @@ export async function POST(req: Request) {
         const { data, error: linkedFetchError } = await supabaseAdmin
           .from(tb)
           .select('*')
-          .or(`trxnid.eq.${rootTrxnid},trxnid.eq.${rootTrxnid}-T2,trxnid.eq.${rootTrxnid}-T3`);
+          .or(`trxnid.eq.${rootTrxnid},trxnid.ilike.${rootTrxnid}-T%`);
         
         if (linkedFetchError) {
           console.error(`Error fetching linked records for table ${tb}:`, linkedFetchError);

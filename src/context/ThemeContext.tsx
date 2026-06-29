@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect } from "react";
 
-export type HighContrastTheme = "default" | "contrast-dark" | "contrast-light" | "terminal-amber";
+export type HighContrastTheme = "default" | "contrast-dark" | "terminal-amber";
 
 interface ThemeContextType {
   theme: HighContrastTheme;
@@ -18,7 +18,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (typeof window !== "undefined") {
       const savedTheme = localStorage.getItem("jmc_accessibility_theme") as HighContrastTheme;
-      if (savedTheme && ["default", "contrast-dark", "contrast-light", "terminal-amber"].includes(savedTheme)) {
+      if (savedTheme && ["default", "contrast-dark", "terminal-amber"].includes(savedTheme)) {
         setThemeState(savedTheme);
         applyTheme(savedTheme);
       }
@@ -34,8 +34,6 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     // Apply new theme class if not default
     if (t === "contrast-dark") {
       document.body.classList.add("theme-contrast-dark");
-    } else if (t === "contrast-light") {
-      document.body.classList.add("theme-contrast-light");
     } else if (t === "terminal-amber") {
       document.body.classList.add("theme-contrast-amber");
     }

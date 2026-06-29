@@ -20,7 +20,8 @@ import {
   History,
   HelpCircle,
   Mail,
-  BadgeCheck
+  BadgeCheck,
+  PieChart
 } from 'lucide-react';
 import { useContent } from '../context/ContentContext';
 import { useAuth } from '../context/AuthContext';
@@ -54,7 +55,7 @@ const ChallengeManagementSection = dynamic(() => import('../components/dashboard
 const DashboardAuditLogsSection = dynamic(() => import('../components/dashboard/sections/DashboardAuditLogsSection').then(mod => mod.DashboardAuditLogsSection), { loading: () => <Skeleton className="h-64 w-full rounded-3xl" /> });
 const EmailConfirmationsSection = dynamic(() => import('../components/dashboard/sections/EmailConfirmationsSection').then(mod => mod.EmailConfirmationsSection), { loading: () => <Skeleton className="h-64 w-full rounded-3xl" /> });
 const EventRegistrationsSection = dynamic(() => import('../components/dashboard/sections/EventRegistrationsSection').then(mod => mod.EventRegistrationsSection), { loading: () => <Skeleton className="h-64 w-full rounded-3xl" /> });
-const VerifiedEventParticipatorsSection = dynamic(() => import('../components/dashboard/sections/VerifiedEventParticipatorsSection').then(mod => mod.VerifiedEventParticipatorsSection), { loading: () => <Skeleton className="h-64 w-full rounded-3xl" /> });
+const StatisticsSection = dynamic(() => import('../components/dashboard/sections/StatisticsSection').then(mod => mod.StatisticsSection), { loading: () => <Skeleton className="h-64 w-full rounded-3xl" /> });
 
 import ConfirmModal from '../components/ConfirmModal';
 import Image from 'next/image';
@@ -1069,7 +1070,7 @@ const AdminDashboard = () => {
     { id: 'challenge', label: 'Challenge Problems', icon: HelpCircle },
     { id: 'email_confirmations', label: 'Email Logs', icon: Mail },
     { id: 'event_registrations', label: 'Unique Registrants', icon: Users },
-    { id: 'verified_participators', label: 'Verified Participators', icon: BadgeCheck },
+    { id: 'statistics', label: 'Statistics', icon: PieChart },
     ...(isSuperAdmin ? [
       { id: 'home', label: 'Home', icon: LayoutDashboard },
       { id: 'about', label: 'About', icon: FileText },
@@ -1256,8 +1257,8 @@ const AdminDashboard = () => {
           <EventRegistrationsSection />
         )}
 
-        {activeTab === 'verified_participators' && (
-          <VerifiedEventParticipatorsSection />
+        {activeTab === 'statistics' && (
+          <StatisticsSection />
         )}
 
         {activeTab === 'support' && (

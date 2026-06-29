@@ -640,99 +640,71 @@ body.theme-contrast-dark {
 body.theme-contrast-dark .fixed.inset-0.pointer-events-none,
 body.theme-contrast-dark #star-field-canvas,
 body.theme-contrast-dark canvas {
-  display: none !important; /* Disable ambient/low contrast visual decorations */
+  display: none !important; /* Disable canvas rendering for pure performance */
 }
 
-body.theme-contrast-dark p, 
-body.theme-contrast-dark span,
+/* Specific text/UI elements for dark mode */
 body.theme-contrast-dark h1,
 body.theme-contrast-dark h2,
 body.theme-contrast-dark h3,
 body.theme-contrast-dark h4,
 body.theme-contrast-dark h5,
 body.theme-contrast-dark h6,
-body.theme-contrast-dark label {
-  color: #ffffff !important;
-}
-
+body.theme-contrast-dark p,
+body.theme-contrast-dark span,
 body.theme-contrast-dark a,
-body.theme-contrast-dark button {
-  border-color: #ffffff !important;
-  color: #ffffff !important;
-}
-
+body.theme-contrast-dark label,
+body.theme-contrast-dark li,
+body.theme-contrast-dark td,
+body.theme-contrast-dark th,
 body.theme-contrast-dark input,
 body.theme-contrast-dark textarea,
-body.theme-contrast-dark select {
-  background-color: #000000 !important;
+body.theme-contrast-dark select,
+body.theme-contrast-dark button,
+body.theme-contrast-dark svg,
+body.theme-contrast-dark small {
   color: #ffffff !important;
-  border: 2px solid #ffffff !important;
+  text-shadow: none !important;
 }
 
+/* Borders in high contrast dark mode */
+body.theme-contrast-dark .border,
+body.theme-contrast-dark [class*="border-"]:not(.border-transparent) {
+  border-color: #ffffff !important;
+}
+
+/* Backgrounds in high-contrast dark mode - excluding translucent overlays */
+body.theme-contrast-dark [class*="bg-white"]:not([class*="/"]),
+body.theme-contrast-dark [class*="bg-zinc-"]:not([class*="/"]),
+body.theme-contrast-dark [class*="bg-slate-"]:not([class*="/"]),
+body.theme-contrast-dark [class*="bg-neutral-"]:not([class*="/"]),
+body.theme-contrast-dark [class*="bg-gray-"]:not([class*="/"]),
+body.theme-contrast-dark [class*="bg-[#"]:not([class*="/"]),
 body.theme-contrast-dark .glass,
 body.theme-contrast-dark .glass-card,
-body.theme-contrast-dark .glass-nav {
+body.theme-contrast-dark .glass-nav,
+body.theme-contrast-dark input,
+body.theme-contrast-dark textarea,
+body.theme-contrast-dark select,
+body.theme-contrast-dark button {
   background-color: #000000 !important;
-  border: 2px solid #ffffff !important;
-  box-shadow: none !important;
-}
-
-/* Theme 2: High Contrast Light */
-body.theme-contrast-light {
-  background-color: #ffffff !important;
   background-image: none !important;
-  color: #000000 !important;
-  --c-1-start: #000000 !important;
-  --c-1-end: #000000 !important;
-  --c-6-start: #0052cc !important;
-  --c-6-end: #0033aa !important;
-}
-
-body.theme-contrast-light .fixed.inset-0.pointer-events-none,
-body.theme-contrast-light #star-field-canvas,
-body.theme-contrast-light canvas {
-  display: none !important; /* Disable canvas/particle rendering for pure readability */
-}
-
-body.theme-contrast-light p, 
-body.theme-contrast-light span,
-body.theme-contrast-light h1,
-body.theme-contrast-light h2,
-body.theme-contrast-light h3,
-body.theme-contrast-light h4,
-body.theme-contrast-light h5,
-body.theme-contrast-light h6,
-body.theme-contrast-light label {
-  color: #000000 !important;
-}
-
-body.theme-contrast-light a,
-body.theme-contrast-light button {
-  color: #000000 !important;
-  border: 2px solid #000000 !important;
-}
-
-body.theme-contrast-light input,
-body.theme-contrast-light textarea,
-body.theme-contrast-light select {
-  background-color: #ffffff !important;
-  color: #000000 !important;
-  border: 2px solid #000000 !important;
-}
-
-body.theme-contrast-light .glass,
-body.theme-contrast-light .glass-card,
-body.theme-contrast-light .glass-nav {
-  background-color: #ffffff !important;
-  border: 2px solid #000000 !important;
   box-shadow: none !important;
 }
+
+/* Keep dialog/backdrop overlays translucent in dark mode so the underlying context is slightly visible but dark */
+body.theme-contrast-dark [class*="bg-black/"],
+body.theme-contrast-dark [class*="bg-white/"] {
+  background-color: rgba(0, 0, 0, 0.85) !important;
+  backdrop-filter: blur(4px) !important;
+}
+
 
 /* Theme 3: Retro Amber / Terminal */
 body.theme-contrast-amber {
   background-color: #000000 !important;
   background-image: none !important;
-  color: #f59e0b !important; /* amber-500 */
+  color: #f59e0b !important;
   --c-1-start: #f59e0b !important;
   --c-1-end: #f59e0b !important;
   --c-6-start: #f59e0b !important;
@@ -742,42 +714,73 @@ body.theme-contrast-amber {
 body.theme-contrast-amber .fixed.inset-0.pointer-events-none,
 body.theme-contrast-amber #star-field-canvas,
 body.theme-contrast-amber canvas {
-  display: none !important;
+  display: none !important; /* Disable canvas rendering for pure performance */
 }
 
-body.theme-contrast-amber p, 
-body.theme-contrast-amber span,
+/* Specific text/UI elements for amber mode */
 body.theme-contrast-amber h1,
 body.theme-contrast-amber h2,
 body.theme-contrast-amber h3,
 body.theme-contrast-amber h4,
 body.theme-contrast-amber h5,
 body.theme-contrast-amber h6,
-body.theme-contrast-amber label {
+body.theme-contrast-amber p,
+body.theme-contrast-amber span,
+body.theme-contrast-amber a,
+body.theme-contrast-amber label,
+body.theme-contrast-amber li,
+body.theme-contrast-amber td,
+body.theme-contrast-amber th,
+body.theme-contrast-amber input,
+body.theme-contrast-amber textarea,
+body.theme-contrast-amber select,
+body.theme-contrast-amber button,
+body.theme-contrast-amber svg,
+body.theme-contrast-amber small {
   color: #f59e0b !important;
+  text-shadow: none !important;
 }
 
-body.theme-contrast-amber a,
+/* Borders in high contrast amber mode */
+body.theme-contrast-amber .border,
+body.theme-contrast-amber [class*="border-"]:not(.border-transparent) {
+  border-color: #f59e0b !important;
+}
+
+/* Backgrounds in high-contrast amber mode - excluding translucent overlays */
+body.theme-contrast-amber [class*="bg-white"]:not([class*="/"]),
+body.theme-contrast-amber [class*="bg-zinc-"]:not([class*="/"]),
+body.theme-contrast-amber [class*="bg-slate-"]:not([class*="/"]),
+body.theme-contrast-amber [class*="bg-neutral-"]:not([class*="/"]),
+body.theme-contrast-amber [class*="bg-gray-"]:not([class*="/"]),
+body.theme-contrast-amber [class*="bg-[#"]:not([class*="/"]),
+body.theme-contrast-amber footer,
+body.theme-contrast-amber .glass,
+body.theme-contrast-amber .glass-card,
+body.theme-contrast-amber .glass-nav,
+body.theme-contrast-amber input,
+body.theme-contrast-amber textarea,
+body.theme-contrast-amber select,
 body.theme-contrast-amber button {
-  color: #f59e0b !important;
-  border: 2px solid #f59e0b !important;
+  background-color: #000000 !important;
+  background-image: none !important;
+  box-shadow: none !important;
 }
 
 body.theme-contrast-amber input,
 body.theme-contrast-amber textarea,
-body.theme-contrast-amber select {
-  background-color: #000000 !important;
-  color: #f59e0b !important;
-  border: 2px solid #f59e0b !important;
+body.theme-contrast-amber select,
+body.theme-contrast-amber button {
+  border: 1px solid #f59e0b !important;
 }
 
-body.theme-contrast-amber .glass,
-body.theme-contrast-amber .glass-card,
-body.theme-contrast-amber .glass-nav {
-  background-color: #000000 !important;
-  border: 2px solid #f59e0b !important;
-  box-shadow: none !important;
+/* Modal and dialog backdrops should keep dark translucency so content is visible in amber terminal mode */
+body.theme-contrast-amber [class*="bg-black/"],
+body.theme-contrast-amber [class*="bg-white/"] {
+  background-color: rgba(0, 0, 0, 0.85) !important;
+  backdrop-filter: blur(4px) !important;
 }
+
 
 
 

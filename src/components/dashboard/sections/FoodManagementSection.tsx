@@ -169,8 +169,14 @@ export const FoodManagementSection: React.FC<FoodManagementSectionProps> = ({
   const [newSlotName, setNewSlotName] = useState('');
   const [newSlotMaxServings, setNewSlotMaxServings] = useState(1);
 
-  // Active members list used for calculations and query matching (falls back to props)
-  const activeMembersList = localMembers.length > 0 ? localMembers : (members || []);
+  // Active members list used for calculations and query matching (falls back to props, strictly filtered to general and EC members)
+  const activeMembersList = useMemo(() => {
+    const baseList = localMembers.length > 0 ? localMembers : (members || []);
+    return baseList.filter(m => {
+      const cleanId = cleanToUniqueCode(m.member_id || '');
+      return /^\d{3}$/.test(cleanId) || /^\d{6}$/.test(cleanId);
+    });
+  }, [localMembers, members]);
 
   // Responsive Search Filtering for Manual Lookup Fallback
   const matchingMembers = useMemo(() => {
@@ -178,21 +184,26 @@ export const FoodManagementSection: React.FC<FoodManagementSectionProps> = ({
     if (!query) return [];
 
     return (activeMembersList || []).filter(m => {
-      const mId = (m.member_id || '').toLowerCase();
-      // Only general member and EC member's code can be input; the other 5-digit code is blocked.
-      if (/^\d{5}$/.test(mId)) {
+      const cleanId = cleanToUniqueCode(m.member_id || '');
+      const isThreeDigit = /^\d{3}$/.test(cleanId);
+      const isSixDigit = /^\d{6}$/.test(cleanId);
+      
+      // Food distribution should only work on general members (6-digit ID) and EC members (3-digit ID)
+      if (!isThreeDigit && !isSixDigit) {
         return false;
       }
+
+      const mId = (m.member_id || '').toLowerCase();
       const fullName = (m.full_name || '').toLowerCase();
 
       // Match full_name or member_id
-      const matchesId = mId.includes(query);
+      const matchesId = mId.includes(query) || cleanId.includes(query);
       const matchesName = fullName.includes(query);
 
       if (!matchesId && !matchesName) return false;
 
       // Determine if they are EC members
-      const isEcMember = m.is_ec === true || (m.member_id && /^\d{3}$/.test(m.member_id));
+      const isEcMember = m.is_ec === true || isThreeDigit;
 
       // Rule: If query length <= 3, show both EC and general members.
       // If query length > 3, isolate only to general members (i.e., do not show EC members).
@@ -285,16 +296,27 @@ export const FoodManagementSection: React.FC<FoodManagementSectionProps> = ({
           ecMembers = ecRes.map(m => ({ ...m, is_ec: true }));
         }
 
-        // Deduplicate standard members
+        // Deduplicate and filter standard members (must be 6-digit ID)
         const ecIds = new Set(ecMembers.map(m => (m.id || '').toLowerCase()));
         const ecMemberIds = new Set(ecMembers.map(m => (m.member_id || '').toLowerCase()));
         const filteredStandard = standardMembers.filter(m => {
+          const cleanId = cleanToUniqueCode(m.member_id || '');
+          const isSixDigit = /^\d{6}$/.test(cleanId);
+          if (!isSixDigit) return false;
+
           const idLower = (m.id || '').toLowerCase();
           const mIdLower = (m.member_id || '').toLowerCase();
           return !ecIds.has(idLower) && !ecMemberIds.has(mIdLower);
         });
 
-        const combined = [...filteredStandard, ...ecMembers];
+        // Filter ec members (must be 3-digit ID)
+        const filteredEc = ecMembers.filter(m => {
+          const cleanId = cleanToUniqueCode(m.member_id || '');
+          const isThreeDigit = /^\d{3}$/.test(cleanId);
+          return isThreeDigit;
+        });
+
+        const combined = [...filteredStandard, ...filteredEc];
         setLocalMembers(combined);
       } catch (memErr) {
         console.error("Failed to query members list locally inside food management:", memErr);
@@ -358,12 +380,15 @@ export const FoodManagementSection: React.FC<FoodManagementSectionProps> = ({
     
     const formattedId = cleanToUniqueCode(decodedText);
 
-    // Block any 5-digit Event/Spot registration code immediately as they are not General/EC Members
-    if (/^\d{5}$/.test(formattedId)) {
+    const isThreeDigit = /^\d{3}$/.test(formattedId);
+    const isSixDigit = /^\d{6}$/.test(formattedId);
+
+    // Food distribution is strictly for General Members (6-digit ID) and EC Officers (3-digit ID)
+    if (!isThreeDigit && !isSixDigit) {
       setScanFeedback({
         status: 'error',
-        title: 'Event-Only Ticket Code',
-        message: `The 5-digit code "${formattedId}" is an Event-Only Participant ticket. Food distribution is strictly limited to verified General Members and EC Officers.`,
+        title: 'Invalid ID Format',
+        message: `The scanned ID "${formattedId}" is invalid for food distribution. Food distribution is strictly limited to verified General Members (6-digit ID) and EC Officers (3-digit ID). Event registrants without a 6-digit General Member ID are not eligible.`,
         memberId: formattedId
       });
       setIsProcessing(false);
@@ -432,12 +457,13 @@ export const FoodManagementSection: React.FC<FoodManagementSectionProps> = ({
         return;
       }
 
-      // Block resolved 5-digit Event/Spot registration codes from redeeming food
-      if (/^\d{5}$/.test(member.member_id || '')) {
+      // Block resolved non-conforming IDs from redeeming food
+      const cleanResolvedId = cleanToUniqueCode(member.member_id || '');
+      if (!/^\d{3}$/.test(cleanResolvedId) && !/^\d{6}$/.test(cleanResolvedId)) {
         setScanFeedback({
           status: 'error',
-          title: 'Event-Only Ticket Code',
-          message: `${member.full_name} has an Event-Only Participant ticket. Food distribution is strictly limited to verified General Members and EC Officers.`,
+          title: 'Invalid ID Format',
+          message: `${member.full_name} has an invalid or Event-Only ID ("${member.member_id}"). Food distribution is strictly limited to verified General Members (6-digit ID) and EC Officers (3-digit ID).`,
           memberName: member.full_name,
           memberId: member.member_id
         });

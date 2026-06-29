@@ -303,15 +303,14 @@ export const EventParticipation = ({
         return;
       }
 
-      // Query verified registrations using standard, reliable syntax
-      const { data: verifiedRegs, error: regError } = await supabase
+      // Query all registrations for this segment
+      const { data: allRegs, error: regError } = await supabase
         .from(tableName)
-        .select("*")
-        .or("verified.eq.yes,verified.eq.true");
+        .select("*");
 
       if (regError) throw regError;
 
-      const filtered = (verifiedRegs || []).filter((reg: any) => {
+      const filteredRegs = (allRegs || []).filter((reg: any) => {
         if (!reg.selected_events) return false;
         const selectedList = reg.selected_events
           .split(",")
@@ -319,21 +318,22 @@ export const EventParticipation = ({
         return selectedList.includes(event.trim().toLowerCase());
       });
 
-      // Extract all userIds from the filtered registrations to bypass 1000-row limit in member table
-      const userIds = filtered.map((reg: any) => reg.user_id).filter(Boolean);
+      // Extract all userIds from the filtered registrations
+      const userIds = filteredRegs.map((reg: any) => reg.user_id).filter(Boolean);
 
       const userToMemberMap: Record<string, string> = {};
+      const verifiedUsers = new Set<string>();
 
       if (userIds.length > 0) {
         // Query both member and ec_member only for these userIds in parallel
         const [memberRes, ecMemberRes] = await Promise.all([
           supabase
             .from("member")
-            .select("id, member_id")
+            .select("id, member_id, verified")
             .in("id", userIds),
           supabase
             .from("ec_member")
-            .select("id, member_id")
+            .select("id, member_id, verified")
             .in("id", userIds)
         ]);
 
@@ -341,6 +341,9 @@ export const EventParticipation = ({
           memberRes.data.forEach((m: any) => {
             if (m.id && m.member_id) {
               userToMemberMap[m.id] = m.member_id;
+            }
+            if (m.id && (m.verified === "yes" || m.verified === true)) {
+              verifiedUsers.add(m.id);
             }
           });
         }
@@ -350,9 +353,19 @@ export const EventParticipation = ({
             if (m.id && m.member_id) {
               userToMemberMap[m.id] = m.member_id;
             }
+            // EC members are always auto-verified
+            if (m.id) {
+              verifiedUsers.add(m.id);
+            }
           });
         }
       }
+
+      // Filter to keep all registrations except rejected ones to ensure every single person is shown on the fast attendance sheet
+      const filtered = filteredRegs.filter((reg: any) => {
+        const isRejected = reg.verified === "rejected" || String(reg.verified).toLowerCase() === "rejected";
+        return !isRejected;
+      });
 
       // Fetch recorded participations for this specific event and category
       const { data: partData, error: partError } = await supabase
