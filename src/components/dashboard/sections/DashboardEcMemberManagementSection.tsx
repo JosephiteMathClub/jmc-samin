@@ -248,6 +248,46 @@ export const DashboardEcMemberManagementSection: React.FC<DashboardEcMemberManag
     return scoredList.map(res => res.item);
   }, [members, memberSearch, memberFilter]);
 
+  const handleDownloadCSV = () => {
+    if (filteredMembers.length === 0) {
+      showToast("No EC members to download.", "info");
+      return;
+    }
+
+    const headers = ["Name", "Class", "Section", "Roll", "Unique ID", "Department"];
+    
+    const csvRows = [
+      headers.join(",")
+    ];
+
+    filteredMembers.forEach(m => {
+      const name = m.full_name || '';
+      const className = m.class || '';
+      const section = m.section || '';
+      const roll = m.roll || '';
+      const uniqueId = m.member_id || m.id || '';
+      const department = m.department || '';
+
+      const values = [name, className, section, roll, uniqueId, department];
+      const escapedValues = values.map(val => {
+        const stringVal = String(val).replace(/"/g, '""');
+        return `"${stringVal}"`;
+      });
+      csvRows.push(escapedValues.join(','));
+    });
+
+    const csvContent = csvRows.join('\n');
+    const blob = new Blob([new Uint8Array([0xEF, 0xBB, 0xBF]), csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `ec_members_list_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    showToast("EC members list exported successfully in CSV format!", "success");
+  };
+
   return (
     <motion.div
       key="ec-members"
@@ -595,7 +635,15 @@ export const DashboardEcMemberManagementSection: React.FC<DashboardEcMemberManag
             </div>
           </div>
 
-          <div className="flex justify-end border-b border-white/10 pb-4 gap-4">
+          <div className="flex justify-end border-b border-white/10 pb-4 gap-4 flex-wrap">
+            <button
+              onClick={handleDownloadCSV}
+              className="px-6 py-3 rounded-xl border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10 transition-all text-xs font-bold uppercase tracking-widest flex items-center gap-2 cursor-pointer"
+            >
+              <FileSpreadsheet className="w-4 h-4" />
+              Download EC List (CSV)
+            </button>
+
             <button
               onClick={async () => {
                 const pending = filteredMembers.filter(m => m.verified === 'no');

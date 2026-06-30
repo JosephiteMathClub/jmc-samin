@@ -274,7 +274,7 @@ export const EventParticipation = ({
 
   // States for Fast Attendance / Check-In
   const [attendanceEvent, setAttendanceEvent] = useState<string>("");
-  const [attendanceCategory, setAttendanceCategory] = useState<string>("Junior");
+  const [attendanceCategory, setAttendanceCategory] = useState<string>("All");
   const [attendanceSearch, setAttendanceSearch] = useState<string>("");
   const [attendanceStudents, setAttendanceStudents] = useState<any[]>([]);
   const [loadingAttendance, setLoadingAttendance] = useState<boolean>(false);
@@ -288,34 +288,85 @@ export const EventParticipation = ({
   const [abruptRoll, setAbruptRoll] = useState<string>("");
   const [abruptId, setAbruptId] = useState<string>("");
 
+  const getCategoryFromClass = (cls: string): string => {
+    const norm = String(cls).trim().toLowerCase();
+    const numMatch = norm.match(/\d+/);
+    if (numMatch) {
+      const val = parseInt(numMatch[0], 10);
+      if (val >= 3 && val <= 5) return "Primary";
+      if (val >= 6 && val <= 8) return "Junior";
+      if (val >= 9 && val <= 10) return "Secondary";
+      if (val >= 11 && val <= 12) return "Higher Secondary";
+    }
+    if (norm.includes("xii") || norm.includes("twelve") || norm.includes("xi") || norm.includes("eleven")) {
+      return "Higher Secondary";
+    }
+    if (norm.includes("ix") || norm.includes("nine") || norm.includes("x") || norm.includes("ten")) {
+      return "Secondary";
+    }
+    if (norm.includes("viii") || norm.includes("eight") || norm.includes("vii") || norm.includes("seven") || norm.includes("vi") || norm.includes("six")) {
+      return "Junior";
+    }
+    if (norm.includes("iv") || norm.includes("four") || norm.includes("iii") || norm.includes("three") || norm.includes("v") || norm.includes("five")) {
+      return "Primary";
+    }
+    return "Junior";
+  };
+
   const fetchAttendanceList = useCallback(async (event: string, category: string) => {
     if (!event || !category || !isSupabaseConfigured) return;
     setLoadingAttendance(true);
     try {
-      let tableName = "";
-      if (category === "Primary") tableName = "primary_events";
-      else if (category === "Junior") tableName = "junior_events";
-      else if (category === "Secondary") tableName = "secondary_events";
-      else if (category === "Higher Secondary") tableName = "higher_secondary_events";
+      let allRegs: any[] = [];
+      if (category === "All") {
+        const tables = ["primary_events", "junior_events", "secondary_events", "higher_secondary_events"];
+        const results = await Promise.all(
+          tables.map(tb => supabase.from(tb).select("*"))
+        );
+        results.forEach((res, index) => {
+          if (res.data) {
+            const tblName = tables[index];
+            const mappedRegs = res.data.map((r: any) => ({
+              ...r,
+              tableName: tblName,
+              rowCategory: tblName === "primary_events" ? "Primary" :
+                           tblName === "junior_events" ? "Junior" :
+                           tblName === "secondary_events" ? "Secondary" : "Higher Secondary"
+            }));
+            allRegs = [...allRegs, ...mappedRegs];
+          }
+        });
+      } else {
+        let tableName = "";
+        if (category === "Primary") tableName = "primary_events";
+        else if (category === "Junior") tableName = "junior_events";
+        else if (category === "Secondary") tableName = "secondary_events";
+        else if (category === "Higher Secondary") tableName = "higher_secondary_events";
 
-      if (!tableName) {
-        setLoadingAttendance(false);
-        return;
+        if (!tableName) {
+          setLoadingAttendance(false);
+          return;
+        }
+
+        const { data: data, error: regError } = await supabase
+          .from(tableName)
+          .select("*");
+
+        if (regError) throw regError;
+        allRegs = (data || []).map((r: any) => ({
+          ...r,
+          tableName,
+          rowCategory: category
+        }));
       }
 
-      // Query all registrations for this segment
-      const { data: allRegs, error: regError } = await supabase
-        .from(tableName)
-        .select("*");
-
-      if (regError) throw regError;
-
-      const filteredRegs = (allRegs || []).filter((reg: any) => {
+      const filteredRegs = allRegs.filter((reg: any) => {
         if (!reg.selected_events) return false;
         const selectedList = reg.selected_events
           .split(",")
           .map((s: string) => s.trim().toLowerCase());
-        return selectedList.includes(event.trim().toLowerCase());
+        return selectedList.includes(event.trim().toLowerCase()) ||
+               reg.selected_events.toLowerCase().includes(event.trim().toLowerCase());
       });
 
       // Extract all userIds from the filtered registrations
@@ -368,11 +419,16 @@ export const EventParticipation = ({
       });
 
       // Fetch recorded participations for this specific event and category
-      const { data: partData, error: partError } = await supabase
+      let partQuery = supabase
         .from("event_participation")
-        .select("member_id")
-        .eq("event_name", event)
-        .eq("category", category);
+        .select("member_id, category")
+        .eq("event_name", event);
+
+      if (category !== "All") {
+        partQuery = partQuery.eq("category", category);
+      }
+
+      const { data: partData, error: partError } = await partQuery;
 
       const participationSet = new Set<string>();
       if (!partError && partData) {
@@ -444,7 +500,8 @@ export const EventParticipation = ({
             roll: mem?.roll || "N/A",
             uniqueId: p.member_id,
             participated: true,
-            isAbrupt: true
+            isAbrupt: true,
+            rowCategory: p.category || category
           };
         });
 
@@ -461,7 +518,9 @@ export const EventParticipation = ({
   }, [showToast]);
 
   const validateStudentParticipation = async (student: any) => {
-    if (!attendanceEvent || !attendanceCategory || !isSupabaseConfigured) return;
+    const rawCategory = student.rowCategory || attendanceCategory;
+    const targetCategory = rawCategory && rawCategory !== "All" ? rawCategory : getCategoryFromClass(student.class || "Junior");
+    if (!attendanceEvent || !targetCategory || targetCategory === "All" || !isSupabaseConfigured) return;
     setValidatingStudentId(student.uniqueId);
     try {
       const mId = student.uniqueId;
@@ -497,7 +556,7 @@ export const EventParticipation = ({
         .insert({
           member_id: mId,
           event_name: attendanceEvent,
-          category: attendanceCategory,
+          category: targetCategory,
           position: null
         });
 
@@ -507,8 +566,8 @@ export const EventParticipation = ({
       
       await logAction(
         "VALIDATE_EVENT_PARTICIPATION_FAST",
-        `${attendanceEvent}:${attendanceCategory}:${mId}`,
-        `Validated participation for ${student.full_name} (${mId}) in event ${attendanceEvent} (${attendanceCategory}).`
+        `${attendanceEvent}:${targetCategory}:${mId}`,
+        `Validated participation for ${student.full_name} (${mId}) in event ${attendanceEvent} (${targetCategory}).`
       );
 
       await fetchAttendanceList(attendanceEvent, attendanceCategory);
@@ -529,6 +588,8 @@ export const EventParticipation = ({
     setLoading(true);
     try {
       const formattedAbruptId = abruptId.trim();
+      const rawCategory = attendanceCategory;
+      const targetCategory = rawCategory && rawCategory !== "All" ? rawCategory : getCategoryFromClass(abruptClass);
 
       // Check duplicate in event_participation
       const { data: existing } = await supabase
@@ -536,7 +597,7 @@ export const EventParticipation = ({
         .select("id")
         .eq("member_id", formattedAbruptId)
         .eq("event_name", attendanceEvent)
-        .eq("category", attendanceCategory)
+        .eq("category", targetCategory)
         .maybeSingle();
 
       if (existing) {
@@ -568,7 +629,7 @@ export const EventParticipation = ({
         .insert({
           member_id: formattedAbruptId,
           event_name: attendanceEvent,
-          category: attendanceCategory,
+          category: targetCategory,
           position: null
         });
 
@@ -578,8 +639,8 @@ export const EventParticipation = ({
 
       await logAction(
         "ABRUPT_ADD_PARTICIPATION",
-        `${attendanceEvent}:${attendanceCategory}:${formattedAbruptId}`,
-        `Abruptly added non-registered participant ${abruptName.trim()} (${formattedAbruptId}) in event ${attendanceEvent} (${attendanceCategory}).`
+        `${attendanceEvent}:${targetCategory}:${formattedAbruptId}`,
+        `Abruptly added non-registered participant ${abruptName.trim()} (${formattedAbruptId}) in event ${attendanceEvent} (${targetCategory}).`
       );
 
       // Reset form & state
@@ -2433,9 +2494,9 @@ export const EventParticipation = ({
                 onChange={(e) => setAttendanceCategory(e.target.value)}
                 className="w-full bg-black/40 text-amber-400 border border-white/10 rounded-2xl px-4 py-3 text-xs font-bold uppercase tracking-wider outline-none focus:border-amber-500/50"
               >
-                {["Primary", "Junior", "Secondary", "Higher Secondary"].map((cat) => (
+                {["All", "Primary", "Junior", "Secondary", "Higher Secondary"].map((cat) => (
                   <option key={cat} value={cat} className="bg-zinc-900 text-white font-medium">
-                    {cat} Category
+                    {cat === "All" ? "All Categories" : `${cat} Category`}
                   </option>
                 ))}
               </select>

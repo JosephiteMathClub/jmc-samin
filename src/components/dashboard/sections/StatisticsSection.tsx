@@ -17,7 +17,8 @@ import {
   GraduationCap,
   Hammer,
   FileText,
-  X
+  X,
+  Layers
 } from 'lucide-react';
 import { isSupabaseConfigured, supabase } from '../../../lib/supabase';
 import { Skeleton } from '../../Skeleton';
@@ -60,7 +61,6 @@ export function StatisticsSection() {
   const [generalMembers, setGeneralMembers] = useState<MemberRow[]>([]);
   const [ecMembers, setEcMembers] = useState<EcMemberRow[]>([]);
   const [verifiedRegistrations, setVerifiedRegistrations] = useState<VerifiedRegRow[]>([]);
-  const [totalWebsiteUsersCount, setTotalWebsiteUsersCount] = useState<number>(0);
 
   // Selected slice state for interactive pie chart
   const [activeSlice, setActiveSlice] = useState<string | null>(null);
@@ -116,19 +116,9 @@ export function StatisticsSection() {
         }
       }
 
-      // 4. Fetch total profiles count (total people in website)
-      const { count: profilesCount, error: profilesErr } = await supabase
-        .from('profiles')
-        .select('id', { count: 'exact', head: true });
-
-      if (profilesErr) {
-        console.error("Error fetching profiles count:", profilesErr);
-      }
-
       setGeneralMembers(memberData || []);
       setEcMembers(ecData || []);
       setVerifiedRegistrations(allVerified);
-      setTotalWebsiteUsersCount(profilesCount || 0);
     } catch (err: any) {
       console.error("Error loading stats data:", err);
       setError(err.message || "Failed to load club statistics");
@@ -404,21 +394,21 @@ export function StatisticsSection() {
 
       {/* Headcount Stat Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        {/* Card 1: Total Website Users */}
+        {/* Card 1: Total Headcount */}
         <div 
           className="p-6 rounded-3xl border transition-all duration-300 relative overflow-hidden glass-card border-white/10 hover:border-white/20"
         >
           <div className="flex justify-between items-start">
             <div className="space-y-2">
-              <span className="text-[10px] font-mono font-black text-indigo-400 uppercase tracking-widest">Total Website Users</span>
-              <h3 className="text-4xl font-display font-black text-white">{totalWebsiteUsersCount}</h3>
+              <span className="text-[10px] font-mono font-black text-indigo-400 uppercase tracking-widest">Total Headcount</span>
+              <h3 className="text-4xl font-display font-black text-white">{stats.totalHeadcount}</h3>
             </div>
             <span className="p-3 bg-indigo-500/15 text-indigo-400 rounded-2xl">
-              <Users className="h-6 w-6" />
+              <Layers className="h-6 w-6" />
             </span>
           </div>
           <p className="text-[10px] text-zinc-400 mt-4 font-mono">
-            All registered accounts on the platform
+            General, EC members, and verified registrants
           </p>
           <div className="absolute bottom-0 left-0 right-0 h-1 bg-indigo-500/30 overflow-hidden">
             <div className="h-full bg-indigo-500 w-full" />

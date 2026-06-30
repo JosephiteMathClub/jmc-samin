@@ -162,6 +162,10 @@ const EventRegister = () => {
   const [proxyResolvedUserId, setProxyResolvedUserId] = useState<string | null>(null);
   const [checkingProxyEmail, setCheckingProxyEmail] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [proxyNameEditable, setProxyNameEditable] = useState(true);
+  const [proxyClassEditable, setProxyClassEditable] = useState(true);
+  const [proxySectionEditable, setProxySectionEditable] = useState(true);
+  const [proxyRollEditable, setProxyRollEditable] = useState(true);
 
   // General Member Check on Load
   const fetchMemberInfo = useCallback(async () => {
@@ -564,6 +568,10 @@ const EventRegister = () => {
     setUserRegisteredEvents([]);
     setAlreadyRegisteredTeam(false);
     setUserRegisteredTeamEventName(null);
+    setProxyNameEditable(true);
+    setProxyClassEditable(true);
+    setProxySectionEditable(true);
+    setProxyRollEditable(true);
 
     if (!checked) {
       if (registeredMemberData) {
@@ -644,6 +652,13 @@ const EventRegister = () => {
         setProxyUserExists(true);
         setProxyVerified(true);
         setIsGeneralMember(matchedMemberVerified);
+
+        // Editability is determined by whether the pulled values are blank/falsy
+        setProxyNameEditable(!matchedName);
+        setProxyClassEditable(!matchedClass);
+        setProxySectionEditable(!matchedSection);
+        setProxyRollEditable(!matchedRoll);
+
         showToast("Registered student found! General information auto-populated.", "success");
       } else {
         setProxyUserExists(false);
@@ -657,6 +672,13 @@ const EventRegister = () => {
         setIsGeneralMember(false);
         setIsProxyUserEc(false);
         setProxyUserEcId(null);
+        
+        // In spot mode, everything is editable
+        setProxyNameEditable(true);
+        setProxyClassEditable(true);
+        setProxySectionEditable(true);
+        setProxyRollEditable(true);
+
         showToast("Email address not registered. Manual spot registration mode activated.", "info");
       }
     } catch (err: any) {
@@ -998,16 +1020,25 @@ const EventRegister = () => {
             isUserRegisteredGeneral = true;
             existingMemberId = memberData.member_id || '';
 
-            // If they selected the free Math Olympiad or was registered via proxy, and are not verified yet, auto-verify their membership!
-            if ((isOnlyFreeMathOlympiad || isProxyRegistration) && memberData.verified !== 'yes') {
+            // If they selected the free Math Olympiad or was registered via proxy, update details and auto-verify membership!
+            const updateFields: any = {};
+            if (fullName) updateFields.full_name = fullName;
+            if (className) updateFields.class = className;
+            if (section) updateFields.section = section;
+            if (roll) updateFields.roll = roll;
+            if (isOnlyFreeMathOlympiad || isProxyRegistration) {
+              updateFields.verified = 'yes';
+            }
+
+            if (Object.keys(updateFields).length > 0) {
               const { error: updateVerError } = await supabase
                 .from('member')
-                .update({ verified: 'yes' })
+                .update(updateFields)
                 .eq('id', finalUserId);
               if (updateVerError) {
-                console.error("Failed to auto-verify existing member for special event:", updateVerError);
+                console.error("Failed to update existing member details:", updateVerError);
               } else {
-                console.log("Successfully auto-verified existing member for proxy/free Math Olympiad event.");
+                console.log("Successfully updated existing member details in database:", updateFields);
               }
             }
           }
@@ -1511,7 +1542,7 @@ const EventRegister = () => {
                           </p>
                           <p className="text-xs text-zinc-400 mt-1">
                             {proxyUserExists 
-                              ? 'Credentials pulled automatically from database archives. Form inputs are pre-populated & locked.' 
+                              ? 'Credentials pulled automatically from database archives. Form inputs are pre-populated & locked (any missing details can be filled manually).' 
                               : 'This email is not registered in our database. Since a pre-registered account is not mandatory, manual credentials input is enabled. A new account will be auto-generated upon registration.'}
                           </p>
                         </div>
@@ -1524,13 +1555,13 @@ const EventRegister = () => {
                       <div className="space-y-3">
                         <label className="text-[10px] font-black uppercase tracking-wider text-zinc-500">Full Name</label>
                         <div className="relative group">
-                          <User className="absolute left-6 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500 group-focus-within:text-amber-500 transition-colors" />
+                           <User className="absolute left-6 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500 group-focus-within:text-amber-500 transition-colors" />
                           <input 
                             type="text"
                             placeholder="YOUR FULL NAME"
                             value={fullName}
                             onChange={(e) => setFullName(e.target.value)}
-                            disabled={(!isProxyRegistration && isGeneralMember) || (isProxyRegistration && (!proxyVerified || proxyUserExists))}
+                            disabled={(!isProxyRegistration && isGeneralMember) || (isProxyRegistration && (!proxyVerified || !proxyNameEditable))}
                             className="w-full pl-14 pr-6 py-4.5 bg-white/5 border border-white/10 rounded-2xl focus:outline-none focus:border-amber-500/50 focus:ring-4 focus:ring-amber-500/10 transition-all text-sm font-bold text-white placeholder:text-zinc-600 disabled:opacity-60"
                           />
                         </div>
@@ -1547,7 +1578,7 @@ const EventRegister = () => {
                               setClassName(e.target.value);
                               setSection('');
                             }}
-                            disabled={(!isProxyRegistration && isGeneralMember) || (isProxyRegistration && (!proxyVerified || proxyUserExists))}
+                            disabled={(!isProxyRegistration && isGeneralMember) || (isProxyRegistration && (!proxyVerified || !proxyClassEditable))}
                             className="w-full pl-14 pr-6 py-4.5 bg-white/5 border border-white/10 rounded-2xl focus:outline-none focus:border-amber-500/50 focus:ring-4 focus:ring-amber-500/10 transition-all text-sm font-bold text-white placeholder:text-zinc-600 disabled:opacity-60 appearance-none cursor-pointer"
                           >
                             <option value="" className="bg-zinc-950 text-zinc-500 font-extrabold uppercase tracking-wider">SELECT CLASS</option>
@@ -1569,7 +1600,7 @@ const EventRegister = () => {
                           <select 
                             value={section}
                             onChange={(e) => setSection(e.target.value)}
-                            disabled={(!isProxyRegistration && isGeneralMember) || (isProxyRegistration && (!proxyVerified || proxyUserExists))}
+                            disabled={(!isProxyRegistration && isGeneralMember) || (isProxyRegistration && (!proxyVerified || !proxySectionEditable))}
                             className="w-full pl-14 pr-12 py-4.5 bg-white/5 border border-white/10 rounded-2xl focus:outline-none focus:border-amber-500/50 focus:ring-4 focus:ring-amber-500/10 transition-all text-sm font-bold text-white placeholder:text-zinc-600 disabled:opacity-60 appearance-none cursor-pointer"
                           >
                             {!className ? (
@@ -1599,7 +1630,7 @@ const EventRegister = () => {
                             placeholder="CLASS ROLL (E.G. 42)"
                             value={roll}
                             onChange={(e) => setRoll(e.target.value)}
-                            disabled={(!isProxyRegistration && isGeneralMember) || (isProxyRegistration && (!proxyVerified || proxyUserExists))}
+                            disabled={(!isProxyRegistration && isGeneralMember) || (isProxyRegistration && (!proxyVerified || !proxyRollEditable))}
                             className="w-full pl-14 pr-6 py-4.5 bg-white/5 border border-white/10 rounded-2xl focus:outline-none focus:border-amber-500/50 focus:ring-4 focus:ring-amber-500/10 transition-all text-sm font-bold text-white placeholder:text-zinc-600 disabled:opacity-60"
                           />
                         </div>
