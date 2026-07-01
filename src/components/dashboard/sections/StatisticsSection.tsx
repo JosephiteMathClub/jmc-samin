@@ -147,7 +147,7 @@ export function StatisticsSection() {
   // Breakdown metrics
   const stats = useMemo(() => {
     const generalCount = actualGeneralMembers.length;
-    const verifiedRegistrantsCount = verifiedRegistrations.length;
+    const baseVerifiedCount = verifiedRegistrations.length;
     
     // EC Breakdown
     let managementCount = 0;
@@ -168,8 +168,11 @@ export function StatisticsSection() {
       }
     });
 
+    const nonAcademicEcCount = managementCount + logisticsCount;
+    const verifiedRegistrantsCount = baseVerifiedCount + nonAcademicEcCount;
+
     const ecTotal = ecMembers.length;
-    const totalHeadcount = generalCount + verifiedRegistrantsCount + ecTotal;
+    const totalHeadcount = generalCount + baseVerifiedCount + ecTotal;
 
     return {
       generalCount,
@@ -190,10 +193,11 @@ export function StatisticsSection() {
       managementCount,
       logisticsCount,
       academicsCount,
-      totalHeadcount
     } = stats;
 
-    if (totalHeadcount === 0) return [];
+    const sumOfSlices = generalCount + verifiedRegistrantsCount + managementCount + logisticsCount + academicsCount;
+
+    if (sumOfSlices === 0) return [];
 
     const rawSegments = [
       {
@@ -211,7 +215,7 @@ export function StatisticsSection() {
         value: verifiedRegistrantsCount,
         color: '#06b6d4', // Cyan 500
         hoverColor: '#22d3ee', // Cyan 400
-        description: 'Validated participants of club events',
+        description: 'Validated participants of club events (includes non-academic EC members)',
         icon: Calendar
       },
       {
@@ -248,7 +252,7 @@ export function StatisticsSection() {
     return rawSegments
       .filter(s => s.value > 0)
       .map(s => {
-        const percentage = s.value / totalHeadcount;
+        const percentage = s.value / sumOfSlices;
         const startPercentage = currentPercentage;
         currentPercentage += percentage;
         return {
@@ -280,12 +284,29 @@ export function StatisticsSection() {
     }
 
     if (activeSlice === 'verified_registrants') {
-      return verifiedRegistrations.map(r => ({
+      // Base verified registrants
+      const baseRegs = verifiedRegistrations.map(r => ({
         name: r.full_name,
         role: `${r.tableName.replace("_events", " Events")} registrant`,
         id: r.id.substring(0, 8),
         extra: r.selected_events ? `Events: ${r.selected_events}` : ''
       }));
+
+      // Non-academic EC members who can freely enter any event
+      const nonAcademicEcs = ecMembers
+        .filter(m => {
+          const dept = String(m.department || "").toLowerCase().trim();
+          const isAcademic = dept === "academics" || dept.includes("acad");
+          return !isAcademic;
+        })
+        .map(m => ({
+          name: m.full_name,
+          role: `${m.designation || 'EC Officer'} (Eligible EC Registrant)`,
+          id: m.id.substring(0, 8),
+          extra: 'Events: All (Free Entrance)'
+        }));
+
+      return [...baseRegs, ...nonAcademicEcs];
     }
 
     if (activeSlice.startsWith('ec_')) {

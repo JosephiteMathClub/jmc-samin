@@ -452,8 +452,58 @@ export const EventParticipation = ({
         };
       });
 
+      // Fetch EC members (except Academics EC) who can freely enter any event
+      let ecMapped: any[] = [];
+      const { data: ecData, error: ecErr } = await supabase
+        .from("ec_member")
+        .select("*");
+      
+      if (!ecErr && ecData) {
+        const eligibleEcMembers = ecData.filter((m: any) => {
+          const dept = String(m.department || "").toLowerCase().trim();
+          const isAcademic = dept === "academics" || dept.includes("acad");
+          return !isAcademic;
+        });
+
+        const filteredEcMembers = eligibleEcMembers.filter((ec: any) => {
+          if (category !== "All") {
+            const rowCategory = getCategoryFromClass(ec.class || "");
+            return rowCategory === category;
+          }
+          return true;
+        });
+
+        ecMapped = filteredEcMembers.map((ec: any) => {
+          const memberId = ec.member_id || "";
+          const uniqueId = memberId || `EC-${ec.id.substring(0, 8)}`;
+          const participated = participationSet.has(uniqueId.trim().toLowerCase());
+
+          return {
+            id: `ec-${ec.id}`,
+            user_id: ec.id,
+            full_name: ec.full_name || "",
+            class: ec.class || "N/A",
+            section: ec.section || "N/A",
+            roll: ec.roll || "N/A",
+            phone: ec.phone || ec.contact || "N/A",
+            tableName: "ec_member",
+            rowCategory: getCategoryFromClass(ec.class || ""),
+            selected_events: event,
+            uniqueId,
+            participated,
+            memberId,
+            isEcMember: true
+          };
+        });
+      }
+
+      // Merge standard registrations and eligible EC members (avoid duplicates by uniqueId)
+      const registeredUniqueIds = new Set(mapped.map(m => m.uniqueId.trim().toLowerCase()));
+      const ecNotRegistered = ecMapped.filter(ec => !registeredUniqueIds.has(ec.uniqueId.trim().toLowerCase()));
+      const combinedMapped = [...mapped, ...ecNotRegistered];
+
       // Get extra participations that were abruptly added
-      const registeredMemberIds = new Set(mapped.map(m => m.uniqueId.trim().toLowerCase()));
+      const registeredMemberIds = new Set(combinedMapped.map(m => m.uniqueId.trim().toLowerCase()));
       const extraParticipations = (partData || []).filter(p => {
         return p.member_id && !registeredMemberIds.has(p.member_id.trim().toLowerCase());
       });
@@ -505,9 +555,9 @@ export const EventParticipation = ({
           };
         });
 
-        setAttendanceStudents([...mapped, ...extraMapped]);
+        setAttendanceStudents([...combinedMapped, ...extraMapped]);
       } else {
-        setAttendanceStudents(mapped);
+        setAttendanceStudents(combinedMapped);
       }
     } catch (err: any) {
       console.error("Error fetching attendance list:", err);
