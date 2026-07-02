@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
-import { sendEmail } from '@/lib/email';
+import { sendEmail, sendSMS } from '@/lib/email';
 
 export async function POST(req: Request) {
   try {
@@ -30,7 +30,7 @@ export async function POST(req: Request) {
     // 2. Fetch member details directly from supabase
     const { data: members, error: memError } = await supabase
       .from('member')
-      .select('member_id, full_name, email, email_address')
+      .select('member_id, full_name, email, email_address, phone')
       .in('member_id', memberIds);
 
     if (memError) {
@@ -41,11 +41,12 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'No member data found' }, { status: 500 });
     }
 
-    // Create a map of member_id to email
+    // Create a map of member_id to email and phone
     const memberMap = new Map();
     members.forEach(m => memberMap.set(m.member_id, {
       full_name: m.full_name,
-      email: m.email_address || m.email
+      email: m.email_address || m.email,
+      phone: m.phone
     }));
 
     // 3. Process each participant and send email
@@ -56,10 +57,11 @@ export async function POST(req: Request) {
     // but for simplicity we will do a simple sequential sending or Promise.all directly.
     const emailPromises = participations.map(async (p) => {
       const memberInfo = memberMap.get(p.member_id);
-      if (!memberInfo || !memberInfo.email) return;
+      if (!memberInfo || (!memberInfo.email && !memberInfo.phone)) return;
 
       let subject = '';
       let htmlContent = '';
+      let smsContent = '';
 
       if (p.position && p.position > 0) {
         // Winner
@@ -74,6 +76,7 @@ export async function POST(req: Request) {
             <p>Best regards,<br/>The Josephite Math Club Team</p>
           </div>
         `;
+        smsContent = `Congratulations ${memberInfo.full_name}! You secured ${posText} place in ${eventName} (${category} category)! - Josephite Math Club`;
       } else {
         // Not qualified / No position
         subject = `Participation Result for ${eventName}`;
@@ -87,20 +90,37 @@ export async function POST(req: Request) {
             <p>Best regards,<br/>The Josephite Math Club Team</p>
           </div>
         `;
+        smsContent = `Hello ${memberInfo.full_name}, results for ${eventName} (${category} category) are out. Thank you for your participation. Keep practicing! - Josephite Math Club`;
       }
 
-      try {
-        const result = await sendEmail({
-          to: memberInfo.email,
-          subject,
-          html: htmlContent
-        });
-        if (!result.success) {
-          throw result.error || new Error('Failed to send email via SMTP provider.');
+      // If registered phone number exists, dispatch the SMS notification
+      if (memberInfo.phone) {
+        try {
+          const smsRes = await sendSMS(memberInfo.phone, smsContent);
+          if (smsRes.success) {
+            console.log(`[SMS DISPATCH] Successfully sent result SMS via Brevo to participant phone: ${memberInfo.phone}`);
+          } else {
+            console.error(`[SMS DISPATCH] Failed to send result SMS to participant phone: ${memberInfo.phone}. Error:`, smsRes.error);
+          }
+        } catch (smsErr) {
+          console.error(`[SMS DISPATCH] Exception sending result SMS to participant phone: ${memberInfo.phone}. Error:`, smsErr);
         }
-        sentCount++;
-      } catch (e: any) {
-        errors.push(`Failed to send to ${memberInfo.email}: ${e.message}`);
+      }
+
+      if (memberInfo.email) {
+        try {
+          const result = await sendEmail({
+            to: memberInfo.email,
+            subject,
+            html: htmlContent
+          });
+          if (!result.success) {
+            throw result.error || new Error('Failed to send email via SMTP provider.');
+          }
+          sentCount++;
+        } catch (e: any) {
+          errors.push(`Failed to send to ${memberInfo.email}: ${e.message}`);
+        }
       }
     });
 

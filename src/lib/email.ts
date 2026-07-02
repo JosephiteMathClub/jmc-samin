@@ -158,3 +158,68 @@ export const sendEmail = async (options: EmailOptions) => {
     return { success: false, error: new Error(`SMTP Error: ${errorMsg}`) };
   }
 };
+
+/**
+ * Sends a transactional SMS using Brevo REST API
+ */
+export const sendSMS = async (to: string, content: string) => {
+  const rawApiKey = process.env.BREVO_API_KEY;
+  const hasBrevoApiKey = rawApiKey && 
+                         rawApiKey.trim() !== '' && 
+                         !rawApiKey.includes('your-brevo-api-key-here') &&
+                         !rawApiKey.startsWith('your-');
+
+  if (!hasBrevoApiKey) {
+    console.warn('[SMS] BREVO_API_KEY is not set or is using placeholder. SMS cannot be sent via Brevo.');
+    return { success: false, error: new Error('BREVO_API_KEY is missing or invalid') };
+  }
+
+  // Format phone number for Bangladesh (E.164 with + prefix)
+  let cleanPhone = to.replace(/[^0-9+]/g, '');
+  if (cleanPhone.startsWith('01') && cleanPhone.length === 11) {
+    cleanPhone = '+88' + cleanPhone;
+  } else if (cleanPhone.startsWith('1') && cleanPhone.length === 10) {
+    cleanPhone = '+880' + cleanPhone;
+  } else if (cleanPhone.startsWith('880') && !cleanPhone.startsWith('+')) {
+    cleanPhone = '+' + cleanPhone;
+  } else if (!cleanPhone.startsWith('+') && cleanPhone.length > 0) {
+    if (cleanPhone.startsWith('0')) {
+      cleanPhone = '+88' + cleanPhone;
+    } else {
+      cleanPhone = '+' + cleanPhone;
+    }
+  }
+
+  console.log(`[SMS] Attempting to send SMS via Brevo API to ${cleanPhone}...`);
+
+  try {
+    const response = await fetch('https://api.brevo.com/v3/transactionalSMS/sms', {
+      method: 'POST',
+      headers: {
+        'accept': 'application/json',
+        'api-key': rawApiKey!,
+        'content-type': 'application/json'
+      },
+      body: JSON.stringify({
+        sender: 'SJSMathClub', // Max 11 alphanumeric characters
+        recipient: cleanPhone,
+        content: content,
+        type: 'transactional'
+      })
+    });
+
+    if (!response.ok) {
+      const errorData = await response.text();
+      console.error('Brevo SMS API Error:', errorData);
+      return { success: false, error: new Error(`Brevo SMS API Error: ${errorData}`) };
+    } else {
+      const data = await response.json();
+      console.log(`[SMS] Successfully sent SMS via Brevo API:`, data);
+      return { success: true, data };
+    }
+  } catch (error) {
+    console.error('Brevo SMS API fetch error:', error);
+    return { success: false, error };
+  }
+};
+

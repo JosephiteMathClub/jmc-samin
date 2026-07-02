@@ -107,11 +107,43 @@ const Auth = () => {
     }
 
     try {
+      let finalEmail = email.trim();
+      const isPhoneInput = !finalEmail.includes('@') && /^[0-9+\s\-()]+$/.test(finalEmail);
+      
+      if (isPhoneInput) {
+        // Find their registered email by checking member table or ec_member table or default to virtual email
+        try {
+          const { data: memberData } = await supabase
+            .from('member')
+            .select('email')
+            .eq('phone', finalEmail)
+            .maybeSingle();
+          if (memberData?.email) {
+            finalEmail = memberData.email;
+          } else {
+            const { data: ecData } = await supabase
+              .from('ec_member')
+              .select('email')
+              .eq('phone', finalEmail)
+              .maybeSingle();
+            if (ecData?.email) {
+              finalEmail = ecData.email;
+            } else {
+              // Fallback to virtual email
+              finalEmail = `${finalEmail}@josephite.club`;
+            }
+          }
+        } catch (e) {
+          console.error("Error resolving email from phone:", e);
+          finalEmail = `${finalEmail}@josephite.club`;
+        }
+      }
+
       if (mode === 'signup') {
         const signupRes = await fetch('/api/auth/signup', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email, password, fullName })
+          body: JSON.stringify({ email: finalEmail, password, fullName })
         });
         
         const signupData = await signupRes.json();
@@ -120,7 +152,7 @@ const Auth = () => {
         }
 
         // Programmatically sign in immediately on successful signup
-        const { error: signInErr } = await supabase.auth.signInWithPassword({ email, password });
+        const { error: signInErr } = await supabase.auth.signInWithPassword({ email: finalEmail, password });
         if (signInErr) {
           showToast('Registration successful! You can now sign in.', 'success');
           setMode('login');
@@ -130,7 +162,7 @@ const Auth = () => {
           router.push(redirect);
         }
       } else {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        const { error } = await supabase.auth.signInWithPassword({ email: finalEmail, password });
         if (error) throw error;
         
         const redirect = searchParams?.get('redirect') || '/profile';
@@ -213,15 +245,15 @@ const Auth = () => {
               </AnimatePresence>
 
               <div className="space-y-4">
-                <label className="text-[10px] font-bold uppercase tracking-[0.3em] text-zinc-600 ml-4">Email Address</label>
+                <label className="text-[10px] font-bold uppercase tracking-[0.3em] text-zinc-600 ml-4">Email or Phone Number</label>
                 <div className="relative group">
                   <Mail className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-600 group-focus-within:text-amber-500 transition-colors" />
                   <input 
-                    type="email"
+                    type="text"
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="name@example.com"
+                    placeholder="name@example.com or phone number"
                     autoCapitalize="none"
                     autoComplete="off"
                     autoCorrect="off"

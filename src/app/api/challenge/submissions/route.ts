@@ -2,7 +2,7 @@ import { createClient } from '@supabase/supabase-js';
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
-import { sendEmail } from '@/lib/email';
+import { sendEmail, sendSMS } from '@/lib/email';
 import { SUPER_ADMIN_EMAILS } from '@/lib/constants';
 
 function getSupabaseAdmin() {
@@ -265,52 +265,96 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Failed to update record in DB: ' + upsertError.message }, { status: 500 });
     }
 
-    // 6. Send Email Announcement to student if publishing results and email is provided
-    if (publish && sub.email) {
-      try {
-        const subject = `Your Math Challenge Result has been Published!`;
-        const htmlContent = `
-          <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; color: #333; line-height: 1.6;">
-            <div style="background: #18181b; padding: 20px; text-align: center; border-radius: 10px 10px 0 0;">
-              <h2 style="color: #f59e0b; margin: 0; font-size: 24px; text-transform: uppercase; letter-spacing: 2px;">Josephite Math Club</h2>
-            </div>
-            <div style="padding: 30px; border: 1px border border-white/10; border-top: none; border-radius: 0 0 10px 10px; background: #fafafa;">
-              <h3 style="color: #0f172a; margin-top: 0;">Hello ${sub.fullName},</h3>
-              <p>The administrators have completed the final verification checks on your recent math challenge submission!</p>
-              
-              <div style="background: #f1f5f9; padding: 20px; border-radius: 12px; margin: 24px 0; text-align: center;">
-                <p style="font-size: 14px; color: #64748b; margin: 0 0 8px 0; uppercase; tracking: 0.1em;">Final Published Score</p>
-                <p style="font-size: 36px; font-weight: bold; color: #0d9488; margin: 0;">${sub.finalScore} / ${sub.totalQuestions}</p>
-              </div>
+    // 6. Send Email and SMS Announcement to student if publishing results
+    if (publish) {
+      let registeredPhone = '';
+      if (sub.email) {
+        try {
+          const supabaseAdmin = getSupabaseAdmin();
+          const { data: memberData } = await supabaseAdmin
+            .from('member')
+            .select('phone')
+            .eq('email', sub.email)
+            .maybeSingle();
+          if (memberData?.phone) {
+            registeredPhone = memberData.phone;
+          } else {
+            const { data: ecData } = await supabaseAdmin
+              .from('ec_member')
+              .select('phone')
+              .eq('email', sub.email)
+              .maybeSingle();
+            if (ecData?.phone) {
+              registeredPhone = ecData.phone;
+            }
+          }
+        } catch (dbErr) {
+          console.error('Error fetching student phone for result SMS dispatch:', dbErr);
+        }
+      }
 
-              ${sub.feedback ? `
-                <div style="margin-bottom: 24px;">
-                  <strong style="color: #0f172a;">Review Feedback & Comments:</strong>
-                  <p style="font-style: italic; color: #475569; background: #fff; padding: 15px; border-left: 4px solid #f59e0b; border-radius: 4px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">${sub.feedback}</p>
+      // Send SMS dispatch notification if registered phone exists
+      if (registeredPhone) {
+        const smsMessage = `Hello ${sub.fullName}, your Math Challenge result is published! Score: ${sub.finalScore}/${sub.totalQuestions}. Check details on the Josephite Math Club portal. - Josephite Math Club`;
+        try {
+          const smsRes = await sendSMS(registeredPhone, smsMessage);
+          if (smsRes.success) {
+            console.log(`[SMS DISPATCH] Successfully sent challenge result SMS via Brevo to phone: ${registeredPhone}`);
+          } else {
+            console.error(`[SMS DISPATCH] Failed to send challenge result SMS to phone: ${registeredPhone}. Error:`, smsRes.error);
+          }
+        } catch (smsErr) {
+          console.error(`[SMS DISPATCH] Exception sending challenge result SMS to phone: ${registeredPhone}. Error:`, smsErr);
+        }
+      }
+
+      // Send Email if email is provided
+      if (sub.email) {
+        try {
+          const subject = `Your Math Challenge Result has been Published!`;
+          const htmlContent = `
+            <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; color: #333; line-height: 1.6;">
+              <div style="background: #18181b; padding: 20px; text-align: center; border-radius: 10px 10px 0 0;">
+                <h2 style="color: #f59e0b; margin: 0; font-size: 24px; text-transform: uppercase; letter-spacing: 2px;">Josephite Math Club</h2>
+              </div>
+              <div style="padding: 30px; border: 1px border border-white/10; border-top: none; border-radius: 0 0 10px 10px; background: #fafafa;">
+                <h3 style="color: #0f172a; margin-top: 0;">Hello ${sub.fullName},</h3>
+                <p>The administrators have completed the final verification checks on your recent math challenge submission!</p>
+                
+                <div style="background: #f1f5f9; padding: 20px; border-radius: 12px; margin: 24px 0; text-align: center;">
+                  <p style="font-size: 14px; color: #64748b; margin: 0 0 8px 0; uppercase; tracking: 0.1em;">Final Published Score</p>
+                  <p style="font-size: 36px; font-weight: bold; color: #0d9488; margin: 0;">${sub.finalScore} / ${sub.totalQuestions}</p>
                 </div>
-              ` : ''}
 
-              <p>You can now open the <strong>Challenge Problems</strong> portal at any time to view your fully corrected paper, feedback, and question answer keys.</p>
-              
-              <div style="text-align: center; margin: 32px 0;">
-                <a href="${process.env.NEXT_PUBLIC_APP_URL ? `https://${process.env.NEXT_PUBLIC_APP_URL}/challenge-problems` : '#'}" style="background: #0f172a; color: #ffffff; padding: 12px 30px; border-radius: 9999px; text-decoration: none; font-size: 14px; font-weight: bold;">View Detailed Solutions</a>
+                ${sub.feedback ? `
+                  <div style="margin-bottom: 24px;">
+                    <strong style="color: #0f172a;">Review Feedback & Comments:</strong>
+                    <p style="font-style: italic; color: #475569; background: #fff; padding: 15px; border-left: 4px solid #f59e0b; border-radius: 4px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">${sub.feedback}</p>
+                  </div>
+                ` : ''}
+
+                <p>You can now open the <strong>Challenge Problems</strong> portal at any time to view your fully corrected paper, feedback, and question answer keys.</p>
+                
+                <div style="text-align: center; margin: 32px 0;">
+                  <a href="${process.env.NEXT_PUBLIC_APP_URL ? `https://${process.env.NEXT_PUBLIC_APP_URL}/challenge-problems` : '#'}" style="background: #0f172a; color: #ffffff; padding: 12px 30px; border-radius: 9999px; text-decoration: none; font-size: 14px; font-weight: bold;">View Detailed Solutions</a>
+                </div>
+
+                <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 32px 0;" />
+                <p style="font-size: 12px; color: #94a3b8; margin: 0; text-align: center;">
+                  This is an automated result dispatch system. Please do not reply directly to this email.
+                </p>
               </div>
-
-              <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 32px 0;" />
-              <p style="font-size: 12px; color: #94a3b8; margin: 0; text-align: center;">
-                This is an automated result dispatch system. Please do not reply directly to this email.
-              </p>
             </div>
-          </div>
-        `;
+          `;
 
-        await sendEmail({
-          to: sub.email,
-          subject,
-          html: htmlContent
-        });
-      } catch (emailErr) {
-        console.error('Failed to dispatch result email to student:', emailErr);
+          await sendEmail({
+            to: sub.email,
+            subject,
+            html: htmlContent
+          });
+        } catch (emailErr) {
+          console.error('Failed to dispatch result email to student:', emailErr);
+        }
       }
     }
 

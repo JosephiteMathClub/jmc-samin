@@ -42,6 +42,7 @@ interface EventRegistrationRow {
   tableName: string;
   email?: string;
   member_id?: string;
+  phone?: string;
 }
 
 export function EventRegistrationsSection() {
@@ -87,6 +88,7 @@ export function EventRegistrationsSection() {
           const userIds = data.map((d: any) => d.user_id).filter(Boolean);
           let emailsMap: Record<string, string> = {};
           let memberIdsMap: Record<string, string> = {};
+          let memberPhonesMap: Record<string, string> = {};
           
           if (userIds.length > 0) {
             // Fetch both in parallel for optimal throughput
@@ -97,7 +99,7 @@ export function EventRegistrationsSection() {
                 .in("id", userIds),
               supabase
                 .from("member")
-                .select("id, member_id")
+                .select("id, member_id, phone")
                 .in("id", userIds)
             ]);
 
@@ -110,6 +112,7 @@ export function EventRegistrationsSection() {
             if (!memberRes.error && memberRes.data) {
               memberRes.data.forEach((m: any) => {
                 memberIdsMap[m.id] = m.member_id;
+                memberPhonesMap[m.id] = m.phone;
               });
             }
           }
@@ -130,6 +133,7 @@ export function EventRegistrationsSection() {
               verified: normVerified,
               email: emailsMap[item.user_id] || item.registered_by || "",
               member_id: memberIdsMap[item.user_id] || "",
+              phone: item.phone || memberPhonesMap[item.user_id] || "",
             };
           });
 
@@ -829,6 +833,11 @@ export function EventRegistrationsSection() {
                                 <div className="font-mono text-[9px] text-zinc-500 mt-0.5 break-all">
                                   {reg.email || "No connected email"}
                                 </div>
+                                {reg.phone && (
+                                  <div className="font-mono text-[9px] text-amber-500 font-bold mt-0.5">
+                                    📞 {reg.phone}
+                                  </div>
+                                )}
                               </div>
                             </div>
                           </td>
@@ -1014,6 +1023,11 @@ export function EventRegistrationsSection() {
                             <p className="font-mono text-[10px] text-zinc-500 mt-0.5">
                               Class {member.class} | Sec: {member.section} | Roll: {member.roll}
                             </p>
+                            {member.phone && (
+                              <p className="font-mono text-[10px] text-amber-500 font-bold mt-0.5">
+                                📞 {member.phone}
+                              </p>
+                            )}
                           </div>
                         </div>
 
@@ -1162,7 +1176,11 @@ export function EventRegistrationsSection() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-4 gap-4">
+                <div className="bg-white/[0.01] p-4 rounded-xl border border-white/5">
+                  <p className="text-zinc-500 text-[9px] font-black uppercase tracking-wider">Registered Phone</p>
+                  <p className="text-amber-500 font-bold font-mono mt-1">{selectedRegistrant.phone || "N/A"}</p>
+                </div>
                 <div className="bg-white/[0.01] p-4 rounded-xl border border-white/5">
                   <p className="text-zinc-500 text-[9px] font-black uppercase tracking-wider">bKash Number</p>
                   <p className="text-white font-bold font-mono mt-1">{selectedRegistrant.bkash_number}</p>

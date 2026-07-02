@@ -435,14 +435,21 @@ const AdminDashboard = () => {
     try {
       let userId: string | null = null;
 
+      const getVirtualEmail = (val: string) => {
+        const trimmed = (val || '').trim().toLowerCase();
+        const isPhoneInput = !trimmed.includes('@') && /^[0-9+\s\-()]+$/.test(trimmed);
+        return isPhoneInput ? `${trimmed}@josephite.club` : trimmed;
+      };
+
+      const finalEmail = getVirtualEmail(memberData.email);
+
       // First, try to find an existing member record by email to reuse their ID
       if (memberData.email) {
-        const normalizedEmail = memberData.email.toLowerCase().trim();
         try {
           const { data: memByEmail } = await supabase
             .from('member')
             .select('id')
-            .eq('email', normalizedEmail)
+            .eq('email', finalEmail)
             .maybeSingle();
           
           if (memByEmail?.id) {
@@ -451,7 +458,7 @@ const AdminDashboard = () => {
             const { data: ecByEmail } = await supabase
               .from('ec_member')
               .select('id')
-              .eq('email', normalizedEmail)
+              .eq('email', finalEmail)
               .maybeSingle();
             
             if (ecByEmail?.id) {
@@ -492,7 +499,7 @@ const AdminDashboard = () => {
               'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-              email: memberData.email,
+              email: finalEmail,
               phone: memberData.phone,
               password: memberData.phone, // Password is the phone number
               fullName: memberData.full_name
@@ -513,7 +520,7 @@ const AdminDashboard = () => {
             const { data, error: userError } = await supabase
               .from('profiles')
               .select('id')
-              .eq('email', memberData.email.toLowerCase().trim())
+              .eq('email', finalEmail)
               .maybeSingle();
             
             if (userError) throw userError;
@@ -581,8 +588,8 @@ const AdminDashboard = () => {
         class: memberData.class,
         section: memberData.section,
         roll: memberData.roll,
-        email: memberData.email,
-        email_address: memberData.email,
+        email: finalEmail,
+        email_address: finalEmail,
         phone: memberData.phone,
         member_id: memberIdToUse,
         verified: 'yes',

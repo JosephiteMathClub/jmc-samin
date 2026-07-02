@@ -98,9 +98,13 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Forbidden: Admin access required' }, { status: 403 });
     }
 
+    const trimmedInput = email.trim().toLowerCase();
+    const isPhoneInput = !trimmedInput.includes('@') && /^[0-9+\s\-()]+$/.test(trimmedInput);
+    const finalEmail = isPhoneInput ? `${trimmedInput}@josephite.club` : trimmedInput;
+
     // 2. Create the new user
     const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
-      email: email,
+      email: finalEmail,
       password: password,
       email_confirm: true, // Auto-confirm email
       user_metadata: {
@@ -119,7 +123,8 @@ export async function POST(req: Request) {
       .upsert({
         id: newUser.user.id,
         full_name: fullName,
-        role: 'member'
+        role: 'member',
+        email: finalEmail
       }, { onConflict: 'id' });
 
     if (profileError) {

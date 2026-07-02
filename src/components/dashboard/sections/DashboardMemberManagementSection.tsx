@@ -425,9 +425,9 @@ const DashboardMemberManagementSectionComponent: React.FC<DashboardMemberManagem
                       />
                     </div>
                     <div className="space-y-2 relative">
-                      <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 ml-1">Email Address</label>
+                      <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 ml-1">Email or Phone Number (User ID)</label>
                       <input 
-                        type="email"
+                        type="text"
                         required
                         value={formData.email}
                         onChange={(e) => {
@@ -440,7 +440,7 @@ const DashboardMemberManagementSectionComponent: React.FC<DashboardMemberManagem
                             setShowSuggestions(false);
                           }, 250);
                         }}
-                        placeholder="EMAIL@EXAMPLE.COM"
+                        placeholder="EMAIL@EXAMPLE.COM OR PHONE NUMBER"
                         className="w-full px-6 py-4 bg-white/5 border border-white/10 rounded-xl focus:outline-none focus:border-amber-500/50 transition-all text-white font-bold text-xs"
                       />
 
@@ -740,6 +740,7 @@ const DashboardMemberManagementSectionComponent: React.FC<DashboardMemberManagem
                             <div className="flex flex-col">
                               <span className="text-xs font-bold text-white">{m.full_name}</span>
                               <span className="text-[9px] text-zinc-500">{m.email_address || m.email}</span>
+                              {m.phone && <span className="text-[9px] text-amber-500/80 font-mono font-bold">{m.phone}</span>}
                             </div>
                           </div>
                         </td>
@@ -830,6 +831,7 @@ const DashboardMemberManagementSectionComponent: React.FC<DashboardMemberManagem
                         <div className="min-w-0">
                           <p className="text-sm font-bold text-white truncate">{m.full_name}</p>
                           <p className="text-[10px] text-zinc-500 truncate">{m.email_address || m.email}</p>
+                          {m.phone && <p className="text-[10px] text-amber-500/80 font-mono font-bold truncate">{m.phone}</p>}
                         </div>
                       </div>
                       <span className="text-[9px] font-mono font-bold text-amber-500 bg-amber-500/5 px-2 py-1 rounded">

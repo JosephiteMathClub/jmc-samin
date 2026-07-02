@@ -37,9 +37,13 @@ export async function POST(req: Request) {
 
     const supabaseAdmin = getSupabaseAdmin();
 
+    const trimmedInput = email.trim().toLowerCase();
+    const isPhoneInput = !trimmedInput.includes('@') && /^[0-9+\s\-()]+$/.test(trimmedInput);
+    const finalEmail = isPhoneInput ? `${trimmedInput}@josephite.club` : trimmedInput;
+
     // Create the user with email_confirm: true, which acts as pre-verified / auto-verified and suppresses signup confirmation links
     const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
-      email: email,
+      email: finalEmail,
       password: password,
       email_confirm: true,
       user_metadata: {
@@ -57,13 +61,14 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: errorMessage }, { status: 400 });
     }
 
-    // Upsert the public profile to associate full name and role 'member'
+    // Upsert the public profile to associate full name, role 'member', and email
     const { error: profileError } = await supabaseAdmin
       .from('profiles')
       .upsert({
         id: newUser.user.id,
         full_name: fullName,
-        role: 'member'
+        role: 'member',
+        email: finalEmail
       }, { onConflict: 'id' });
 
     if (profileError) {

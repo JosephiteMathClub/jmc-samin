@@ -106,6 +106,7 @@ const EventRegister = () => {
   const [className, setClassName] = useState('');
   const [section, setSection] = useState('');
   const [roll, setRoll] = useState('');
+  const [phone, setPhone] = useState('');
   
   // Event sub-tab ("solo" or "team")
   const [eventTab, setEventTab] = useState<'solo' | 'team'>('solo');
@@ -200,6 +201,7 @@ const EventRegister = () => {
         setClassName(activeData.class || '');
         setSection(activeData.section || '');
         setRoll(activeData.roll || '');
+        setPhone(activeData.phone || '');
         
         if (activeData.verified === 'yes') {
           setIsGeneralMember(true);
@@ -579,12 +581,14 @@ const EventRegister = () => {
         setClassName(registeredMemberData.class || '');
         setSection(registeredMemberData.section || '');
         setRoll(registeredMemberData.roll || '');
+        setPhone(registeredMemberData.phone || '');
         setIsGeneralMember(registeredMemberData.verified === 'yes');
       } else {
         setFullName('');
         setClassName('');
         setSection('');
         setRoll('');
+        setPhone('');
         setIsGeneralMember(false);
       }
     } else {
@@ -592,18 +596,32 @@ const EventRegister = () => {
       setClassName('');
       setSection('');
       setRoll('');
+      setPhone('');
       setIsGeneralMember(false);
     }
   };
 
   const handleVerifyProxyEmail = async () => {
-    if (!proxyEmail || !proxyEmail.trim().includes('@')) {
-      showToast("Please enter a valid email address.", "error");
+    const trimmedInput = (proxyEmail || '').trim();
+    if (!trimmedInput) {
+      showToast("Please enter a valid email address or phone number.", "error");
       return;
     }
+
+    const isPhoneInput = !trimmedInput.includes('@') && /^[0-9+\s\-()]+$/.test(trimmedInput);
+    if (!isPhoneInput && !trimmedInput.includes('@')) {
+      showToast("Please enter a valid email address or phone number.", "error");
+      return;
+    }
+
     setCheckingProxyEmail(true);
     try {
-      const emailToCheck = proxyEmail.trim().toLowerCase();
+      let emailToCheck = trimmedInput.toLowerCase();
+      const originalPhone = trimmedInput;
+
+      if (isPhoneInput) {
+        emailToCheck = `${trimmedInput.toLowerCase()}@josephite.club`;
+      }
       
       const { data: profileCheck, error: pError } = await supabase
         .from('profiles')
@@ -616,13 +634,13 @@ const EventRegister = () => {
       const { data: memberCheck } = await supabase
         .from('member')
         .select('*')
-        .or(`email.eq.${emailToCheck},email_address.eq.${emailToCheck}`)
+        .or(`email.eq.${emailToCheck},email_address.eq.${emailToCheck}${isPhoneInput ? `,phone.eq.${originalPhone}` : ''}`)
         .maybeSingle();
 
       const { data: ecCheck } = await supabase
         .from('ec_member')
         .select('*')
-        .or(`email.eq.${emailToCheck},email_address.eq.${emailToCheck}`)
+        .or(`email.eq.${emailToCheck},email_address.eq.${emailToCheck}${isPhoneInput ? `,phone.eq.${originalPhone}` : ''}`)
         .maybeSingle();
 
       const activeMember = ecCheck || memberCheck;
@@ -647,7 +665,7 @@ const EventRegister = () => {
         setClassName(matchedClass);
         setSection(matchedSection);
         setRoll(matchedRoll);
-        setProxyPhoneNumber(matchedPhone);
+        setProxyPhoneNumber(matchedPhone || (isPhoneInput ? originalPhone : ''));
         setProxyResolvedUserId(profileCheck?.id || activeMember?.id || null);
         setProxyUserExists(true);
         setProxyVerified(true);
@@ -668,7 +686,7 @@ const EventRegister = () => {
         setClassName('');
         setSection('');
         setRoll('');
-        setProxyPhoneNumber('');
+        setProxyPhoneNumber(isPhoneInput ? originalPhone : '');
         setIsGeneralMember(false);
         setIsProxyUserEc(false);
         setProxyUserEcId(null);
@@ -679,7 +697,7 @@ const EventRegister = () => {
         setProxySectionEditable(true);
         setProxyRollEditable(true);
 
-        showToast("Email address not registered. Manual spot registration mode activated.", "info");
+        showToast("Student not registered. Manual spot registration mode activated.", "info");
       }
     } catch (err: any) {
       console.error("Error verifying proxy email:", err);
@@ -691,12 +709,14 @@ const EventRegister = () => {
 
   const handleNextStep1 = () => {
     if (isProxyRegistration) {
-      if (!proxyEmail.trim() || !proxyEmail.trim().includes('@')) {
-        showToast("Please enter a valid student email address.", "error");
+      const trimmedInput = proxyEmail.trim();
+      const isPhoneInput = !trimmedInput.includes('@') && /^[0-9+\s\-()]+$/.test(trimmedInput);
+      if (!trimmedInput || (!trimmedInput.includes('@') && !isPhoneInput)) {
+        showToast("Please enter a valid student email address or phone number.", "error");
         return;
       }
       if (!proxyVerified) {
-        showToast("Please verify the student's email address first.", "error");
+        showToast("Please search and verify the student's credentials first.", "error");
         return;
       }
       if (!proxyPhoneNumber.trim() || proxyPhoneNumber.trim().length < 11) {
@@ -705,8 +725,13 @@ const EventRegister = () => {
       }
     }
 
-    if (!fullName.trim() || !className.trim() || !section.trim() || !roll.trim()) {
-      showToast("Please fill all general information fields to proceed.", "error");
+    if (!fullName.trim() || !className.trim() || !section.trim() || !roll.trim() || (!isProxyRegistration && !phone.trim())) {
+      showToast("Please fill all general information fields (including phone number) to proceed.", "error");
+      return;
+    }
+
+    if (!isProxyRegistration && phone.trim().length < 11) {
+      showToast("Please enter a valid student contact phone number (at least 11 digits).", "error");
       return;
     }
     setStep(2);
@@ -869,6 +894,12 @@ const EventRegister = () => {
     try {
       let finalUserId = user?.id;
 
+      const getVirtualEmail = (val: string) => {
+        const trimmed = val.trim().toLowerCase();
+        const isPhoneInput = !trimmed.includes('@') && /^[0-9+\s\-()]+$/.test(trimmed);
+        return isPhoneInput ? `${trimmed}@josephite.club` : trimmed;
+      };
+
       if (isProxyRegistration) {
         if (!proxyUserExists || !proxyResolvedUserId) {
           // Trigger spot registration: Call admin create-user route!
@@ -876,7 +907,7 @@ const EventRegister = () => {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              email: proxyEmail.trim().toLowerCase(),
+              email: getVirtualEmail(proxyEmail),
               password: proxyPhoneNumber.trim(),
               fullName: fullName.trim()
             })
@@ -906,6 +937,7 @@ const EventRegister = () => {
         class: className,
         section: section,
         roll: roll,
+        phone: isProxyRegistration ? proxyPhoneNumber : phone.trim(),
         bkash_number: finalBkashNumber,
         trxnid: finalTrxnid,
         amount: finalPrice,
@@ -1075,9 +1107,9 @@ const EventRegister = () => {
           .upsert({
             id: finalUserId,
             full_name: fullName,
-            email: isProxyRegistration ? proxyEmail.trim().toLowerCase() : (user?.email || ''),
-            email_address: isProxyRegistration ? proxyEmail.trim().toLowerCase() : (user?.email || ''),
-            phone: isProxyRegistration ? proxyPhoneNumber : (bkashNumber.trim() || 'N/A - FREE ENTRY'),
+            email: isProxyRegistration ? getVirtualEmail(proxyEmail) : (user?.email || ''),
+            email_address: isProxyRegistration ? getVirtualEmail(proxyEmail) : (user?.email || ''),
+            phone: isProxyRegistration ? proxyPhoneNumber : phone.trim(),
             school: 'St Joseph Higher Secondary School',
             class: className,
             section: section,
@@ -1110,7 +1142,7 @@ const EventRegister = () => {
               recordId: insertedRow.id,
               tableName: targetTable,
               action: 'approve',
-              emailAddress: proxyEmail.trim().toLowerCase(),
+              emailAddress: getVirtualEmail(proxyEmail),
               verifiedBy: user?.email || 'Admin'
             })
           });
@@ -1466,13 +1498,13 @@ const EventRegister = () => {
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-white/5">
                             {/* Student Email Input */}
                             <div className="space-y-2">
-                              <label className="text-[10px] font-black uppercase tracking-wider text-zinc-400">Student's Email Address</label>
+                              <label className="text-[10px] font-black uppercase tracking-wider text-zinc-400">Student's Email or Phone Number (User ID)</label>
                               <div className="flex gap-2">
                                 <div className="relative flex-1">
                                   <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
                                   <input
-                                    type="email"
-                                    placeholder="student@example.com"
+                                    type="text"
+                                    placeholder="student@example.com or 017XXXXXXXX"
                                     value={proxyEmail}
                                     onChange={(e) => {
                                       setProxyEmail(e.target.value);
@@ -1635,6 +1667,24 @@ const EventRegister = () => {
                           />
                         </div>
                       </div>
+
+                      {/* Contact Phone Number */}
+                      {!isProxyRegistration && (
+                        <div className="space-y-3">
+                          <label className="text-[10px] font-black uppercase tracking-wider text-zinc-500">Contact Phone Number</label>
+                          <div className="relative group">
+                            <Phone className="absolute left-6 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500 group-focus-within:text-amber-500 transition-colors pointer-events-none" />
+                            <input 
+                              type="tel"
+                              placeholder="CONTACT PHONE NUMBER (E.G. 017XXXXXXXX)"
+                              value={phone}
+                              onChange={(e) => setPhone(e.target.value)}
+                              disabled={isGeneralMember}
+                              className="w-full pl-14 pr-6 py-4.5 bg-white/5 border border-white/10 rounded-2xl focus:outline-none focus:border-amber-500/50 focus:ring-4 focus:ring-amber-500/10 transition-all text-sm font-bold text-white placeholder:text-zinc-600 disabled:opacity-60"
+                            />
+                          </div>
+                        </div>
+                      )}
 
                     </div>
 
