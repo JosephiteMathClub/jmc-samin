@@ -16,6 +16,33 @@ export interface GalleryItem {
   description?: string;
 }
 
+export const SECTION_TITLES = [
+  "Intra Math Fiesta",
+  "Opening ceremony",
+  "Workshops",
+  "Josephite Math Mania"
+];
+
+export const getSectionForCategory = (categoryStr: string, index: number) => {
+  const normalized = (categoryStr || '').toLowerCase().trim();
+  if (!normalized) {
+    return SECTION_TITLES[index % SECTION_TITLES.length];
+  }
+  if (normalized.includes('fiesta') || normalized.includes('intra')) {
+    return "Intra Math Fiesta";
+  }
+  if (normalized.includes('opening') || normalized.includes('ceremony') || normalized.includes('inaugural')) {
+    return "Opening ceremony";
+  }
+  if (normalized.includes('workshop') || normalized.includes('seminar')) {
+    return "Workshops";
+  }
+  if (normalized.includes('mania') || normalized.includes('josephite') || normalized.includes('jmm') || normalized.includes('club')) {
+    return "Josephite Math Mania";
+  }
+  return SECTION_TITLES[index % SECTION_TITLES.length];
+};
+
 export const GalleryView = () => {
   const [selectedItem, setSelectedItem] = useState<GalleryItem | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -24,7 +51,6 @@ export const GalleryView = () => {
   const { shouldReduceGfx } = usePerformance();
   const { content } = useContent();
 
-  // Parse and normalize gallery items
   const galleryItems = useMemo(() => {
     if (!content?.gallery_page?.images || !Array.isArray(content.gallery_page.images)) {
       return [];
@@ -32,19 +58,19 @@ export const GalleryView = () => {
     return content.gallery_page.images.map((img: any, i: number) => {
       if (typeof img === 'string') {
         const fallbacks = [
-          { title: "Inaugural Math Olympiad", desc: "Our brilliant Josephite participants testing their limits on deep arithmetic formulas." },
-          { title: "Weekly Seminar Session", desc: "A seminar showcasing innovative computational algebra theories and interactive discussions." },
-          { title: "National Math Fest Banner", desc: "A nostalgic glimpse at the banner unveiling with moderators, members, and guest speakers." },
-          { title: "Club Executive Meetup", desc: "Strategizing future workshops, academic newsletters, and upcoming club logistics." },
-          { title: "Prize Giving Ceremony", desc: "An esteemed moment recognizing the exemplary achievers and future mathematics champions." },
-          { title: "Interactive Workshop", desc: "Fostering collaboration, critical problem-solving skills, and visual logic maps." }
+          { title: "Inaugural Math Olympiad", desc: "Our brilliant Josephite participants testing their limits on deep arithmetic formulas.", category: "Intra Math Fiesta" },
+          { title: "Prize Giving Ceremony", desc: "An esteemed moment recognizing the exemplary achievers and future mathematics champions.", category: "Opening ceremony" },
+          { title: "Weekly Seminar Session", desc: "A seminar showcasing innovative computational algebra theories and interactive discussions.", category: "Workshops" },
+          { title: "Interactive Workshop", desc: "Fostering collaboration, critical problem-solving skills, and visual logic maps.", category: "Workshops" },
+          { title: "National Math Fest Banner", desc: "A nostalgic glimpse at the banner unveiling with moderators, members, and guest speakers.", category: "Josephite Math Mania" },
+          { title: "Club Executive Meetup", desc: "Strategizing future workshops, academic newsletters, and upcoming club logistics.", category: "Josephite Math Mania" }
         ];
         const fb = fallbacks[i % fallbacks.length];
         return { 
           id: `gallery-str-${i}`, 
           url: img, 
           title: fb.title, 
-          category: 'EVENT', 
+          category: fb.category, 
           description: fb.desc 
         };
       }
@@ -52,23 +78,16 @@ export const GalleryView = () => {
         id: img.id || `gallery-obj-${i}`,
         url: img.url || '',
         title: img.title || `JMC Legacy Moment ${i + 1}`,
-        category: (img.category || 'EVENT').toUpperCase().trim(),
+        category: getSectionForCategory(img.category || '', i),
         description: img.description || 'Fascinating captures from the events, competitions, and collaborative math spaces.'
       };
     }).filter((img: any) => !!img.url);
   }, [content?.gallery_page?.images]);
 
-  // Extract all unique categories dynamically
+  // Extract static clean categories
   const categories = useMemo(() => {
-    const cats = new Set<string>();
-    cats.add('ALL');
-    galleryItems.forEach((item: any) => {
-      if (item.category) {
-        cats.add(item.category);
-      }
-    });
-    return Array.from(cats);
-  }, [galleryItems]);
+    return ['ALL', 'Intra Math Fiesta', 'Opening ceremony', 'Workshops', 'Josephite Math Mania'];
+  }, []);
 
   // Filtered gallery items for visualization
   const filteredItems = useMemo(() => {
@@ -80,6 +99,33 @@ export const GalleryView = () => {
       return matchesCategory && matchesSearch;
     });
   }, [galleryItems, selectedCategory, searchQuery]);
+
+  // Group items by category sections for separate display
+  const groupedSections = useMemo(() => {
+    const sectionsMap: { [key: string]: any[] } = {
+      'Intra Math Fiesta': [],
+      'Opening ceremony': [],
+      'Workshops': [],
+      'Josephite Math Mania': []
+    };
+
+    filteredItems.forEach((item) => {
+      if (sectionsMap[item.category]) {
+        sectionsMap[item.category].push(item);
+      }
+    });
+
+    return [
+      { id: 'intra-math-fiesta', title: 'Intra Math Fiesta', items: sectionsMap['Intra Math Fiesta'] },
+      { id: 'opening-ceremony', title: 'Opening ceremony', items: sectionsMap['Opening ceremony'] },
+      { id: 'workshops', title: 'Workshops', items: sectionsMap['Workshops'] },
+      { id: 'josephite-math-mania', title: 'Josephite Math Mania', items: sectionsMap['Josephite Math Mania'] }
+    ];
+  }, [filteredItems]);
+
+  const hasVisibleItems = useMemo(() => {
+    return groupedSections.some(sec => sec.items.length > 0);
+  }, [groupedSections]);
 
   // Handle keyboard arrow scrolling in Lightbox
   useEffect(() => {
@@ -189,7 +235,7 @@ export const GalleryView = () => {
         {/* Gallery Content Area */}
         <div className="relative min-h-[400px]">
           <AnimatePresence mode="wait">
-            {filteredItems.length === 0 ? (
+            {!hasVisibleItems ? (
               <motion.div 
                 key="empty"
                 initial={{ opacity: 0 }}
@@ -204,70 +250,94 @@ export const GalleryView = () => {
                 <p className="text-xs text-zinc-600">Try selecting another category or check your spelling</p>
               </motion.div>
             ) : (
-              /* Bento Masonry Grid Mode */
+              /* Beautiful Sleek Categorized Grid Mode */
               <motion.div
-                key="bento-grid"
+                key="categorized-sections"
                 initial={{ opacity: 0, y: 15 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -15 }}
                 transition={{ duration: 0.3 }}
-                className="container-custom max-w-6xl mx-auto px-4"
+                className="container-custom max-w-6xl mx-auto px-4 space-y-24"
               >
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-                  {filteredItems.map((item: any, index: number) => {
-                    // Create bento variable heights based on pattern
-                    const isFeature = index % 5 === 0;
-                    return (
-                      <div
-                        key={item.id}
-                        onClick={() => setSelectedItem(item)}
-                        className={`group relative rounded-3xl overflow-hidden bg-zinc-900/50 border border-white/5 cursor-pointer shadow-xl transition-all duration-300 hover:scale-[1.01] hover:border-amber-500/20 hover:shadow-2xl hover:shadow-amber-500/5 ${
-                          isFeature ? 'md:col-span-2 aspect-[16/10]' : 'aspect-square'
-                        }`}
-                      >
-                        {/* Shimmer element */}
-                        <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 z-10" />
-
-                        <div className="w-full h-full relative">
-                          <OptimizedImage
-                            src={item.url}
-                            alt={item.title}
-                            fill
-                            className="object-cover transition-transform duration-700 ease-out group-hover:scale-105"
-                            sizes="(max-width: 768px) 100vw, 400px"
-                          />
-                        </div>
-
-                        {/* Top Indicator */}
-                        <div className="absolute top-4 left-4 z-20 flex gap-2">
-                          <span className="px-2.5 py-1 text-[8px] font-mono font-black text-white bg-zinc-950/80 backdrop-blur-md rounded-lg uppercase tracking-wider border border-white/5">
-                            {item.category}
+                {groupedSections.map((section, sIndex) => {
+                  if (section.items.length === 0) return null;
+                  return (
+                    <div key={section.id} className="space-y-8 scroll-mt-32">
+                      {/* Clean sleek section title */}
+                      <div className="flex items-center gap-6">
+                        <div className="flex items-center gap-3">
+                          <span className="font-mono text-xs font-black text-amber-500 bg-amber-500/10 px-3 py-1.5 rounded-xl border border-amber-500/20">
+                            0{sIndex + 1}
                           </span>
+                          <h2 className="text-xl md:text-2xl font-black tracking-wider text-white uppercase italic">
+                            {section.title}
+                          </h2>
                         </div>
-
-                        {/* Hover Overlay */}
-                        <div className="absolute inset-x-0 bottom-0 p-6 bg-gradient-to-t from-black via-black/80 to-transparent pt-16 translate-y-2 group-hover:translate-y-0 opacity-0 group-hover:opacity-100 transition-all duration-300 flex flex-col justify-end">
-                          <h3 className="text-lg font-black text-white uppercase tracking-tight">{item.title}</h3>
-                          {item.description && (
-                            <p className="text-zinc-400 text-xs mt-1.5 line-clamp-2 leading-relaxed font-medium">
-                              {item.description}
-                            </p>
-                          )}
-                          <div className="flex items-center gap-1 text-[9px] font-mono text-amber-500 font-extrabold uppercase mt-3 tracking-widest">
-                            <Maximize2 className="w-3 h-3" />
-                            Expand Capture
-                          </div>
-                        </div>
-
-                        {/* Inline fallback card name for touch screens */}
-                        <div className="absolute bottom-3 left-3 right-3 bg-zinc-950/90 backdrop-blur-md py-2.5 px-3.5 rounded-xl border border-white/5 group-hover:opacity-0 transition-opacity duration-300 flex justify-between items-center">
-                          <p className="text-[10px] font-bold text-white truncate max-w-[80%] uppercase tracking-wider">{item.title}</p>
-                          <Maximize2 className="w-3.5 h-3.5 text-zinc-500 shrink-0" />
-                        </div>
+                        <div className="flex-grow h-[1px] bg-gradient-to-r from-zinc-800/80 via-zinc-800/40 to-transparent" />
+                        <span className="font-mono text-[9px] text-zinc-500 uppercase tracking-widest hidden sm:inline">
+                          {section.items.length} Capture{section.items.length !== 1 ? 's' : ''}
+                        </span>
                       </div>
-                    );
-                  })}
-                </div>
+
+                      {/* Section bento grid */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+                        {section.items.map((item: any, index: number) => {
+                          // Dynamic layout spacing: every 4th element spans 2 cols for interesting rhythm
+                          const isFeature = index % 4 === 0;
+                          return (
+                            <div
+                              key={item.id}
+                              onClick={() => setSelectedItem(item)}
+                              className={`group relative rounded-3xl overflow-hidden bg-zinc-900/50 border border-white/5 cursor-pointer shadow-xl transition-all duration-300 hover:scale-[1.01] hover:border-amber-500/20 hover:shadow-2xl hover:shadow-amber-500/5 ${
+                                isFeature ? 'md:col-span-2 aspect-[16/10]' : 'aspect-square'
+                              }`}
+                            >
+                              {/* Shimmer element */}
+                              <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 z-10" />
+
+                              <div className="w-full h-full relative">
+                                <OptimizedImage
+                                  src={item.url}
+                                  alt={item.title}
+                                  fill
+                                  className="object-cover transition-transform duration-700 ease-out group-hover:scale-105"
+                                  sizes="(max-width: 768px) 100vw, 400px"
+                                />
+                              </div>
+
+                              {/* Top Indicator */}
+                              <div className="absolute top-4 left-4 z-20 flex gap-2">
+                                <span className="px-2.5 py-1 text-[8px] font-mono font-black text-white bg-zinc-950/80 backdrop-blur-md rounded-lg uppercase tracking-wider border border-white/5">
+                                  {item.category}
+                                </span>
+                              </div>
+
+                              {/* Hover Overlay */}
+                              <div className="absolute inset-x-0 bottom-0 p-6 bg-gradient-to-t from-black via-black/80 to-transparent pt-16 translate-y-2 group-hover:translate-y-0 opacity-0 group-hover:opacity-100 transition-all duration-300 flex flex-col justify-end">
+                                <h3 className="text-lg font-black text-white uppercase tracking-tight">{item.title}</h3>
+                                {item.description && (
+                                  <p className="text-zinc-400 text-xs mt-1.5 line-clamp-2 leading-relaxed font-medium">
+                                    {item.description}
+                                  </p>
+                                )}
+                                <div className="flex items-center gap-1 text-[9px] font-mono text-amber-500 font-extrabold uppercase mt-3 tracking-widest">
+                                  <Maximize2 className="w-3 h-3" />
+                                  Expand Capture
+                                </div>
+                              </div>
+
+                              {/* Inline fallback card name for touch screens */}
+                              <div className="absolute bottom-3 left-3 right-3 bg-zinc-950/90 backdrop-blur-md py-2.5 px-3.5 rounded-xl border border-white/5 group-hover:opacity-0 transition-opacity duration-300 flex justify-between items-center">
+                                <p className="text-[10px] font-bold text-white truncate max-w-[80%] uppercase tracking-wider">{item.title}</p>
+                                <Maximize2 className="w-3.5 h-3.5 text-zinc-500 shrink-0" />
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
               </motion.div>
             )}
           </AnimatePresence>
