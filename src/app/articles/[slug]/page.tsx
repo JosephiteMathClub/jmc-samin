@@ -41,6 +41,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       "Math Articles BD",
       article.author || "Josephite Math Club",
     ],
+    robots: {
+      index: false,
+      follow: true,
+    },
     openGraph: {
       title: `${article.title} | Josephite Math Club`,
       description: article.excerpt || article.summary || `Read "${article.title}" published by the Josephite Math Club.`,

@@ -45,8 +45,6 @@ export const getSectionForCategory = (categoryStr: string, index: number) => {
 
 export const GalleryView = () => {
   const [selectedItem, setSelectedItem] = useState<GalleryItem | null>(null);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('ALL');
   
   const { shouldReduceGfx } = usePerformance();
   const { content } = useContent();
@@ -84,21 +82,10 @@ export const GalleryView = () => {
     }).filter((img: any) => !!img.url);
   }, [content?.gallery_page?.images]);
 
-  // Extract static clean categories
-  const categories = useMemo(() => {
-    return ['ALL', 'Intra Math Fiesta', 'Opening ceremony', 'Workshops', 'Josephite Math Mania'];
-  }, []);
-
-  // Filtered gallery items for visualization
+  // All gallery items are visualized
   const filteredItems = useMemo(() => {
-    return galleryItems.filter((item: any) => {
-      const matchesCategory = selectedCategory === 'ALL' || item.category === selectedCategory;
-      const matchesSearch = item.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                            (item.description || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-                            (item.category || '').toLowerCase().includes(searchQuery.toLowerCase());
-      return matchesCategory && matchesSearch;
-    });
-  }, [galleryItems, selectedCategory, searchQuery]);
+    return galleryItems;
+  }, [galleryItems]);
 
   // Group items by category sections for separate display
   const groupedSections = useMemo(() => {
@@ -195,43 +182,6 @@ export const GalleryView = () => {
           </div>
         </section>
 
-        {/* Filter and Navigation Shell */}
-        <section className="container-custom max-w-6xl mx-auto mb-10 px-4">
-          <div className="flex flex-col md:flex-row gap-4 items-center justify-between p-4 rounded-3xl bg-zinc-900/60 border border-white/5 backdrop-blur-xl">
-            {/* Search inputs */}
-            <div className="relative w-full md:w-80 group">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500 group-hover:text-amber-500 transition-colors" />
-              <input 
-                type="text" 
-                placeholder="Search archive..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-11 pr-4 py-3 rounded-2xl bg-zinc-950/50 border border-white/5 text-xs text-white focus:outline-none focus:border-amber-500/55 focus:bg-zinc-950 transition-all font-medium placeholder:text-zinc-500"
-              />
-            </div>
-
-            {/* Category selection */}
-            <div className="flex items-center gap-1.5 overflow-x-auto max-w-full no-scrollbar py-1">
-              {categories.map((cat) => {
-                const isActive = selectedCategory === cat;
-                return (
-                  <button
-                    key={cat}
-                    onClick={() => setSelectedCategory(cat)}
-                    className={`relative px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shrink-0 ${
-                      isActive 
-                        ? 'text-zinc-950 bg-amber-500 shadow-md shadow-amber-500/10' 
-                        : 'text-zinc-400 hover:text-white bg-white/5 border border-white/5 hover:border-white/10'
-                    }`}
-                  >
-                    {cat}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        </section>
-
         {/* Gallery Content Area */}
         <div className="relative min-h-[400px]">
           <AnimatePresence mode="wait">
@@ -246,8 +196,8 @@ export const GalleryView = () => {
                 <div className="w-16 h-16 rounded-full bg-zinc-900/50 border border-white/5 flex items-center justify-center">
                   <Compass className="w-6 h-6 text-zinc-500 animate-spin" style={{ animationDuration: '10s' }} />
                 </div>
-                <p className="text-zinc-500 font-bold tracking-tight text-sm">No archive items match search parameters</p>
-                <p className="text-xs text-zinc-600">Try selecting another category or check your spelling</p>
+                <p className="text-zinc-500 font-bold tracking-tight text-sm">No archive items available</p>
+                <p className="text-xs text-zinc-600">Check back later for new additions to the gallery</p>
               </motion.div>
             ) : (
               /* Beautiful Sleek Categorized Grid Mode */
@@ -257,37 +207,53 @@ export const GalleryView = () => {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -15 }}
                 transition={{ duration: 0.3 }}
-                className="container-custom max-w-6xl mx-auto px-4 space-y-24"
+                className="container-custom max-w-6xl mx-auto px-4 space-y-32"
               >
                 {groupedSections.map((section, sIndex) => {
                   if (section.items.length === 0) return null;
                   return (
-                    <div key={section.id} className="space-y-8 scroll-mt-32">
-                      {/* Clean sleek section title */}
-                      <div className="flex items-center gap-6">
-                        <div className="flex items-center gap-3">
-                          <span className="font-mono text-xs font-black text-amber-500 bg-amber-500/10 px-3 py-1.5 rounded-xl border border-amber-500/20">
-                            0{sIndex + 1}
+                    <div key={section.id} className="space-y-12 scroll-mt-32">
+                      {/* Clean sleek centered section title shown on scroll */}
+                      <motion.div
+                        initial={{ opacity: 0, y: 35 }}
+                        whileInView={{ opacity: 1, y: 0 }}
+                        viewport={{ once: true, margin: "-100px" }}
+                        transition={{ duration: 0.8, ease: "easeOut" }}
+                        className="flex flex-col items-center justify-center text-center space-y-4"
+                      >
+                        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-500/5 border border-amber-500/10 backdrop-blur-sm">
+                          <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+                          <span className="font-mono text-[10px] font-black uppercase tracking-widest text-amber-500">
+                            Category 0{sIndex + 1}
                           </span>
-                          <h2 className="text-xl md:text-2xl font-black tracking-wider text-white uppercase italic">
-                            {section.title}
-                          </h2>
                         </div>
-                        <div className="flex-grow h-[1px] bg-gradient-to-r from-zinc-800/80 via-zinc-800/40 to-transparent" />
-                        <span className="font-mono text-[9px] text-zinc-500 uppercase tracking-widest hidden sm:inline">
-                          {section.items.length} Capture{section.items.length !== 1 ? 's' : ''}
-                        </span>
-                      </div>
+                        
+                        <h2 className="text-2xl md:text-4xl font-black tracking-widest text-white uppercase italic">
+                          {section.title}
+                        </h2>
+                        
+                        <div className="flex items-center gap-3 w-40 justify-center">
+                          <div className="h-[1px] flex-grow bg-gradient-to-r from-transparent to-zinc-800" />
+                          <span className="font-mono text-[9px] text-zinc-500 uppercase tracking-widest shrink-0">
+                            {section.items.length} Capture{section.items.length !== 1 ? 's' : ''}
+                          </span>
+                          <div className="h-[1px] flex-grow bg-gradient-to-l from-transparent to-zinc-800" />
+                        </div>
+                      </motion.div>
 
-                      {/* Section bento grid */}
+                      {/* Section bento grid with stagger entry on scroll */}
                       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
                         {section.items.map((item: any, index: number) => {
                           // Dynamic layout spacing: every 4th element spans 2 cols for interesting rhythm
                           const isFeature = index % 4 === 0;
                           return (
-                            <div
+                            <motion.div
                               key={item.id}
                               onClick={() => setSelectedItem(item)}
+                              initial={{ opacity: 0, y: 20 }}
+                              whileInView={{ opacity: 1, y: 0 }}
+                              viewport={{ once: true, margin: "-60px" }}
+                              transition={{ duration: 0.6, delay: (index % 3) * 0.1, ease: "easeOut" }}
                               className={`group relative rounded-3xl overflow-hidden bg-zinc-900/50 border border-white/5 cursor-pointer shadow-xl transition-all duration-300 hover:scale-[1.01] hover:border-amber-500/20 hover:shadow-2xl hover:shadow-amber-500/5 ${
                                 isFeature ? 'md:col-span-2 aspect-[16/10]' : 'aspect-square'
                               }`}
@@ -331,7 +297,7 @@ export const GalleryView = () => {
                                 <p className="text-[10px] font-bold text-white truncate max-w-[80%] uppercase tracking-wider">{item.title}</p>
                                 <Maximize2 className="w-3.5 h-3.5 text-zinc-500 shrink-0" />
                               </div>
-                            </div>
+                            </motion.div>
                           );
                         })}
                       </div>

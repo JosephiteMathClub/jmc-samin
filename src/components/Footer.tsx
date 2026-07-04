@@ -4,7 +4,6 @@ import React, { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useContent } from "@/context/ContentContext";
-import ContactModal from "@/components/ContactModal";
 import { motion } from "framer-motion";
 import { ChevronUp, Radio, Mail, ShieldCheck } from "lucide-react";
 import { FacebookIcon, InstagramIcon, GithubIcon } from "@/components/SocialIcons";
@@ -13,7 +12,6 @@ import { resolveImageUrl } from "@/lib/utils";
 
 const Footer = () => {
   const { content } = useContent();
-  const [isContactOpen, setIsContactOpen] = useState(false);
   const { shouldReduceGfx } = usePerformance();
   const clubName = content?.site?.clubName || 'Josephite Math Club';
   const logoUrl = resolveImageUrl(content?.site?.logoUrl) || "/images/logo.png";
@@ -117,12 +115,6 @@ const Footer = () => {
                   Challenges
                 </Link>
               </li>
-              <li>
-                <button onClick={() => setIsContactOpen(true)} className="text-xs font-mono font-black uppercase tracking-[0.2em] text-zinc-500 hover:text-[var(--c-6-start)] transition-all flex items-center gap-3 group">
-                  <span className="w-0 h-[1px] bg-[var(--c-6-start)] transition-all group-hover:w-4" />
-                  Contact
-                </button>
-              </li>
             </ul>
           </div>
 
@@ -193,7 +185,6 @@ const Footer = () => {
         </div>
       </div>
 
-      <ContactModal isOpen={isContactOpen} onClose={() => setIsContactOpen(false)} />
     </footer>
   );
 };
