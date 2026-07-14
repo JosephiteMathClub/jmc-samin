@@ -30,7 +30,8 @@ import {
   Coins,
   Save,
   Trophy,
-  SlidersHorizontal
+  SlidersHorizontal,
+  Globe
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useToast } from '../../context/ToastContext';
@@ -40,6 +41,7 @@ import { DashboardFormField } from './DashboardFormField';
 import { SupportManagement } from './SupportManagement';
 import Image from 'next/image';
 import dynamic from 'next/dynamic';
+import { cleanDisplayEmail } from '../../lib/utils';
 
 const QRCode = dynamic(() => import('../QRCode'), { ssr: false });
 
@@ -49,50 +51,75 @@ interface SuperAdminPanelProps {
 
 export function RegistrationToggleControl() {
   const [isEnabled, setIsEnabled] = useState<boolean>(true);
+  const [isIntraEnabled, setIsIntraEnabled] = useState<boolean>(true);
+  const [isInterEnabled, setIsInterEnabled] = useState<boolean>(true);
+  const [isInterRegEnabled, setIsInterRegEnabled] = useState<boolean>(true);
   const [loading, setLoading] = useState<boolean>(true);
   const [updating, setUpdating] = useState<boolean>(false);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
 
   useEffect(() => {
-    async function fetchStatus() {
+    async function fetchStatuses() {
       try {
         const { data, error } = await supabase
           .from('system_settings')
-          .select('value')
-          .eq('key', 'event_registration_enabled')
-          .maybeSingle();
+          .select('key, value');
 
         if (error) throw error;
+        
         if (data) {
-          setIsEnabled(data.value === true);
+          const reg = data.find(item => item.key === 'event_registration_enabled');
+          const intra = data.find(item => item.key === 'visit_intra_enabled');
+          const inter = data.find(item => item.key === 'visit_inter_enabled');
+          const interReg = data.find(item => item.key === 'inter_registration_enabled');
+
+          if (reg) setIsEnabled(reg.value === true);
+          if (intra) setIsIntraEnabled(intra.value === true);
+          if (inter) setIsInterEnabled(inter.value === true);
+          if (interReg) setIsInterRegEnabled(interReg.value === true);
+
+          // Insert defaults if missing
+          if (!intra) {
+            await supabase.from('system_settings').upsert({ key: 'visit_intra_enabled', value: true });
+            setIsIntraEnabled(true);
+          }
+          if (!inter) {
+            await supabase.from('system_settings').upsert({ key: 'visit_inter_enabled', value: true });
+            setIsInterEnabled(true);
+          }
+          if (!interReg) {
+            await supabase.from('system_settings').upsert({ key: 'inter_registration_enabled', value: true });
+            setIsInterRegEnabled(true);
+          }
         } else {
-          // Attempt to insert initial default value
-          await supabase
-            .from('system_settings')
-            .insert({ key: 'event_registration_enabled', value: true });
+          // Attempt to insert default values
+          await supabase.from('system_settings').upsert({ key: 'event_registration_enabled', value: true });
+          await supabase.from('system_settings').upsert({ key: 'visit_intra_enabled', value: true });
+          await supabase.from('system_settings').upsert({ key: 'visit_inter_enabled', value: true });
+          await supabase.from('system_settings').upsert({ key: 'inter_registration_enabled', value: true });
         }
       } catch (err: any) {
         if (err?.code === '42P01') {
           console.warn("Table 'system_settings' does not exist yet. Please run DB setup schema.", err);
         } else {
-          console.warn('Failed to load registration status gracefully:', err);
+          console.warn('Failed to load status values gracefully:', err);
         }
       } finally {
         setLoading(false);
       }
     }
-    fetchStatus();
+    fetchStatuses();
   }, []);
 
-  const handleToggle = async () => {
+  const handleToggleKey = async (key: string, currentValue: boolean, setter: (val: boolean) => void, label: string) => {
     setUpdating(true);
     setStatusMessage(null);
-    const nextState = !isEnabled;
+    const nextState = !currentValue;
     try {
       const { error } = await supabase
         .from('system_settings')
         .upsert({
-          key: 'event_registration_enabled',
+          key: key,
           value: nextState,
           updated_at: new Date().toISOString()
         });
@@ -103,10 +130,10 @@ export function RegistrationToggleControl() {
         }
         throw error;
       }
-      setIsEnabled(nextState);
-      setStatusMessage(`Event registration forms are now ${nextState ? 'ONLINE & ENABLED' : 'OFFLINE & DISABLED'}.`);
+      setter(nextState);
+      setStatusMessage(`${label} is now ${nextState ? 'ONLINE & ENABLED' : 'OFFLINE & LOCKED'}.`);
     } catch (err: any) {
-      console.error('Failed to update registration status', err);
+      console.error(`Failed to update ${key} status`, err);
       setStatusMessage(`Error: ${err.message || 'Could not update status.'}`);
     } finally {
       setUpdating(false);
@@ -115,19 +142,24 @@ export function RegistrationToggleControl() {
 
   if (loading) {
     return (
-      <div className="animate-pulse bg-white/[0.02] border border-white/5 rounded-3xl p-8 flex items-center justify-between">
-        <div className="space-y-2 w-1/2">
-          <div className="h-4 bg-white/10 rounded w-1/3"></div>
-          <div className="h-3 bg-white/5 rounded w-2/3"></div>
-        </div>
-        <div className="h-8 bg-white/10 rounded-full w-14"></div>
+      <div className="space-y-4">
+        {[1, 2, 3, 4].map((i) => (
+          <div key={i} className="animate-pulse bg-white/[0.02] border border-white/5 rounded-3xl p-8 flex items-center justify-between">
+            <div className="space-y-2 w-1/2">
+              <div className="h-4 bg-white/10 rounded w-1/3"></div>
+              <div className="h-3 bg-white/5 rounded w-2/3"></div>
+            </div>
+            <div className="h-8 bg-white/10 rounded-full w-14"></div>
+          </div>
+        ))}
       </div>
     );
   }
 
   return (
-    <div className="bg-white/[0.01] border border-white/5 rounded-3xl p-8 shadow-2xl space-y-6">
-      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+    <div className="bg-white/[0.01] border border-white/5 rounded-3xl p-8 shadow-2xl space-y-8">
+      {/* 1. Registration form toggle */}
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 pb-6 border-b border-white/5">
         <div className="flex items-start gap-4">
           <div className={`p-4 rounded-2xl flex items-center justify-center border transition-all ${isEnabled ? 'bg-green-500/10 border-green-500/20 text-green-400' : 'bg-red-500/10 border-red-500/20 text-red-500 animate-pulse'}`}>
             <ShieldAlert className="w-7 h-7" />
@@ -141,9 +173,8 @@ export function RegistrationToggleControl() {
         </div>
 
         <button
-          onClick={handleToggle}
+          onClick={() => handleToggleKey('event_registration_enabled', isEnabled, setIsEnabled, 'Event registration')}
           disabled={updating}
-          id="registration-toggle-btn"
           className={`relative inline-flex h-9 w-18 items-center rounded-full transition-colors duration-300 focus:outline-none ${
             isEnabled ? 'bg-green-500' : 'bg-zinc-850'
           } ${updating ? 'opacity-55 cursor-not-allowed' : 'cursor-pointer'}`}
@@ -151,6 +182,93 @@ export function RegistrationToggleControl() {
           <span
             className={`inline-block h-7 w-7 transform rounded-full bg-white transition-transform duration-300 shadow-lg ${
               isEnabled ? 'translate-x-[40px]' : 'translate-x-[4px]'
+            }`}
+          />
+        </button>
+      </div>
+
+      {/* 2. Intra events visit toggle */}
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 pb-6 border-b border-white/5">
+        <div className="flex items-start gap-4">
+          <div className={`p-4 rounded-2xl flex items-center justify-center border transition-all ${isIntraEnabled ? 'bg-indigo-500/10 border-indigo-500/20 text-indigo-400' : 'bg-red-500/10 border-red-500/20 text-red-500 animate-pulse'}`}>
+            <Lock className="w-7 h-7" />
+          </div>
+          <div>
+            <h3 className="font-extrabold text-white text-lg uppercase tracking-tight">Intra-School Event Page Access</h3>
+            <p className="text-xs text-zinc-500 mt-1 max-w-md leading-relaxed">
+              Control whether users can visit the Intra-school Mathematics Competitions Hub. Setting this offline displays an "Access Disabled" message.
+            </p>
+          </div>
+        </div>
+
+        <button
+          onClick={() => handleToggleKey('visit_intra_enabled', isIntraEnabled, setIsIntraEnabled, 'Intra-school event page access')}
+          disabled={updating}
+          className={`relative inline-flex h-9 w-18 items-center rounded-full transition-colors duration-300 focus:outline-none ${
+            isIntraEnabled ? 'bg-indigo-500' : 'bg-zinc-850'
+          } ${updating ? 'opacity-55 cursor-not-allowed' : 'cursor-pointer'}`}
+        >
+          <span
+            className={`inline-block h-7 w-7 transform rounded-full bg-white transition-transform duration-300 shadow-lg ${
+              isIntraEnabled ? 'translate-x-[40px]' : 'translate-x-[4px]'
+            }`}
+          />
+        </button>
+      </div>
+
+      {/* 3. Inter events visit toggle */}
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 pb-6 border-b border-white/5">
+        <div className="flex items-start gap-4">
+          <div className={`p-4 rounded-2xl flex items-center justify-center border transition-all ${isInterEnabled ? 'bg-purple-500/10 border-purple-500/20 text-purple-400' : 'bg-red-500/10 border-red-500/20 text-red-500 animate-pulse'}`}>
+            <Lock className="w-7 h-7" />
+          </div>
+          <div>
+            <h3 className="font-extrabold text-white text-lg uppercase tracking-tight">Inter-School Event Page Access</h3>
+            <p className="text-xs text-zinc-500 mt-1 max-w-md leading-relaxed">
+              Control whether users can visit the Inter-school Mathematics Portal. Setting this offline displays an "Access Disabled" message.
+            </p>
+          </div>
+        </div>
+
+        <button
+          onClick={() => handleToggleKey('visit_inter_enabled', isInterEnabled, setIsInterEnabled, 'Inter-school event page access')}
+          disabled={updating}
+          className={`relative inline-flex h-9 w-18 items-center rounded-full transition-colors duration-300 focus:outline-none ${
+            isInterEnabled ? 'bg-purple-500' : 'bg-zinc-850'
+          } ${updating ? 'opacity-55 cursor-not-allowed' : 'cursor-pointer'}`}
+        >
+          <span
+            className={`inline-block h-7 w-7 transform rounded-full bg-white transition-transform duration-300 shadow-lg ${
+              isInterEnabled ? 'translate-x-[40px]' : 'translate-x-[4px]'
+            }`}
+          />
+        </button>
+      </div>
+
+      {/* 4. Inter events registration gateway toggle */}
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+        <div className="flex items-start gap-4">
+          <div className={`p-4 rounded-2xl flex items-center justify-center border transition-all ${isInterRegEnabled ? 'bg-pink-500/10 border-pink-500/20 text-pink-400' : 'bg-red-500/10 border-red-500/20 text-red-500 animate-pulse'}`}>
+            <Globe className="w-7 h-7" />
+          </div>
+          <div>
+            <h3 className="font-extrabold text-white text-lg uppercase tracking-tight">Inter-School Registration Gateway</h3>
+            <p className="text-xs text-zinc-500 mt-1 max-w-md leading-relaxed">
+              Toggle the visitor Inter-School registration form availability. Locking this disables registrations and shows a "Registration Locked" warning.
+            </p>
+          </div>
+        </div>
+
+        <button
+          onClick={() => handleToggleKey('inter_registration_enabled', isInterRegEnabled, setIsInterRegEnabled, 'Inter-school registration gateway')}
+          disabled={updating}
+          className={`relative inline-flex h-9 w-18 items-center rounded-full transition-colors duration-300 focus:outline-none ${
+            isInterRegEnabled ? 'bg-pink-500' : 'bg-zinc-850'
+          } ${updating ? 'opacity-55 cursor-not-allowed' : 'cursor-pointer'}`}
+        >
+          <span
+            className={`inline-block h-7 w-7 transform rounded-full bg-white transition-transform duration-300 shadow-lg ${
+              isInterRegEnabled ? 'translate-x-[40px]' : 'translate-x-[4px]'
             }`}
           />
         </button>
@@ -808,6 +926,217 @@ export function EventRegistrationConfigEditor({ showToast }: { showToast: (msg: 
   );
 }
 
+export function InterEventRegistrationConfigEditor({ showToast }: { showToast: (msg: string, type: 'success' | 'error' | 'info') => void }) {
+  const [loading, setLoading] = useState<boolean>(true);
+  const [saving, setSaving] = useState<boolean>(false);
+  
+  const [bkashNumber, setBkashNumber] = useState<string>('');
+  const [paymentDescription, setPaymentDescription] = useState<string>('');
+  const [pricePerSegment, setPricePerSegment] = useState<number>(150);
+  const [caCodes, setCaCodes] = useState<string[]>([]);
+  const [newCaCode, setNewCaCode] = useState<string>('');
+
+  const DEFAULT_INTER_CONFIG = {
+    bkashNumber: "01789456123",
+    paymentDescription: "Please pay BDT 150 per event segment to our bKash personal/merchant account. Highlighted Phone: 01789456123. If you use a valid Campus Ambassador (CA) code, you will get a discount!",
+    pricePerSegment: 150,
+    caCodes: []
+  };
+
+  useEffect(() => {
+    async function loadInterConfig() {
+      try {
+        const { data, error } = await supabase
+          .from('system_settings')
+          .select('value')
+          .eq('key', 'inter_registration_config')
+          .maybeSingle();
+
+        if (error) throw error;
+
+        if (data && data.value) {
+          const val = data.value;
+          setBkashNumber(val.bkashNumber || DEFAULT_INTER_CONFIG.bkashNumber);
+          setPaymentDescription(val.paymentDescription || DEFAULT_INTER_CONFIG.paymentDescription);
+          setPricePerSegment(typeof val.pricePerSegment === 'number' ? val.pricePerSegment : DEFAULT_INTER_CONFIG.pricePerSegment);
+          setCaCodes(val.caCodes || DEFAULT_INTER_CONFIG.caCodes);
+        } else {
+          // Seed
+          await supabase
+            .from('system_settings')
+            .upsert({ key: 'inter_registration_config', value: DEFAULT_INTER_CONFIG });
+
+          setBkashNumber(DEFAULT_INTER_CONFIG.bkashNumber);
+          setPaymentDescription(DEFAULT_INTER_CONFIG.paymentDescription);
+          setPricePerSegment(DEFAULT_INTER_CONFIG.pricePerSegment);
+          setCaCodes(DEFAULT_INTER_CONFIG.caCodes);
+        }
+      } catch (err) {
+        console.warn("Failed to load inter config", err);
+        setBkashNumber(DEFAULT_INTER_CONFIG.bkashNumber);
+        setPaymentDescription(DEFAULT_INTER_CONFIG.paymentDescription);
+        setPricePerSegment(DEFAULT_INTER_CONFIG.pricePerSegment);
+        setCaCodes(DEFAULT_INTER_CONFIG.caCodes);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadInterConfig();
+  }, []);
+
+  const handleSave = async () => {
+    setSaving(true);
+    const payload = {
+      bkashNumber,
+      paymentDescription,
+      pricePerSegment: Number(pricePerSegment),
+      caCodes
+    };
+    try {
+      const { error } = await supabase
+        .from('system_settings')
+        .upsert({
+          key: 'inter_registration_config',
+          value: payload,
+          updated_at: new Date().toISOString()
+        });
+
+      if (error) throw error;
+      showToast("Inter-school registration parameters updated successfully!", "success");
+    } catch (err: any) {
+      console.error(err);
+      showToast("Failed to save inter configuration: " + (err.message || "Check Supabase settings"), "error");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const addCaCode = () => {
+    const code = newCaCode.trim().toUpperCase();
+    if (!code) return;
+    if (caCodes.includes(code)) {
+      showToast("CA Code already exists.", "error");
+      return;
+    }
+    setCaCodes([...caCodes, code]);
+    setNewCaCode('');
+    showToast(`Added CA Code: ${code}`, "success");
+  };
+
+  const removeCaCode = (code: string) => {
+    setCaCodes(caCodes.filter(c => c !== code));
+    showToast(`Removed CA Code: ${code}`, "info");
+  };
+
+  if (loading) {
+    return (
+      <div className="animate-pulse bg-white/[0.01] border border-white/5 rounded-3xl p-8 space-y-4">
+        <div className="h-4 bg-white/10 rounded w-1/4"></div>
+        <div className="h-12 bg-white/5 rounded w-full"></div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-white/[0.01] border border-white/5 rounded-3xl p-8 shadow-2xl space-y-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pb-6 border-b border-white/5">
+        <div className="space-y-2 col-span-1 md:col-span-2">
+          <label className="text-[10px] font-black uppercase tracking-wider text-zinc-500 font-mono">Payment Instruction Description (Highlights Phone Number)</label>
+          <textarea
+            value={paymentDescription}
+            onChange={(e) => setPaymentDescription(e.target.value)}
+            rows={3}
+            className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-xs font-bold text-white focus:outline-none focus:border-pink-500/50 transition-all [resize:none]"
+            placeholder="Specify bKash transfer guidelines. Highlight the target number..."
+          />
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-[10px] font-black uppercase tracking-wider text-zinc-500 font-mono">Official bKash Target Number (Highlighted)</label>
+          <input
+            type="text"
+            value={bkashNumber}
+            onChange={(e) => setBkashNumber(e.target.value)}
+            className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-xs font-bold text-white focus:outline-none focus:border-pink-500/50 transition-all"
+            placeholder="E.G. 01789456123"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-[10px] font-black uppercase tracking-wider text-zinc-500 font-mono">Price Per Segment (BDT)</label>
+          <input
+            type="number"
+            value={pricePerSegment}
+            onChange={(e) => setPricePerSegment(Number(e.target.value))}
+            className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-xs font-bold text-white focus:outline-none focus:border-pink-500/50 transition-all"
+            placeholder="150"
+          />
+        </div>
+      </div>
+
+      {/* Selective CA Codes Management */}
+      <div className="space-y-4 pb-6 border-b border-white/5">
+        <div>
+          <h4 className="text-sm font-extrabold text-white uppercase tracking-wider">Campus Ambassador (CA) Codes List</h4>
+          <p className="text-[10px] text-zinc-500 mt-1 uppercase tracking-wider font-semibold font-mono">
+            Manage valid selective CA codes that visitors can choose from on the registration form.
+          </p>
+        </div>
+
+        <div className="flex gap-4 max-w-md">
+          <input
+            type="text"
+            value={newCaCode}
+            onChange={(e) => setNewCaCode(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') addCaCode(); }}
+            placeholder="E.G. CA-JMC-101"
+            className="flex-1 bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-xs font-bold text-white focus:outline-none focus:border-pink-500/50 transition-all uppercase"
+          />
+          <button
+            onClick={addCaCode}
+            className="px-6 py-3 bg-pink-600 hover:bg-pink-500 text-white rounded-xl text-xs font-black uppercase tracking-widest cursor-pointer flex items-center gap-1 transition-all"
+          >
+            <Plus className="w-4 h-4" /> Add Code
+          </button>
+        </div>
+
+        {caCodes.length === 0 ? (
+          <div className="p-6 text-center border border-dashed border-white/10 rounded-2xl bg-black/20 text-zinc-500 text-xs font-semibold uppercase tracking-wider font-mono">
+            No selective CA codes added yet. The dropdown will be empty/unused until configured.
+          </div>
+        ) : (
+          <div className="flex flex-wrap gap-3 pt-2">
+            {caCodes.map((code) => (
+              <div key={code} className="px-3.5 py-2 bg-zinc-900 border border-white/10 rounded-xl flex items-center gap-2.5">
+                <span className="text-xs font-mono font-bold text-pink-400">{code}</span>
+                <button
+                  onClick={() => removeCaCode(code)}
+                  className="text-zinc-500 hover:text-rose-500 transition-colors cursor-pointer"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Save Action */}
+      <div className="flex justify-end gap-4 pt-4">
+        <button
+          type="button"
+          onClick={handleSave}
+          disabled={saving}
+          className="w-full sm:w-auto px-8 py-3 rounded-xl bg-pink-600 hover:bg-pink-500 text-white font-black text-xs uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-2 shadow-lg shadow-pink-600/20 cursor-pointer"
+        >
+          {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+          SAVE INTER REGISTRATION PARAMETERS
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ isSuperAdmin = false }) => {
   const { showToast } = useToast();
   const [mounted, setMounted] = useState(false);
@@ -820,7 +1149,7 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ isSuperAdmin =
   const [loading, setLoading] = useState(true);
   const [promoting, setPromoting] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [activeSubTab, setActiveSubTab] = useState<'users' | 'database' | 'positions' | 'support' | 'email' | 'food' | 'cards' | 'transactions' | 'registration' | 'manual_announce'>('users');
+  const [activeSubTab, setActiveSubTab] = useState<'users' | 'database' | 'positions' | 'support' | 'email' | 'food' | 'cards' | 'transactions' | 'registration' | 'manual_announce' | 'bulk_name_notice'>('users');
   
   // Member ID Cards state
   const [members, setMembers] = useState<any[]>([]);
@@ -853,6 +1182,39 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ isSuperAdmin =
   const [confirmBroadcast, setConfirmBroadcast] = useState(false);
   const [announcementTargetType, setAnnouncementTargetType] = useState<'all' | 'individual'>('all');
   const [announcementIndividualEmail, setAnnouncementIndividualEmail] = useState('');
+
+  // Bulk Name Notice state
+  const [bulkNameSubject, setBulkNameSubject] = useState('[ACTION REQUIRED] Please update your registered profile name to Given Name only');
+  const [bulkNameTemplate, setBulkNameTemplate] = useState(`<div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 25px; background-color: #0b0b0f; color: #ffffff; border-radius: 24px; border: 1px solid rgba(255, 255, 255, 0.08); box-shadow: 0 20px 40px rgba(0,0,0,0.5);">
+  <div style="text-align: center; margin-bottom: 25px;">
+    <div style="display: inline-block; padding: 12px; background-color: rgba(245, 158, 11, 0.1); border-radius: 16px; color: #f59e0b; font-size: 24px;">⚠️</div>
+  </div>
+  <h2 style="color: #f59e0b; text-transform: uppercase; letter-spacing: 0.1em; border-bottom: 1px solid rgba(255, 255, 255, 0.08); padding-bottom: 15px; margin-top: 0; font-size: 20px; font-weight: 800; text-align: center;">Action Required: Update Your Profile Name</h2>
+  <p style="font-size: 14px; line-height: 1.6; color: #ccc;">Dear <strong>{NAME}</strong>,</p>
+  <p style="font-size: 14px; line-height: 1.6; color: #ccc;">We noticed you have registered using a multi-word name (e.g., full name <strong>{NAME}</strong>). To comply with our event standards and database indexing, we require you to update your profile name to your <strong>Given Name</strong> only.</p>
+  
+  <div style="background-color: rgba(245, 158, 11, 0.05); border: 1px solid rgba(245, 158, 11, 0.2); border-radius: 16px; padding: 18px; margin: 25px 0;">
+    <p style="font-size: 14px; margin: 0 0 10px 0; color: #f59e0b; font-weight: bold; text-transform: uppercase; letter-spacing: 0.05em;">💡 Example of Name Correction:</p>
+    <ul style="font-size: 13px; color: #bbb; padding-left: 20px; margin: 0; line-height: 1.6;">
+      <li><strong>Current (Multi-word):</strong> Samin Tausif</li>
+      <li><strong>Correct (Given name only):</strong> Samin</li>
+    </ul>
+    <p style="font-size: 13px; margin: 12px 0 0 0; color: #aaa; font-style: italic;">Based on your current name, we suggest changing it to: <strong style="color: #f59e0b;">{GIVEN_NAME}</strong></p>
+  </div>
+
+  <p style="font-size: 14px; line-height: 1.6; color: #ccc;">Please click the button below to log in and instantly correct your name to your given name.</p>
+  
+  <div style="text-align: center; margin: 30px 0;">
+    <a href="{REDIRECT_URL}" style="background-color: #f59e0b; color: #000000; font-weight: 900; text-decoration: none; padding: 14px 32px; border-radius: 12px; display: inline-block; font-size: 12px; text-transform: uppercase; letter-spacing: 0.1em; box-shadow: 0 8px 20px rgba(245, 158, 11, 0.25); transition: all 0.2s ease;">Correct My Name Now</a>
+  </div>
+
+  <p style="font-size: 12px; color: #666; text-align: center; margin-top: 45px; border-top: 1px solid rgba(255, 255, 255, 0.08); padding-top: 20px;">Josephite Math Club &copy; 2026. All rights reserved.</p>
+</div>`);
+  const [sendingBulkNameNotice, setSendingBulkNameNotice] = useState(false);
+  const [confirmBulkName, setConfirmBulkName] = useState(false);
+  const [multiWordProfiles, setMultiWordProfiles] = useState<any[]>([]);
+  const [loadingMultiWordProfiles, setLoadingMultiWordProfiles] = useState(false);
+  const [bulkNameSearchTerm, setBulkNameSearchTerm] = useState('');
 
   const [emailSuggestions, setEmailSuggestions] = useState<{ email: string; full_name: string }[]>([]);
   const [suggestionsLoading, setSuggestionsLoading] = useState(false);
@@ -992,6 +1354,66 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ isSuperAdmin =
     }
   };
 
+  const fetchMultiWordProfiles = useCallback(async () => {
+    setLoadingMultiWordProfiles(true);
+    try {
+      const res = await fetch('/api/admin/bulk-name-notice');
+      const data = await res.json();
+      if (res.ok) {
+        setMultiWordProfiles(data.profiles || []);
+      } else {
+        throw new Error(data.error || 'Failed to fetch profiles');
+      }
+    } catch (err: any) {
+      showToast(err.message, 'error');
+    } finally {
+      setLoadingMultiWordProfiles(false);
+    }
+  }, [showToast]);
+
+  const sendBulkNameNotice = async () => {
+    if (!bulkNameSubject.trim() || !bulkNameTemplate.trim()) {
+      showToast('Subject and HTML Template are required.', 'error');
+      return;
+    }
+
+    if (!confirmBulkName) {
+      showToast('Please check the authorization box to proceed.', 'error');
+      return;
+    }
+
+    setSendingBulkNameNotice(true);
+    showToast('Initiating name correction broadcast...', 'info');
+
+    try {
+      const res = await fetch('/api/admin/bulk-name-notice', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          subject: bulkNameSubject,
+          htmlTemplate: bulkNameTemplate,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        showToast(`Successfully completed! Total Targeted: ${data.totalTargeted || 0}, Sent: ${data.sentCount || 0}, Failed: ${data.failedCount || 0}`, 'success');
+        setConfirmBulkName(false);
+        // Refresh profiles list
+        fetchMultiWordProfiles();
+      } else {
+        throw new Error(data.error || 'Failed to send bulk name notice emails');
+      }
+    } catch (err: any) {
+      showToast(err.message, 'error');
+    } finally {
+      setSendingBulkNameNotice(false);
+    }
+  };
+
   // Database Explorer state
   const [tables] = useState([
     'profiles', 
@@ -1017,6 +1439,7 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ isSuperAdmin =
   const [verifiedTransactions, setVerifiedTransactions] = useState<any[]>([]);
   const [loadingTransactions, setLoadingTransactions] = useState(false);
   const [txSearchTerm, setTxSearchTerm] = useState('');
+  const [txTypeFilter, setTxTypeFilter] = useState<'all' | 'online' | 'spot'>('all');
 
   const fetchEmailConfig = useCallback(async () => {
     setLoadingEmailConfig(true);
@@ -1831,6 +2254,7 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ isSuperAdmin =
     if (activeSubTab === 'food') fetchFoodConfig();
     if (activeSubTab === 'cards') fetchVerifiedMembers();
     if (activeSubTab === 'transactions') fetchVerifiedTransactions();
+    if (activeSubTab === 'bulk_name_notice') fetchMultiWordProfiles();
   }, [
     activeSubTab, 
     selectedTable, 
@@ -1840,7 +2264,8 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ isSuperAdmin =
     fetchEmailConfig, 
     fetchFoodConfig, 
     fetchVerifiedMembers,
-    fetchVerifiedTransactions
+    fetchVerifiedTransactions,
+    fetchMultiWordProfiles
   ]);
 
   const updateUserRole = async (userId: string, currentRole: string) => {
@@ -1955,12 +2380,32 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ isSuperAdmin =
     u.email?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const filteredTransactions = verifiedTransactions.filter(tx => 
-    tx.full_name?.toLowerCase().includes(txSearchTerm.toLowerCase()) ||
-    tx.trxnid?.toLowerCase().includes(txSearchTerm.toLowerCase()) ||
-    tx.email?.toLowerCase().includes(txSearchTerm.toLowerCase()) ||
-    tx.class?.toLowerCase().includes(txSearchTerm.toLowerCase())
-  );
+  const filteredTransactions = verifiedTransactions.filter(tx => {
+    const matchesSearch = 
+      tx.full_name?.toLowerCase().includes(txSearchTerm.toLowerCase()) ||
+      tx.trxnid?.toLowerCase().includes(txSearchTerm.toLowerCase()) ||
+      tx.email?.toLowerCase().includes(txSearchTerm.toLowerCase()) ||
+      tx.class?.toLowerCase().includes(txSearchTerm.toLowerCase());
+
+    if (!matchesSearch) return false;
+
+    const registeredBy = tx.registered_by || '';
+    const bkashNumber = tx.bkash_number || '';
+    const trxnid = tx.trxnid || '';
+
+    const isSpot = 
+      (registeredBy && registeredBy !== 'Self (Online)') || 
+      bkashNumber.startsWith('PROXY:') || 
+      trxnid.startsWith('PROXY-');
+
+    if (txTypeFilter === 'online') {
+      return !isSpot;
+    }
+    if (txTypeFilter === 'spot') {
+      return isSpot;
+    }
+    return true;
+  });
 
   if (mounted && !isSuperAdmin) {
     return (
@@ -1986,6 +2431,7 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ isSuperAdmin =
           { id: 'support', label: 'Support Issues', icon: ShieldAlert },
           { id: 'email', label: 'Email Status', icon: Mail },
           { id: 'manual_announce', label: 'Email Announcements Manually', icon: Mail },
+          { id: 'bulk_name_notice', label: 'Bulk Name Notice', icon: AlertCircle },
           { id: 'food', label: 'Food Management', icon: Utensils },
           { id: 'cards', label: 'Member ID Cards', icon: QrCode },
           { id: 'transactions', label: 'Verified Transactions', icon: CheckCircle2 },
@@ -2058,7 +2504,7 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ isSuperAdmin =
                               </div>
                               <div>
                                 <p className="text-xs font-bold text-white mb-0.5">{u.full_name}</p>
-                                <p className="text-[10px] text-zinc-600 font-mono">{u.email}</p>
+                                <p className="text-[10px] text-zinc-600 font-mono">{cleanDisplayEmail(u.email)}</p>
                               </div>
                             </div>
                           </td>
@@ -2441,6 +2887,177 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ isSuperAdmin =
                       icon={sendingAnnouncement ? Loader2 : Mail}
                       variant="primary"
                     />
+                  </div>
+                </div>
+              </div>
+            </DashboardSection>
+          </motion.div>
+        )}
+
+        {activeSubTab === 'bulk_name_notice' && (
+          <motion.div
+            key="bulk_name_notice"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+          >
+            <DashboardSection 
+              title="Bulk Name Correction Center" 
+              description="Notify users who registered with multi-word full names to update their profile to Given Name only."
+              icon={AlertCircle}
+            >
+              <div className="space-y-8 max-w-6xl">
+                {/* Information Header card */}
+                <div className="p-6 rounded-3xl border border-amber-500/10 bg-amber-500/[0.02] flex flex-col md:flex-row md:items-center justify-between gap-6">
+                  <div className="flex items-start gap-4 flex-1 min-w-0">
+                    <div className="p-3 rounded-2xl bg-amber-500/10 text-amber-400">
+                      <AlertCircle className="w-6 h-6 animate-pulse" />
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-bold text-white uppercase tracking-wider">Aesthetic & Compliant Name Policies</h4>
+                      <p className="text-xs text-zinc-400 mt-1 leading-relaxed max-w-2xl">
+                        To maintain a clean database and elegant ticket displays, users should have single-word Given Names (e.g., changing <span className="text-amber-400 font-semibold">"Samin Tausif"</span> to <span className="text-green-400 font-semibold">"Samin"</span>). This utility broadcasts notice emails to profiles matching this filter, complete with a live example and secure update links.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex flex-col items-center bg-zinc-900 border border-white/5 rounded-2xl px-6 py-4 justify-center md:self-stretch min-w-[140px] md:flex-shrink-0">
+                    <span className="text-2xl font-black text-amber-500">{multiWordProfiles.length}</span>
+                    <span className="text-[10px] uppercase font-bold text-zinc-500 tracking-wider mt-1 text-center">Profiles Flagged</span>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                  {/* Left panel: Form editor */}
+                  <div className="lg:col-span-7 space-y-6">
+                    <div className="p-6 rounded-3xl bg-zinc-950 border border-white/5 space-y-4">
+                      <h3 className="text-xs font-black uppercase tracking-widest text-zinc-400 border-b border-white/5 pb-3">Craft Notice Broadcast</h3>
+
+                      <DashboardFormField 
+                        label="Email Subject Line" 
+                        type="text"
+                        value={bulkNameSubject} 
+                        onChange={setBulkNameSubject} 
+                        placeholder="e.g. Action Required: Please update your registered profile name"
+                        description="Subject line for the notification. Placeholders available: {NAME}, {GIVEN_NAME}, {EMAIL}."
+                      />
+
+                      <DashboardFormField 
+                        label="HTML Template Body" 
+                        type="textarea"
+                        value={bulkNameTemplate} 
+                        onChange={setBulkNameTemplate} 
+                        placeholder="HTML email body..."
+                        description="Placeholders: {NAME} (Current Name), {GIVEN_NAME} (Guessed Name, e.g. Samin), {EMAIL}, {REDIRECT_URL} (Redirect link to change profile name)."
+                      />
+
+                      {/* Safety verification check */}
+                      <div className="p-6 rounded-2xl bg-white/[0.02] border border-white/5 flex items-start gap-3 select-none">
+                        <input
+                          type="checkbox"
+                          id="confirm-bulk-name-checkbox"
+                          checked={confirmBulkName}
+                          onChange={(e) => setConfirmBulkName(e.target.checked)}
+                          className="mt-1 h-4 w-4 rounded border-zinc-700 bg-zinc-850 text-amber-500 focus:ring-amber-500/20 focus:ring-offset-0 cursor-pointer"
+                        />
+                        <label htmlFor="confirm-bulk-name-checkbox" className="text-xs text-zinc-400 leading-relaxed cursor-pointer selection:bg-transparent">
+                          <strong className="text-white block font-semibold mb-0.5">
+                            I authorize this bulk email broadcast
+                          </strong>
+                          I verify that this email will be delivered only to the {multiWordProfiles.length} identified profiles with multi-word names. It specifies the "Given Name only" rule with the exact example "Samin Tausif, given name Samin".
+                        </label>
+                      </div>
+
+                      <div className="flex items-center gap-4 pt-2">
+                        <DashboardButton 
+                          label={sendingBulkNameNotice ? "Broadcasting..." : `Send Bulk Notice to ${multiWordProfiles.length} Users`} 
+                          onClick={sendBulkNameNotice}
+                          disabled={
+                            sendingBulkNameNotice || 
+                            !confirmBulkName || 
+                            !bulkNameSubject.trim() || 
+                            !bulkNameTemplate.trim() ||
+                            multiWordProfiles.length === 0
+                          }
+                          icon={sendingBulkNameNotice ? Loader2 : Mail}
+                          variant="primary"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Right panel: Flagged users & interactive search */}
+                  <div className="lg:col-span-5 space-y-6">
+                    <div className="p-6 rounded-3xl bg-zinc-950 border border-white/5 space-y-4 flex flex-col h-[650px]">
+                      <div className="flex items-center justify-between border-b border-white/5 pb-3">
+                        <h3 className="text-xs font-black uppercase tracking-widest text-zinc-400">Flagged Profiles</h3>
+                        <span className="px-2.5 py-0.5 rounded-full bg-amber-500/10 text-amber-400 text-[10px] font-bold">
+                          {multiWordProfiles.filter(p => {
+                            const term = bulkNameSearchTerm.trim().toLowerCase();
+                            if (!term) return true;
+                            return (p.full_name || '').toLowerCase().includes(term) || (p.email || '').toLowerCase().includes(term);
+                          }).length} of {multiWordProfiles.length}
+                        </span>
+                      </div>
+
+                      {/* Interactive search input */}
+                      <div className="relative">
+                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
+                        <input
+                          type="text"
+                          placeholder="Search flagged profiles..."
+                          value={bulkNameSearchTerm}
+                          onChange={(e) => setBulkNameSearchTerm(e.target.value)}
+                          className="w-full pl-11 pr-4 py-3 bg-white/5 border border-white/5 rounded-xl text-xs text-white placeholder:text-zinc-500 outline-none focus:border-amber-500/30 transition-all"
+                        />
+                      </div>
+
+                      {/* List container */}
+                      <div className="flex-1 overflow-y-auto pr-1 space-y-3 scrollbar-thin scrollbar-thumb-zinc-800 scrollbar-track-transparent">
+                        {loadingMultiWordProfiles ? (
+                          <div className="flex flex-col items-center justify-center py-20 gap-3">
+                            <Loader2 className="w-6 h-6 text-amber-500 animate-spin" />
+                            <span className="text-[10px] uppercase font-bold text-zinc-500 tracking-wider">Analyzing Name Formats...</span>
+                          </div>
+                        ) : multiWordProfiles.filter(p => {
+                          const term = bulkNameSearchTerm.trim().toLowerCase();
+                          if (!term) return true;
+                          return (p.full_name || '').toLowerCase().includes(term) || (p.email || '').toLowerCase().includes(term);
+                        }).length === 0 ? (
+                          <div className="text-center py-12 text-zinc-500 text-xs">
+                            No matching flagged profiles found.
+                          </div>
+                        ) : (
+                          multiWordProfiles.filter(p => {
+                            const term = bulkNameSearchTerm.trim().toLowerCase();
+                            if (!term) return true;
+                            return (p.full_name || '').toLowerCase().includes(term) || (p.email || '').toLowerCase().includes(term);
+                          }).map((p) => {
+                            const guessedGiven = (p.full_name || '').trim().split(/\s+/)[0] || '';
+                            return (
+                              <div key={p.id} className="p-4 rounded-2xl bg-white/[0.02] hover:bg-white/[0.04] border border-white/5 transition-all space-y-2">
+                                <div className="flex items-start justify-between gap-4">
+                                  <div className="min-w-0 flex-1">
+                                    <p className="text-xs font-black text-white truncate uppercase tracking-wide">
+                                      {p.full_name}
+                                    </p>
+                                    <p className="text-[10px] text-zinc-500 truncate mt-0.5">
+                                      {p.email}
+                                    </p>
+                                  </div>
+                                  <span className="px-2 py-0.5 rounded bg-amber-500/5 border border-amber-500/10 text-[9px] font-black uppercase text-amber-400 tracking-widest whitespace-nowrap self-start">
+                                    Flagged
+                                  </span>
+                                </div>
+                                <div className="pt-2 border-t border-white/[0.03] flex items-center justify-between text-[10px]">
+                                  <span className="text-zinc-500 font-medium">Guessed Given Name:</span>
+                                  <span className="text-green-400 font-bold uppercase">{guessedGiven}</span>
+                                </div>
+                              </div>
+                            );
+                          })
+                        )}
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -3134,13 +3751,65 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ isSuperAdmin =
                 </div>
               </div>
 
+              {/* Type Filter Tabs */}
+              <div className="flex flex-wrap gap-2 mb-6 border-b border-white/5 pb-4">
+                {[
+                  { id: 'all', label: 'All Transactions', count: verifiedTransactions.length },
+                  { 
+                    id: 'online', 
+                    label: 'Online Paid', 
+                    count: verifiedTransactions.filter(tx => {
+                      const registeredBy = tx.registered_by || '';
+                      const bkashNumber = tx.bkash_number || '';
+                      const trxnid = tx.trxnid || '';
+                      return !(
+                        (registeredBy && registeredBy !== 'Self (Online)') || 
+                        bkashNumber.startsWith('PROXY:') || 
+                        trxnid.startsWith('PROXY-')
+                      );
+                    }).length 
+                  },
+                  { 
+                    id: 'spot', 
+                    label: 'Spot / Admin Proxy', 
+                    count: verifiedTransactions.filter(tx => {
+                      const registeredBy = tx.registered_by || '';
+                      const bkashNumber = tx.bkash_number || '';
+                      const trxnid = tx.trxnid || '';
+                      return (
+                        (registeredBy && registeredBy !== 'Self (Online)') || 
+                        bkashNumber.startsWith('PROXY:') || 
+                        trxnid.startsWith('PROXY-')
+                      );
+                    }).length 
+                  }
+                ].map(tab => (
+                  <button
+                    key={tab.id}
+                    onClick={() => setTxTypeFilter(tab.id as 'all' | 'online' | 'spot')}
+                    className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all flex items-center gap-2 border cursor-pointer ${
+                      txTypeFilter === tab.id
+                        ? 'bg-amber-500 text-black border-amber-500'
+                        : 'bg-white/5 text-zinc-400 border-white/5 hover:text-white hover:bg-white/10'
+                    }`}
+                  >
+                    {tab.label}
+                    <span className={`px-1.5 py-0.5 rounded-full text-[8px] font-bold ${
+                      txTypeFilter === tab.id ? 'bg-black/20 text-black' : 'bg-white/10 text-zinc-400'
+                    }`}>
+                      {tab.count}
+                    </span>
+                  </button>
+                ))}
+              </div>
+
               <div className="overflow-x-auto">
                 {loadingTransactions ? (
                   <div className="flex items-center justify-center py-20">
                     <Loader2 className="w-8 h-8 text-amber-500 animate-spin" />
                   </div>
                 ) : filteredTransactions.length === 0 ? (
-                  <div className="py-20 text-center text-zinc-600 text-xs italic">
+                  <div className="py-20 text-center text-zinc-650 text-xs italic">
                     No verified transactions found matching your criteria.
                   </div>
                 ) : (
@@ -3156,37 +3825,59 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ isSuperAdmin =
                       </tr>
                     </thead>
                     <tbody>
-                      {filteredTransactions.map((tx, idx) => (
-                        <tr key={`${tx.tableName}-${tx.id}-${idx}`} className="border-b border-white/5 group hover:bg-white/[0.01]">
-                          <td className="py-4 px-6">
-                            <div>
-                              <p className="text-xs font-bold text-white mb-0.5">{tx.full_name}</p>
-                              <p className="text-[10px] text-zinc-500 font-mono">{tx.email || 'No email profile'}</p>
-                            </div>
-                          </td>
-                          <td className="py-4 px-6">
-                            <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest bg-amber-500/10 text-amber-500 border border-amber-500/20">
-                              {tx.tableName.replace('_', ' ')}
-                            </span>
-                          </td>
-                          <td className="py-4 px-6">
-                            <p className="text-xs font-semibold text-zinc-300">
-                              Class: {tx.class} | {tx.section} | #{tx.roll}
-                            </p>
-                          </td>
-                          <td className="py-4 px-6">
-                            <p className="text-xs font-mono text-zinc-400">
-                              {tx.verified_by || tx.verified_by_audit || (tx.registered_by && tx.registered_by !== 'Self (Online)' ? tx.registered_by : '') || (tx.bkash_number?.startsWith("PROXY: ") ? tx.bkash_number.replace("PROXY: ", "") : '') || 'System/Auto'}
-                            </p>
-                          </td>
-                          <td className="py-4 px-6 font-mono text-xs font-black text-green-500 uppercase">
-                            {tx.trxnid}
-                          </td>
-                          <td className="py-4 px-6 text-xs text-white font-bold">
-                            {tx.amount} BDT
-                          </td>
-                        </tr>
-                      ))}
+                      {filteredTransactions.map((tx, idx) => {
+                        const registeredBy = tx.registered_by || '';
+                        const bkashNumber = tx.bkash_number || '';
+                        const trxnid = tx.trxnid || '';
+                        
+                        const isSpot = 
+                          (registeredBy && registeredBy !== 'Self (Online)') || 
+                          bkashNumber.startsWith('PROXY:') || 
+                          trxnid.startsWith('PROXY-');
+
+                        return (
+                          <tr key={`${tx.tableName}-${tx.id}-${idx}`} className="border-b border-white/5 group hover:bg-white/[0.01]">
+                            <td className="py-4 px-6">
+                              <div>
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <p className="text-xs font-bold text-white mb-0.5">{tx.full_name}</p>
+                                  {isSpot ? (
+                                    <span className="px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-wider bg-rose-500/10 text-rose-400 border border-rose-500/20">
+                                      Spot/Proxy
+                                    </span>
+                                  ) : (
+                                    <span className="px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-wider bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                                      Online Paid
+                                    </span>
+                                  )}
+                                </div>
+                                <p className="text-[10px] text-zinc-500 font-mono">{cleanDisplayEmail(tx.email) || 'No email profile'}</p>
+                              </div>
+                            </td>
+                            <td className="py-4 px-6">
+                              <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest bg-amber-500/10 text-amber-500 border border-amber-500/20">
+                                {tx.tableName.replace('_', ' ')}
+                              </span>
+                            </td>
+                            <td className="py-4 px-6">
+                              <p className="text-xs font-semibold text-zinc-300">
+                                Class: {tx.class} | {tx.section} | #{tx.roll}
+                              </p>
+                            </td>
+                            <td className="py-4 px-6">
+                              <p className="text-xs font-mono text-zinc-400">
+                                {tx.verified_by || tx.verified_by_audit || (tx.registered_by && tx.registered_by !== 'Self (Online)' ? tx.registered_by : '') || (tx.bkash_number?.startsWith("PROXY: ") ? tx.bkash_number.replace("PROXY: ", "") : '') || 'System/Auto'}
+                              </p>
+                            </td>
+                            <td className="py-4 px-6 font-mono text-xs font-black text-green-500 uppercase">
+                              {tx.trxnid}
+                            </td>
+                            <td className="py-4 px-6 text-xs text-white font-bold">
+                              {tx.amount} BDT
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 )}
@@ -3217,6 +3908,14 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ isSuperAdmin =
               icon={SlidersHorizontal}
             >
               <EventRegistrationConfigEditor showToast={showToast} />
+            </DashboardSection>
+
+            <DashboardSection
+              title="Inter-School Event Registration Parameters Editor"
+              description="Customize payment guidelines, bKash receiver, selective Campus Ambassador (CA) codes, and event segment price points."
+              icon={SlidersHorizontal}
+            >
+              <InterEventRegistrationConfigEditor showToast={showToast} />
             </DashboardSection>
           </motion.div>
         )}

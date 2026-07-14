@@ -403,6 +403,30 @@
     opacity: var(--glow-opacity, 0.16);
     transition: all 1.2s cubic-bezier(0.16, 1, 0.3, 1);
   }
+
+  /* GPU/Performance Reduction Overrides on Low-End Mobile / Reduced Motion */
+  body.reduce-gfx .premium-glow-orb,
+  body.reduce-gfx .atmospheric-glow,
+  body.reduce-gfx .scanline,
+  body.reduce-gfx .noise {
+    display: none !important;
+  }
+
+  body.reduce-gfx .premium-3d-bg::before {
+    background-image: none !important;
+    background-color: var(--bg-section-color, #040406) !important;
+    opacity: 1 !important;
+  }
+
+  body.reduce-gfx .moving-border-container::before {
+    animation: none !important;
+    background: var(--c-6-start, #00B4DB) !important;
+  }
+
+  body.reduce-gfx * {
+    text-shadow: none !important;
+    box-shadow: none !important;
+  }
 }
 
 @layer utilities {

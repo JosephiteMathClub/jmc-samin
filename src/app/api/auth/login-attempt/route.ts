@@ -9,6 +9,14 @@ export async function POST(req: Request) {
     const forwardedFor = req.headers.get('x-forwarded-for');
     const ip = forwardedFor ? forwardedFor.split(',')[0].trim() : '127.0.0.1';
 
+    // Bypass rate limiting for local environments or development mode
+    if (process.env.NODE_ENV === 'development' || ip === '127.0.0.1' || ip === '::1' || ip === 'localhost') {
+      return NextResponse.json({
+        allowed: true,
+        attemptsRemaining: 999
+      });
+    }
+
     const now = Date.now();
     const windowMs = 5 * 60 * 1000; // 5 minutes
 

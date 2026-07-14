@@ -28,9 +28,11 @@ import {
 import { useAuth } from '../context/AuthContext';
 import { useContent } from '../context/ContentContext';
 import { useToast } from '../context/ToastContext';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import ScrollReveal from '../components/ScrollReveal';
+import { cleanDisplayEmail } from '../lib/utils';
+import InterEventRegister from './InterEventRegister';
 
 // List of all solo events in the website as hardcoded fallbacks
 const SOLO_EVENTS = [
@@ -81,6 +83,26 @@ const EventRegister = () => {
   const { content, loading: contentLoading } = useContent();
   const { showToast } = useToast();
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+  // Inter Mode States
+  const [isInterMode, setIsInterMode] = useState(false);
+  const [interIsGeneralMemberQuestion, setInterIsGeneralMemberQuestion] = useState<boolean | null>(null);
+  const [interGeneralMemberEmail, setInterGeneralMemberEmail] = useState('');
+  const [interVerifyingEmail, setInterVerifyingEmail] = useState(false);
+  const [interEmailVerified, setInterEmailVerified] = useState(false);
+  const [interUniqueId, setInterUniqueId] = useState('');
+  const [interAccountEmail, setInterAccountEmail] = useState('');
+  const [interAccountPassword, setInterAccountPassword] = useState('');
+
+  useEffect(() => {
+    if (searchParams) {
+      const type = searchParams.get('type');
+      if (type === 'inter') {
+        setIsInterMode(true);
+      }
+    }
+  }, [searchParams]);
 
   // Dynamic config states loaded from db
   const [soloEventsList, setSoloEventsList] = useState<string[]>(SOLO_EVENTS);
@@ -145,6 +167,8 @@ const EventRegister = () => {
   const [fetchingMemberStatus, setFetchingMemberStatus] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [guestEmail, setGuestEmail] = useState('');
+  const [wasGuestRegistered, setWasGuestRegistered] = useState(false);
   const [showConfirmSegmentModal, setShowConfirmSegmentModal] = useState(false);
   const [hasConfirmedSegments, setHasConfirmedSegments] = useState(false);
 
@@ -167,6 +191,50 @@ const EventRegister = () => {
   const [proxyClassEditable, setProxyClassEditable] = useState(true);
   const [proxySectionEditable, setProxySectionEditable] = useState(true);
   const [proxyRollEditable, setProxyRollEditable] = useState(true);
+
+  // Verification of general member email for inter mode
+  const handleVerifyInterGeneralMemberEmail = async () => {
+    if (!interGeneralMemberEmail.trim() || !interGeneralMemberEmail.includes('@')) {
+      showToast("Please enter a valid email address.", "error");
+      return;
+    }
+    setInterVerifyingEmail(true);
+    try {
+      const { data: memberData, error } = await supabase
+        .from('member')
+        .select('*')
+        .or(`email_address.eq.${interGeneralMemberEmail.trim().toLowerCase()},email.eq.${interGeneralMemberEmail.trim().toLowerCase()}`)
+        .eq('verified', 'yes')
+        .maybeSingle();
+
+      if (error) {
+        throw error;
+      }
+
+      if (memberData) {
+        setIsGeneralMember(true);
+        setInterEmailVerified(true);
+        
+        // Auto-fill their details if they exist to make registration ultra-smooth!
+        if (memberData.full_name) setFullName(memberData.full_name);
+        if (memberData.class) setClassName(memberData.class);
+        if (memberData.section) setSection(memberData.section);
+        if (memberData.roll) setRoll(memberData.roll);
+        if (memberData.phone) setPhone(memberData.phone);
+        // Also set guest email since they register as visitor/guest
+        setGuestEmail(interGeneralMemberEmail.trim().toLowerCase());
+
+        showToast("Success! Your General Membership was verified. 50% discount applied!", "success");
+      } else {
+        showToast("No verified General Membership found with this email. Please check spelling or select 'No'.", "error");
+      }
+    } catch (err: any) {
+      console.error("Error verifying general member email:", err);
+      showToast("Verification failed. Please try again or select 'No'.", "error");
+    } finally {
+      setInterVerifyingEmail(false);
+    }
+  };
 
   // General Member Check on Load
   const fetchMemberInfo = useCallback(async () => {
@@ -205,6 +273,9 @@ const EventRegister = () => {
         
         if (activeData.verified === 'yes') {
           setIsGeneralMember(true);
+          setInterIsGeneralMemberQuestion(true);
+          setInterEmailVerified(true);
+          setInterGeneralMemberEmail(activeData.email_address || activeData.email || user.email || '');
         }
       }
     } catch (err) {
@@ -369,11 +440,12 @@ const EventRegister = () => {
   }, []);
 
   useEffect(() => {
-    if (!authLoading && !user) {
-      const currentPath = window.location.pathname + window.location.search;
-      router.push('/login?redirect=' + encodeURIComponent(currentPath));
+    // Non-logged-in users are allowed to register for events without an account.
+    // An account will be automatically generated for them upon form submission.
+    if (!user && !authLoading) {
+      console.log("Guest mode active: user is unregistered/not logged in.");
     }
-  }, [user, authLoading, router]);
+  }, [user, authLoading]);
 
   // Helper to get Table name based on Class Level input
   const getTargetTable = (cls: string): string => {
@@ -439,33 +511,37 @@ const EventRegister = () => {
 
   // Helper to calculate total amount based on business rules
   const calculateAmount = () => {
+    let basePrice = 0;
     if (eventTab === 'team') {
       const match = teamEventsList.find(tc => selectedEvents.includes(tc.name));
-      return match ? match.price : 0;
+      basePrice = match ? match.price : 0;
+    } else {
+      const N = selectedEvents.length;
+      if (N === 0) return 0;
+
+      // If only Math Olympiad is selected, it is completely free under all circumstances!
+      const isOnlyMathOlympiad = N === 1 && selectedEvents[0].trim().toLowerCase() === "math olympiad";
+      if (isOnlyMathOlympiad) {
+        return 0;
+      }
+
+      // Both general members and non-members follow the same simplified flat charge:
+      // If they have registered once before, registering for more events later costs another 100 BDT
+      if (userRegisteredEvents.length > 0) {
+        basePrice = 100;
+      } else if (isGeneralMember && N === soloEventsList.length) {
+        basePrice = formConfig.allEventsSoloPriceMember || 50;
+      } else {
+        basePrice = 100;
+      }
     }
 
-    const N = selectedEvents.length;
-    if (N === 0) return 0;
-
-    // If only Math Olympiad is selected, it is completely free under all circumstances!
-    const isOnlyMathOlympiad = N === 1 && selectedEvents[0].trim().toLowerCase() === "math olympiad";
-    if (isOnlyMathOlympiad) {
-      return 0;
+    // Apply 50% discount for general members in inter-school registration
+    if (isInterMode && isGeneralMember) {
+      return basePrice * 0.5;
     }
 
-    // Both general members and non-members follow the same simplified flat charge:
-    // If they have registered once before, registering for more events later costs another 100 BDT
-    if (userRegisteredEvents.length > 0) {
-      return 100;
-    }
-
-    // Member bundle discount: if isGeneralMember is true and they select all solo events
-    if (isGeneralMember && N === soloEventsList.length) {
-      return formConfig.allEventsSoloPriceMember || 50;
-    }
-
-    // Otherwise, flat fee of 100 BDT (selecting either one, some, or all events is 100tk total)
-    return 100;
+    return basePrice;
   };
 
   const handleSwitchTab = (tab: 'solo' | 'team') => {
@@ -474,27 +550,95 @@ const EventRegister = () => {
   };
 
   const verifyTeammateEmail = async (email: string, memberNum: 2 | 3) => {
-    if (!email || !email.trim().includes('@')) {
-      showToast("Please enter a valid teammate email address.", "error");
+    const trimmedInput = (email || '').trim();
+    if (!trimmedInput) {
+      showToast("Please enter a valid teammate email address, phone, or Full Name.", "error");
       return;
     }
+
+    const isPhoneInput = !trimmedInput.includes('@') && /^[0-9+\s\-()]+$/.test(trimmedInput);
+    const isEmailInput = trimmedInput.includes('@');
+    const isNameInput = !isPhoneInput && !isEmailInput;
     
     setCheckingTeammates(true);
     try {
-      const trimmedEmail = email.trim().toLowerCase();
-      
-      // Check both member and ec_member tables under their emails
-      const { data: memberData } = await supabase
-        .from('member')
-        .select('*')
-        .or(`email.eq.${trimmedEmail},email_address.eq.${trimmedEmail}`)
-        .maybeSingle();
+      let trimmedEmail = trimmedInput.toLowerCase();
+      if (isPhoneInput) {
+        trimmedEmail = `${trimmedInput.toLowerCase()}@josephitre.club`;
+      }
 
-      const { data: ecData } = await supabase
-        .from('ec_member')
-        .select('*')
-        .or(`email.eq.${trimmedEmail},email_address.eq.${trimmedEmail}`)
-        .maybeSingle();
+      const slugifyName = (name: string): string => {
+        return (name || '')
+          .trim()
+          .toLowerCase()
+          .replace(/[^a-z0-9]/g, '_')
+          .replace(/__+/g, '_')
+          .replace(/^_+|_+$/g, '');
+      };
+
+      let memberData: any = null;
+      let ecData: any = null;
+      let profileData: any = null;
+
+      if (isNameInput) {
+        const slug = slugifyName(trimmedInput);
+        const virtualEmail = `${slug}@josephitre.club`;
+
+        // Look up member by full name or virtual email
+        const { data: mList } = await supabase
+          .from('member')
+          .select('*')
+          .or(`full_name.ilike.%${trimmedInput}%,email.eq.${virtualEmail},email_address.eq.${virtualEmail}`)
+          .limit(1);
+        if (mList && mList.length > 0) memberData = mList[0];
+
+        const { data: eList } = await supabase
+          .from('ec_member')
+          .select('*')
+          .or(`full_name.ilike.%${trimmedInput}%,email.eq.${virtualEmail},email_address.eq.${virtualEmail}`)
+          .limit(1);
+        if (eList && eList.length > 0) ecData = eList[0];
+
+        const { data: pList } = await supabase
+          .from('profiles')
+          .select('id, full_name, email')
+          .or(`full_name.ilike.%${trimmedInput}%,email.eq.${virtualEmail}`)
+          .limit(1);
+        if (pList && pList.length > 0) profileData = pList[0];
+      } else {
+        // Look up member by email or phone
+        const { data: mList } = await supabase
+          .from('member')
+          .select('*')
+          .or(`email.eq.${trimmedEmail},email_address.eq.${trimmedEmail}${isPhoneInput ? `,phone.eq.${trimmedInput}` : ''}`);
+        
+        if (mList && mList.length > 1) {
+          showToast(`Multiple general members found with this email. We loaded the first one. For specificity, search by teammate's Full Name.`, "info");
+          memberData = mList[0];
+        } else if (mList && mList.length === 1) {
+          memberData = mList[0];
+        }
+
+        const { data: eList } = await supabase
+          .from('ec_member')
+          .select('*')
+          .or(`email.eq.${trimmedEmail},email_address.eq.${trimmedEmail}${isPhoneInput ? `,phone.eq.${trimmedInput}` : ''}`);
+        
+        if (eList && eList.length > 1) {
+          ecData = eList[0];
+        } else if (eList && eList.length === 1) {
+          ecData = eList[0];
+        }
+
+        const { data: pList } = await supabase
+          .from('profiles')
+          .select('id, full_name, email')
+          .eq('email', trimmedEmail);
+        
+        if (pList && pList.length > 0) {
+          profileData = pList[0];
+        }
+      }
 
       const activeTeammateData = ecData || memberData;
 
@@ -504,15 +648,16 @@ const EventRegister = () => {
         const resolvedClass = activeTeammateData.class || '';
         const resolvedSection = activeTeammateData.section || '';
         const resolvedRoll = activeTeammateData.roll || '';
+        const teammateEmailAddress = activeTeammateData.email_address || activeTeammateData.email || trimmedEmail;
 
         if (memberNum === 2) {
-          setMember2Profile({ id: activeTeammateData.id, email: trimmedEmail, isGeneralMember: true });
+          setMember2Profile({ id: activeTeammateData.id, email: teammateEmailAddress, isGeneralMember: true });
           setTeamMember2Name(resolvedName);
           setTeamMember2Class(resolvedClass);
           setTeamMember2Section(resolvedSection);
           setTeamMember2Roll(resolvedRoll);
         } else {
-          setMember3Profile({ id: activeTeammateData.id, email: trimmedEmail, isGeneralMember: true });
+          setMember3Profile({ id: activeTeammateData.id, email: teammateEmailAddress, isGeneralMember: true });
           setTeamMember3Name(resolvedName);
           setTeamMember3Class(resolvedClass);
           setTeamMember3Section(resolvedSection);
@@ -520,24 +665,17 @@ const EventRegister = () => {
         }
         showToast(`Teammate ${memberNum} verified as Member! Credentials pulled.`, "success");
       } else {
-        // They are not registered as a general member before.
-        // Check if they at least have a profile/account on the site to retrieve user id
-        const { data: profileData } = await supabase
-          .from('profiles')
-          .select('id, full_name')
-          .eq('email', trimmedEmail)
-          .maybeSingle();
-
         const resolvedName = profileData?.full_name || '';
+        const teammateEmailAddress = profileData?.email || trimmedEmail;
 
         if (memberNum === 2) {
-          setMember2Profile({ id: profileData?.id || null, email: trimmedEmail, isGeneralMember: false });
+          setMember2Profile({ id: profileData?.id || null, email: teammateEmailAddress, isGeneralMember: false });
           setTeamMember2Name(resolvedName);
           setTeamMember2Class('');
           setTeamMember2Section('');
           setTeamMember2Roll('');
         } else {
-          setMember3Profile({ id: profileData?.id || null, email: trimmedEmail, isGeneralMember: false });
+          setMember3Profile({ id: profileData?.id || null, email: teammateEmailAddress, isGeneralMember: false });
           setTeamMember3Name(resolvedName);
           setTeamMember3Class('');
           setTeamMember3Section('');
@@ -547,7 +685,7 @@ const EventRegister = () => {
         if (profileData) {
           showToast(`Teammate ${memberNum} has an account but is not an active General Member. Name auto-loaded. Please manually enter Class, Section, and Roll.`, "info");
         } else {
-          showToast(`Teammate ${memberNum} email not found in our database. Since a pre-registered account is not mandatory, please manually input their details (Name, Class, Section, Roll).`, "info");
+          showToast(`Teammate ${memberNum} details not found. Please manually input their Name, Class, Section, and Roll.`, "info");
         }
       }
     } catch (err) {
@@ -620,7 +758,7 @@ const EventRegister = () => {
       const originalPhone = trimmedInput;
 
       if (isPhoneInput) {
-        emailToCheck = `${trimmedInput.toLowerCase()}@josephite.club`;
+        emailToCheck = `${trimmedInput.toLowerCase()}@josephitre.club`;
       }
       
       const { data: profileCheck, error: pError } = await supabase
@@ -708,6 +846,17 @@ const EventRegister = () => {
   };
 
   const handleNextStep1 = () => {
+    if (isInterMode) {
+      if (interIsGeneralMemberQuestion === null) {
+        showToast("Please select whether you are a JMC General Member.", "error");
+        return;
+      }
+      if (interIsGeneralMemberQuestion === true && !interEmailVerified) {
+        showToast("Please enter and verify your General Member email address to proceed.", "error");
+        return;
+      }
+    }
+
     if (isProxyRegistration) {
       const trimmedInput = proxyEmail.trim();
       const isPhoneInput = !trimmedInput.includes('@') && /^[0-9+\s\-()]+$/.test(trimmedInput);
@@ -721,6 +870,13 @@ const EventRegister = () => {
       }
       if (!proxyPhoneNumber.trim() || proxyPhoneNumber.trim().length < 11) {
         showToast("Please enter a valid student contact phone number (at least 11 digits).", "error");
+        return;
+      }
+    }
+
+    if (!user) {
+      if (!guestEmail.trim() || !guestEmail.includes('@')) {
+        showToast("Please enter a valid email address to auto-generate your account.", "error");
         return;
       }
     }
@@ -838,6 +994,10 @@ const EventRegister = () => {
       showToast("Please enter your full name.", "error");
       return;
     }
+    if (/\s/.test(fullName)) {
+      showToast("Please type in your name without spaces or just type in your surname", "error");
+      return;
+    }
     if (!className || !className.trim()) {
       showToast("Please select your class.", "error");
       return;
@@ -892,12 +1052,110 @@ const EventRegister = () => {
 
     setSubmitting(true);
     try {
+      const targetTable = getTargetTable(className);
+      if (!user) {
+        // Guest user flow: Register via our custom guest registration API
+        const response = await fetch('/api/events/register-guest', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            fullName: fullName.trim(),
+            email: guestEmail.trim(),
+            phone: phone.trim(),
+            className,
+            section,
+            roll,
+            bkashNumber: finalBkashNumber,
+            trxnid: finalTrxnid,
+            amount: finalPrice,
+            selectedEvents,
+            eventTab
+          })
+        });
+
+        const resData = await response.json();
+        if (!response.ok) {
+          throw new Error(resData.error || "Failed to submit registration.");
+        }
+
+        // If team events, save teammate records using the existing teammate endpoint
+        if (eventTab === 'team') {
+          const teammatesList = [];
+          if (member2Profile) {
+            teammatesList.push({
+              id: member2Profile.id,
+              email: member2Profile.email,
+              name: teamMember2Name,
+              class: teamMember2Class,
+              section: teamMember2Section,
+              roll: teamMember2Roll
+            });
+          }
+          const activeTeamConf = teamEventsList.find(tc => tc.name === selectedEvents[0]);
+          if (activeTeamConf && activeTeamConf.memberCount === 3 && member3Profile) {
+            teammatesList.push({
+              id: member3Profile.id,
+              email: member3Profile.email,
+              name: teamMember3Name,
+              class: teamMember3Class,
+              section: teamMember3Section,
+              roll: teamMember3Roll
+            });
+          }
+
+          if (teammatesList.length > 0) {
+            const teamRes = await fetch('/api/events/register-teammates', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                trxnid: finalTrxnid,
+                bkash_number: finalBkashNumber,
+                targetTable,
+                event_name: selectedEvents[0],
+                teammates: teammatesList
+              })
+            });
+
+            const teamResData = await teamRes.json();
+            if (!teamRes.ok) {
+              throw new Error(teamResData.error || "Failed while saving teammate registrations.");
+            }
+          }
+        }
+
+        // Auto login the newly created guest user!
+        showToast("Account automatically generated. Logging in...", "success");
+        try {
+          const { error: signInError } = await supabase.auth.signInWithPassword({
+            email: resData.virtualEmail,
+            password: phone.trim()
+          });
+
+          if (signInError) {
+            console.error("Auto login failed:", signInError);
+            showToast("Account created! Please sign in using your phone number as password.", "info");
+          } else {
+            showToast("Welcome! You are now logged in.", "success");
+          }
+        } catch (loginErr) {
+          console.error("Auto login error caught:", loginErr);
+        }
+
+        if (resData.memberId) setInterUniqueId(resData.memberId);
+        setInterAccountEmail(guestEmail.trim());
+        setInterAccountPassword(phone.trim());
+        setWasGuestRegistered(true);
+        setIsSuccess(true);
+        setSubmitting(false);
+        return;
+      }
+
       let finalUserId = user?.id;
 
       const getVirtualEmail = (val: string) => {
         const trimmed = val.trim().toLowerCase();
         const isPhoneInput = !trimmed.includes('@') && /^[0-9+\s\-()]+$/.test(trimmed);
-        return isPhoneInput ? `${trimmed}@josephite.club` : trimmed;
+        return isPhoneInput ? `${trimmed}@josephitre.club` : trimmed;
       };
 
       if (isProxyRegistration) {
@@ -929,7 +1187,7 @@ const EventRegister = () => {
         }
       }
 
-      const targetTable = getTargetTable(className);
+      // Use targetTable declared at the top of the try block
       
       const payload: any = {
         user_id: finalUserId,
@@ -990,6 +1248,7 @@ const EventRegister = () => {
         if (member2Profile) {
           teammatesList.push({
             id: member2Profile.id,
+            email: member2Profile.email,
             name: teamMember2Name,
             class: teamMember2Class,
             section: teamMember2Section,
@@ -1000,6 +1259,7 @@ const EventRegister = () => {
         if (activeTeamConf && activeTeamConf.memberCount === 3 && member3Profile) {
           teammatesList.push({
             id: member3Profile.id,
+            email: member3Profile.email,
             name: teamMember3Name,
             class: teamMember3Class,
             section: teamMember3Section,
@@ -1028,6 +1288,7 @@ const EventRegister = () => {
       }
 
       // Ensure the student gets a member ID automatically if they are not already listed in the 'member' or 'ec_member' table
+      const realUserEmail = registeredMemberData?.email || user?.email || '';
       let isUserRegisteredGeneral = false;
       let existingMemberId = '';
       try {
@@ -1107,8 +1368,8 @@ const EventRegister = () => {
           .upsert({
             id: finalUserId,
             full_name: fullName,
-            email: isProxyRegistration ? getVirtualEmail(proxyEmail) : (user?.email || ''),
-            email_address: isProxyRegistration ? getVirtualEmail(proxyEmail) : (user?.email || ''),
+            email: isProxyRegistration ? getVirtualEmail(proxyEmail) : realUserEmail,
+            email_address: isProxyRegistration ? getVirtualEmail(proxyEmail) : realUserEmail,
             phone: isProxyRegistration ? proxyPhoneNumber : phone.trim(),
             school: 'St Joseph Higher Secondary School',
             class: className,
@@ -1158,7 +1419,7 @@ const EventRegister = () => {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               members: [{
-                email: user?.email,
+                email: realUserEmail,
                 fullName: fullName
               }]
             })
@@ -1177,6 +1438,10 @@ const EventRegister = () => {
       setSubmitting(false);
     }
   };
+
+  if (isInterMode) {
+    return <InterEventRegister />;
+  }
 
   if (authLoading || fetchingMemberStatus || contentLoading || checkingFormAvailability) {
     return (
@@ -1288,9 +1553,9 @@ const EventRegister = () => {
               </button>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {userRegisteredEvents.map((reg) => {
+              {userRegisteredEvents.map((reg: any) => {
                 const events = (reg.selected_events || '').split(',').map((s: string) => s.trim()).filter(Boolean);
-                return events.map((evt, idx) => (
+                return events.map((evt: string, idx: number) => (
                   <div key={`${reg.tableName}-${reg.id}-${idx}`} className="p-5 rounded-2xl bg-black/40 border border-white/5 flex flex-col justify-between gap-2 relative">
                     <div>
                       <p className="text-[9px] font-black uppercase tracking-[0.2em] text-zinc-500">
@@ -1334,7 +1599,11 @@ const EventRegister = () => {
               {isProxyRegistration ? "Proxy Registration Complete!" : finalAmount === 0 ? "Entry Approved!" : "Successfully Submitted!"}
             </h2>
             <p className="text-zinc-400 mb-8 text-sm leading-relaxed">
-              {isProxyRegistration ? (
+              {wasGuestRegistered ? (
+                <span>
+                  Hey <strong>{fullName}</strong>, an account has been automatically generated using your email and phone number. Your login password is your <strong>contact phone number ({phone})</strong>. We have <strong>automatically signed you in</strong> so you can access your profile and track registrations right away!
+                </span>
+              ) : isProxyRegistration ? (
                 <span>
                   Student <strong>{fullName}</strong> has been successfully registered and automatically verified. Their unique Ticket ID / member ID has been generated, and email notifications have been dispatched.
                 </span>
@@ -1406,6 +1675,35 @@ const EventRegister = () => {
               </div>
             ) : (
               <>
+                {isInterMode && (
+                  <div className="p-6 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 w-full mb-8 text-left space-y-4">
+                    <h4 className="text-sm font-black uppercase tracking-wider text-white border-b border-white/10 pb-2">
+                      Registration & Account Details
+                    </h4>
+                    
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+                      <div>
+                        <span className="text-zinc-500 block uppercase font-bold text-[10px]">Unique Ticket ID</span>
+                        <strong className="text-lg text-amber-400 font-mono tracking-widest">{interUniqueId || 'PENDING'}</strong>
+                      </div>
+                      <div>
+                        <span className="text-zinc-500 block uppercase font-bold text-[10px]">Membership Type</span>
+                        <strong className="text-white uppercase">{isGeneralMember ? 'General Member (50% Discount Applied)' : 'Regular Participant'}</strong>
+                      </div>
+                      <div className="sm:col-span-2 pt-2 border-t border-white/5">
+                        <span className="text-zinc-400 block font-bold mb-1 uppercase text-[10px]">Auto-Generated Account Credentials:</span>
+                        <p className="text-zinc-300 font-medium leading-relaxed">
+                          We've automatically registered your account and signed you in. You can log in using either your email address or phone number as username:
+                        </p>
+                        <div className="mt-2 p-3 bg-black/40 rounded-xl space-y-1.5 font-mono text-[11px] border border-white/5">
+                          <p><span className="text-zinc-500">EMAIL / USERNAME:</span> <strong className="text-white">{interAccountEmail}</strong></p>
+                          <p><span className="text-zinc-500">PASSWORD:</span> <strong className="text-amber-400">{interAccountPassword}</strong></p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 <p className="text-amber-400 text-xs font-bold mb-8 uppercase tracking-wider bg-amber-500/5 px-6 py-3 rounded-xl border border-amber-500/10">
                   {finalAmount === 0 ? (
                     "You can view your ticket on the profile page or register for more events later!"
@@ -1581,7 +1879,107 @@ const EventRegister = () => {
                       </div>
                     )}
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {isInterMode && !isGeneralMember && (
+                      <div className="p-8 rounded-[2rem] bg-gradient-to-r from-indigo-950/40 via-purple-900/10 to-black/90 border border-indigo-500/20 space-y-6">
+                        <div>
+                          <h3 className="text-sm font-black uppercase tracking-wider text-white">General Membership Status</h3>
+                          <p className="text-[10px] text-zinc-400 mt-1">Are you a registered General Member of Josephite Math Club? Verified members qualify for an exclusive 50% discount on all registrations.</p>
+                        </div>
+                        
+                        <div className="flex flex-col sm:flex-row gap-4">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setInterIsGeneralMemberQuestion(true);
+                              // Reset states if they toggle
+                              if (!interEmailVerified) {
+                                setIsGeneralMember(false);
+                              }
+                            }}
+                            className={`flex-1 py-4.5 rounded-2xl text-xs font-black uppercase tracking-wider transition-all duration-150 border cursor-pointer ${
+                              interIsGeneralMemberQuestion === true
+                                ? 'bg-indigo-600 border-indigo-500 text-white shadow-lg'
+                                : 'bg-white/5 border-white/5 text-zinc-400 hover:bg-white/10'
+                            }`}
+                          >
+                            Yes, I am a General Member
+                          </button>
+                          
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setInterIsGeneralMemberQuestion(false);
+                              setIsGeneralMember(false);
+                              setInterEmailVerified(false);
+                            }}
+                            className={`flex-1 py-4.5 rounded-2xl text-xs font-black uppercase tracking-wider transition-all duration-150 border cursor-pointer ${
+                              interIsGeneralMemberQuestion === false
+                                ? 'bg-indigo-600 border-indigo-500 text-white shadow-lg'
+                                : 'bg-white/5 border-white/5 text-zinc-400 hover:bg-white/10'
+                            }`}
+                          >
+                            No, I am not
+                          </button>
+                        </div>
+
+                        {interIsGeneralMemberQuestion === true && (
+                          <div className="space-y-3 pt-4 border-t border-white/5">
+                            <label className="text-[10px] font-black uppercase tracking-wider text-zinc-400">
+                              Please enter the email address you used for General Membership registration:
+                            </label>
+                            <div className="flex gap-2">
+                              <div className="relative flex-1">
+                                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
+                                <input
+                                  type="email"
+                                  placeholder="membership_email@example.com"
+                                  value={interGeneralMemberEmail}
+                                  onChange={(e) => {
+                                    setInterGeneralMemberEmail(e.target.value);
+                                    setInterEmailVerified(false);
+                                    setIsGeneralMember(false);
+                                  }}
+                                  disabled={interEmailVerified}
+                                  className="w-full pl-11 pr-4 py-3 bg-black/40 border border-white/10 rounded-xl text-xs font-bold text-white focus:outline-none focus:border-indigo-500 disabled:opacity-60"
+                                />
+                              </div>
+                              <button
+                                type="button"
+                                onClick={handleVerifyInterGeneralMemberEmail}
+                                disabled={interVerifyingEmail || interEmailVerified}
+                                className="px-6 py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-black text-[10px] uppercase tracking-wider rounded-xl transition-all flex items-center gap-1.5 shrink-0 disabled:opacity-50 cursor-pointer text-center justify-center"
+                              >
+                                {interVerifyingEmail ? (
+                                  <>
+                                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                    Verifying...
+                                  </>
+                                ) : interEmailVerified ? (
+                                  <>
+                                    <Check className="w-3.5 h-3.5 text-green-400" />
+                                    Verified
+                                  </>
+                                ) : (
+                                  <>
+                                    <Sparkles className="w-3.5 h-3.5" />
+                                    Verify Email
+                                  </>
+                                )}
+                              </button>
+                            </div>
+                            {interEmailVerified && (
+                              <p className="text-[10px] text-green-400 font-bold uppercase tracking-wider flex items-center gap-1 mt-1">
+                                <Check className="w-3.5 h-3.5" /> JMC General Member Account Found & Details Pre-populated! 50% discount will be applied during event selection.
+                              </p>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {(!isInterMode || interIsGeneralMemberQuestion !== null || isGeneralMember) && (
+                      <>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       
                       {/* Name */}
                       <div className="space-y-3">
@@ -1593,10 +1991,15 @@ const EventRegister = () => {
                             placeholder="YOUR FULL NAME"
                             value={fullName}
                             onChange={(e) => setFullName(e.target.value)}
-                            disabled={(!isProxyRegistration && isGeneralMember) || (isProxyRegistration && (!proxyVerified || !proxyNameEditable))}
-                            className="w-full pl-14 pr-6 py-4.5 bg-white/5 border border-white/10 rounded-2xl focus:outline-none focus:border-amber-500/50 focus:ring-4 focus:ring-amber-500/10 transition-all text-sm font-bold text-white placeholder:text-zinc-600 disabled:opacity-60"
+                            disabled={(!isProxyRegistration && isGeneralMember && !!fullName) || (isProxyRegistration && (!proxyVerified || !proxyNameEditable))}
+                            className={`w-full pl-14 pr-6 py-4.5 bg-white/5 border ${/\s/.test(fullName) ? 'border-red-500/50 focus:border-red-500/50 focus:ring-red-500/10' : 'border-white/10 focus:border-amber-500/50 focus:ring-amber-500/10'} rounded-2xl focus:outline-none focus:ring-4 transition-all text-sm font-bold text-white placeholder:text-zinc-600 disabled:opacity-60`}
                           />
                         </div>
+                        {/\s/.test(fullName) && (
+                          <p className="text-[10px] text-red-400 font-bold uppercase tracking-wider mt-1">
+                            Please type in your name without spaces or just type in your surname
+                          </p>
+                        )}
                       </div>
 
                       {/* Class */}
@@ -1610,7 +2013,7 @@ const EventRegister = () => {
                               setClassName(e.target.value);
                               setSection('');
                             }}
-                            disabled={(!isProxyRegistration && isGeneralMember) || (isProxyRegistration && (!proxyVerified || !proxyClassEditable))}
+                            disabled={(!isProxyRegistration && isGeneralMember && !!className) || (isProxyRegistration && (!proxyVerified || !proxyClassEditable))}
                             className="w-full pl-14 pr-6 py-4.5 bg-white/5 border border-white/10 rounded-2xl focus:outline-none focus:border-amber-500/50 focus:ring-4 focus:ring-amber-500/10 transition-all text-sm font-bold text-white placeholder:text-zinc-600 disabled:opacity-60 appearance-none cursor-pointer"
                           >
                             <option value="" className="bg-zinc-950 text-zinc-500 font-extrabold uppercase tracking-wider">SELECT CLASS</option>
@@ -1632,7 +2035,7 @@ const EventRegister = () => {
                           <select 
                             value={section}
                             onChange={(e) => setSection(e.target.value)}
-                            disabled={(!isProxyRegistration && isGeneralMember) || (isProxyRegistration && (!proxyVerified || !proxySectionEditable))}
+                            disabled={(!isProxyRegistration && isGeneralMember && !!section) || (isProxyRegistration && (!proxyVerified || !proxySectionEditable))}
                             className="w-full pl-14 pr-12 py-4.5 bg-white/5 border border-white/10 rounded-2xl focus:outline-none focus:border-amber-500/50 focus:ring-4 focus:ring-amber-500/10 transition-all text-sm font-bold text-white placeholder:text-zinc-600 disabled:opacity-60 appearance-none cursor-pointer"
                           >
                             {!className ? (
@@ -1662,7 +2065,7 @@ const EventRegister = () => {
                             placeholder="CLASS ROLL (E.G. 42)"
                             value={roll}
                             onChange={(e) => setRoll(e.target.value)}
-                            disabled={(!isProxyRegistration && isGeneralMember) || (isProxyRegistration && (!proxyVerified || !proxyRollEditable))}
+                            disabled={(!isProxyRegistration && isGeneralMember && !!roll) || (isProxyRegistration && (!proxyVerified || !proxyRollEditable))}
                             className="w-full pl-14 pr-6 py-4.5 bg-white/5 border border-white/10 rounded-2xl focus:outline-none focus:border-amber-500/50 focus:ring-4 focus:ring-amber-500/10 transition-all text-sm font-bold text-white placeholder:text-zinc-600 disabled:opacity-60"
                           />
                         </div>
@@ -1679,8 +2082,25 @@ const EventRegister = () => {
                               placeholder="CONTACT PHONE NUMBER (E.G. 017XXXXXXXX)"
                               value={phone}
                               onChange={(e) => setPhone(e.target.value)}
-                              disabled={isGeneralMember}
+                              disabled={isGeneralMember && !!phone}
                               className="w-full pl-14 pr-6 py-4.5 bg-white/5 border border-white/10 rounded-2xl focus:outline-none focus:border-amber-500/50 focus:ring-4 focus:ring-amber-500/10 transition-all text-sm font-bold text-white placeholder:text-zinc-600 disabled:opacity-60"
+                            />
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Guest Email Address */}
+                      {!user && (
+                        <div className="space-y-3">
+                          <label className="text-[10px] font-black uppercase tracking-wider text-zinc-500">Email Address (for auto account generation)</label>
+                          <div className="relative group">
+                            <Mail className="absolute left-6 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500 group-focus-within:text-amber-500 transition-colors pointer-events-none" />
+                            <input 
+                              type="email"
+                              placeholder="YOUR EMAIL ADDRESS (E.G. STUDENT@EXAMPLE.COM)"
+                              value={guestEmail}
+                              onChange={(e) => setGuestEmail(e.target.value)}
+                              className="w-full pl-14 pr-6 py-4.5 bg-white/5 border border-white/10 rounded-2xl focus:outline-none focus:border-amber-500/50 focus:ring-4 focus:ring-amber-500/10 transition-all text-sm font-bold text-white placeholder:text-zinc-600"
                             />
                           </div>
                         </div>
@@ -1696,7 +2116,9 @@ const EventRegister = () => {
                         Proceed to Events <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                       </button>
                     </div>
-                  </motion.div>
+                  </>
+                )}
+              </motion.div>
                 )}
 
                 {/* STEP 2: EVENT PARTICIPATION */}
@@ -1934,7 +2356,7 @@ const EventRegister = () => {
                                       <User className="w-4 h-4" /> Team Members Profiles
                                     </h3>
                                     <p className="text-[10px] text-zinc-500 mt-1 uppercase font-bold">
-                                      Member 1 (Leader): {fullName} ({user?.email}) - Filled automatically
+                                      Member 1 (Leader): {fullName} ({cleanDisplayEmail(user?.email)}) - Filled automatically
                                     </p>
                                   </div>
 
@@ -1973,13 +2395,13 @@ const EventRegister = () => {
 
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                       <div className="space-y-1">
-                                        <label className="text-[10px] font-black uppercase tracking-wider text-zinc-500">Teammate Email Address</label>
+                                        <label className="text-[10px] font-black uppercase tracking-wider text-zinc-500">Teammate Email, Phone, or Full Name</label>
                                         <div className="flex gap-2">
                                           <div className="relative flex-1">
                                             <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-600" />
                                             <input
-                                              type="email"
-                                              placeholder="teammate2@example.com"
+                                              type="text"
+                                              placeholder="teammate's email, phone, or Full Name"
                                               disabled={!!member2Profile}
                                               value={teamMember2Email}
                                               onChange={(e) => setTeamMember2Email(e.target.value)}
@@ -2008,11 +2430,11 @@ const EventRegister = () => {
                                           <input
                                             type="text"
                                             placeholder={member2Profile ? "Member Name" : "Verify Email First"}
-                                            disabled={!member2Profile || member2Profile.isGeneralMember}
+                                            disabled={!member2Profile || (member2Profile.isGeneralMember && !!teamMember2Name)}
                                             value={teamMember2Name}
                                             onChange={(e) => setTeamMember2Name(e.target.value)}
                                             className={`w-full bg-black/40 border border-white/5 rounded-xl py-3 pl-11 pr-4 text-xs font-bold transition-all focus:outline-none focus:border-indigo-500 ${
-                                              (!member2Profile || member2Profile.isGeneralMember)
+                                              (!member2Profile || (member2Profile.isGeneralMember && !!teamMember2Name))
                                                 ? 'text-zinc-500 cursor-not-allowed opacity-60' 
                                                 : 'text-white border-white/15'
                                             }`}
@@ -2024,14 +2446,14 @@ const EventRegister = () => {
                                         <div className="space-y-1">
                                           <label className="text-[10px] font-black uppercase tracking-wider text-zinc-500">Class</label>
                                           <select
-                                            disabled={!member2Profile || member2Profile.isGeneralMember}
+                                            disabled={!member2Profile || (member2Profile.isGeneralMember && !!teamMember2Class)}
                                             value={teamMember2Class}
                                             onChange={(e) => {
                                               setTeamMember2Class(e.target.value);
                                               setTeamMember2Section('');
                                             }}
                                             className={`w-full bg-black/40 border border-white/5 rounded-xl py-3 px-4 text-xs font-bold transition-all focus:outline-none focus:border-indigo-500 appearance-none cursor-pointer ${
-                                              (!member2Profile || member2Profile.isGeneralMember)
+                                              (!member2Profile || (member2Profile.isGeneralMember && !!teamMember2Class))
                                                 ? 'text-zinc-500 cursor-not-allowed opacity-60' 
                                                 : 'text-white border-white/15'
                                             }`}
@@ -2045,11 +2467,11 @@ const EventRegister = () => {
                                         <div className="space-y-1">
                                           <label className="text-[10px] font-black uppercase tracking-wider text-zinc-500">Section</label>
                                           <select
-                                            disabled={!member2Profile || member2Profile.isGeneralMember}
+                                            disabled={!member2Profile || (member2Profile.isGeneralMember && !!teamMember2Section)}
                                             value={teamMember2Section}
                                             onChange={(e) => setTeamMember2Section(e.target.value)}
                                             className={`w-full bg-black/40 border border-white/5 rounded-xl py-3 px-4 text-xs font-bold transition-all focus:outline-none focus:border-indigo-500 appearance-none cursor-pointer ${
-                                              (!member2Profile || member2Profile.isGeneralMember)
+                                              (!member2Profile || (member2Profile.isGeneralMember && !!teamMember2Section))
                                                 ? 'text-zinc-500 cursor-not-allowed opacity-60' 
                                                 : 'text-white border-white/15'
                                             }`}
@@ -2075,11 +2497,11 @@ const EventRegister = () => {
                                           <input
                                             type="text"
                                             placeholder="Roll"
-                                            disabled={!member2Profile || member2Profile.isGeneralMember}
+                                            disabled={!member2Profile || (member2Profile.isGeneralMember && !!teamMember2Roll)}
                                             value={teamMember2Roll}
                                             onChange={(e) => setTeamMember2Roll(e.target.value)}
                                             className={`w-full bg-black/40 border border-white/5 rounded-xl py-3 px-4 text-xs font-bold transition-all focus:outline-none focus:border-indigo-500 ${
-                                              (!member2Profile || member2Profile.isGeneralMember)
+                                              (!member2Profile || (member2Profile.isGeneralMember && !!teamMember2Roll))
                                                 ? 'text-zinc-500 cursor-not-allowed opacity-60' 
                                                 : 'text-white border-white/15'
                                             }`}
@@ -2125,13 +2547,13 @@ const EventRegister = () => {
 
                                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         <div className="space-y-1">
-                                          <label className="text-[10px] font-black uppercase tracking-wider text-zinc-500">Teammate Email Address</label>
+                                          <label className="text-[10px] font-black uppercase tracking-wider text-zinc-500">Teammate Email, Phone, or Full Name</label>
                                           <div className="flex gap-2">
                                             <div className="relative flex-1">
                                               <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-600" />
                                               <input
-                                                type="email"
-                                                placeholder="teammate3@example.com"
+                                                type="text"
+                                                placeholder="teammate's email, phone, or Full Name"
                                                 disabled={!!member3Profile}
                                                 value={teamMember3Email}
                                                 onChange={(e) => setTeamMember3Email(e.target.value)}
@@ -2160,11 +2582,11 @@ const EventRegister = () => {
                                             <input
                                               type="text"
                                               placeholder={member3Profile ? "Member Name" : "Verify Email First"}
-                                              disabled={!member3Profile || member3Profile.isGeneralMember}
+                                              disabled={!member3Profile || (member3Profile.isGeneralMember && !!teamMember3Name)}
                                               value={teamMember3Name}
                                               onChange={(e) => setTeamMember3Name(e.target.value)}
                                               className={`w-full bg-black/40 border border-white/5 rounded-xl py-3 pl-11 pr-4 text-xs font-bold transition-all focus:outline-none focus:border-indigo-500 ${
-                                                (!member3Profile || member3Profile.isGeneralMember)
+                                                (!member3Profile || (member3Profile.isGeneralMember && !!teamMember3Name))
                                                   ? 'text-zinc-500 cursor-not-allowed opacity-60' 
                                                   : 'text-white border-white/15'
                                               }`}
@@ -2176,7 +2598,7 @@ const EventRegister = () => {
                                           <div className="space-y-1">
                                             <label className="text-[10px] font-black uppercase tracking-wider text-zinc-500">Class</label>
                                             <select
-                                              disabled={!member3Profile || member3Profile.isGeneralMember}
+                                              disabled={!member3Profile || (member3Profile.isGeneralMember && !!teamMember3Class)}
                                               value={teamMember3Class}
                                               onChange={(e) => {
                                                 setTeamMember3Class(e.target.value);
@@ -2197,7 +2619,7 @@ const EventRegister = () => {
                                           <div className="space-y-1">
                                             <label className="text-[10px] font-black uppercase tracking-wider text-zinc-500">Section</label>
                                             <select
-                                              disabled={!member3Profile || member3Profile.isGeneralMember}
+                                              disabled={!member3Profile || (member3Profile.isGeneralMember && !!teamMember3Section)}
                                               value={teamMember3Section}
                                               onChange={(e) => setTeamMember3Section(e.target.value)}
                                               className={`w-full bg-black/40 border border-white/5 rounded-xl py-3 px-4 text-xs font-bold transition-all focus:outline-none focus:border-indigo-500 appearance-none cursor-pointer ${
@@ -2227,7 +2649,7 @@ const EventRegister = () => {
                                             <input
                                               type="text"
                                               placeholder="Roll"
-                                              disabled={!member3Profile || member3Profile.isGeneralMember}
+                                              disabled={!member3Profile || (member3Profile.isGeneralMember && !!teamMember3Roll)}
                                               value={teamMember3Roll}
                                               onChange={(e) => setTeamMember3Roll(e.target.value)}
                                               className={`w-full bg-black/40 border border-white/5 rounded-xl py-3 px-4 text-xs font-bold transition-all focus:outline-none focus:border-indigo-500 ${

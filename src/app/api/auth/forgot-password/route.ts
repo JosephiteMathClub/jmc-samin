@@ -43,12 +43,63 @@ export async function POST(req: Request) {
     const cleanOrigin = targetOrigin.replace(/\/$/, '');
     const redirectUrl = `${cleanOrigin}/reset-password`;
 
-    console.log(`[Forgot Password] Generating recovery link for ${email} with redirect: ${redirectUrl}`);
+    const cleanEmail = email.trim().toLowerCase();
+    const isPhoneInput = !cleanEmail.includes('@') && /^[0-9+\s\-()]+$/.test(cleanEmail);
+    const isEmailInput = cleanEmail.includes('@');
+
+    let resolvedEmail = cleanEmail;
+    let recipientEmail = cleanEmail;
+
+    if (isPhoneInput) {
+      resolvedEmail = `${cleanEmail}@josephitre.club`;
+      recipientEmail = cleanEmail;
+    } else if (!isEmailInput) {
+      // It's a Name! Assign the unique id to the provided name
+      const slug = cleanEmail.replace(/[^a-z0-9]/g, '_').replace(/__+/g, '_').replace(/^_+|_+$/g, '');
+      resolvedEmail = `${slug}@josephitre.club`;
+      
+      try {
+        const { data: profile } = await supabaseAdmin
+          .from('profiles')
+          .select('email')
+          .eq('full_name', email.trim())
+          .limit(1)
+          .maybeSingle();
+        
+        if (profile?.email) {
+          recipientEmail = profile.email;
+        }
+      } catch (err) {
+        console.error("Error looking up profile for name reset:", err);
+      }
+    } else {
+      // It's a real email address!
+      try {
+        const { data: profiles } = await supabaseAdmin
+          .from('profiles')
+          .select('full_name, email')
+          .eq('email', cleanEmail);
+        
+        if (profiles && profiles.length > 1) {
+          return NextResponse.json({ 
+            error: `Multiple accounts are registered with this email (${profiles.map(p => p.full_name).join(', ')}). Please request password reset using your Full Name instead of email.` 
+          }, { status: 400 });
+        } else if (profiles && profiles.length === 1) {
+          const slug = profiles[0].full_name.trim().toLowerCase().replace(/[^a-z0-9]/g, '_').replace(/__+/g, '_').replace(/^_+|_+$/g, '');
+          resolvedEmail = `${slug}@josephitre.club`;
+          recipientEmail = cleanEmail;
+        }
+      } catch (err) {
+        console.error("Error checking profiles for email reset:", err);
+      }
+    }
+
+    console.log(`[Forgot Password] Generating recovery link for auth email: ${resolvedEmail}, sending to recipient: ${recipientEmail} with redirect: ${redirectUrl}`);
 
     // Generate standard password reset recovery link
     const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
       type: 'recovery',
-      email,
+      email: resolvedEmail,
       options: {
         redirectTo: redirectUrl
       }
@@ -76,11 +127,11 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Could not generate recovery properties.' }, { status: 500 });
     }
 
-    console.log(`[Forgot Password] Directing email delivery via configured SMTP to ${email}...`);
+    console.log(`[Forgot Password] Directing email delivery via configured SMTP to ${recipientEmail}...`);
 
     // Send the custom branded password reset email using the configure SMTP sender
     const emailResult = await sendEmail({
-      to: email,
+      to: recipientEmail,
       subject: 'Reset your Josephite Math Club account password',
       html: `
         <div style="font-family: inherit, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; padding: 40px 20px; color: #f4f4f5; background-color: #09090b; max-width: 600px; margin: 0 auto; border: 1px solid #27272a; border-radius: 24px;">

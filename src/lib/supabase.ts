@@ -21,7 +21,7 @@ export const supabase = createBrowserClient(
   supabaseAnonKey || "placeholder-key",
   {
     global: {
-      fetch: (url, options) => {
+      fetch: (url: any, options: any) => {
         return fetch(url, {
           ...options,
           cache: 'no-store'

@@ -188,6 +188,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, [user, fetchProfile]);
 
+  // Intended redirect-back URL storage initialization
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const redirectUrl = params.get('redirect');
+      if (redirectUrl && redirectUrl.startsWith('/') && !redirectUrl.startsWith('//') && redirectUrl !== '/login') {
+        sessionStorage.setItem('intended_redirect_url', redirectUrl);
+      }
+    }
+  }, []);
+
   useEffect(() => {
     if (!isSupabaseConfigured) {
       setLoading(false);
@@ -225,6 +236,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED' || event === 'INITIAL_SESSION') {
         if (sessionUser) {
           handleAuthChange(sessionUser);
+          
+          // Redirect back mechanism for protected pages
+          if (event === 'SIGNED_IN' && typeof window !== 'undefined') {
+            const params = new URLSearchParams(window.location.search);
+            const redirectUrl = params.get('redirect') || sessionStorage.getItem('intended_redirect_url');
+            if (redirectUrl) {
+              sessionStorage.removeItem('intended_redirect_url');
+              if (redirectUrl.startsWith('/') && !redirectUrl.startsWith('//') && redirectUrl !== '/login') {
+                window.location.href = redirectUrl;
+              }
+            }
+          }
         } else if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
           handleAuthChange(null);
         }

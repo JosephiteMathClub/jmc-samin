@@ -58,8 +58,8 @@ export async function POST(req: Request) {
           getAll() {
             return cookieStore.getAll()
           },
-          setAll(cookiesToSet) {
-            cookiesToSet.forEach(({ name, value, options }) => cookieStore.set(name, value, options))
+          setAll(cookiesToSet: any) {
+            cookiesToSet.forEach(({ name, value, options }: any) => cookieStore.set(name, value, options))
           },
         },
       }
@@ -98,17 +98,20 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Forbidden: Admin access required' }, { status: 403 });
     }
 
-    const trimmedInput = email.trim().toLowerCase();
-    const isPhoneInput = !trimmedInput.includes('@') && /^[0-9+\s\-()]+$/.test(trimmedInput);
-    const finalEmail = isPhoneInput ? `${trimmedInput}@josephite.club` : trimmedInput;
+    const cleanEmail = email.trim().toLowerCase();
+    
+    // Assign the unique id to the provided name not to the provided email address
+    const slug = fullName.trim().toLowerCase().replace(/[^a-z0-9]/g, '_').replace(/__+/g, '_').replace(/^_+|_+$/g, '');
+    const virtualEmail = `${slug}@josephitre.club`;
 
     // 2. Create the new user
     const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
-      email: finalEmail,
+      email: virtualEmail,
       password: password,
       email_confirm: true, // Auto-confirm email
       user_metadata: {
-        full_name: fullName
+        full_name: fullName,
+        real_email: cleanEmail
       }
     });
 
@@ -124,7 +127,7 @@ export async function POST(req: Request) {
         id: newUser.user.id,
         full_name: fullName,
         role: 'member',
-        email: finalEmail
+        email: cleanEmail
       }, { onConflict: 'id' });
 
     if (profileError) {
@@ -143,8 +146,10 @@ export async function POST(req: Request) {
           
           <div style="background-color: #f0f9ff; padding: 15px; border-radius: 6px; margin: 20px 0;">
             <h2 style="font-size: 14px; color: #0369a1; margin-top: 0;">Login Credentials:</h2>
+            <p style="margin: 5px 0;"><strong>Username / Full Name:</strong> ${fullName}</p>
             <p style="margin: 5px 0;"><strong>Email:</strong> ${email}</p>
             <p style="margin: 5px 0;"><strong>Password:</strong> Your provided phone number (${password})</p>
+            <p style="margin: 5px 0; font-size: 12px; color: #666;"><em>Note: You can sign in using either your Full Name (as Username) or your email.</em></p>
           </div>
           
           <p style="font-size: 16px; line-height: 1.5;">You can now sign in to your dashboard to view your profile and participate in upcoming events using your phone number as password.</p>

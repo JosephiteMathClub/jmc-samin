@@ -25,7 +25,7 @@ export async function middleware(request: NextRequest) {
     supabaseAnonKey,
     {
       global: {
-        fetch: (url, options) => {
+        fetch: (url: any, options: any) => {
           return fetch(url, {
             ...options,
             signal: AbortSignal.timeout(2000),
@@ -37,12 +37,12 @@ export async function middleware(request: NextRequest) {
         getAll() {
           return request.cookies.getAll();
         },
-        setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
+        setAll(cookiesToSet: any) {
+          cookiesToSet.forEach(({ name, value }: any) => request.cookies.set(name, value));
           supabaseResponse = NextResponse.next({
             request,
           });
-          cookiesToSet.forEach(({ name, value, options }) => {
+          cookiesToSet.forEach(({ name, value, options }: any) => {
             // Force SameSite=None for AI Studio iframes
             const overridenOptions = {
               ...options,

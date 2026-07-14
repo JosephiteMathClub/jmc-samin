@@ -158,3 +158,23 @@ export function matchesSearchWithFuzzy(
   return isFuzzyMatch(nameValue, q);
 }
 
+/**
+ * Strips the auto-generated email domains (like @josephite.club or @josephitemathclub)
+ * for users who signed up or registered with a phone number.
+ */
+export function cleanDisplayEmail(email: string | null | undefined): string {
+  if (!email) return '';
+  const cleaned = email.trim();
+  if (cleaned.endsWith('@josephite.club')) {
+    return cleaned.replace('@josephite.club', '');
+  }
+  if (cleaned.endsWith('@josephitre.club')) {
+    return cleaned.replace('@josephitre.club', '');
+  }
+  if (cleaned.endsWith('@josephitemathclub')) {
+    return cleaned.replace('@josephitemathclub', '');
+  }
+  return cleaned;
+}
+
+

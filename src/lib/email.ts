@@ -10,7 +10,7 @@ export interface EmailOptions {
 /**
  * Sends an email using Brevo REST API or SMTP Fallback
  */
-export const sendEmail = async (options: EmailOptions) => {
+export const sendEmail = async (options: EmailOptions): Promise<{ success: boolean; messageId?: string; error?: Error }> => {
   const rawFromEmail = process.env.SMTP_FROM_MAIL || process.env.SMTP_FROM_EMAIL || 'mathclub@sjs.edu.bd';
   const fromName = process.env.SMTP_FROM_NAME || 'Josephite Math Club';
 
@@ -83,14 +83,14 @@ export const sendEmail = async (options: EmailOptions) => {
         console.log(`[Email] Successfully sent via Brevo API: ${data.messageId}`);
         return { success: true, messageId: data.messageId };
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Brevo API fetch error:', error);
       const rawSmtpUser = process.env.SMTP_USER;
       const fallbackSmtpAvailable = rawSmtpUser && 
                                     rawSmtpUser.trim() !== '' && 
                                     !rawSmtpUser.includes('your-smtp-user') &&
                                     !rawSmtpUser.startsWith('your-');
-      if (!fallbackSmtpAvailable) return { success: false, error };
+      if (!fallbackSmtpAvailable) return { success: false, error: error instanceof Error ? error : new Error(String(error)) };
     }
   } else {
     console.warn('[Email] BREVO_API_KEY is not set or is using placeholder. Falling back to SMTP. WARNING: SMTP is highly prone to IP authorization issues on dynamic hosts like Netlify.');
@@ -162,7 +162,7 @@ export const sendEmail = async (options: EmailOptions) => {
 /**
  * Sends a transactional SMS using Brevo REST API
  */
-export const sendSMS = async (to: string, content: string) => {
+export const sendSMS = async (to: string, content: string): Promise<{ success: boolean; data?: any; error?: Error }> => {
   const rawApiKey = process.env.BREVO_API_KEY;
   const hasBrevoApiKey = rawApiKey && 
                          rawApiKey.trim() !== '' && 
@@ -217,9 +217,28 @@ export const sendSMS = async (to: string, content: string) => {
       console.log(`[SMS] Successfully sent SMS via Brevo API:`, data);
       return { success: true, data };
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error('Brevo SMS API fetch error:', error);
-    return { success: false, error };
+    return { success: false, error: error instanceof Error ? error : new Error(String(error)) };
   }
 };
+
+/**
+ * Checks if an email address is a real, non-placeholder email.
+ */
+export function isRealEmail(email: string | null | undefined): boolean {
+  if (!email) return false;
+  const clean = email.trim().toLowerCase();
+  return clean.includes('@') && !clean.endsWith('@josephite.club') && !clean.endsWith('@josephitre.club') && !clean.endsWith('@josephitemathclub');
+}
+
+/**
+ * Checks if a user has only a phone number (meaning they have a phone, and no real email).
+ */
+export function hasOnlyPhone(phone: string | null | undefined, email: string | null | undefined): boolean {
+  const hasPhone = !!(phone && phone.trim() !== '');
+  const hasEmail = isRealEmail(email);
+  return hasPhone && !hasEmail;
+}
+
 

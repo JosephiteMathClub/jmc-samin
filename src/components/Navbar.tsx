@@ -8,6 +8,7 @@ import { useContent } from '../context/ContentContext';
 import { Menu, X, User, LogOut, LayoutDashboard, Globe, Cpu, Radio } from 'lucide-react';
 import { motion, AnimatePresence, useScroll, useSpring } from 'framer-motion';
 import { resolveImageUrl } from '../lib/utils';
+import GeometricAvatar from './GeometricAvatar';
 import { usePerformance } from '../hooks/usePerformance';
 
 const MarqueeElement = 'marquee' as any;
@@ -72,7 +73,13 @@ const Navbar = () => {
     };
   }, [isOpen]);
 
-  const navLinks = [
+  interface NavLink {
+    name: string;
+    path: string;
+    newTab?: boolean;
+  }
+
+  const navLinks: NavLink[] = [
     { name: 'Home', path: '/' },
     { name: 'About', path: '/about' },
     { name: 'Articles', path: '/articles' },
@@ -80,7 +87,7 @@ const Navbar = () => {
     { name: 'Notices', path: '/notices' },
     { name: 'Gallery', path: '/gallery' },
     { name: 'Panel', path: '/panel' },
-    { name: 'Challenges', path: '/challenge-problems', newTab: true },
+    { name: 'Online Events', path: '/online-events' },
   ];
 
   const logoUrl = content?.site?.logoUrl;
@@ -213,9 +220,7 @@ const Navbar = () => {
                             referrerPolicy="no-referrer"
                           />
                         ) : (
-                          <div className="w-full h-full flex items-center justify-center text-zinc-500 group-hover/nav-avatar:text-[var(--c-6-start)] transition-colors">
-                            <User className="h-4 w-4" />
-                          </div>
+                          <GeometricAvatar name={profile?.full_name || 'Member'} size="100%" className="!rounded-xl text-[10px]" />
                         )}
                      </div>
                   </Link>

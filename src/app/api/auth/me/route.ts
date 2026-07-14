@@ -36,7 +36,7 @@ export async function GET(req: Request) {
       anonKey,
       {
         global: {
-          fetch: (url, options) => {
+          fetch: (url: any, options: any) => {
             return fetch(url, {
               ...options,
               signal: AbortSignal.timeout(2000),
@@ -48,8 +48,8 @@ export async function GET(req: Request) {
           getAll() {
             return cookieStore.getAll()
           },
-          setAll(cookiesToSet) {
-            cookiesToSet.forEach(({ name, value, options }) => cookieStore.set(name, value, options))
+          setAll(cookiesToSet: any) {
+            cookiesToSet.forEach(({ name, value, options }: any) => cookieStore.set(name, value, options))
           },
         },
       }

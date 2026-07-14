@@ -19,15 +19,17 @@ const ReviewCard = ({
   name,
   role,
   message,
+  shouldReduceGfx,
 }: {
   avatar: string;
   name: string;
   role: string;
   message: string;
+  shouldReduceGfx?: boolean;
 }) => {
   return (
     <figure
-      style={{
+      style={shouldReduceGfx ? {} : {
         transform: "rotateY(-15deg) rotateX(10deg) scale(0.9)",
         transformStyle: "preserve-3d",
       }}
@@ -35,8 +37,9 @@ const ReviewCard = ({
         "relative h-full w-64 cursor-pointer overflow-hidden rounded-xl border p-6 mx-2 transition-all duration-500 md:w-80",
         // dark styles
         "border-white/10 bg-black/40 backdrop-blur-md shadow-lg",
-        "hover:bg-black/60 hover:border-white/30 hover:z-50 hover:shadow-2xl",
-        "hover:![transform:rotateY(0deg)_rotateX(0deg)_scale(1.1)]"
+        shouldReduceGfx 
+          ? "hover:bg-black/60 hover:border-white/30 hover:z-50" 
+          : "hover:bg-black/60 hover:border-white/30 hover:z-50 hover:shadow-2xl hover:![transform:rotateY(0deg)_rotateX(0deg)_scale(1.1)]"
       )}
     >
       <div className="flex flex-row items-center gap-4">
@@ -128,28 +131,28 @@ export const Testimonials: React.FC<TestimonialsProps> = ({ home, duplicatedTest
             <div className="block">
               <Marquee pauseOnHover vertical className="[--duration:30s]">
                 {firstRow.map((review, i) => (
-                  <ReviewCard key={`r1-${i}`} {...review} />
+                  <ReviewCard key={`r1-${i}`} {...review} shouldReduceGfx={shouldReduceGfx} />
                 ))}
               </Marquee>
             </div>
             <div className="hidden sm:block">
               <Marquee reverse pauseOnHover className="[--duration:30s]" vertical>
                 {secondRow.map((review, i) => (
-                  <ReviewCard key={`r2-${i}`} {...review} />
+                  <ReviewCard key={`r2-${i}`} {...review} shouldReduceGfx={shouldReduceGfx} />
                 ))}
               </Marquee>
             </div>
             <div className="hidden md:block">
               <Marquee reverse pauseOnHover className="[--duration:30s]" vertical>
                 {thirdRow.map((review, i) => (
-                  <ReviewCard key={`r3-${i}`} {...review} />
+                  <ReviewCard key={`r3-${i}`} {...review} shouldReduceGfx={shouldReduceGfx} />
                 ))}
               </Marquee>
             </div>
             <div className="hidden lg:block">
               <Marquee pauseOnHover className="[--duration:30s]" vertical>
                 {fourthRow.map((review, i) => (
-                  <ReviewCard key={`r4-${i}`} {...review} />
+                  <ReviewCard key={`r4-${i}`} {...review} shouldReduceGfx={shouldReduceGfx} />
                 ))}
               </Marquee>
             </div>

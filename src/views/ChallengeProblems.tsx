@@ -9,22 +9,26 @@ import { Skeleton } from '../components/Skeleton';
 import { usePerformance } from '../hooks/usePerformance';
 import { MathJaxNode } from '../components/MathJaxNode';
 
-const PageSkeleton = () => (
-  <div className="min-h-screen bg-[#050505] pt-40">
-    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-      <Skeleton className="h-6 w-32 mb-4" />
-      <Skeleton className="h-16 w-3/4 mb-6" />
-      <Skeleton className="h-32 w-full rounded-[2.5rem] mb-8" />
+const PageSkeleton = ({ embedded = false }: { embedded?: boolean }) => (
+  <div className={embedded ? "py-8" : "min-h-screen bg-[#050505] pt-40"}>
+    <div className={embedded ? "max-w-4xl mx-auto" : "max-w-4xl mx-auto px-4 sm:px-6 lg:px-8"}>
+      <Skeleton className="h-6 w-32 mb-4 bg-white/5" />
+      <Skeleton className="h-16 w-3/4 mb-6 bg-white/5" />
+      <Skeleton className="h-32 w-full rounded-[2.5rem] mb-8 bg-white/5" />
       <div className="space-y-4">
         {[1, 2, 3].map((i) => (
-          <Skeleton key={i} className="h-24 rounded-3xl" />
+          <Skeleton key={i} className="h-24 rounded-3xl bg-white/5 animate-pulse" />
         ))}
       </div>
     </div>
   </div>
 );
 
-const ChallengeProblems = () => {
+interface ChallengeProblemsProps {
+  embedded?: boolean;
+}
+
+const ChallengeProblems = ({ embedded = false }: ChallengeProblemsProps) => {
   const { content, loading } = useContent();
   const { user, profile, isAdmin, isSuperAdmin } = useAuth();
   const { shouldReduceGfx } = usePerformance();
@@ -266,77 +270,86 @@ const ChallengeProblems = () => {
       }).length 
     : 0;
 
-  if (loading || loadingChallenges) return <PageSkeleton />;
+  if (loading || loadingChallenges) return <PageSkeleton embedded={embedded} />;
 
   return (
-    <div className="relative min-h-screen bg-[#050505] text-white overflow-hidden pb-32">
+    <div className={embedded ? "w-full" : "relative min-h-screen bg-[#050505] text-white overflow-hidden pb-32"}>
       {/* Background glow ambiance */}
-      {!shouldReduceGfx && (
+      {!embedded && !shouldReduceGfx && (
         <>
           <div className="atmospheric-glow w-[600px] h-[600px] bg-amber-500/5 -top-40 right-0" />
           <div className="atmospheric-glow w-[500px] h-[500px] bg-[var(--c-6-start)]/5 bottom-0 left-0" />
         </>
       )}
 
-      <div className="pt-40 max-w-4xl mx-auto px-6 relative z-10">
+      <div className={embedded ? "w-full mx-auto relative z-10" : "pt-40 max-w-4xl mx-auto px-6 relative z-10"}>
         
         {/* Title Block */}
-        <ScrollReveal>
-          <div className="flex items-center gap-3 mb-6">
-            <Sparkles className="w-5 h-5 text-amber-500" />
-            <span className="text-[10px] uppercase tracking-[0.40em] font-black text-amber-400 font-mono">
-              COMPETE & EXCEL
-            </span>
-          </div>
-          <h1 className="text-5xl md:text-8xl font-display font-black leading-[0.9] tracking-tighter mb-8 uppercase">
-            CHALLENGE<br />
-            <span className="bg-gradient-to-r from-amber-400 via-yellow-200 to-amber-500 bg-clip-text text-transparent bg-clip-text">PROBLEMS</span>
-          </h1>
-          <p className="text-zinc-400 text-lg max-w-2xl leading-relaxed mb-16 font-light">
-            Welcome to the official math challenge room. Put your problem-solving skills to the ultimate test. Solve, type in, and wait for verified results.
-          </p>
-        </ScrollReveal>
+        {!embedded && (
+          <ScrollReveal>
+            <div className="flex items-center gap-3 mb-6">
+              <Sparkles className="w-5 h-5 text-amber-500" />
+              <span className="text-[10px] uppercase tracking-[0.40em] font-black text-amber-400 font-mono">
+                COMPETE & EXCEL
+              </span>
+            </div>
+            <h1 className="text-5xl md:text-8xl font-display font-black leading-[0.9] tracking-tighter mb-8 uppercase">
+              CHALLENGE<br />
+              <span className="bg-gradient-to-r from-amber-400 via-yellow-200 to-amber-500 bg-clip-text text-transparent">PROBLEMS</span>
+            </h1>
+            <p className="text-zinc-400 text-lg max-w-2xl leading-relaxed mb-16 font-light">
+              Welcome to the official math challenge room. Put your problem-solving skills to the ultimate test. Solve, type in, and wait for verified results.
+            </p>
+          </ScrollReveal>
+        )}
 
         {/* Tab Controls */}
-        <div className="flex border-b border-white/5 mb-12 gap-8 font-mono text-xs font-black uppercase tracking-widest relative">
-          <button
-            onClick={() => setActiveTab('portal')}
-            className={`pb-4 transition-all relative ${
-              activeTab === 'portal'
-                ? 'text-amber-400 font-extrabold'
-                : 'text-zinc-500 hover:text-zinc-300'
-            }`}
-          >
-            <span>[ 01 // CHALLENGE PORTAL ]</span>
-            {activeTab === 'portal' && (
-              <motion.div
-                layoutId="challengeTabBorder"
-                className="absolute bottom-0 left-0 right-0 h-[2px] bg-amber-400"
-                transition={{ type: 'spring', stiffness: 380, damping: 30 }}
-              />
-            )}
-          </button>
-          <button
-            onClick={() => setActiveTab('leaderboard')}
-            className={`pb-4 transition-all relative flex items-center gap-2 ${
-              activeTab === 'leaderboard'
-                ? 'text-amber-400 font-extrabold'
-                : 'text-zinc-500 hover:text-zinc-300'
-            }`}
-          >
-            <span>[ 02 // STANDINGS LEADERBOARD ]</span>
-            <span className="relative flex h-1.5 w-1.5">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>
-            </span>
-            {activeTab === 'leaderboard' && (
-              <motion.div
-                layoutId="challengeTabBorder"
-                className="absolute bottom-0 left-0 right-0 h-[2px] bg-amber-400"
-                transition={{ type: 'spring', stiffness: 380, damping: 30 }}
-              />
-            )}
-          </button>
+        <div className="flex justify-center sm:justify-start mb-12">
+          <div className="inline-flex p-1.5 rounded-full bg-zinc-950/60 border border-white/5 backdrop-blur-xl relative z-10 shadow-[0_8px_32px_rgba(0,0,0,0.5)] overflow-hidden">
+            <button
+              onClick={() => setActiveTab('portal')}
+              className={`px-6 py-2.5 rounded-full font-display text-xs font-black uppercase tracking-wider transition-all relative z-10 shrink-0 flex items-center gap-2 cursor-pointer ${
+                activeTab === 'portal'
+                  ? 'text-black'
+                  : 'text-zinc-400 hover:text-white'
+              }`}
+            >
+              {activeTab === 'portal' && (
+                <motion.div
+                  layoutId="challengeTabPill"
+                  className="absolute inset-0 rounded-full bg-gradient-to-r from-amber-400 to-amber-300 shadow-[0_4px_20px_rgba(245,158,11,0.35)]"
+                  style={{ zIndex: -1 }}
+                  transition={{ type: 'spring', stiffness: 380, damping: 30 }}
+                />
+              )}
+              <HelpCircle className={`w-3.5 h-3.5 ${activeTab === 'portal' ? 'text-black' : 'text-zinc-400'}`} />
+              <span>Challenge Portal</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('leaderboard')}
+              className={`px-6 py-2.5 rounded-full font-display text-xs font-black uppercase tracking-wider transition-all relative z-10 shrink-0 flex items-center gap-2 cursor-pointer ${
+                activeTab === 'leaderboard'
+                  ? 'text-black font-black'
+                  : 'text-zinc-400 hover:text-white'
+              }`}
+            >
+              {activeTab === 'leaderboard' && (
+                <motion.div
+                  layoutId="challengeTabPill"
+                  className="absolute inset-0 rounded-full bg-gradient-to-r from-amber-400 to-amber-300 shadow-[0_4px_20px_rgba(245,158,11,0.35)]"
+                  style={{ zIndex: -1 }}
+                  transition={{ type: 'spring', stiffness: 380, damping: 30 }}
+                />
+              )}
+              <Trophy className={`w-3.5 h-3.5 ${activeTab === 'leaderboard' ? 'text-black' : 'text-zinc-400'}`} />
+              <span>Standings Leaderboard</span>
+              <span className="relative flex h-1.5 w-1.5">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>
+              </span>
+            </button>
+          </div>
         </div>
 
         {/* Outer State Controller */}

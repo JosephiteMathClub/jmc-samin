@@ -1,6 +1,8 @@
 {
   "name": "Josephite Math Club",
-  "description": "The official portal for the Josephite Math Club",
-  "requestFramePermissions": ["camera"],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+  "description": "The official website of the Josephite Math Club, with members and event registration, dashboards, profile tracking, and math challenge problems.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
 }

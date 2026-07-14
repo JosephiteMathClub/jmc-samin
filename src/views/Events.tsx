@@ -9,9 +9,10 @@ import { Skeleton } from '../components/Skeleton';
 import { ExpandableEventCards } from '../components/ExpandableEventCards';
 import { resolveImageUrl } from '../lib/utils';
 import { useAuth } from '../context/AuthContext';
+import { useRouter } from 'next/navigation';
 import { supabase } from '../lib/supabase';
 import dynamic from 'next/dynamic';
-import { QrCode, Printer, AlertCircle, Sparkle, Tag, FileText } from 'lucide-react';
+import { QrCode, Printer, AlertCircle, Sparkle, Tag, FileText, Lock, Brain, Compass, Timer, Eye, Grid, Layers, Award, Activity, Home, Share2, Smile, Edit, Construction, Layout, Coins } from 'lucide-react';
 
 const QRCode = dynamic(() => import('../components/QRCode'), { ssr: false });
 
@@ -41,6 +42,7 @@ const EventsSkeleton = () => (
 );
 
 const Events = () => {
+  const router = useRouter();
   const { content, loading } = useContent();
   const eventsContent = content?.events || {};
   const events = React.useMemo(() => eventsContent.events || [], [eventsContent.events]);
@@ -49,7 +51,12 @@ const Events = () => {
   const { shouldReduceGfx } = usePerformance();
 
   // Route control State
-  const [isIntraView, setIsIntraView] = useState(false);
+  const [currentTab, setCurrentTab] = useState<'hub' | 'intra' | 'inter'>('hub');
+  const isIntraView = currentTab === 'intra';
+
+  const [isIntraEnabled, setIsIntraEnabled] = useState<boolean>(true);
+  const [isInterEnabled, setIsInterEnabled] = useState<boolean>(true);
+  const [loadingSettings, setLoadingSettings] = useState<boolean>(true);
 
   const { user, isAdmin, isSuperAdmin } = useAuth();
   const [registrations, setRegistrations] = useState<any[]>([]);
@@ -66,12 +73,94 @@ const Events = () => {
   const [searching, setSearching] = useState(false);
   const [searchError, setSearchError] = useState('');
 
+  // Inter pre-reg form states
+  const [preRegName, setPreRegName] = useState('');
+  const [preRegEmail, setPreRegEmail] = useState('');
+  const [preRegInst, setPreRegInst] = useState('');
+  const [preRegSubmitted, setPreRegSubmitted] = useState(false);
+  const [preRegLoading, setPreRegLoading] = useState(false);
+
   useEffect(() => {
+    async function loadPortalSettings() {
+      try {
+        if (supabase) {
+          const { data, error } = await supabase
+            .from('system_settings')
+            .select('key, value');
+          if (!error && data) {
+            const intra = data.find(item => item.key === 'visit_intra_enabled');
+            const inter = data.find(item => item.key === 'visit_inter_enabled');
+            if (intra) setIsIntraEnabled(intra.value === true);
+            if (inter) setIsInterEnabled(inter.value === true);
+          }
+        }
+      } catch (err) {
+        console.error('Failed to load portal visit settings:', err);
+      } finally {
+        setLoadingSettings(false);
+      }
+    }
+    loadPortalSettings();
+
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
-      setIsIntraView(params.get('view') === 'intra');
+      const view = params.get('view');
+      if (view === 'intra') {
+        setCurrentTab('intra');
+      } else if (view === 'inter') {
+        setCurrentTab('inter');
+      } else {
+        setCurrentTab('hub');
+      }
     }
   }, []);
+
+  const handleToggleView = (view: 'hub' | 'intra' | 'inter') => {
+    setCurrentTab(view);
+    if (typeof window !== 'undefined') {
+      const url = view === 'hub' ? '/events' : `/events?view=${view}`;
+      window.history.pushState({}, '', url);
+    }
+  };
+
+  const handlePreRegSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!preRegName.trim() || !preRegEmail.trim() || !preRegInst.trim()) {
+      alert("Please fill in all fields.");
+      return;
+    }
+    setPreRegLoading(true);
+    try {
+      if (supabase) {
+        const { data: currentContent } = await supabase
+          .from('site_content')
+          .select('data')
+          .eq('id', 'inter_waitlist')
+          .maybeSingle();
+
+        const waitlist = currentContent?.data?.list || [];
+        waitlist.push({
+          name: preRegName.trim(),
+          email: preRegEmail.trim(),
+          institution: preRegInst.trim(),
+          joinedAt: new Date().toISOString()
+        });
+
+        await supabase
+          .from('site_content')
+          .upsert({
+            id: 'inter_waitlist',
+            data: { list: waitlist },
+            updated_at: new Date().toISOString()
+          });
+      }
+      setPreRegSubmitted(true);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setPreRegLoading(false);
+    }
+  };
 
   useEffect(() => {
     const loadUserRegistrations = async () => {
@@ -190,11 +279,11 @@ const Events = () => {
   };
 
   const handleOpenIntraTab = () => {
-    window.open('/events?view=intra', '_blank');
+    handleToggleView('intra');
   };
 
   const handleOpenRegistrationForm = () => {
-    window.open('/events/register', '_blank');
+    router.push('/events/register');
   };
 
   const handlePrintTicket = (reg: any, customId: string | null) => {
@@ -446,50 +535,94 @@ const Events = () => {
           <ScrollReveal>
             <div className="max-w-5xl mb-16">
               <div className="flex items-center gap-4 mb-8">
-                <Sparkles className="w-5 h-5 text-[var(--c-6-start)]" />
-                <span className="text-[10px] uppercase tracking-[0.4em] font-bold text-[var(--c-6-start)]/80">
-                  {isIntraView ? 'INTRA EVENTS LIST' : (eventsContent.subtitle || 'UPCOMING EVENTS')}
+                <Sparkles className="w-5 h-5 text-amber-500" />
+                <span className="text-[10px] uppercase tracking-[0.4em] font-bold text-zinc-500">
+                  {currentTab === 'intra' 
+                    ? 'INTRA EVENTS LIST' 
+                    : currentTab === 'inter' 
+                    ? 'INTER-SCHOOL PORTAL' 
+                    : 'CHOOSE YOUR ARENA'}
                 </span>
               </div>
               <h1 className="text-6xl md:text-[8rem] font-display font-bold leading-[0.85] tracking-tighter mb-8 uppercase">
-                {isIntraView ? (
+                {currentTab === 'intra' ? (
                   <>
                     <span className="block">INTRA</span>
                     <span className="blue-text">FESTIVAL</span>
                   </>
+                ) : currentTab === 'inter' ? (
+                  <>
+                    <span className="block text-indigo-400">INTER</span>
+                    <span className="blue-text">SCHOOL</span>
+                  </>
                 ) : (
-                  eventsContent.title?.split(' ').map((word: string, i: number) => (
-                    <span key={i} className={i === 1 ? 'blue-text' : 'block'}>{word} </span>
-                  )) || (
-                    <>
-                      <span className="block">BEYOND</span>
-                      <span className="blue-text">NUMBERS</span>
-                    </>
-                  )
+                  <>
+                    <span className="block">BEYOND</span>
+                    <span className="blue-text">NUMBERS</span>
+                  </>
                 )}
               </h1>
               <p className="text-lg md:text-2xl text-zinc-400 font-light leading-relaxed max-w-3xl">
-                {isIntraView 
+                {currentTab === 'intra' 
                   ? 'Welcome to the Intra-school Mathematics Competitions Hub. Browse the categories below and open the Registration form to confirm your participation.'
-                  : (eventsContent.description || 'Join us for a series of challenging competitions, insightful workshops, and engaging seminars designed to push your mathematical boundaries.')}
+                  : currentTab === 'inter'
+                  ? 'Welcome to the Inter-school and College Mathematics Portal. Explore our premium upcoming national scale showdowns and training programs.'
+                  : 'Welcome to the JMC Competitions Hub. Visit the exclusive Intra-school Mathematics Festival, or explore our upcoming national-scale Inter-school and College Championship.'}
               </p>
             </div>
           </ScrollReveal>
 
+          {/* Dynamic Switcher Toggle */}
+          <div className="flex flex-wrap items-center justify-between gap-6 mb-16 border-b border-white/5 pb-8 relative z-30">
+            {currentTab !== 'hub' ? (
+              <button
+                onClick={() => handleToggleView('hub')}
+                className="px-6 py-3 bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white rounded-xl text-[10px] font-black uppercase tracking-wider transition-all flex items-center gap-2 cursor-pointer border border-white/10"
+              >
+                <ArrowRight className="w-3.5 h-3.5 rotate-180" /> Back to Hub
+              </button>
+            ) : (
+              <div className="text-[10px] font-bold uppercase tracking-widest text-zinc-600">
+                Switch arena instantly
+              </div>
+            )}
+            
+            <div className="flex flex-wrap items-center gap-2 bg-white/[0.02] border border-white/10 p-1.5 rounded-2xl backdrop-blur-md">
+              <button
+                onClick={() => handleToggleView('intra')}
+                className={`px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 cursor-pointer ${
+                  currentTab === 'intra' 
+                    ? 'bg-amber-500 text-black font-black shadow-lg shadow-amber-400/20' 
+                    : 'text-zinc-500 hover:text-white'
+                }`}
+              >
+                <Zap className="w-3.5 h-3.5" /> Intra Events {!isIntraEnabled && <Lock className="w-3 h-3 text-red-500 shrink-0" />}
+              </button>
+              <button
+                onClick={() => handleToggleView('inter')}
+                className={`px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 cursor-pointer ${
+                  currentTab === 'inter' 
+                    ? 'bg-indigo-600 text-white font-black shadow-lg shadow-indigo-600/20' 
+                    : 'text-zinc-500 hover:text-white'
+                }`}
+              >
+                <Globe className="w-3.5 h-3.5" /> Inter Events {!isInterEnabled && <Lock className="w-3 h-3 text-red-500 shrink-0" />}
+              </button>
+            </div>
+          </div>
+
           <AnimatePresence mode="wait">
-            {!isIntraView ? (
-              <>
-              {/* DUAL CARDS VIEW: INTRA & INTER SELECTION SCENE */}
+            {currentTab === 'hub' && (
               <motion.div 
                 key="subpage-selectors"
                 initial={{ opacity: 0, y: 30 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -30 }}
-                className="grid grid-cols-1 md:grid-cols-2 gap-12 mt-12"
+                className="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-12"
               >
                 {/* CARD 1: INTRA EVENTS */}
                 <motion.div 
-                  onClick={handleOpenIntraTab}
+                  onClick={() => handleToggleView('intra')}
                   whileHover={{ scale: 1.02 }}
                   transition={{ type: 'spring', stiffness: 300, damping: 20 }}
                   className="group relative cursor-pointer overflow-hidden rounded-[2.5rem] bg-gradient-to-br from-white/[0.03] to-white/[0.01] border border-white/10 p-10 flex flex-col justify-between h-[540px] select-none hover:border-amber-500/50 shadow-2xl shadow-indigo-500/5 hover:shadow-amber-500/10 hover:bg-neutral-900/10"
@@ -534,9 +667,10 @@ const Events = () => {
 
                 {/* CARD 2: INTER EVENTS */}
                 <motion.div 
+                  onClick={() => handleToggleView('inter')}
                   whileHover={{ scale: 1.02 }}
                   transition={{ type: 'spring', stiffness: 300, damping: 20 }}
-                  className="group relative overflow-hidden rounded-[2.5rem] bg-gradient-to-br from-white/[0.01] to-transparent border border-white/5 p-10 flex flex-col justify-between h-[540px] select-none hover:border-indigo-500/20 shadow-2xl"
+                  className="group relative cursor-pointer overflow-hidden rounded-[2.5rem] bg-gradient-to-br from-white/[0.03] to-white/[0.01] border border-white/10 p-10 flex flex-col justify-between h-[540px] select-none hover:border-indigo-500/50 shadow-2xl shadow-indigo-500/5 hover:shadow-indigo-500/10 hover:bg-neutral-900/10"
                 >
                   {/* Subtle Glow inside Card */}
                   <div className="absolute top-0 right-0 w-[200px] h-[200px] bg-indigo-500/5 rounded-full blur-[80px]" />
@@ -546,50 +680,68 @@ const Events = () => {
                       <div className="p-4 rounded-2xl bg-indigo-500/10 text-indigo-400">
                         <Globe className="w-8 h-8" />
                       </div>
-                      <span className="px-4 py-2 rounded-full border border-indigo-500/10 text-[9px] text-zinc-500 font-bold uppercase tracking-widest">
-                        Coming Soon
+                      <span className="px-4 py-2 rounded-full border border-indigo-500/20 text-[9px] text-indigo-400 font-black uppercase tracking-widest bg-indigo-500/5">
+                        National Portal
                       </span>
                     </div>
 
-                    <h2 className="text-4xl md:text-5xl font-display font-black text-white/50 uppercase tracking-tight mb-4 group-hover:text-white transition-colors">
+                    <h2 className="text-4xl md:text-5xl font-display font-black text-white uppercase tracking-tight mb-4 group-hover:text-indigo-400 transition-colors">
                       Inter Events
                     </h2>
                     
-                    <p className="text-sm text-zinc-600 font-medium leading-relaxed max-w-sm">
+                    <p className="text-sm text-zinc-400 font-medium leading-relaxed max-w-sm">
                       National scale math festivals, training camps, and inter-school/college mega math carnivals uniting logic masters across Bangladesh.
                     </p>
 
-                    <ul className="mt-8 space-y-3 text-xs text-zinc-700 font-bold uppercase tracking-wider">
-                      <li className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-zinc-800" /> Nationwide St Joseph Carnivals</li>
-                      <li className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-zinc-800" /> Elite Inter-College Face-offs</li>
-                      <li className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-zinc-800" /> Renowned Guest Lectures & Exhibitions</li>
+                    <ul className="mt-8 space-y-3 text-xs text-zinc-500 font-bold uppercase tracking-wider">
+                      <li className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-indigo-500" /> Nationwide St Joseph Carnivals</li>
+                      <li className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-indigo-500" /> Elite Inter-College Face-offs</li>
+                      <li className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-indigo-500" /> Renowned Guest Lectures & Exhibitions</li>
                     </ul>
                   </div>
 
                   <div className="mt-12 flex items-center justify-between border-t border-white/5 pt-8">
-                    <span className="text-[10px] font-black uppercase tracking-widest text-zinc-700">
-                      National Portal In Development
+                    <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500 group-hover:text-white transition-colors flex items-center gap-2">
+                      Explore Portal <ExternalLink className="w-4 h-4 text-indigo-500" />
                     </span>
-                    <button className="p-4 rounded-full bg-white/5 text-zinc-700 flex items-center justify-center cursor-not-allowed border border-white/5">
-                      <Clock className="w-5 h-5" />
+                    <button className="p-4 rounded-full bg-indigo-600 text-white hover:bg-indigo-500 transition-all flex items-center justify-center">
+                      <ArrowRight className="w-5 h-5 group-hover:translate-x-1.5 transition-transform" />
                     </button>
                   </div>
                 </motion.div>
               </motion.div>
-              </>
-            ) : (
+            )}
+
+            {currentTab === 'intra' && !isIntraEnabled && !isAdmin && !isSuperAdmin ? (
+              <motion.div
+                key="intra-disabled-view"
+                initial={{ opacity: 0, scale: 0.98 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.98 }}
+                className="text-center py-32 px-6 rounded-[2.5rem] bg-white/[0.02] border border-dashed border-white/10 max-w-2xl mx-auto"
+              >
+                <div className="w-20 h-20 bg-red-500/10 border border-red-500/20 text-red-500 rounded-full flex items-center justify-center mx-auto mb-8 animate-pulse">
+                  <Lock className="w-10 h-10" />
+                </div>
+                <h3 className="text-3xl font-display font-black text-white uppercase tracking-tight mb-4">Intra Events Portal Offline</h3>
+                <p className="text-zinc-500 text-sm max-w-md mx-auto leading-relaxed uppercase tracking-wider font-semibold">
+                  This portal has been set offline by the administration. Please check back later or contact the St. Joseph Math Club coordinators for announcements.
+                </p>
+              </motion.div>
+            ) : currentTab === 'intra' && (
               /* THE INTRA-EVENTS SECTION LISTING */
               <motion.div 
                 key="intra-festival-view"
                 initial={{ opacity: 0, scale: 0.98 }}
                 animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.98 }}
                 className="space-y-12"
               >
                 {/* NEW REGISTRATION FORM BANNER */}
                 <motion.div 
                   initial={{ opacity: 0, y: 15 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="p-8 md:p-10 rounded-[2.5rem] bg-gradient-to-r from-[#171302]/70 via-[#3a2007]/40 to-[#020202]/90 border border-amber-500/20 shadow-2xl relative overflow-hidden flex flex-col md:flex-row items-center justify-between gap-8 mb-16 mb-24"
+                  className="p-8 md:p-10 rounded-[2.5rem] bg-gradient-to-r from-[#171302]/70 via-[#3a2007]/40 to-[#020202]/90 border border-amber-500/20 shadow-2xl relative overflow-hidden flex flex-col md:flex-row items-center justify-between gap-8 mb-16"
                 >
                   <div className="absolute top-0 right-0 w-[150px] h-[150px] bg-amber-500/5 rounded-full blur-[50px] pointer-events-none" />
                   
@@ -669,6 +821,122 @@ const Events = () => {
                       <p className="text-zinc-700 uppercase tracking-widest text-xs font-bold">Try adjusting your filters or search terms.</p>
                     </motion.div>
                   )}
+                </div>
+              </motion.div>
+            )}
+
+            {currentTab === 'inter' && !isInterEnabled && !isAdmin && !isSuperAdmin ? (
+              <motion.div
+                key="inter-disabled-view"
+                initial={{ opacity: 0, scale: 0.98 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.98 }}
+                className="text-center py-32 px-6 rounded-[2.5rem] bg-white/[0.02] border border-dashed border-white/10 max-w-2xl mx-auto"
+              >
+                <div className="w-20 h-20 bg-red-500/10 border border-red-500/20 text-red-500 rounded-full flex items-center justify-center mx-auto mb-8 animate-pulse">
+                  <Lock className="w-10 h-10" />
+                </div>
+                <h3 className="text-3xl font-display font-black text-white uppercase tracking-tight mb-4">Inter-School Portal Offline</h3>
+                <p className="text-zinc-500 text-sm max-w-md mx-auto leading-relaxed uppercase tracking-wider font-semibold">
+                  This portal has been set offline by the administration. Please check back later or contact the St. Joseph Math Club coordinators for announcements.
+                </p>
+              </motion.div>
+            ) : currentTab === 'inter' && (
+              /* THE INTER-EVENTS SECTION LISTING */
+              <motion.div 
+                key="inter-festival-view"
+                initial={{ opacity: 0, scale: 0.98 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.98 }}
+                className="space-y-16"
+              >
+                {/* STUNNING INTER BANNER */}
+                <motion.div 
+                  initial={{ opacity: 0, y: 15 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="p-8 md:p-10 rounded-[2.5rem] bg-gradient-to-r from-indigo-950/40 via-purple-900/10 to-black/90 border border-indigo-500/20 shadow-2xl relative overflow-hidden flex flex-col md:flex-row items-center justify-between gap-8 mb-16"
+                >
+                  <div className="absolute top-0 right-0 w-[150px] h-[150px] bg-indigo-500/5 rounded-full blur-[50px] pointer-events-none" />
+                  
+                  <div className="space-y-2 text-center md:text-left flex-1 min-w-0">
+                    <span className="px-3 py-1 rounded bg-indigo-500/10 text-indigo-400 text-[9px] font-black uppercase tracking-widest border border-indigo-500/20">
+                      National Scale
+                    </span>
+                    <h2 className="text-2xl md:text-3xl font-black text-white uppercase tracking-tight pt-2">
+                      National Inter-School Mathematics Championship
+                    </h2>
+                    <p className="text-xs text-zinc-400 font-medium max-w-xl leading-relaxed">
+                      External students from any school/college across Bangladesh can priority pre-register to reserve their ticket priority for team/solo tracks.
+                    </p>
+                  </div>
+
+                  <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto md:flex-shrink-0">
+                    <button
+                      onClick={() => {
+                        router.push('/events/register?type=inter');
+                      }}
+                      className="w-full md:w-auto py-5 px-8 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white font-black text-xs uppercase tracking-[0.2em] transition-all shadow-[0_0_30px_rgba(99,102,241,0.25)] flex items-center justify-center gap-2 group flex-shrink-0 cursor-pointer"
+                    >
+                      Register Now <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                    </button>
+                  </div>
+                </motion.div>
+
+                {/* INTER-SCHOOL TRACKS */}
+                <div>
+                  <h3 className="text-xl font-black text-white uppercase tracking-wider mb-8 flex items-center gap-3">
+                    <Trophy className="w-5 h-5 text-indigo-400" /> 22 Championship Segments
+                  </h3>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                    {[
+                      { name: "Math Olympiad (Find-based)", tagline: "Solve numeric mysteries and discover deep hidden structural patterns.", category: "Solo track", icon: Trophy, bg: "from-amber-500/10 to-yellow-500/10 text-amber-400 border-amber-500/20" },
+                      { name: "Math Olympiad (Proof-based)", tagline: "Draft elegant formal proofs and logically sound explanations.", category: "Solo track", icon: FileText, bg: "from-blue-500/10 to-cyan-500/10 text-blue-400 border-blue-500/20" },
+                      { name: "IQ Test", tagline: "Race against the clock in analytical speed reasoning.", category: "Solo track", icon: Brain, bg: "from-pink-500/10 to-rose-500/10 text-pink-400 border-pink-500/20" },
+                      { name: "Human Calculator", tagline: "Unleash super-speed mental arithmetic and calculation loops.", category: "Solo track", icon: Zap, bg: "from-green-500/10 to-emerald-500/10 text-green-400 border-green-500/20" },
+                      { name: "Genesis", tagline: "Interactive math design and scientific origin-based discovery.", category: "Solo track", icon: Sparkles, bg: "from-purple-500/10 to-violet-500/10 text-purple-400 border-purple-500/20" },
+                      { name: "Geometry Dash", tagline: "Navigate space calculations, angle proofs, and vector mazes.", category: "Solo track", icon: Compass, bg: "from-indigo-500/10 to-blue-500/10 text-indigo-400 border-indigo-500/20" },
+                      { name: "Probability Pressure", tagline: "Calculate rapid-fire odds and stochastic outcomes under stress.", category: "Solo track", icon: Timer, bg: "from-red-500/10 to-orange-500/10 text-red-400 border-red-500/20" },
+                      { name: "Murder Mystery", tagline: "Deduce clues and crack mathematical murder mystery cases.", category: "Team / Solo track", icon: Eye, bg: "from-pink-500/10 to-purple-500/10 text-pink-400 border-pink-500/20" },
+                      { name: "Crack the Code", tagline: "Deconstruct cryptographic ciphers and decode encrypted strings.", category: "Solo track", icon: Lock, bg: "from-teal-500/10 to-emerald-500/10 text-teal-400 border-teal-500/20" },
+                      { name: "Complex Calamity", tagline: "Grapple with complex numbers, imaginary axes, and fractals.", category: "Solo track", icon: HelpCircle, bg: "from-amber-500/10 to-red-500/10 text-amber-400 border-amber-500/20" },
+                      { name: "Sudoku", tagline: "Solve grid placement challenges with extreme speed precision.", category: "Solo track", icon: Grid, bg: "from-blue-500/10 to-indigo-500/10 text-blue-400 border-blue-500/20" },
+                      { name: "Rubik’s Cube Showdown", tagline: "Manipulate cubic modules and solve cubes in record times.", category: "Solo track", icon: Layers, bg: "from-emerald-500/10 to-teal-500/10 text-emerald-400 border-emerald-500/20" },
+                      { name: "5 min Professor", tagline: "Deliver a lightning lecture explaining abstract concepts simply.", category: "Solo track", icon: Award, bg: "from-yellow-500/10 to-orange-500/10 text-yellow-400 border-yellow-500/20" },
+                      { name: "Calculus Bee", tagline: "Solve derivatives and integral equations in real-time playoffs.", category: "Solo track", icon: Activity, bg: "from-red-500/10 to-rose-500/10 text-red-400 border-red-500/20" },
+                      { name: "Escape Room", tagline: "Decrypt physical room locks and spatial logic systems.", category: "Team track", icon: Home, bg: "from-violet-500/10 to-fuchsia-500/10 text-violet-400 border-violet-500/20" },
+                      { name: "Combi Verse", tagline: "Navigate combinatorics, permutations, graph theory networks.", category: "Solo track", icon: Share2, bg: "from-cyan-500/10 to-blue-500/10 text-cyan-400 border-cyan-500/20" },
+                      { name: "Math Memes", tagline: "Design humorous and intellectually witty math memes.", category: "Creative track", icon: Smile, bg: "from-yellow-500/10 to-green-500/10 text-yellow-400 border-yellow-500/20" },
+                      { name: "Math Article", tagline: "Draft a well-researched article on advanced mathematical theories.", category: "Writing track", icon: BookOpen, bg: "from-zinc-500/10 to-slate-500/10 text-zinc-400 border-zinc-500/20" },
+                      { name: "Math Vision", tagline: "Design digital graphic art illustrating geometric formulas.", category: "Creative track", icon: Eye, bg: "from-pink-500/10 to-purple-500/10 text-pink-400 border-pink-500/20" },
+                      { name: "Math Drawing", tagline: "Create pristine hand-drawn sketches of golden ratios and fractals.", category: "Creative track", icon: Edit, bg: "from-purple-500/10 to-indigo-500/10 text-purple-400 border-purple-500/20" },
+                      { name: "Truss", tagline: "Build high-load structurally sound physical bridge trusses.", category: "Team / Solo track", icon: Construction, bg: "from-amber-500/10 to-orange-500/10 text-amber-400 border-amber-500/20" },
+                      { name: "Wall Magazine Display", tagline: "Design physical wall posters mapping historical math breakthroughs.", category: "Exhibition track", icon: Layout, bg: "from-emerald-500/10 to-green-500/10 text-emerald-400 border-emerald-500/20" }
+                    ].map((seg, idx) => {
+                      const SegIcon = seg.icon;
+                      return (
+                        <div 
+                          key={idx}
+                          className="p-8 rounded-3xl bg-zinc-900/30 border border-white/5 hover:border-indigo-500/20 transition-all duration-300 group flex flex-col justify-between h-[230px]"
+                        >
+                          <div>
+                            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center mb-6 bg-gradient-to-br ${seg.bg}`}>
+                              <SegIcon className="w-5 h-5" />
+                            </div>
+                            <h4 className="text-lg font-black text-white uppercase tracking-wide group-hover:text-indigo-400 transition-colors mb-2">
+                              {seg.name}
+                            </h4>
+                            <p className="text-xs text-zinc-500 font-medium leading-relaxed">
+                              {seg.tagline}
+                            </p>
+                          </div>
+                          <span className="inline-block mt-4 text-[9px] font-black uppercase tracking-widest text-zinc-400">
+                            {seg.category}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
               </motion.div>
             )}

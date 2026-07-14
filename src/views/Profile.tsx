@@ -3,6 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
 import { OptimizedImage } from '../components/OptimizedImage';
+import GeometricAvatar from '../components/GeometricAvatar';
 import { 
   User, 
   Mail, 
@@ -42,7 +43,7 @@ import ScrollReveal from '../components/ScrollReveal';
 import confetti from 'canvas-confetti';
 
 import { usePerformance } from '../hooks/usePerformance';
-import { resolveImageUrl } from '../lib/utils';
+import { resolveImageUrl, cleanDisplayEmail } from '../lib/utils';
 import { useMathJax } from '../hooks/useMathJax';
 
 const isValidClassForTable = (className: string, tableName: string): boolean => {
@@ -334,6 +335,37 @@ const Profile = () => {
     }
   };
 
+  const handleRemoveAvatar = async () => {
+    if (!user) return;
+    const confirmRemove = window.confirm("Are you sure you want to remove your profile picture and use a geometric avatar instead?");
+    if (!confirmRemove) return;
+
+    setUploadingAvatar(true);
+    try {
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({ avatar_url: null })
+        .eq('id', user.id);
+
+      if (updateError) throw updateError;
+      
+      await refreshProfile();
+      
+      if (isMember) {
+        await supabase
+          .from('member')
+          .update({ photo_url: null })
+          .eq('id', user.id);
+      }
+      showToast('Profile picture removed. Switched to geometric avatar!', 'success');
+    } catch (err: any) {
+      console.error('Error removing avatar:', err);
+      showToast(err.message || 'Failed to remove profile picture', 'error');
+    } finally {
+      setUploadingAvatar(false);
+    }
+  };
+
   const isActualWin = (positionVal: any): boolean => {
     if (positionVal === null || positionVal === undefined) return false;
     const pos = String(positionVal).trim().toLowerCase();
@@ -458,24 +490,6 @@ const Profile = () => {
       
       if (error) throw error;
       setAchievements(data || []);
-      
-      // Trigger celebration if there are actual wins and we haven't celebrated this mount
-      const wins = (data || []).filter((a: any) => isActualWin(a.position));
-      if (wins.length > 0 && !celebratedRef.current) {
-        celebratedRef.current = true;
-        
-        // Sort wins to find the best position (lowest number/rank priority)
-        const sortedWins = [...wins].sort((a, b) => {
-          const pA = getRankInfo(a.position).priority;
-          const pB = getRankInfo(b.position).priority;
-          return pA - pB;
-        });
-        
-        const bestRank = sortedWins[0].position;
-        
-        // Add slight delay so content is visible
-        setTimeout(() => triggerCelebration(bestRank), 800);
-      }
     } catch (err) {
       console.error("Error fetching achievements:", err);
     } finally {
@@ -483,7 +497,7 @@ const Profile = () => {
     }
   }, [triggerCelebration]);
 
-  const fetchRegisteredEventsList = React.useCallback(async () => {
+  const fetchRegisteredEventsList = React.useCallback(async (resolvedMemberId?: string | null) => {
     if (!user || !isSupabaseConfigured) return;
     setLoadingRegisteredEvents(true);
     try {
@@ -539,6 +553,9 @@ const Profile = () => {
       setRegisteredEventsList(allReg);
       console.log(`[Profile] Total registered events: ${allReg.length}, hasAnyVerifiedEvent: ${hasAnyVerifiedEvent}`);
 
+      const currentMemberId = resolvedMemberId !== undefined ? resolvedMemberId : memberId;
+      const isFiveDigit = currentMemberId && /^\d{5}$/.test(String(currentMemberId).trim());
+
       // CRITICAL FIX: Ensure database member record is synced when events are verified
       if (hasOnlyMathOlympiadReg || hasAnyVerifiedEvent) {
         try {
@@ -550,6 +567,19 @@ const Profile = () => {
         } catch (syncErr) {
           console.warn("Could not auto-verify member row in DB:", syncErr);
         }
+      } else if (allReg.length === 0 && isFiveDigit) {
+        // If they have no registered events, and their member_id is a 5-digit number (inter-school participant),
+        // we must revert their verified status in standard member table to 'no' and update UI state immediately.
+        try {
+          await supabase
+            .from('member')
+            .update({ verified: 'no' })
+            .eq('id', user.id);
+        } catch (syncErr) {
+          console.warn("Could not reset member verification status in DB:", syncErr);
+        }
+        setVerified('no');
+        setIsMember(false);
       }
 
       try {
@@ -569,7 +599,7 @@ const Profile = () => {
     } finally {
       setLoadingRegisteredEvents(false);
     }
-  }, [user]);
+  }, [user, memberId]);
 
   const checkMemberStatus = React.useCallback(async () => {
     if (!user) return;
@@ -582,11 +612,12 @@ const Profile = () => {
         .maybeSingle();
 
       // Fetch from ec_member table
-      const { data: ecData } = await supabase
+      const { data: ecDataRaw } = await supabase
         .from('ec_member')
         .select('id, verified, member_id, class, section, roll')
         .eq('id', user.id)
         .maybeSingle();
+      const ecData = ecDataRaw as any;
       
       const isUserEc = (ecData !== null) || 
                        (memberData?.is_ec === true) || 
@@ -595,6 +626,7 @@ const Profile = () => {
 
       // Store member verification status for use in event list verification
       let memberVerificationStatus = 'no';
+      let finalMId: string | null = null;
 
       if (isUserEc) {
         setIsMember(true);
@@ -613,6 +645,7 @@ const Profile = () => {
         setVerified(resolvedVerified);
 
         const mId = ecData?.member_id || memberData?.member_id || null;
+        finalMId = mId;
         setMemberId(mId);
         setMemberClass(ecData?.class || memberData?.class || '');
         setMemberSection(ecData?.section || memberData?.section || '');
@@ -635,6 +668,7 @@ const Profile = () => {
         setVerified(resolvedVerified);
 
         const mId = memberData.member_id || null;
+        finalMId = mId;
         setMemberId(mId);
         setMemberClass(memberData.class || '');
         setMemberSection(memberData.section || '');
@@ -651,7 +685,7 @@ const Profile = () => {
         setMemberRoll('');
       }
       
-      await fetchRegisteredEventsList();
+      await fetchRegisteredEventsList(finalMId);
     } catch (err) {
       console.error('Error checking member status:', err);
     } finally {
@@ -864,14 +898,30 @@ const Profile = () => {
     });
   }, [achievements, registeredEventsList]);
 
-  const wins = filteredAchievements
-    .filter(a => isActualWin(a.position))
-    .sort((a, b) => {
-      const pA = getRankInfo(a.position).priority;
-      const pB = getRankInfo(b.position).priority;
-      return pA - pB;
-    });
-  const pending = filteredAchievements.filter(a => !isActualWin(a.position));
+  const wins = React.useMemo(() => {
+    return filteredAchievements
+      .filter(a => isActualWin(a.position))
+      .sort((a, b) => {
+        const pA = getRankInfo(a.position).priority;
+        const pB = getRankInfo(b.position).priority;
+        return pA - pB;
+      });
+  }, [filteredAchievements]);
+
+  const pending = React.useMemo(() => {
+    return filteredAchievements.filter(a => !isActualWin(a.position));
+  }, [filteredAchievements]);
+
+  // Trigger celebration once both registeredEventsList and achievements are finished loading
+  useEffect(() => {
+    if (loadingAchievements || loadingRegisteredEvents) return;
+    if (wins.length > 0 && !celebratedRef.current) {
+      celebratedRef.current = true;
+      const bestRank = wins[0].position;
+      const timer = setTimeout(() => triggerCelebration(bestRank), 800);
+      return () => clearTimeout(timer);
+    }
+  }, [loadingAchievements, loadingRegisteredEvents, wins, triggerCelebration]);
 
   const isGeneralMember = React.useMemo(() => {
     // A user is NOT a general member if they have a 5-digit member_id (which is auto-generated for non-general event registrants)
@@ -896,11 +946,11 @@ const Profile = () => {
     const list = [...pending];
     
     // Auto-populate verified registrations if not already in achievements or wins
-    registeredEventsList.forEach(reg => {
+    registeredEventsList.forEach((reg: any) => {
       const v = String(reg.verified || '').toLowerCase().trim();
       if (v === 'yes') {
         const events = (reg.selected_events || '').split(',').map((s: string) => s.trim()).filter(Boolean);
-        events.forEach(evt => {
+        events.forEach((evt: string) => {
           const alreadyInPending = list.some(p => p.event_name?.toLowerCase().trim() === evt.toLowerCase().trim());
           const alreadyInWins = wins.some(w => w.event_name?.toLowerCase().trim() === evt.toLowerCase().trim());
           if (!alreadyInPending && !alreadyInWins) {
@@ -1845,9 +1895,7 @@ const Profile = () => {
                           referrerPolicy="no-referrer" 
                         />
                       ) : (
-                        <div className="w-full h-full flex items-center justify-center bg-zinc-800 text-zinc-600">
-                          <User className="w-16 h-16" />
-                        </div>
+                        <GeometricAvatar name={profile?.full_name || 'Member'} size="100%" />
                       )}
                       
                       {uploadingAvatar && (
@@ -1864,6 +1912,17 @@ const Profile = () => {
                       accept="image/png, image/jpeg, image/webp" 
                       onChange={handleFileChange} 
                     />
+
+                    {profile?.avatar_url && (
+                      <button 
+                        onClick={handleRemoveAvatar}
+                        disabled={uploadingAvatar}
+                        className={`absolute bottom-0 left-0 p-4 sm:p-3 rounded-full bg-red-500/90 hover:bg-red-600 text-white shadow-xl ${!shouldReduceGfx && !uploadingAvatar && 'hover:scale-110 transition-transform'} disabled:opacity-50 z-20`}
+                        title="Remove profile picture & use geometric avatar"
+                      >
+                        <X className="w-5 h-5 sm:w-4 sm:h-4" />
+                      </button>
+                    )}
 
                     <button 
                       onClick={handleAvatarClick}
@@ -1905,7 +1964,7 @@ const Profile = () => {
                   </div>
 
                   <h2 className="text-2xl font-bold text-white mb-2">{fullName || profile?.full_name || 'Josephite'}</h2>
-                  <p className="text-sm text-zinc-500 font-medium mb-6">{user.email}</p>
+                  <p className="text-sm text-zinc-500 font-medium mb-6">{cleanDisplayEmail(user.email)}</p>
                   
                   {isAdmin && (
                     <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[var(--c-6-start)]/10 border border-[var(--c-6-start)]/20 text-[var(--c-6-start)] text-xs font-bold uppercase tracking-widest mb-8">
@@ -2076,7 +2135,7 @@ const Profile = () => {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                           <div className="p-8 rounded-3xl bg-white/5 border border-white/5">
                             <p className="text-xs font-bold uppercase tracking-widest text-zinc-500 mb-2">Email Address</p>
-                            <p className="text-white font-medium">{user.email}</p>
+                            <p className="text-white font-medium">{cleanDisplayEmail(user.email)}</p>
                           </div>
                           <div className="p-8 rounded-3xl bg-white/5 border border-white/5">
                             <p className="text-xs font-bold uppercase tracking-widest text-zinc-500 mb-2">Member Status</p>
@@ -2188,9 +2247,9 @@ const Profile = () => {
                                 <h3 className="text-xl font-bold text-white uppercase tracking-wider">Registered Event Transactions</h3>
                               </div>
                               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                {unverifiedRegistrations.map((reg) => {
+                                {unverifiedRegistrations.map((reg: any) => {
                                   const events = (reg.selected_events || '').split(',').map((s: string) => s.trim()).filter(Boolean);
-                                  return events.map((evt, idx) => (
+                                  return events.map((evt: string, idx: number) => (
                                     <div key={`${reg.tableName}-${reg.id}-${idx}`} className="p-5 rounded-2xl bg-black/40 border border-white/5 flex flex-col justify-between gap-2 relative">
                                       <div>
                                         <p className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500">
@@ -2268,9 +2327,9 @@ const Profile = () => {
                               </div>
                               
                               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-2">
-                                {unverifiedRegistrations.map((reg) => {
+                                {unverifiedRegistrations.map((reg: any) => {
                                   const eventsList = (reg.selected_events || '').split(',').map((s: string) => s.trim()).filter(Boolean);
-                                  return eventsList.map((evt, idx) => {
+                                  return eventsList.map((evt: string, idx: number) => {
                                     const displayId = 'EVT-' + (reg.id?.split('-')[0]?.toUpperCase() || reg.trxnid || 'PENDING');
                                     return (
                                       <div 
@@ -2430,7 +2489,7 @@ const Profile = () => {
                 </div>
 
                 {/* Registration Link */}
-                {!isMember && !checkingMember && content?.registration?.registrationOpen !== false && (
+                {!isMember && !checkingMember && (content?.registration?.registrationOpen !== false || isAdmin) && (
                   <div className="p-8 md:p-12 rounded-[40px] bg-white/[0.03] border border-white/10 backdrop-blur-xl mt-8 relative overflow-hidden group">
                     <div className="absolute top-0 right-0 w-64 h-64 bg-[var(--c-6-start)]/5 rounded-full blur-[80px] -mr-32 -mt-32 group-hover:bg-[var(--c-6-start)]/10 transition-colors duration-700" />
                     

@@ -24,10 +24,14 @@ function getSupabaseAdmin() {
 
 export async function POST(req: Request) {
   try {
-    const { email, password, fullName } = await req.json();
+    const { email, password, fullName, phone } = await req.json();
 
-    if (!email || !password || !fullName) {
-      return NextResponse.json({ error: 'All fields (email, password, full name) are required.' }, { status: 400 });
+    if (!password || !fullName || !phone) {
+      return NextResponse.json({ error: 'Password, given name, and phone number are required.' }, { status: 400 });
+    }
+
+    if (/\s/.test(fullName)) {
+      return NextResponse.json({ error: 'Please type in your name without spaces or just type in your surname' }, { status: 400 });
     }
 
     if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
@@ -37,17 +41,22 @@ export async function POST(req: Request) {
 
     const supabaseAdmin = getSupabaseAdmin();
 
-    const trimmedInput = email.trim().toLowerCase();
-    const isPhoneInput = !trimmedInput.includes('@') && /^[0-9+\s\-()]+$/.test(trimmedInput);
-    const finalEmail = isPhoneInput ? `${trimmedInput}@josephite.club` : trimmedInput;
+    const cleanEmail = email && email.trim() ? email.trim().toLowerCase() : null;
+    const cleanPhone = phone.trim();
+    
+    // Assign the unique id to the provided name not to the provided email address
+    const slug = fullName.trim().toLowerCase().replace(/[^a-z0-9]/g, '_').replace(/__+/g, '_').replace(/^_+|_+$/g, '');
+    const virtualEmail = `${slug}@josephitre.club`;
 
     // Create the user with email_confirm: true, which acts as pre-verified / auto-verified and suppresses signup confirmation links
     const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
-      email: finalEmail,
+      email: virtualEmail,
       password: password,
       email_confirm: true,
       user_metadata: {
-        full_name: fullName
+        full_name: fullName,
+        real_email: cleanEmail,
+        phone: cleanPhone
       }
     });
 
@@ -68,12 +77,50 @@ export async function POST(req: Request) {
         id: newUser.user.id,
         full_name: fullName,
         role: 'member',
-        email: finalEmail
+        email: cleanEmail
       }, { onConflict: 'id' });
 
     if (profileError) {
       console.error('Error creating user profile:', profileError.message);
       // Log profile error but proceed because account was successfully created
+    }
+
+    // Generate a unique 5-digit ID for the member record
+    let resolvedMemberId = '';
+    let isUnique = false;
+    let attempts = 0;
+    while (!isUnique && attempts < 100) {
+      attempts++;
+      const digits = Math.floor(10000 + Math.random() * 90000).toString();
+      const { data: check } = await supabaseAdmin
+        .from('member')
+        .select('id')
+        .eq('member_id', digits)
+        .maybeSingle();
+      if (!check) {
+        resolvedMemberId = digits;
+        isUnique = true;
+      }
+    }
+    if (!resolvedMemberId) {
+      resolvedMemberId = Math.floor(10000 + Math.random() * 90000).toString();
+    }
+
+    // Insert a base record in the member table so login-by-phone and profile settings find it
+    const { error: memberError } = await supabaseAdmin
+      .from('member')
+      .insert({
+        id: newUser.user.id,
+        full_name: fullName,
+        email: virtualEmail,
+        email_address: cleanEmail,
+        phone: cleanPhone,
+        verified: 'no',
+        member_id: resolvedMemberId
+      });
+
+    if (memberError) {
+      console.error('Error creating member table row:', memberError.message);
     }
 
     return NextResponse.json({ success: true, userId: newUser.user.id });

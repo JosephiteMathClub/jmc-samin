@@ -2,7 +2,7 @@ import { createClient } from '@supabase/supabase-js';
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
-import { sendEmail, sendSMS } from '@/lib/email';
+import { sendEmail, sendSMS, isRealEmail, hasOnlyPhone } from '@/lib/email';
 import { SUPER_ADMIN_EMAILS } from '@/lib/constants';
 
 function getSupabaseAdmin() {
@@ -42,8 +42,8 @@ async function isCallerSuperAdmin(): Promise<boolean> {
           getAll() {
             return cookieStore.getAll()
           },
-          setAll(cookiesToSet) {
-            cookiesToSet.forEach(({ name, value, options }) => cookieStore.set(name, value, options))
+          setAll(cookiesToSet: any) {
+            cookiesToSet.forEach(({ name, value, options }: any) => cookieStore.set(name, value, options))
           },
         },
       }
@@ -293,23 +293,91 @@ export async function POST(req: Request) {
         }
       }
 
-      // Send SMS dispatch notification if registered phone exists
-      if (registeredPhone) {
+      const hasRealEmail = isRealEmail(sub.email);
+      let phone = registeredPhone;
+      if (!phone && sub.email && (sub.email.endsWith('@josephitre.club') || sub.email.endsWith('@josephite.club'))) {
+        phone = sub.email.split('@')[0];
+      }
+      const isPhoneOnly = hasOnlyPhone(phone, sub.email);
+
+      // Send SMS dispatch notification if user only has phone number
+      if (isPhoneOnly && phone) {
         const smsMessage = `Hello ${sub.fullName}, your Math Challenge result is published! Score: ${sub.finalScore}/${sub.totalQuestions}. Check details on the Josephite Math Club portal. - Josephite Math Club`;
         try {
-          const smsRes = await sendSMS(registeredPhone, smsMessage);
+          const smsRes = await sendSMS(phone, smsMessage);
           if (smsRes.success) {
-            console.log(`[SMS DISPATCH] Successfully sent challenge result SMS via Brevo to phone: ${registeredPhone}`);
+            console.log(`[SMS DISPATCH] Successfully sent challenge result SMS via Brevo to phone: ${phone}`);
+            
+            // Log sent SMS in email_confirmations_sent
+            try {
+              await supabaseAdmin
+                .from('email_confirmations_sent')
+                .insert([{
+                  recipient_email: phone,
+                  recipient_name: sub.fullName || '',
+                  recipient_class: '',
+                  recipient_section: '',
+                  recipient_roll: '',
+                  subject: `[SMS] Math Challenge Result`,
+                  body_text: smsMessage,
+                  verified_by: 'System / Challenge Publish',
+                  status: 'sent'
+                }]);
+            } catch (logErr) {
+              console.error('[SMS LOG] Failed to log sent challenge SMS to DB:', logErr);
+            }
           } else {
-            console.error(`[SMS DISPATCH] Failed to send challenge result SMS to phone: ${registeredPhone}. Error:`, smsRes.error);
+            const errMsg = smsRes.error?.message || 'Unknown error';
+            console.error(`[SMS DISPATCH] Failed to send challenge result SMS to phone: ${phone}. Error:`, smsRes.error);
+            
+            // Log failed SMS in email_confirmations_sent
+            try {
+              await supabaseAdmin
+                .from('email_confirmations_sent')
+                .insert([{
+                  recipient_email: phone,
+                  recipient_name: sub.fullName || '',
+                  recipient_class: '',
+                  recipient_section: '',
+                  recipient_roll: '',
+                  subject: `[SMS] Math Challenge Result`,
+                  body_text: smsMessage,
+                  verified_by: 'System / Challenge Publish',
+                  status: 'failed',
+                  error_message: errMsg
+                }]);
+            } catch (logErr) {
+              console.error('[SMS LOG] Failed to log failed challenge SMS to DB:', logErr);
+            }
           }
-        } catch (smsErr) {
-          console.error(`[SMS DISPATCH] Exception sending challenge result SMS to phone: ${registeredPhone}. Error:`, smsErr);
+        } catch (smsErr: any) {
+          const errMsg = smsErr.message || smsErr;
+          console.error(`[SMS DISPATCH] Exception sending challenge result SMS to phone: ${phone}. Error:`, smsErr);
+          
+          // Log failed SMS in email_confirmations_sent
+          try {
+            await supabaseAdmin
+              .from('email_confirmations_sent')
+              .insert([{
+                recipient_email: phone,
+                recipient_name: sub.fullName || '',
+                recipient_class: '',
+                recipient_section: '',
+                recipient_roll: '',
+                subject: `[SMS] Math Challenge Result`,
+                body_text: smsMessage,
+                verified_by: 'System / Challenge Publish',
+                status: 'failed',
+                error_message: errMsg
+              }]);
+          } catch (logErr) {
+            console.error('[SMS LOG] Failed to log exception challenge SMS to DB:', logErr);
+          }
         }
       }
 
-      // Send Email if email is provided
-      if (sub.email) {
+      // Send Email if user has a real email address
+      if (hasRealEmail && sub.email) {
         try {
           const subject = `Your Math Challenge Result has been Published!`;
           const htmlContent = `

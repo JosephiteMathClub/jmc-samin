@@ -21,7 +21,10 @@ import {
   HelpCircle,
   Mail,
   BadgeCheck,
-  PieChart
+  PieChart,
+  Ticket,
+  Tag,
+  SlidersHorizontal
 } from 'lucide-react';
 import { useContent } from '../context/ContentContext';
 import { useAuth } from '../context/AuthContext';
@@ -34,9 +37,10 @@ import { DashboardFormField } from '../components/dashboard/DashboardFormField';
 import { DashboardButton } from '../components/dashboard/DashboardButton';
 import { DashboardFileUpload } from '../components/dashboard/DashboardFileUpload';
 import { EventParticipation } from '../components/dashboard/EventParticipation';
-import { SuperAdminPanel } from '../components/dashboard/SuperAdminPanel';
+import { SuperAdminPanel, InterEventRegistrationConfigEditor } from '../components/dashboard/SuperAdminPanel';
 import { SupportManagement } from '../components/dashboard/SupportManagement';
 import { deleteFileFromStorage } from '../lib/storage';
+import { cleanDisplayEmail } from '../lib/utils';
 
 import dynamic from 'next/dynamic';
 
@@ -55,7 +59,9 @@ const ChallengeManagementSection = dynamic(() => import('../components/dashboard
 const DashboardAuditLogsSection = dynamic(() => import('../components/dashboard/sections/DashboardAuditLogsSection').then(mod => mod.DashboardAuditLogsSection), { loading: () => <Skeleton className="h-64 w-full rounded-3xl" /> });
 const EmailConfirmationsSection = dynamic(() => import('../components/dashboard/sections/EmailConfirmationsSection').then(mod => mod.EmailConfirmationsSection), { loading: () => <Skeleton className="h-64 w-full rounded-3xl" /> });
 const EventRegistrationsSection = dynamic(() => import('../components/dashboard/sections/EventRegistrationsSection').then(mod => mod.EventRegistrationsSection), { loading: () => <Skeleton className="h-64 w-full rounded-3xl" /> });
+const CaParticipantsSection = dynamic(() => import('../components/dashboard/sections/CaParticipantsSection').then(mod => mod.CaParticipantsSection), { loading: () => <Skeleton className="h-64 w-full rounded-3xl" /> });
 const StatisticsSection = dynamic(() => import('../components/dashboard/sections/StatisticsSection').then(mod => mod.StatisticsSection), { loading: () => <Skeleton className="h-64 w-full rounded-3xl" /> });
+const TicketPurchaseSection = dynamic(() => import('../components/dashboard/sections/TicketPurchaseSection').then(mod => mod.TicketPurchaseSection), { loading: () => <Skeleton className="h-64 w-full rounded-3xl" /> });
 
 import ConfirmModal from '../components/ConfirmModal';
 import Image from 'next/image';
@@ -438,35 +444,37 @@ const AdminDashboard = () => {
       const getVirtualEmail = (val: string) => {
         const trimmed = (val || '').trim().toLowerCase();
         const isPhoneInput = !trimmed.includes('@') && /^[0-9+\s\-()]+$/.test(trimmed);
-        return isPhoneInput ? `${trimmed}@josephite.club` : trimmed;
+        return isPhoneInput ? `${trimmed}@josephitre.club` : trimmed;
       };
 
       const finalEmail = getVirtualEmail(memberData.email);
 
-      // First, try to find an existing member record by email to reuse their ID
-      if (memberData.email) {
+      // First, try to find an existing member record by email and full name to reuse their ID
+      if (memberData.email && memberData.full_name) {
         try {
           const { data: memByEmail } = await supabase
             .from('member')
             .select('id')
             .eq('email', finalEmail)
-            .maybeSingle();
+            .eq('full_name', memberData.full_name)
+            .limit(1);
           
-          if (memByEmail?.id) {
-            userId = memByEmail.id;
+          if (memByEmail && memByEmail.length > 0) {
+            userId = memByEmail[0].id;
           } else {
             const { data: ecByEmail } = await supabase
               .from('ec_member')
               .select('id')
               .eq('email', finalEmail)
-              .maybeSingle();
+              .eq('full_name', memberData.full_name)
+              .limit(1);
             
-            if (ecByEmail?.id) {
-              userId = ecByEmail.id;
+            if (ecByEmail && ecByEmail.length > 0) {
+              userId = ecByEmail[0].id;
             }
           }
         } catch (e) {
-          console.error("Error looking up existing member by email:", e);
+          console.error("Error looking up existing member by email/name:", e);
         }
       }
 
@@ -517,14 +525,17 @@ const AdminDashboard = () => {
           // Gracefully handle missing email column in profiles
           let userData = null;
           try {
+            const slug = (memberData.full_name || '').trim().toLowerCase().replace(/[^a-z0-9]/g, '_').replace(/__+/g, '_').replace(/^_+|_+$/g, '');
+            const virtualEmail = `${slug}@josephitre.club`;
+
             const { data, error: userError } = await supabase
               .from('profiles')
               .select('id')
-              .eq('email', finalEmail)
-              .maybeSingle();
+              .or(`email.eq.${finalEmail},email.eq.${virtualEmail}`)
+              .limit(1);
             
             if (userError) throw userError;
-            userData = data;
+            userData = data && data.length > 0 ? data[0] : null;
           } catch (e) {
             console.error("Error fetching user from profiles by email:", e);
           }
@@ -901,7 +912,7 @@ const AdminDashboard = () => {
           <div className="p-4 bg-black/40 rounded-2xl text-[10px] font-mono text-zinc-500 text-left space-y-1">
             <div className="flex justify-between">
               <span>User:</span>
-              <span className="text-zinc-300">{user?.email || 'Not Logged In'}</span>
+              <span className="text-zinc-300">{cleanDisplayEmail(user?.email) || 'Not Logged In'}</span>
             </div>
             <div className="flex justify-between">
               <span>Status:</span>
@@ -1075,8 +1086,11 @@ const AdminDashboard = () => {
     { id: 'gallery', label: 'Gallery', icon: LayoutDashboard },
     { id: 'food', label: 'Food Management', icon: Utensils },
     { id: 'challenge', label: 'Challenge Problems', icon: HelpCircle },
+    { id: 'ticket_purchase', label: 'Ticket Purchase', icon: Ticket },
     { id: 'email_confirmations', label: 'Email Logs', icon: Mail },
     { id: 'event_registrations', label: 'Unique Registrants', icon: Users },
+    { id: 'ca_participants', label: 'CA Participants', icon: Tag },
+    { id: 'inter_reg_config', label: 'Inter Config', icon: SlidersHorizontal },
     { id: 'statistics', label: 'Statistics', icon: PieChart },
     ...(isSuperAdmin ? [
       { id: 'home', label: 'Home', icon: LayoutDashboard },
@@ -1262,6 +1276,32 @@ const AdminDashboard = () => {
 
         {activeTab === 'event_registrations' && (
           <EventRegistrationsSection />
+        )}
+
+        {activeTab === 'ca_participants' && (
+          <CaParticipantsSection />
+        )}
+
+        {activeTab === 'inter_reg_config' && (
+          <motion.div
+            key="inter_reg_config"
+            initial={shouldReduceGfx ? { opacity: 0 } : { opacity: 0, x: 20 }}
+            animate={shouldReduceGfx ? { opacity: 1 } : { opacity: 1, x: 0 }}
+            exit={shouldReduceGfx ? { opacity: 0 } : { opacity: 0, x: -20 }}
+            className="space-y-8"
+          >
+            <DashboardSection
+              title="Inter-School Event Registration Parameters Editor"
+              description="Customize payment guidelines, bKash receiver, selective Campus Ambassador (CA) codes, and event segment price points."
+              icon={SlidersHorizontal}
+            >
+              <InterEventRegistrationConfigEditor showToast={showToast} />
+            </DashboardSection>
+          </motion.div>
+        )}
+
+        {activeTab === 'ticket_purchase' && (
+          <TicketPurchaseSection />
         )}
 
         {activeTab === 'statistics' && (

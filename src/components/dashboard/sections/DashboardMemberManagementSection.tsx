@@ -20,6 +20,7 @@ import { DashboardSection } from '../DashboardSection';
 import { DashboardButton } from '../DashboardButton';
 import Image from 'next/image';
 import { resolveImageUrl, matchesSearchWithFuzzy } from '../../../lib/utils';
+import GeometricAvatar from '../../GeometricAvatar';
 import ConfirmModal from '../../ConfirmModal';
 import { BatchMemberUpload } from './BatchMemberUpload';
 import { useToast } from '../../../context/ToastContext';
@@ -732,8 +733,8 @@ const DashboardMemberManagementSectionComponent: React.FC<DashboardMemberManagem
                                   />
                                 </div>
                               ) : (
-                                <div className="w-8 h-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center flex-shrink-0">
-                                  <UserIcon className="w-4 h-4 text-zinc-500" />
+                                <div className="w-8 h-8 rounded-full overflow-hidden border border-white/10 flex items-center justify-center flex-shrink-0">
+                                  <GeometricAvatar name={m.full_name || 'Member'} size="100%" />
                                 </div>
                               )}
                             </div>
@@ -824,8 +825,8 @@ const DashboardMemberManagementSectionComponent: React.FC<DashboardMemberManagem
                             />
                           </div>
                         ) : (
-                          <div className="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center">
-                            <UserIcon className="w-5 h-5 text-zinc-500" />
+                          <div className="w-10 h-10 rounded-full overflow-hidden border border-white/10 flex items-center justify-center">
+                            <GeometricAvatar name={m.full_name || 'Member'} size="100%" />
                           </div>
                         )}
                         <div className="min-w-0">

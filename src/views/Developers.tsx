@@ -5,6 +5,7 @@ import { motion, useScroll, useTransform, useMotionValue, useSpring } from 'fram
 import { GithubIcon, LinkedinIcon } from '@/components/SocialIcons';
 import { Globe, Mail, Code2, Cpu, Palette, Terminal, Sparkles, Zap, Star, Layout, Database } from 'lucide-react';
 import ScrollReveal from '@/components/ScrollReveal';
+import { usePerformance } from '@/hooks/usePerformance';
 
 const developers = [
   {
@@ -79,6 +80,7 @@ interface TiltCardProps {
 }
 
 const TiltCard: React.FC<TiltCardProps> = ({ children, className = "" }) => {
+  const { shouldReduceGfx } = usePerformance();
   const x = useMotionValue(0);
   const y = useMotionValue(0);
 
@@ -88,6 +90,7 @@ const TiltCard: React.FC<TiltCardProps> = ({ children, className = "" }) => {
   const rotateY = useSpring(useTransform(x, [-0.5, 0.5], [-15, 15]), springConfig);
 
   const handleMouseMove = (event: React.MouseEvent<HTMLDivElement>) => {
+    if (shouldReduceGfx) return;
     const el = event.currentTarget;
     const rect = el.getBoundingClientRect();
     const width = rect.width;
@@ -102,6 +105,7 @@ const TiltCard: React.FC<TiltCardProps> = ({ children, className = "" }) => {
   };
 
   const handleMouseLeave = () => {
+    if (shouldReduceGfx) return;
     x.set(0);
     y.set(0);
   };
@@ -110,7 +114,7 @@ const TiltCard: React.FC<TiltCardProps> = ({ children, className = "" }) => {
     <motion.div
       onMouseMove={handleMouseMove}
       onMouseLeave={handleMouseLeave}
-      style={{
+      style={shouldReduceGfx ? {} : {
         rotateX,
         rotateY,
         transformStyle: "preserve-3d",
@@ -123,6 +127,7 @@ const TiltCard: React.FC<TiltCardProps> = ({ children, className = "" }) => {
 };
 
 export default function DevelopersView() {
+  const { shouldReduceGfx } = usePerformance();
   const { scrollYProgress } = useScroll();
   const y = useTransform(scrollYProgress, [0, 1], [0, -200]);
 
@@ -178,10 +183,10 @@ export default function DevelopersView() {
         {developers.map((dev, index) => (
           <div key={index} className={`flex flex-col ${index % 2 === 0 ? 'md:flex-row' : 'md:flex-row-reverse'} gap-12 md:gap-24 items-center`}>
             {/* Image Container */}
-            <div className="w-full md:w-1/2 relative" style={{ perspective: "1000px" }}>
+            <div className="w-full md:w-1/2 relative" style={shouldReduceGfx ? {} : { perspective: "1000px" }}>
               <ScrollReveal direction={index % 2 === 0 ? "left" : "right"} distance={50}>
                 <TiltCard className="relative aspect-[4/5] md:aspect-square group overflow-hidden rounded-[2rem] bg-zinc-900 border border-white/5">
-                  <div className={`absolute inset-0 bg-gradient-to-tr ${dev.color} opacity-0 group-hover:opacity-100 transition-opacity duration-700 z-10`} style={{ transform: "translateZ(10px)" }} />
+                  <div className={`absolute inset-0 bg-gradient-to-tr ${dev.color} opacity-0 group-hover:opacity-100 transition-opacity duration-700 z-10`} style={shouldReduceGfx ? {} : { transform: "translateZ(10px)" }} />
                   <Image 
                     src={dev.image} 
                     alt={dev.name}
@@ -193,7 +198,7 @@ export default function DevelopersView() {
                   {/* Floating Identity with 3D Depth Layer */}
                   <div 
                     className="absolute bottom-0 left-0 w-full p-8 z-20 translate-y-4 group-hover:translate-y-0 opacity-0 group-hover:opacity-100 transition-all duration-500"
-                    style={{ transform: "translateZ(40px)", transformStyle: "preserve-3d" }}
+                    style={shouldReduceGfx ? {} : { transform: "translateZ(40px)", transformStyle: "preserve-3d" }}
                   >
                     <div className="p-6 glass-card backdrop-blur-xl border-white/10 rounded-2xl">
                       <p className="text-[10px] font-black uppercase tracking-[0.2em] text-amber-500 mb-1">Status</p>

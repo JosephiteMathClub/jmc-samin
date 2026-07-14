@@ -1,13 +1,14 @@
 "use client";
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Mail, Lock, User, ArrowRight, Loader2, AlertCircle, Sparkles, Eye, EyeOff } from 'lucide-react';
+import { Mail, Lock, User, ArrowRight, Loader2, AlertCircle, Sparkles, Eye, EyeOff, Phone } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useToast } from '../context/ToastContext';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 
 import { usePerformance } from '../hooks/usePerformance';
+import { cleanDisplayEmail } from '../lib/utils';
 
 const Auth = () => {
   const router = useRouter();
@@ -17,10 +18,12 @@ const Auth = () => {
   const { shouldReduceGfx } = usePerformance();
   
   const [mode, setMode] = useState<'login' | 'signup'>(initialMode);
+  const [signupMethod, setSignupMethod] = useState<'email_phone' | 'phone_only'>('email_phone');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [fullName, setFullName] = useState('');
+  const [phone, setPhone] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showDebug, setShowDebug] = useState(false);
@@ -107,43 +110,222 @@ const Auth = () => {
     }
 
     try {
+      const slugifyName = (name: string): string => {
+        return (name || '')
+          .trim()
+          .toLowerCase()
+          .replace(/[^a-z0-9]/g, '_')
+          .replace(/__+/g, '_')
+          .replace(/^_+|_+$/g, '');
+      };
+
       let finalEmail = email.trim();
-      const isPhoneInput = !finalEmail.includes('@') && /^[0-9+\s\-()]+$/.test(finalEmail);
-      
-      if (isPhoneInput) {
-        // Find their registered email by checking member table or ec_member table or default to virtual email
+      if (mode === 'login') {
+        let resolved = false;
         try {
-          const { data: memberData } = await supabase
-            .from('member')
-            .select('email')
-            .eq('phone', finalEmail)
-            .maybeSingle();
-          if (memberData?.email) {
-            finalEmail = memberData.email;
+          const res = await fetch('/api/auth/resolve-email', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ identifier: email.trim() })
+          });
+          const resData = await res.json();
+          if (res.ok && resData.email) {
+            finalEmail = resData.email;
+            resolved = true;
           } else {
-            const { data: ecData } = await supabase
-              .from('ec_member')
-              .select('email')
-              .eq('phone', finalEmail)
-              .maybeSingle();
-            if (ecData?.email) {
-              finalEmail = ecData.email;
-            } else {
-              // Fallback to virtual email
-              finalEmail = `${finalEmail}@josephite.club`;
+            console.warn("API resolution failed. Reason:", resData?.error || "Unknown error", ". Falling back to client-side database query.");
+          }
+        } catch (err: any) {
+          console.error("Error calling resolve-email API. Falling back to client-side resolution:", err);
+        }
+
+        if (!resolved) {
+          // Robust client-side resolution fallback
+          const isPhoneInput = !finalEmail.includes('@') && /^[0-9+\s\-()]+$/.test(finalEmail);
+          const isEmailInput = finalEmail.includes('@');
+
+          if (isPhoneInput) {
+            try {
+              let matchedName = '';
+              
+              // 1. Check profiles table for matching email/phone column
+              const { data: pData } = await supabase
+                .from('profiles')
+                .select('full_name')
+                .eq('email', finalEmail)
+                .maybeSingle();
+              if (pData?.full_name) {
+                matchedName = pData.full_name;
+              }
+
+              // 2. Check member table for phone
+              if (!matchedName) {
+                const { data: memberData } = await supabase
+                  .from('member')
+                  .select('full_name')
+                  .eq('phone', finalEmail)
+                  .maybeSingle();
+                if (memberData?.full_name) {
+                  matchedName = memberData.full_name;
+                }
+              }
+
+              // 3. Check ec_member table for phone
+              if (!matchedName) {
+                const { data: ecData } = await supabase
+                  .from('ec_member')
+                  .select('full_name')
+                  .eq('phone', finalEmail)
+                  .maybeSingle();
+                if (ecData?.full_name) {
+                  matchedName = ecData.full_name;
+                }
+              }
+
+              if (matchedName) {
+                finalEmail = `${slugifyName(matchedName)}@josephitre.club`;
+              } else {
+                finalEmail = `${finalEmail}@josephitre.club`;
+              }
+            } catch (phoneErr) {
+              console.error('Error resolving phone on client fallback:', phoneErr);
+              finalEmail = `${finalEmail}@josephitre.club`;
+            }
+          } else if (!isEmailInput) {
+            // It's a Name! Let's check if we can find an exact or fuzzy match in profiles/member/ec_member
+            try {
+              let matchedName = '';
+              
+              // Try profiles exact match
+              const { data: pExact } = await supabase
+                .from('profiles')
+                .select('full_name')
+                .ilike('full_name', finalEmail)
+                .maybeSingle();
+              if (pExact?.full_name) {
+                matchedName = pExact.full_name;
+              }
+              
+              // Try profiles contains match
+              if (!matchedName) {
+                const { data: pLike } = await supabase
+                  .from('profiles')
+                  .select('full_name')
+                  .ilike('full_name', `%${finalEmail}%`);
+                if (pLike && pLike.length > 0) {
+                  const exactSlugMatch = pLike.find(p => slugifyName(p.full_name) === slugifyName(finalEmail));
+                  if (exactSlugMatch) {
+                    matchedName = exactSlugMatch.full_name;
+                  } else {
+                    matchedName = pLike[0].full_name;
+                  }
+                }
+              }
+              
+              // Try member contains match
+              if (!matchedName) {
+                const { data: mLike } = await supabase
+                  .from('member')
+                  .select('full_name')
+                  .ilike('full_name', `%${finalEmail}%`);
+                if (mLike && mLike.length > 0) {
+                  matchedName = mLike[0].full_name;
+                }
+              }
+              
+              // Try ec_member contains match
+              if (!matchedName) {
+                const { data: ecLike } = await supabase
+                  .from('ec_member')
+                  .select('full_name')
+                  .ilike('full_name', `%${finalEmail}%`);
+                if (ecLike && ecLike.length > 0) {
+                  matchedName = ecLike[0].full_name;
+                }
+              }
+              
+              if (matchedName) {
+                finalEmail = `${slugifyName(matchedName)}@josephitre.club`;
+              } else {
+                finalEmail = `${slugifyName(finalEmail)}@josephitre.club`;
+              }
+            } catch (nameErr) {
+              console.error('Error resolving name on client fallback:', nameErr);
+              finalEmail = `${slugifyName(finalEmail)}@josephitre.club`;
+            }
+          } else {
+            // It's an email address
+            if (!finalEmail.endsWith('@josephitre.club')) {
+              try {
+                let matchedFullName = '';
+
+                // Try profiles table
+                const { data: profiles, error: pErr } = await supabase
+                  .from('profiles')
+                  .select('id, full_name, email')
+                  .eq('email', finalEmail.toLowerCase());
+
+                if (!pErr && profiles && profiles.length > 0) {
+                  if (profiles.length > 1) {
+                    setError(`Multiple accounts are registered with this email (${profiles.map(p => p.full_name).join(', ')}). Please sign in using your Given Name instead of your email address.`);
+                    setLoading(false);
+                    return;
+                  } else {
+                    matchedFullName = profiles[0].full_name;
+                  }
+                }
+
+                // Try member table
+                if (!matchedFullName) {
+                  const { data: members, error: mErr } = await supabase
+                    .from('member')
+                    .select('full_name')
+                    .or(`email.eq.${finalEmail.toLowerCase()},email_address.eq.${finalEmail.toLowerCase()}`);
+                  if (!mErr && members && members.length > 0) {
+                    matchedFullName = members[0].full_name;
+                  }
+                }
+
+                // Try ec_member table
+                if (!matchedFullName) {
+                  const { data: ecMembers, error: eErr } = await supabase
+                    .from('ec_member')
+                    .select('full_name')
+                    .or(`email.eq.${finalEmail.toLowerCase()},email_address.eq.${finalEmail.toLowerCase()}`);
+                  if (!eErr && ecMembers && ecMembers.length > 0) {
+                    matchedFullName = ecMembers[0].full_name;
+                  }
+                }
+
+                if (matchedFullName) {
+                  finalEmail = `${slugifyName(matchedFullName)}@josephitre.club`;
+                }
+              } catch (profileErr) {
+                console.error('Error checking profiles for login on client fallback:', profileErr);
+              }
             }
           }
-        } catch (e) {
-          console.error("Error resolving email from phone:", e);
-          finalEmail = `${finalEmail}@josephite.club`;
         }
       }
 
       if (mode === 'signup') {
+        if (/\s/.test(fullName)) {
+          const spaceError = 'Please type in your name without spaces or just type in your surname';
+          setError(spaceError);
+          showToast(spaceError, 'error');
+          setLoading(false);
+          return;
+        }
+
         const signupRes = await fetch('/api/auth/signup', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email: finalEmail, password, fullName })
+          body: JSON.stringify({
+            email: signupMethod === 'phone_only' ? "" : email.trim(),
+            password,
+            fullName,
+            phone
+          })
         });
         
         const signupData = await signupRes.json();
@@ -151,8 +333,9 @@ const Auth = () => {
           throw new Error(signupData.error || 'Registration failed.');
         }
 
-        // Programmatically sign in immediately on successful signup
-        const { error: signInErr } = await supabase.auth.signInWithPassword({ email: finalEmail, password });
+        // Programmatically sign in immediately on successful signup using the generated name-based virtual email
+        const virtualEmail = `${slugifyName(fullName)}@josephitre.club`;
+        const { error: signInErr } = await supabase.auth.signInWithPassword({ email: virtualEmail, password });
         if (signInErr) {
           showToast('Registration successful! You can now sign in.', 'success');
           setMode('login');
@@ -162,8 +345,23 @@ const Auth = () => {
           router.push(redirect);
         }
       } else {
-        const { error } = await supabase.auth.signInWithPassword({ email: finalEmail, password });
-        if (error) throw error;
+        let loginRes = await supabase.auth.signInWithPassword({ email: finalEmail, password });
+        let loginErr = loginRes.error;
+
+        if (loginErr) {
+          const originalInput = email.trim();
+          if (originalInput.toLowerCase() !== finalEmail.toLowerCase()) {
+            console.log(`Resolved login failed for ${finalEmail}. Retrying with original input ${originalInput}...`);
+            const retryRes = await supabase.auth.signInWithPassword({ email: originalInput, password });
+            if (!retryRes.error) {
+              loginErr = null;
+            } else {
+              loginErr = retryRes.error;
+            }
+          }
+        }
+
+        if (loginErr) throw loginErr;
         
         const redirect = searchParams?.get('redirect') || '/profile';
         router.push(redirect);
@@ -219,6 +417,44 @@ const Auth = () => {
             </div>
 
             <form onSubmit={handleAuth} className="space-y-8">
+              {mode === 'signup' && (
+                <div className="space-y-4">
+                  <label className="text-[10px] font-bold uppercase tracking-[0.3em] text-zinc-600 ml-4">Registration Method</label>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <button
+                      type="button"
+                      onClick={() => setSignupMethod('email_phone')}
+                      className={`p-5 rounded-2xl border text-left transition-all cursor-pointer flex flex-col gap-1.5 ${
+                        signupMethod === 'email_phone'
+                          ? 'bg-amber-500/10 border-amber-500/30 text-amber-400'
+                          : 'bg-white/5 border-white/5 text-zinc-400 hover:border-white/10 hover:text-white'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <Mail className={`w-4 h-4 ${signupMethod === 'email_phone' ? 'text-amber-400' : 'text-zinc-500'}`} />
+                        <span className="font-display font-extrabold text-[11px] uppercase tracking-wider">Email & Phone</span>
+                      </div>
+                      <p className="text-[10px] text-zinc-500 lowercase tracking-normal">Requires both email address and phone number.</p>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setSignupMethod('phone_only')}
+                      className={`p-5 rounded-2xl border text-left transition-all cursor-pointer flex flex-col gap-1.5 ${
+                        signupMethod === 'phone_only'
+                          ? 'bg-amber-500/10 border-amber-500/30 text-amber-400'
+                          : 'bg-white/5 border-white/5 text-zinc-400 hover:border-white/10 hover:text-white'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <Phone className={`w-4 h-4 ${signupMethod === 'phone_only' ? 'text-amber-400' : 'text-zinc-500'}`} />
+                        <span className="font-display font-extrabold text-[11px] uppercase tracking-wider">Phone Only</span>
+                      </div>
+                      <p className="text-[10px] text-zinc-500 lowercase tracking-normal">Only phone number and given name are required.</p>
+                    </button>
+                  </div>
+                </div>
+              )}
               <AnimatePresence mode="wait">
                 {mode === 'signup' && (
                   <motion.div
@@ -227,7 +463,7 @@ const Auth = () => {
                     exit={{ opacity: 0, height: 0 }}
                     className="space-y-4"
                   >
-                    <label className="text-[10px] font-bold uppercase tracking-[0.3em] text-zinc-600 ml-4">Full Name</label>
+                    <label className="text-[10px] font-bold uppercase tracking-[0.3em] text-zinc-600 ml-4">Given Name Only</label>
                     <div className="relative group">
                       <User className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-600 group-focus-within:text-amber-500 transition-colors" />
                       <input 
@@ -235,33 +471,60 @@ const Auth = () => {
                         required
                         value={fullName}
                         onChange={(e) => setFullName(e.target.value)}
-                        placeholder="John Doe"
+                        placeholder="Given Name Only (e.g., John)"
                         autoComplete="off"
-                        className="w-full pl-16 pr-8 py-5 bg-white/5 border border-white/10 rounded-full focus:outline-none focus:border-amber-500/50 focus:ring-4 focus:ring-amber-500/10 transition-all text-white placeholder:text-zinc-600 font-medium text-sm"
+                        className={`w-full pl-16 pr-8 py-5 bg-white/5 border ${/\s/.test(fullName) ? 'border-red-500/50 focus:border-red-500/50 focus:ring-red-500/10' : 'border-white/10 focus:border-amber-500/50 focus:ring-amber-500/10'} rounded-full focus:outline-none focus:ring-4 transition-all text-white placeholder:text-zinc-600 font-medium text-sm`}
                       />
                     </div>
+                    {/\s/.test(fullName) && (
+                      <p className="text-[10px] text-red-400 font-bold uppercase tracking-wider ml-4 mt-1">
+                        Please type in your name without spaces or just type in your surname
+                      </p>
+                    )}
                   </motion.div>
                 )}
               </AnimatePresence>
 
-              <div className="space-y-4">
-                <label className="text-[10px] font-bold uppercase tracking-[0.3em] text-zinc-600 ml-4">Email or Phone Number</label>
-                <div className="relative group">
-                  <Mail className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-600 group-focus-within:text-amber-500 transition-colors" />
-                  <input 
-                    type="text"
-                    required
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="name@example.com or phone number"
-                    autoCapitalize="none"
-                    autoComplete="off"
-                    autoCorrect="off"
-                    spellCheck="false"
-                    className="w-full pl-16 pr-8 py-5 bg-white/5 border border-white/10 rounded-full focus:outline-none focus:border-amber-500/50 focus:ring-4 focus:ring-amber-500/10 transition-all text-white placeholder:text-zinc-600 font-medium text-sm"
-                  />
+              {(mode === 'login' || signupMethod === 'email_phone') && (
+                <div className="space-y-4">
+                  <label className="text-[10px] font-bold uppercase tracking-[0.3em] text-zinc-600 ml-4">
+                    {mode === 'login' ? 'Email, Phone, or Given Name' : 'Email Address'}
+                  </label>
+                  <div className="relative group">
+                    <Mail className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-600 group-focus-within:text-amber-500 transition-colors" />
+                    <input 
+                      type="text"
+                      required
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder={mode === 'login' ? "your given name, email, or phone number" : "name@example.com"}
+                      autoCapitalize="none"
+                      autoComplete="off"
+                      autoCorrect="off"
+                      spellCheck="false"
+                      className="w-full pl-16 pr-8 py-5 bg-white/5 border border-white/10 rounded-full focus:outline-none focus:border-amber-500/50 focus:ring-4 focus:ring-amber-500/10 transition-all text-white placeholder:text-zinc-600 font-medium text-sm"
+                    />
+                  </div>
                 </div>
-              </div>
+              )}
+
+              {mode === 'signup' && (
+                <div className="space-y-4">
+                  <label className="text-[10px] font-bold uppercase tracking-[0.3em] text-zinc-600 ml-4">Phone Number</label>
+                  <div className="relative group">
+                    <Phone className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-600 group-focus-within:text-amber-500 transition-colors pointer-events-none" />
+                    <input 
+                      type="tel"
+                      required
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      placeholder="e.g., 01712345678"
+                      autoComplete="off"
+                      className="w-full pl-16 pr-8 py-5 bg-white/5 border border-white/10 rounded-full focus:outline-none focus:border-amber-500/50 focus:ring-4 focus:ring-amber-500/10 transition-all text-white placeholder:text-zinc-600 font-medium text-sm"
+                    />
+                  </div>
+                </div>
+              )}
 
               <div className="space-y-4">
                 <div className="flex items-center justify-between ml-4">
@@ -324,7 +587,7 @@ const Auth = () => {
                     <div>KEY: {maskString(supabaseAnonKey)}</div>
                     <div>CONFIGURED: {isConfigured ? "YES" : "NO"}</div>
                     <div className="pt-2 flex flex-col gap-1">
-                      <div className="text-zinc-500">Logged In: {currentSession ? currentSession.user.email : "NO"}</div>
+                      <div className="text-zinc-500">Logged In: {currentSession ? cleanDisplayEmail(currentSession.user.email) : "NO"}</div>
                       {currentSession && (
                         <div className="text-zinc-500">Verified: {currentSession.user.email_confirmed_at ? "YES" : "NO"}</div>
                       )}

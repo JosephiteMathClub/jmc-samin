@@ -96,7 +96,7 @@ export const GalleryView = () => {
       'Josephite Math Mania': []
     };
 
-    filteredItems.forEach((item) => {
+    filteredItems.forEach((item: any) => {
       if (sectionsMap[item.category]) {
         sectionsMap[item.category].push(item);
       }

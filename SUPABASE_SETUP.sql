@@ -743,3 +743,13 @@ CREATE POLICY "Allow admins to update submissions" ON public.challenge_submissio
 
 DROP POLICY IF EXISTS "Allow super admins to delete submissions" ON public.challenge_submissions;
 CREATE POLICY "Allow super admins to delete submissions" ON public.challenge_submissions FOR DELETE TO authenticated USING (public.is_super_admin());
+
+
+-- ==========================================
+-- 11. SMS History & Notification Logging Note
+-- ==========================================
+-- SMS dispatches, including successful and failed deliveries, are securely logged
+-- in the `public.email_confirmations_sent` table. SMS records are identified by subjects
+-- prefixed with '[SMS] ' or recipients without '@' characters. Privacy is strictly respected
+-- by masking phone numbers in public and admin UI views.
+

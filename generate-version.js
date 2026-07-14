@@ -6,7 +6,11 @@ try {
   const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
   const version = packageJson.version || '1.0.0';
 
-  const versionFilePath = path.join(__dirname, 'public', 'version.json');
+  const publicDir = path.join(__dirname, 'public');
+  if (!fs.existsSync(publicDir)) {
+    fs.mkdirSync(publicDir, { recursive: true });
+  }
+  const versionFilePath = path.join(publicDir, 'version.json');
   const manifest = {
     version: version,
     buildTime: Date.now()

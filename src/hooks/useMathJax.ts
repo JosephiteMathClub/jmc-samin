@@ -16,6 +16,16 @@ export function useMathJax(ref?: React.RefObject<HTMLElement | null>, active = t
 
     let debounceTimer: any = null;
 
+    // Dynamic Script Injection: load script if not already added
+    if (!(window as any).MathJaxScriptAdded && !document.getElementById("mathjax-dynamic-script")) {
+      (window as any).MathJaxScriptAdded = true;
+      const script = document.createElement("script");
+      script.id = "mathjax-dynamic-script";
+      script.src = "https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js";
+      script.async = true;
+      document.head.appendChild(script);
+    }
+
     const runTypeset = () => {
       if (debounceTimer) {
         clearTimeout(debounceTimer);

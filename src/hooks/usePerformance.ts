@@ -47,6 +47,16 @@ export function usePerformance() {
 
   const shouldReduceGfx = isLowPower || prefersReducedMotion;
 
+  useEffect(() => {
+    if (typeof document !== 'undefined') {
+      if (shouldReduceGfx) {
+        document.body.classList.add('reduce-gfx');
+      } else {
+        document.body.classList.remove('reduce-gfx');
+      }
+    }
+  }, [shouldReduceGfx]);
+
   return {
     isLowPower,
     isMobile,

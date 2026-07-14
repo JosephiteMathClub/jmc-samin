@@ -22,6 +22,7 @@ import {
   FileSpreadsheet
 } from "lucide-react";
 import { supabase, isSupabaseConfigured } from "../../../lib/supabase";
+import { useAuth } from "../../../context/AuthContext";
 
 interface EmailLog {
   id: string;
@@ -38,17 +39,161 @@ interface EmailLog {
   error_message: string;
 }
 
+function maskPhoneNumber(phone: string): string {
+  if (!phone) return "N/A";
+  const clean = phone.trim();
+  
+  if (clean.includes("@")) {
+    const parts = clean.split("@");
+    if (parts[0].length <= 3) return `***@${parts[1]}`;
+    return `${parts[0].substring(0, 3)}***@${parts[1]}`;
+  }
+
+  if (clean.length <= 5) return clean;
+  // If it starts with +880 and has 14 chars (+8801XXXXXXXXX)
+  if (clean.startsWith('+880') && clean.length === 14) {
+    return `+880${clean.substring(4, 7)}******${clean.substring(12)}`;
+  }
+  // Standard BD phone of 11 digits (01XXXXXXXXX)
+  if (clean.startsWith('01') && clean.length === 11) {
+    return `${clean.substring(0, 5)}******${clean.substring(9)}`;
+  }
+  // Otherwise mask middle portion
+  const visibleStart = Math.min(5, Math.floor(clean.length / 3));
+  const visibleEnd = Math.min(2, Math.floor(clean.length / 6));
+  const stars = "*".repeat(Math.max(3, clean.length - visibleStart - visibleEnd));
+  return `${clean.substring(0, visibleStart)}${stars}${clean.substring(clean.length - visibleEnd)}`;
+}
+
 export function EmailConfirmationsSection() {
-  const [activeSubTab, setActiveSubTab] = useState<"logs" | "bulk">("logs");
+  const { isSuperAdmin } = useAuth();
+  const [activeSubTab, setActiveSubTab] = useState<"logs" | "bulk" | "sms" | "name_notice">("logs");
   const [emailLogs, setEmailLogs] = useState<EmailLog[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // States for Name notice Campaign
+  const [nameNoticeProfiles, setNameNoticeProfiles] = useState<any[]>([]);
+  const [isLoadingNameNotice, setIsLoadingNameNotice] = useState(false);
+  const [isSendingNameNotice, setIsSendingNameNotice] = useState(false);
+  const [nameNoticeResult, setNameNoticeResult] = useState<any>(null);
+  const [nameNoticeSubject, setNameNoticeSubject] = useState("Urgent Action Required: Please update your registered full name to your Given Name only");
+  const [nameNoticeTemplate, setNameNoticeTemplate] = useState(`<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #1e293b; padding: 25px; border: 1px solid #e2e8f0; border-radius: 16px; background-color: #ffffff;">
+  <div style="text-align: center; margin-bottom: 25px; border-bottom: 2px solid #0c4a6e; padding-bottom: 15px;">
+    <h1 style="color: #0c4a6e; margin: 0; font-size: 24px; font-weight: 800;">JOSEPHITE MATH CLUB</h1>
+    <p style="color: #64748b; margin: 5px 0 0 0; font-size: 12px; letter-spacing: 0.1em; font-weight: 600;">OFFICIAL ACTION REQUIRED: REGISTRATION DATABASE CLEANUP</p>
+  </div>
+  <p>Hello <strong>{NAME}</strong>,</p>
+  <p>Our administrative team has observed that your registered profile name uses your <strong>full name</strong> (e.g., "{NAME}") instead of your <strong>given name only</strong>.</p>
+  
+  <p>To ensure eligibility for JMC Olympiads and events, you must update your registered name to your <strong>given name only</strong> (single-word name).</p>
+
+  <div style="background-color: #fffbeb; border-left: 4px solid #f59e0b; padding: 15px; border-radius: 8px; margin: 20px 0; font-size: 14px; color: #78350f;">
+    <strong>Example Correction:</strong><br />
+    • Full Name registered: <strong>Samin Tausif</strong><br />
+    • Corrected to Given Name only: <strong>Samin</strong>
+  </div>
+
+  <p>Please update your registered full name to your given name by clicking the link below:</p>
+
+  <div style="text-align: center; margin: 30px 0;">
+    <a href="{REDIRECT_URL}" style="background-color: #f43f5e; color: #ffffff; text-decoration: none; padding: 12px 30px; border-radius: 8px; font-weight: bold; font-size: 14px; display: inline-block; box-shadow: 0 4px 6px -1px rgba(244, 63, 94, 0.2);">Correct My Name Now</a>
+  </div>
+
+  <p>Alternatively, you can copy and paste this link in your browser:<br/> <a href="{REDIRECT_URL}" style="color: #0c4a6e; word-break: break-all;">{REDIRECT_URL}</a></p>
+
+  <p style="margin-top: 30px;">For any questions, please reply to this email or submit a help ticket on the platform.</p>
+  <br/>
+  <p style="border-top: 1px solid #e2e8f0; padding-top: 15px; font-size: 12px; color: #64748b; margin-bottom: 0;">Sincerely,<br/><strong>The Josephite Math Club Organizing Committee</strong></p>
+</div>`);
+
+  const fetchNameNoticeProfiles = useCallback(async () => {
+    if (!isSuperAdmin) return;
+    setIsLoadingNameNotice(true);
+    try {
+      const response = await fetch('/api/admin/bulk-name-notice', { method: 'GET' });
+      const data = await response.json();
+      if (response.ok) {
+        setNameNoticeProfiles(data.profiles || []);
+      } else {
+        console.error('Error fetching multi-word names:', data.error);
+      }
+    } catch (err) {
+      console.error('Network error fetching multi-word names:', err);
+    } finally {
+      setIsLoadingNameNotice(false);
+    }
+  }, [isSuperAdmin]);
+
+  useEffect(() => {
+    if (activeSubTab === "name_notice") {
+      fetchNameNoticeProfiles();
+    }
+  }, [activeSubTab, fetchNameNoticeProfiles]);
+
+  const sendNameNoticeEmails = async () => {
+    if (!isSuperAdmin) return;
+    if (!nameNoticeSubject || !nameNoticeTemplate) {
+      alert("Please provide email subject and body template.");
+      return;
+    }
+
+    if (nameNoticeProfiles.length === 0) {
+      alert("No active recipients match the targets.");
+      return;
+    }
+
+    const confirmSend = window.confirm(`Are you absolutely sure you want to broadcast this notice to all ${nameNoticeProfiles.length} users with multi-word full names?`);
+    if (!confirmSend) return;
+
+    setIsSendingNameNotice(true);
+    setNameNoticeResult(null);
+
+    try {
+      const response = await fetch('/api/admin/bulk-name-notice', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          subject: nameNoticeSubject,
+          htmlTemplate: nameNoticeTemplate
+        })
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || 'Server rejected broadcast request');
+      }
+
+      setNameNoticeResult({
+        success: true,
+        totalTargeted: data.totalTargeted || nameNoticeProfiles.length,
+        sentCount: data.sentCount || 0,
+        failedCount: data.failedCount || 0,
+        errors: data.errors || []
+      });
+
+      // Refresh logs
+      fetchEmailLogs();
+      fetchNameNoticeProfiles();
+    } catch (e: any) {
+      console.error(e);
+      alert(e.message || "An error occurred during broadcasting.");
+    } finally {
+      setIsSendingNameNotice(false);
+    }
+  };
   
   // Search and Filter States for Logs
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "sent" | "failed">("all");
   const [classFilter, setClassFilter] = useState<string>("all");
   const [selectedLog, setSelectedLog] = useState<EmailLog | null>(null);
+
+  // Search and Filter States for SMS History
+  const [smsSearchQuery, setSmsSearchQuery] = useState("");
+  const [smsStatusFilter, setSmsStatusFilter] = useState<"all" | "sent" | "failed">("all");
 
   // States for Admin user Context
   const [adminEmail, setAdminEmail] = useState<string>("Admin");
@@ -455,10 +600,39 @@ export function EmailConfirmationsSection() {
             <Send className="w-3.5 h-3.5" />
             Bulk Broadcast
           </button>
+          <button
+            onClick={() => {
+              setActiveSubTab("sms");
+            }}
+            className={`px-4 py-2.5 rounded-xl uppercase text-[10px] font-black tracking-widest transition-all cursor-pointer flex items-center gap-2 ${
+              activeSubTab === "sms" 
+                ? "bg-amber-500 text-black shadow-lg shadow-amber-500/20" 
+                : "text-zinc-400 hover:text-white hover:bg-white/5"
+            }`}
+          >
+            <FileText className="w-3.5 h-3.5" />
+            SMS History
+          </button>
+          {isSuperAdmin && (
+            <button
+              onClick={() => {
+                setActiveSubTab("name_notice");
+                setNameNoticeResult(null);
+              }}
+              className={`px-4 py-2.5 rounded-xl uppercase text-[10px] font-black tracking-widest transition-all cursor-pointer flex items-center gap-2 ${
+                activeSubTab === "name_notice" 
+                  ? "bg-rose-500 text-black shadow-lg shadow-rose-500/20" 
+                  : "text-zinc-400 hover:text-white hover:bg-white/5"
+              }`}
+            >
+              <AlertCircle className="w-3.5 h-3.5" />
+              Name Corrections
+            </button>
+          )}
         </div>
       </div>
 
-      {activeSubTab === "logs" ? (
+      {activeSubTab === "logs" && (
         <>
           {/* Metrics Row */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -663,7 +837,9 @@ export function EmailConfirmationsSection() {
             </div>
           )}
         </>
-      ) : (
+      )}
+
+      {activeSubTab === "bulk" && (
         /* Bulk composer form layout */
         <div className="space-y-8 animate-fade-in text-left">
           {/* Main Workspace Frame */}
@@ -928,6 +1104,410 @@ export function EmailConfirmationsSection() {
                   className="preview-iframe-mock text-left"
                   dangerouslySetInnerHTML={{ __html: renderLivePreview() }}
                 />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {activeSubTab === "sms" && (
+        <div className="space-y-8 animate-fade-in text-left">
+          {/* Metrics Row */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="bg-white/[0.02] border border-white/5 p-6 rounded-3xl flex items-center gap-5">
+              <div className="w-12 h-12 bg-amber-500/10 border border-amber-500/20 text-amber-400 rounded-2xl flex items-center justify-center font-bold">
+                <Send className="w-5 h-5" />
+              </div>
+              <div>
+                <div className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">Total Sent SMS</div>
+                <div className="text-2xl font-black text-white mt-1">
+                  {emailLogs.filter(log => log.subject.includes('[SMS]') || /^[+0-9]/.test(log.recipient_email) || !log.recipient_email.includes('@')).length}
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white/[0.02] border border-white/5 p-6 rounded-3xl flex items-center gap-5">
+              <div className="w-12 h-12 bg-green-500/10 border border-green-500/20 text-green-400 rounded-2xl flex items-center justify-center font-bold">
+                <CheckCircle2 className="w-5 h-5" />
+              </div>
+              <div>
+                <div className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">Delivered Successfully</div>
+                <div className="text-2xl font-black text-green-400 mt-1">
+                  {emailLogs.filter(log => (log.subject.includes('[SMS]') || /^[+0-9]/.test(log.recipient_email) || !log.recipient_email.includes('@')) && log.status === 'sent').length}
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white/[0.02] border border-white/5 p-6 rounded-3xl flex items-center gap-5">
+              <div className="w-12 h-12 bg-red-500/10 border border-red-500/20 text-red-500 rounded-2xl flex items-center justify-center font-bold">
+                <AlertCircle className="w-5 h-5" />
+              </div>
+              <div>
+                <div className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">Failed Deliveries</div>
+                <div className="text-2xl font-black text-red-400 mt-1">
+                  {emailLogs.filter(log => (log.subject.includes('[SMS]') || /^[+0-9]/.test(log.recipient_email) || !log.recipient_email.includes('@')) && log.status === 'failed').length}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Filters & Search Control Grid */}
+          <div className="bg-white/[0.01] border border-white/5 p-6 rounded-3xl space-y-4">
+            <div className="flex flex-col lg:flex-row gap-4">
+              <div className="relative flex-1">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
+                <input
+                  type="text"
+                  value={smsSearchQuery}
+                  onChange={(e) => setSmsSearchQuery(e.target.value)}
+                  placeholder="Search by recipient name, phone number, subject or content..."
+                  className="w-full pl-11 pr-4 py-3.5 bg-white/5 border border-white/10 rounded-2xl text-white outline-none focus:border-amber-500/50 transition-all text-xs font-bold"
+                />
+              </div>
+
+              <div className="flex items-center gap-2 bg-white/5 border border-white/10 px-4 py-2 rounded-2xl">
+                <Filter className="w-3.5 h-3.5 text-zinc-400" />
+                <select
+                  value={smsStatusFilter}
+                  onChange={(e) => setSmsStatusFilter(e.target.value as any)}
+                  className="bg-transparent border-none text-white text-xs outline-none font-bold pr-4 cursor-pointer"
+                >
+                  <option value="all" className="bg-neutral-900 text-white">All Statuses</option>
+                  <option value="sent" className="bg-neutral-900 text-white">Delivered Only</option>
+                  <option value="failed" className="bg-neutral-900 text-white">Failed Only</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          {/* SMS logs table */}
+          {isLoading ? (
+            <div className="space-y-4">
+              {[1, 2, 3].map((n) => (
+                <div key={n} className="p-6 bg-white/[0.01] border border-white/5 rounded-3xl animate-pulse flex flex-col gap-3">
+                  <div className="h-4 bg-zinc-800 rounded w-1/4" />
+                  <div className="h-3 bg-zinc-800 rounded w-1/2" />
+                </div>
+              ))}
+            </div>
+          ) : emailLogs.filter(log => log.subject.includes('[SMS]') || /^[+0-9]/.test(log.recipient_email) || !log.recipient_email.includes('@')).length === 0 ? (
+            <div className="bg-white/[0.01] border border-dashed border-white/10 p-16 text-center rounded-[2.5rem] max-w-4xl mx-auto">
+              <FileText className="w-16 h-16 text-zinc-700 mx-auto mb-6 opacity-30 animate-pulse" />
+              <p className="text-sm font-bold text-zinc-400 uppercase tracking-wide">
+                No SMS history found
+              </p>
+              <p className="text-xs text-zinc-600 mt-2 font-medium">
+                Sent event result SMS notifications or manual broadcasts will be displayed here.
+              </p>
+            </div>
+          ) : (
+            <div className="bg-[#0b0b0b]/60 overflow-hidden rounded-[2.5rem] border border-white/10 shadow-2xl">
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[1000px] border-collapse text-left">
+                  <thead>
+                    <tr className="border-b border-white/5 bg-white/[0.02]">
+                      <th className="p-5 text-[9px] font-black uppercase tracking-widest text-zinc-500">Recipient Name</th>
+                      <th className="p-5 text-[9px] font-black uppercase tracking-widest text-zinc-500">Masked Phone Number</th>
+                      <th className="p-5 text-[9px] font-black uppercase tracking-widest text-zinc-500">Message Type / Event</th>
+                      <th className="p-5 text-[9px] font-black uppercase tracking-widest text-zinc-500">Message Content Preview</th>
+                      <th className="p-5 text-[9px] font-black uppercase tracking-widest text-zinc-500">Sent At</th>
+                      <th className="p-5 text-[9px] font-black uppercase tracking-widest text-zinc-500">Status</th>
+                      <th className="p-5 text-[9px] font-black uppercase tracking-widest text-zinc-400 text-right">Receipt</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-white/5 font-medium">
+                    {emailLogs
+                      .filter(log => log.subject.includes('[SMS]') || /^[+0-9]/.test(log.recipient_email) || !log.recipient_email.includes('@'))
+                      .filter(log => {
+                        if (smsStatusFilter !== "all" && log.status !== smsStatusFilter) return false;
+                        if (smsSearchQuery.trim() !== "") {
+                          const q = smsSearchQuery.toLowerCase();
+                          const name = (log.recipient_name || "").toLowerCase();
+                          const phone = (log.recipient_email || "").toLowerCase();
+                          const body = (log.body_text || "").toLowerCase();
+                          const subject = (log.subject || "").toLowerCase();
+                          return name.includes(q) || phone.includes(q) || body.includes(q) || subject.includes(q);
+                        }
+                        return true;
+                      })
+                      .map((log) => (
+                        <tr key={log.id} className="hover:bg-white/[0.01] transition-all">
+                          <td className="p-5">
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center">
+                                <User className="w-4 h-4 text-zinc-400" />
+                              </div>
+                              <div className="font-bold text-white text-xs">
+                                {log.recipient_name || "Anonymous Member"}
+                              </div>
+                            </div>
+                          </td>
+
+                          <td className="p-5 font-mono text-xs text-amber-500">
+                            {maskPhoneNumber(log.recipient_email)}
+                          </td>
+
+                          <td className="p-5">
+                            <div className="text-xs text-zinc-300 max-w-xs truncate" title={log.subject}>
+                              {log.subject.replace('[SMS] ', '')}
+                            </div>
+                          </td>
+
+                          <td className="p-5">
+                            <div className="text-xs text-zinc-400 max-w-sm truncate" title={log.body_text}>
+                              {log.body_text}
+                            </div>
+                          </td>
+
+                          <td className="p-5 text-xs text-zinc-400 font-medium whitespace-nowrap">
+                            {log.sent_at ? new Date(log.sent_at).toLocaleString() : "N/A"}
+                          </td>
+
+                          <td className="p-5">
+                            {log.status === "sent" ? (
+                              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-green-500/10 text-green-400 text-[10px] font-extrabold border border-green-500/20">
+                                <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
+                                DELIVERED
+                              </span>
+                            ) : (
+                              <span 
+                                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-red-500/10 text-red-400 text-[10px] font-extrabold border border-red-500/20 cursor-help" 
+                                title={log.error_message || "Unknown error occurred"}
+                              >
+                                <span className="w-1.5 h-1.5 rounded-full bg-red-400 animate-pulse" />
+                                FAILED
+                              </span>
+                            )}
+                          </td>
+
+                          <td className="p-5 text-right whitespace-nowrap">
+                            <button
+                              onClick={() => setSelectedLog(log)}
+                              className="px-3.5 py-2.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-white/5 hover:border-white/10 text-zinc-400 hover:text-white text-[10px] uppercase tracking-wider font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ml-auto"
+                            >
+                              <Eye className="w-3.5 h-3.5" />
+                              View
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {activeSubTab === "name_notice" && isSuperAdmin && (
+        <div className="space-y-8 animate-fade-in text-left">
+          {/* Main Workspace Frame */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+            {/* Left Hand: Controls Panel */}
+            <div className="lg:col-span-7 bg-white/[0.01] border border-white/5 p-8 rounded-[2.5rem] space-y-6">
+              <div className="border-b border-white/5 pb-4">
+                <h3 className="text-xl font-bold text-white flex items-center gap-3">
+                  <Sparkles className="w-5 h-5 text-rose-500" />
+                  Given Name Correction Notice Campaign
+                </h3>
+                <p className="text-[10px] text-zinc-500 font-semibold mt-1">
+                  Send a bulk email to members registered with multi-word full names asking them to change to their given name.
+                </p>
+              </div>
+
+              {/* Audience Preview Badge info */}
+              <div className="flex items-center gap-3 bg-rose-500/10 border border-rose-500/20 px-5 py-4 rounded-2xl justify-between">
+                <div className="flex items-center gap-3">
+                  <FileSpreadsheet className="w-5 h-5 text-rose-500" />
+                  <div>
+                    <span className="text-[10px] font-black uppercase tracking-wider text-zinc-400 block">Identified Affected Members</span>
+                    <span className="text-sm font-bold text-white mt-0.5 inline-block">
+                      {isLoadingNameNotice ? (
+                        <Loader2 className="w-4 h-4 animate-spin inline mr-1" />
+                      ) : (
+                        <span>{nameNoticeProfiles.length} members with multi-word names</span>
+                      )}
+                    </span>
+                  </div>
+                </div>
+                <button 
+                  onClick={fetchNameNoticeProfiles}
+                  className="px-3.5 py-2 rounded-lg bg-zinc-900 hover:bg-zinc-800 border border-white/5 hover:border-white/10 text-zinc-300 hover:text-white text-[10px] font-black cursor-pointer tracking-wider uppercase"
+                >
+                  Refresh Audience
+                </button>
+              </div>
+
+              {/* Subject Input */}
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase text-zinc-400 tracking-wider">Email Subject Header</label>
+                <input
+                  type="text"
+                  value={nameNoticeSubject}
+                  onChange={(e) => setNameNoticeSubject(e.target.value)}
+                  placeholder="e.g. Action Required: Update your full name to Given Name only"
+                  className="w-full px-4 py-3 bg-neutral-900 border border-white/10 rounded-xl text-xs text-white placeholder-zinc-600 outline-none focus:border-rose-500/50 transition-all font-bold"
+                />
+              </div>
+
+              {/* Body Input */}
+              <div className="space-y-2">
+                <div className="flex justify-between items-center">
+                  <label className="text-[10px] font-black uppercase text-zinc-400 tracking-wider">Email HTML Body Content</label>
+                  <span className="text-[9px] text-zinc-500 font-mono font-bold flex items-center gap-1">
+                    <Code className="w-3.5 h-3.5" /> HTML allowed
+                  </span>
+                </div>
+                <textarea
+                  value={nameNoticeTemplate}
+                  onChange={(e) => setNameNoticeTemplate(e.target.value)}
+                  rows={12}
+                  placeholder="Write clear, professional HTML or text body..."
+                  className="w-full px-4 py-3 bg-neutral-900 border border-white/10 rounded-2xl text-xs text-zinc-200 placeholder-zinc-700 outline-none focus:border-rose-500/50 transition-all font-mono leading-relaxed resize-y scrollbar-thin"
+                />
+              </div>
+
+              {/* Dynamic Guidelines panel */}
+              <div className="bg-[#0c0c0c] border border-white/5 p-4 rounded-2xl font-mono text-[9.5px] leading-relaxed text-zinc-500">
+                <p className="font-extrabold text-zinc-400 uppercase tracking-widest mb-1.5">Interactive Placeholders</p>
+                <p>Use these variables to customize email output dynamically:</p>
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-2 mt-2 font-bold text-rose-400">
+                  <span>{"{NAME}"} : Full Name</span>
+                  <span>{"{GIVEN_NAME}"} : Given Name</span>
+                  <span>{"{EMAIL}"} : Member email</span>
+                  <span>{"{REDIRECT_URL}"} : Action link</span>
+                </div>
+              </div>
+
+              {/* Form submit/Cancel row */}
+              <div className="flex items-center justify-between border-t border-white/5 pt-6 gap-4">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveSubTab("logs");
+                    setNameNoticeResult(null);
+                  }}
+                  className="px-6 py-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-zinc-400 hover:text-white uppercase text-[10px] tracking-wider font-black cursor-pointer"
+                >
+                  Cancel
+                </button>
+
+                <button
+                  onClick={sendNameNoticeEmails}
+                  disabled={isSendingNameNotice || nameNoticeProfiles.length === 0}
+                  className="px-8 py-3.5 rounded-xl bg-rose-500 text-black uppercase text-[10px] font-black tracking-widest hover:bg-rose-400 disabled:bg-rose-500/20 disabled:text-zinc-500 transition-all flex items-center gap-2 cursor-pointer shadow-xl shadow-rose-500/10"
+                >
+                  {isSendingNameNotice ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Broadcasting Notice...
+                    </>
+                  ) : (
+                    <>
+                      <Send className="w-4 h-4" />
+                      Broadcast to {nameNoticeProfiles.length} users
+                    </>
+                  )}
+                </button>
+              </div>
+
+              {nameNoticeResult && (
+                <div className={`p-5 rounded-2xl border ${nameNoticeResult.success ? 'bg-green-500/10 border-green-500/20 text-green-400' : 'bg-red-500/10 border-red-500/20 text-red-400'} font-medium space-y-2`}>
+                  <p className="text-xs font-black uppercase tracking-widest">Broadcast Campaign Complete</p>
+                  <div className="grid grid-cols-3 gap-4 text-center py-2 font-mono text-[11px] bg-black/40 rounded-xl">
+                    <div>
+                      <div className="text-zinc-500 text-[9px] uppercase">Targeted</div>
+                      <div className="text-sm font-bold text-white">{nameNoticeResult.totalTargeted}</div>
+                    </div>
+                    <div>
+                      <div className="text-zinc-500 text-[9px] uppercase">Delivered</div>
+                      <div className="text-sm font-bold text-green-400">{nameNoticeResult.sentCount}</div>
+                    </div>
+                    <div>
+                      <div className="text-zinc-500 text-[9px] uppercase">Failed</div>
+                      <div className="text-sm font-bold text-red-400">{nameNoticeResult.failedCount}</div>
+                    </div>
+                  </div>
+                  {nameNoticeResult.errors && nameNoticeResult.errors.length > 0 && (
+                    <div className="mt-2 text-[10px] font-mono max-h-24 overflow-y-auto bg-black/50 p-2.5 rounded-lg border border-red-500/10 space-y-1">
+                      {nameNoticeResult.errors.map((e: string, i: number) => (
+                        <p key={i}>{e}</p>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Right Hand: Affected Members List & Live Preview */}
+            <div className="lg:col-span-5 space-y-6">
+              {/* Affected Members list */}
+              <div className="bg-white/[0.01] border border-white/5 p-6 rounded-[2.5rem] space-y-4">
+                <h4 className="text-sm font-extrabold uppercase tracking-widest text-zinc-400 flex items-center gap-2">
+                  <User className="w-4 h-4" />
+                  Audience Recipient Directory ({nameNoticeProfiles.length})
+                </h4>
+                <p className="text-[10px] text-zinc-500 leading-relaxed">
+                  The following accounts currently have multi-word names in their profile and will be targeted.
+                </p>
+                <div className="max-h-48 overflow-y-auto border border-white/5 rounded-2xl bg-black/45 scrollbar-thin divide-y divide-white/5">
+                  {isLoadingNameNotice ? (
+                    <div className="p-8 text-center text-zinc-500">
+                      <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2" />
+                      Loading profiles...
+                    </div>
+                  ) : nameNoticeProfiles.length === 0 ? (
+                    <div className="p-8 text-center text-zinc-500 text-xs">
+                      No members matching multi-word full names found! Everyone is compliant.
+                    </div>
+                  ) : (
+                    nameNoticeProfiles.map((p, i) => (
+                      <div key={p.id || i} className="p-3 flex justify-between items-center text-xs">
+                        <div>
+                          <p className="font-bold text-white">{p.full_name}</p>
+                          <p className="text-[10px] text-zinc-500 font-mono">{p.email}</p>
+                        </div>
+                        <span className="text-[9px] px-2.5 py-1 bg-rose-500/10 border border-rose-500/20 text-rose-400 font-bold rounded-lg uppercase">
+                          Needs update
+                        </span>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+
+              {/* Live Preview Container */}
+              <div className="bg-white/[0.01] border border-white/5 p-6 rounded-[2.5rem] space-y-4">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-sm font-extrabold uppercase tracking-widest text-zinc-400 flex items-center gap-2">
+                    <Eye className="w-4 h-4 text-rose-500" />
+                    Live Content Template Frame
+                  </h4>
+                  <span className="text-[9px] px-2.5 py-1 rounded-full bg-zinc-900 border border-white/10 font-bold font-mono text-zinc-500 uppercase">
+                    Responsive Preview
+                  </span>
+                </div>
+
+                {/* Simulated browser header bar */}
+                <div className="bg-neutral-900 border border-white/5 p-4 rounded-2xl text-[10px] text-zinc-400 space-y-2">
+                  <p><strong>From:</strong> Samin | Josephite Math Club <span className="font-mono text-zinc-600">&lt;mathclub@sjs.edu.bd&gt;</span></p>
+                  <p><strong>To:</strong> Sample Recipient <span className="font-mono text-zinc-600">&lt;sample@email.com&gt;</span></p>
+                  <p className="text-white border-t border-white/5 pt-2 font-bold truncate"><strong>Subject:</strong> {nameNoticeSubject || "Action Required: Update your profile name"}</p>
+                </div>
+
+                {/* Dynamic Live iframe-style rendering */}
+                <div className="bg-[#121212] rounded-3xl p-4 border border-white/5 min-h-[300px] max-h-[420px] overflow-y-auto scrollbar-thin">
+                  <div 
+                    className="preview-iframe-mock text-left"
+                    dangerouslySetInnerHTML={{ 
+                      __html: (nameNoticeTemplate || "")
+                        .replace(/{NAME}/g, "Samin Tausif")
+                        .replace(/{GIVEN_NAME}/g, "Samin")
+                        .replace(/{EMAIL}/g, "tausif.samin@sjs.edu.bd")
+                        .replace(/{REDIRECT_URL}/g, "/profile/change-name")
+                    }}
+                  />
+                </div>
               </div>
             </div>
           </div>

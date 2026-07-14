@@ -82,15 +82,15 @@ const ForgotPassword = () => {
             {!success ? (
               <form onSubmit={handleResetRequest} className="space-y-8">
                 <div className="space-y-4">
-                  <label className="text-[10px] font-bold uppercase tracking-[0.3em] text-zinc-600 ml-4">Email Address</label>
+                  <label className="text-[10px] font-bold uppercase tracking-[0.3em] text-zinc-600 ml-4">Email Address or Full Name</label>
                   <div className="relative group">
                     <Mail className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-600 group-focus-within:text-amber-500 transition-colors" />
                     <input 
-                      type="email"
+                      type="text"
                       required
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      placeholder="name@example.com"
+                      placeholder="name@example.com or your full name"
                       autoCapitalize="none"
                       autoComplete="off"
                       autoCorrect="off"

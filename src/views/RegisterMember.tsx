@@ -28,7 +28,8 @@ import { useToast } from '../context/ToastContext';
 import ScrollReveal from '../components/ScrollReveal';
 import { DashboardFileUpload } from '../components/dashboard/DashboardFileUpload';
 import Image from 'next/image';
-import { resolveImageUrl } from '../lib/utils';
+import { resolveImageUrl, cleanDisplayEmail } from '../lib/utils';
+import GeometricAvatar from '../components/GeometricAvatar';
 
 import { usePerformance } from '../hooks/usePerformance';
 
@@ -168,24 +169,90 @@ const RegisterMember = () => {
     setSearching(true);
     setError(null);
     try {
-      const { data, error: searchError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('email', searchEmail.toLowerCase().trim())
-        .maybeSingle();
+      let finalSearch = searchEmail.trim();
+      const isPhoneInput = !finalSearch.includes('@') && /^[0-9+\s\-()]+$/.test(finalSearch);
+      const isEmailInput = finalSearch.includes('@');
+      const isNameInput = !isPhoneInput && !isEmailInput;
       
-      if (searchError) throw searchError;
-      
-      if (data) {
-        setFoundUserId(data.id);
-        setExistingProfile(data);
-        setFullName(data.full_name || '');
-        setEmailAddress(data.email || '');
-        showToast('User found!', 'success');
+      if (isPhoneInput) {
+        try {
+          const { data: memberData } = await supabase
+            .from('member')
+            .select('email')
+            .eq('phone', finalSearch)
+            .maybeSingle();
+          if (memberData?.email) {
+            finalSearch = memberData.email;
+          } else {
+            const { data: ecData } = await supabase
+              .from('ec_member')
+              .select('email')
+              .eq('phone', finalSearch)
+              .maybeSingle();
+            if (ecData?.email) {
+              finalSearch = ecData.email;
+            } else {
+              finalSearch = `${finalSearch}@josephitre.club`;
+            }
+          }
+        } catch (e) {
+          console.error("Error resolving email from phone:", e);
+          finalSearch = `${finalSearch}@josephitre.club`;
+        }
       } else {
-        setError('No user found with this email.');
-        setFoundUserId(null);
-        setExistingProfile(null);
+        finalSearch = finalSearch.toLowerCase();
+      }
+
+      if (isNameInput) {
+        const slug = finalSearch.replace(/[^a-z0-9]/g, '_').replace(/__+/g, '_').replace(/^_+|_+$/g, '');
+        const virtualEmail = `${slug}@josephitre.club`;
+        
+        const { data: profiles, error: searchError } = await supabase
+          .from('profiles')
+          .select('*')
+          .or(`full_name.ilike.%${searchEmail.trim()}%,email.eq.${virtualEmail}`);
+        
+        if (searchError) throw searchError;
+        
+        if (profiles && profiles.length > 0) {
+          const matched = profiles[0];
+          setFoundUserId(matched.id);
+          setExistingProfile(matched);
+          setFullName(matched.full_name || '');
+          setEmailAddress(matched.email || '');
+          showToast('User found!', 'success');
+        } else {
+          setError('No user found with this Full Name or virtual email.');
+          setFoundUserId(null);
+          setExistingProfile(null);
+        }
+      } else {
+        const { data: profiles, error: searchError } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('email', finalSearch);
+        
+        if (searchError) throw searchError;
+        
+        if (profiles && profiles.length > 1) {
+          showToast(`Multiple profiles found with this email. Please search by their Full Name to verify specifically.`, "info");
+          const matched = profiles[0];
+          setFoundUserId(matched.id);
+          setExistingProfile(matched);
+          setFullName(matched.full_name || '');
+          setEmailAddress(matched.email || '');
+        } else if (profiles && profiles.length === 1) {
+          const matched = profiles[0];
+          setFoundUserId(matched.id);
+          setExistingProfile(matched);
+          setFullName(matched.full_name || '');
+          setEmailAddress(matched.email || '');
+          showToast('User found!', 'success');
+        } else {
+          setError('No user found with this email or phone number.');
+          setFoundUserId(null);
+          setExistingProfile(null);
+        }
       }
     } catch (err: any) {
       setError(err.message);
@@ -272,6 +339,13 @@ const RegisterMember = () => {
     setError(null);
 
     // Basic Input Validation
+    if (/\s/.test(fullName)) {
+      const spaceError = 'Please type in your name without spaces or just type in your surname';
+      setError(spaceError);
+      showToast(spaceError, 'error');
+      setLoading(false);
+      return;
+    }
     if (fullName.length > 100) {
       showToast('Full name is too long', 'error');
       setLoading(false);
@@ -458,8 +532,8 @@ const RegisterMember = () => {
                         {!foundUserId ? (
                           <div className="flex gap-4">
                             <input 
-                              type="email"
-                              placeholder="Enter user's account email"
+                              type="text"
+                              placeholder="Enter user's account email, phone, or Full Name"
                               value={searchEmail}
                               onChange={(e) => setSearchEmail(e.target.value)}
                               className="flex-1 px-6 py-4 bg-white/5 border border-white/10 rounded-2xl focus:outline-none focus:border-amber-500/50 text-white font-bold text-sm"
@@ -479,13 +553,17 @@ const RegisterMember = () => {
                             className="p-6 rounded-3xl bg-white/[0.03] border border-white/10 flex items-center gap-6"
                           >
                             <div className="relative w-16 h-16 md:w-20 md:h-20 rounded-2xl overflow-hidden bg-zinc-900 border border-white/10 shrink-0">
-                              <Image 
-                                src={resolveImageUrl(existingProfile?.avatar_url) || `https://api.dicebear.com/7.x/initials/svg?seed=${existingProfile?.full_name || 'User'}`} 
-                                alt={existingProfile?.full_name || 'User'}
-                                fill
-                                className="object-cover"
-                                referrerPolicy="no-referrer"
-                              />
+                              {existingProfile?.avatar_url ? (
+                                <Image 
+                                  src={resolveImageUrl(existingProfile.avatar_url)} 
+                                  alt={existingProfile.full_name || 'User'}
+                                  fill
+                                  className="object-cover"
+                                  referrerPolicy="no-referrer"
+                                />
+                              ) : (
+                                <GeometricAvatar name={existingProfile?.full_name || 'User'} size="100%" className="!rounded-2xl" />
+                              )}
                             </div>
                             <div className="flex-grow min-w-0">
                               <div className="text-zinc-500 text-[8px] md:text-[9px] font-mono tracking-[0.2em] uppercase mb-1 flex items-center gap-2">
@@ -493,7 +571,7 @@ const RegisterMember = () => {
                                 Authenticated_Record
                               </div>
                               <h4 className="text-lg md:text-xl font-display font-medium text-white mb-1 truncate">{existingProfile?.full_name}</h4>
-                              <p className="text-zinc-500 text-xs truncate">{existingProfile?.email}</p>
+                              <p className="text-zinc-500 text-xs truncate">{cleanDisplayEmail(existingProfile?.email)}</p>
                             </div>
                             <button 
                               onClick={() => {
@@ -666,22 +744,27 @@ const RegisterMember = () => {
                         required
                         value={fullName}
                         onChange={(e) => setFullName(e.target.value)}
-                        placeholder="John Doe"
+                        placeholder="John"
                         autoComplete="off"
-                        className="w-full px-6 py-5 bg-white/5 border border-white/10 rounded-2xl focus:outline-none focus:border-amber-500/50 focus:ring-4 focus:ring-amber-500/10 transition-all text-white font-medium text-sm tracking-wide"
+                        className={`w-full px-6 py-5 bg-white/5 border ${/\s/.test(fullName) ? 'border-red-500/50 focus:border-red-500/50 focus:ring-red-500/10' : 'border-white/10 focus:border-amber-500/50 focus:ring-amber-500/10'} rounded-2xl focus:outline-none focus:ring-4 transition-all text-white font-medium text-sm tracking-wide`}
                       />
+                      {/\s/.test(fullName) && (
+                        <p className="text-[10px] text-red-400 font-bold uppercase tracking-wider ml-1 mt-1">
+                          Please type in your name without spaces or just type in your surname
+                        </p>
+                      )}
                     </div>
 
                     <div className="space-y-2">
                       <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 ml-1 flex items-center gap-2">
-                        <Mail className="w-3 h-3" /> Email Address
+                        <Mail className="w-3 h-3" /> Email Address or Phone Number
                       </label>
                       <input 
-                        type="email"
+                        type="text"
                         required
                         value={emailAddress}
                         onChange={(e) => setEmailAddress(e.target.value)}
-                        placeholder="name@example.com"
+                        placeholder="name@example.com or phone number"
                         autoCapitalize="none"
                         autoComplete="off"
                         autoCorrect="off"
