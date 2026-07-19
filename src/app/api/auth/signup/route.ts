@@ -48,7 +48,24 @@ export async function POST(req: Request) {
     const slug = fullName.trim().toLowerCase().replace(/[^a-z0-9]/g, '_').replace(/__+/g, '_').replace(/^_+|_+$/g, '');
     const virtualEmail = `${slug}@josephitre.club`;
 
-    // Create the user with email_confirm: true, which acts as pre-verified / auto-verified and suppresses signup confirmation links
+    // 1. Proactively check if this given name or virtual email slug is already set by another user
+    const { data: profileCheck } = await supabaseAdmin
+      .from('profiles')
+      .select('id, full_name');
+
+    if (profileCheck) {
+      const conflictingUser = profileCheck.find(p => {
+        const otherSlug = (p.full_name || '').trim().toLowerCase().replace(/[^a-z0-9]/g, '_').replace(/__+/g, '_').replace(/^_+|_+$/g, '');
+        return otherSlug === slug;
+      });
+      if (conflictingUser) {
+        return NextResponse.json({ 
+          error: 'This given name is already set by another user. Please choose a different one.' 
+        }, { status: 400 });
+      }
+    }
+
+    // 2. Create the user with email_confirm: true, which acts as pre-verified / auto-verified and suppresses signup confirmation links
     const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
       email: virtualEmail,
       password: password,
@@ -64,7 +81,9 @@ export async function POST(req: Request) {
       console.error('Error creating user programmatically:', createError.message);
       
       let errorMessage = createError.message;
-      if (createError.message.includes('Invalid API key') || createError.message.includes('invalid') || createError.message.includes('API key')) {
+      if (createError.message.includes('already exists') || createError.message.includes('registered') || createError.message.includes('unique')) {
+        errorMessage = 'This given name is already set by another user. Please choose a different one.';
+      } else if (createError.message.includes('Invalid API key') || createError.message.includes('invalid') || createError.message.includes('API key')) {
         errorMessage = 'Invalid SUPABASE_SERVICE_ROLE_KEY setup on the server. TIP: Go to your Supabase Dashboard -> Project Settings -> API. Copy the secret "service_role" key (NOT the public "anon" key) and update the SUPABASE_SERVICE_ROLE_KEY environment variable. If you already set it, make sure there are no surrounding quotes.';
       }
       return NextResponse.json({ error: errorMessage }, { status: 400 });

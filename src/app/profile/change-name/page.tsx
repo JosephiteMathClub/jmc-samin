@@ -39,9 +39,8 @@ export default function ChangeNamePage() {
       setCheckingAuth(false);
       if (profile) {
         setCurrentFullName(profile.full_name || '');
-        // Default the given name to the first word of their full name if they have spaces
-        const firstWord = (profile.full_name || '').trim().split(/\s+/)[0] || '';
-        setGivenName(firstWord);
+        // Do NOT automatically prefill the suggested name. The user will manually input it.
+        setGivenName('');
       }
       
       // Check member status
@@ -105,38 +104,15 @@ export default function ChangeNamePage() {
     setLoading(true);
 
     try {
-      // 1. Update the profiles table
-      const { error: profileErr } = await supabase
-        .from('profiles')
-        .update({
-          full_name: trimmedName,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', user?.id);
+      const res = await fetch('/api/auth/update-name', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ newFullName: trimmedName })
+      });
 
-      if (profileErr) throw profileErr;
-
-      // 2. Update member tables if applicable
-      if (isMember) {
-        const { error: memberErr } = await supabase
-          .from('member')
-          .update({
-            full_name: trimmedName,
-          })
-          .eq('id', user?.id);
-
-        if (memberErr) throw memberErr;
-
-        if (isEc) {
-          const { error: ecErr } = await supabase
-            .from('ec_member')
-            .update({
-              full_name: trimmedName,
-            })
-            .eq('id', user?.id);
-
-          if (ecErr) throw ecErr;
-        }
+      const resData = await res.json();
+      if (!res.ok) {
+        throw new Error(resData.error || 'Failed to update your given name.');
       }
 
       await refreshProfile();

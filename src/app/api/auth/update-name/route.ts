@@ -84,7 +84,7 @@ export async function POST(req: Request) {
     const supabaseAdmin = getSupabaseAdmin();
 
     // 3. Ensure uniqueness: check if another user has this name
-    // Check profiles
+    // Check profiles by exact name ilike
     const { data: profileCheck, error: pErr } = await supabaseAdmin
       .from('profiles')
       .select('id, full_name')
@@ -100,6 +100,20 @@ export async function POST(req: Request) {
       return NextResponse.json({ 
         error: 'This given name is already set by another user. Please choose a different one.' 
       }, { status: 400 });
+    }
+
+    // Fetch all profiles to do a robust slug-based uniqueness check to prevent name conflicts (e.g. samin vs Samin)
+    const { data: allProfiles, error: allPErr } = await supabaseAdmin
+      .from('profiles')
+      .select('id, full_name');
+
+    if (!allPErr && allProfiles) {
+      const conflictingSlugUser = allProfiles.find(p => p.id !== user.id && slugifyName(p.full_name) === newSlug);
+      if (conflictingSlugUser) {
+        return NextResponse.json({ 
+          error: 'This given name is already set by another user. Please choose a different one.' 
+        }, { status: 400 });
+      }
     }
 
     // Check member
