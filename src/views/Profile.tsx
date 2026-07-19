@@ -27,7 +27,8 @@ import {
   Printer,
   Download,
   Calendar,
-  Ticket
+  Ticket,
+  FileText
 } from 'lucide-react';
 import { toPng } from 'html-to-image';
 import dynamic from 'next/dynamic';
@@ -170,6 +171,7 @@ const Profile = () => {
   useMathJax();
   
   const [isEditing, setIsEditing] = useState(false);
+  const [activeSubTab, setActiveSubTab] = useState<'profile' | 'handouts'>('profile');
   const [fullName, setFullName] = useState('');
   const [isMember, setIsMember] = useState(false);
   const [isEc, setIsEc] = useState(false);
@@ -832,15 +834,25 @@ const Profile = () => {
     setSuccess(false);
 
     try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({
-          full_name: fullName,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', user?.id);
+      const cleanNewName = fullName.trim();
+      const hasNameChanged = cleanNewName.toLowerCase() !== (profile?.full_name || '').trim().toLowerCase();
 
-      if (error) throw error;
+      if (hasNameChanged) {
+        if (/\s/.test(cleanNewName)) {
+          throw new Error('Please type in your name without spaces or just type in your surname. Your given name must be a single word.');
+        }
+
+        const res = await fetch('/api/auth/update-name', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ newFullName: cleanNewName })
+        });
+
+        const resData = await res.json();
+        if (!res.ok) {
+          throw new Error(resData.error || 'Failed to update your given name.');
+        }
+      }
 
       if (isMember) {
         // Update member table if they have a standard member record
@@ -850,7 +862,7 @@ const Profile = () => {
             class: memberClass,
             section: memberSection,
             roll: memberRoll,
-            full_name: fullName,
+            full_name: cleanNewName,
           })
           .eq('id', user?.id);
 
@@ -862,7 +874,7 @@ const Profile = () => {
               class: memberClass,
               section: memberSection,
               roll: memberRoll,
-              full_name: fullName,
+              full_name: cleanNewName,
             })
             .eq('id', user?.id);
           
@@ -870,13 +882,27 @@ const Profile = () => {
         } else {
           if (memberError) throw memberError;
         }
+      } else {
+        // Even if not a standard club member, update the profiles table
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .update({
+            full_name: cleanNewName,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', user?.id);
+
+        if (profileError) throw profileError;
       }
 
+      await refreshProfile();
       setSuccess(true);
       setIsEditing(false);
+      showToast('Profile updated successfully!', 'success');
       setTimeout(() => setSuccess(false), 3000);
     } catch (err: any) {
       setError(err.message);
+      showToast(err.message, 'error');
     } finally {
       setLoading(false);
     }
@@ -900,17 +926,25 @@ const Profile = () => {
 
   const wins = React.useMemo(() => {
     return filteredAchievements
-      .filter(a => isActualWin(a.position))
+      .filter(a => {
+        if (!isActualWin(a.position)) return false;
+        const matchText = `${String(a.event_name || '').trim()} - ${String(a.category || '').trim()}`.toLowerCase();
+        return announcedResults.some(announced => String(announced || '').trim().toLowerCase() === matchText);
+      })
       .sort((a, b) => {
         const pA = getRankInfo(a.position).priority;
         const pB = getRankInfo(b.position).priority;
         return pA - pB;
       });
-  }, [filteredAchievements]);
+  }, [filteredAchievements, announcedResults]);
 
   const pending = React.useMemo(() => {
-    return filteredAchievements.filter(a => !isActualWin(a.position));
-  }, [filteredAchievements]);
+    return filteredAchievements.filter(a => {
+      const matchText = `${String(a.event_name || '').trim()} - ${String(a.category || '').trim()}`.toLowerCase();
+      const isAnnounced = announcedResults.some(announced => String(announced || '').trim().toLowerCase() === matchText);
+      return !isActualWin(a.position) || !isAnnounced;
+    });
+  }, [filteredAchievements, announcedResults]);
 
   // Trigger celebration once both registeredEventsList and achievements are finished loading
   useEffect(() => {
@@ -2042,8 +2076,43 @@ const Profile = () => {
             {/* Main Content */}
             <div className="lg:col-span-8 space-y-8">
               <ScrollReveal direction="right" delay={0.2}>
-                <div className="p-8 md:p-12 rounded-[40px] bg-white/[0.03] border border-white/10 backdrop-blur-xl">
-                  <AnimatePresence mode="wait">
+                {isGeneralMember && (
+                  <div className="flex border-b border-white/10 gap-8 mb-6">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setActiveSubTab('profile');
+                        setIsEditing(false);
+                      }}
+                      className={`pb-4 text-xs font-bold uppercase tracking-widest transition-all cursor-pointer ${
+                        activeSubTab === 'profile'
+                          ? 'text-[var(--c-6-start)] border-b-2 border-[var(--c-6-start)]'
+                          : 'text-zinc-500 hover:text-white'
+                      }`}
+                    >
+                      My Profile
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setActiveSubTab('handouts');
+                        setIsEditing(false);
+                      }}
+                      className={`pb-4 text-xs font-bold uppercase tracking-widest transition-all cursor-pointer flex items-center gap-2 ${
+                        activeSubTab === 'handouts'
+                          ? 'text-[var(--c-6-start)] border-b-2 border-[var(--c-6-start)]'
+                          : 'text-zinc-500 hover:text-white'
+                      }`}
+                    >
+                      <FileText className="w-4 h-4" />
+                      Session handouts
+                    </button>
+                  </div>
+                )}
+
+                {activeSubTab === 'profile' ? (
+                  <div className="p-8 md:p-12 rounded-[40px] bg-white/[0.03] border border-white/10 backdrop-blur-xl">
+                    <AnimatePresence mode="wait">
                     {isEditing ? (
                       <motion.form
                         key="edit"
@@ -2065,13 +2134,19 @@ const Profile = () => {
                         </div>
 
                         <div className="space-y-2">
-                          <label className="text-xs font-bold uppercase tracking-widest text-zinc-500 ml-1">Full Name</label>
+                          <label className="text-xs font-bold uppercase tracking-widest text-zinc-500 ml-1">Given Name Only (e.g., John)</label>
                           <input 
                             type="text"
+                            required
                             value={fullName}
                             onChange={(e) => setFullName(e.target.value)}
-                            className="w-full px-6 py-4 bg-white/5 border border-white/10 rounded-2xl focus:outline-none focus:border-[var(--c-6-start)]/50 transition-all text-white"
+                            className={`w-full px-6 py-4 bg-white/5 border ${/\s/.test(fullName) ? 'border-red-500/50 focus:border-red-500/50 focus:ring-red-500/10' : 'border-white/10 focus:border-[var(--c-6-start)]/50'} rounded-2xl focus:outline-none transition-all text-white`}
                           />
+                          {/\s/.test(fullName) && (
+                            <p className="text-[10px] text-red-400 font-bold uppercase tracking-wider ml-1 mt-1">
+                              Please type in your name without spaces or just type in your surname
+                            </p>
+                          )}
                         </div>
 
                         {isMember && (
@@ -2280,13 +2355,15 @@ const Profile = () => {
                                               let resultLabel = "Result Pending";
                                               let resultColorClass = "text-indigo-400";
                                               
-                                              if (isActualWin(ach.position)) {
-                                                const rank = getRankInfo(ach.position);
-                                                resultLabel = rank.label;
-                                                resultColorClass = "text-amber-400 font-extrabold";
-                                              } else if (isAnnounced) {
-                                                resultLabel = "Participation Certificate";
-                                                resultColorClass = "text-emerald-400";
+                                              if (isAnnounced) {
+                                                if (isActualWin(ach.position)) {
+                                                  const rank = getRankInfo(ach.position);
+                                                  resultLabel = rank.label;
+                                                  resultColorClass = "text-amber-400 font-extrabold";
+                                                } else {
+                                                  resultLabel = "Participation Certificate";
+                                                  resultColorClass = "text-emerald-400";
+                                                }
                                               }
                                               
                                               return (
@@ -2381,17 +2458,19 @@ const Profile = () => {
                                                 const matchText = `${String(ach.event_name || '').trim()} - ${String(ach.category || '').trim()}`.toLowerCase();
                                                 const isAnnounced = announcedResults.some(announced => String(announced || '').trim().toLowerCase() === matchText);
                                                 
-                                                let resultLabel = "Result Pending";
-                                                let resultColorClass = "text-indigo-400";
-                                                
+                                              let resultLabel = "Result Pending";
+                                              let resultColorClass = "text-indigo-400";
+                                              
+                                              if (isAnnounced) {
                                                 if (isActualWin(ach.position)) {
                                                   const rank = getRankInfo(ach.position);
                                                   resultLabel = rank.label;
                                                   resultColorClass = "text-amber-400 font-extrabold";
-                                                } else if (isAnnounced) {
+                                                } else {
                                                   resultLabel = "Participation Certificate";
                                                   resultColorClass = "text-emerald-400";
                                                 }
+                                              }
                                                 
                                                 return (
                                                   <span className={`text-[10px] uppercase font-bold tracking-wider ${resultColorClass}`}>
@@ -2487,6 +2566,75 @@ const Profile = () => {
                     )}
                   </AnimatePresence>
                 </div>
+                ) : (
+                  <div className="p-8 md:p-12 rounded-[40px] bg-white/[0.03] border border-white/10 backdrop-blur-xl">
+                    <div className="space-y-6">
+                      <div className="border-b border-white/5 pb-6">
+                        <h3 className="text-2xl font-bold text-white mb-2">
+                          {content?.handouts?.title || "Session Handouts"}
+                        </h3>
+                        <p className="text-sm text-zinc-500 font-medium">
+                          {content?.handouts?.description || "Access official handouts, session notes, and resources compiled by the club moderators."}
+                        </p>
+                      </div>
+
+                      <div className="grid grid-cols-1 gap-6 pt-2">
+                        {(!content?.handouts?.sessions || content.handouts.sessions.length === 0) ? (
+                          <div className="p-12 text-center rounded-3xl bg-white/[0.01] border border-white/5 text-zinc-500">
+                            <FileText className="w-12 h-12 text-zinc-600 mx-auto mb-4" />
+                            <p className="text-sm font-medium">No session handouts have been posted yet.</p>
+                            <p className="text-xs text-zinc-700 mt-1">Please check back later or contact a club admin.</p>
+                          </div>
+                        ) : (
+                          content.handouts.sessions.map((session: any) => (
+                            <div 
+                              key={session.id} 
+                              className="p-6 md:p-8 rounded-3xl bg-white/[0.02] border border-white/5 hover:border-amber-500/20 transition-all duration-300 flex flex-col md:flex-row md:items-center justify-between gap-6 relative overflow-hidden group"
+                            >
+                              <div className="space-y-2 max-w-xl">
+                                <div className="flex items-center gap-3">
+                                  <span className="px-2.5 py-1 rounded-md bg-amber-500/10 text-amber-500 text-[10px] font-black uppercase tracking-wider border border-amber-500/10">
+                                    {session.name || "Session"}
+                                  </span>
+                                  {session.date && (
+                                    <span className="text-[10px] font-mono text-zinc-500 flex items-center gap-1">
+                                      <Calendar className="w-3 h-3" />
+                                      {session.date}
+                                    </span>
+                                  )}
+                                </div>
+                                <h4 className="text-lg font-bold text-white group-hover:text-amber-400 transition-colors">
+                                  {session.name || "Untitled Session"}
+                                </h4>
+                                <p className="text-sm text-zinc-400 leading-relaxed">
+                                  {session.description || "No description provided."}
+                                </p>
+                              </div>
+
+                              <div className="flex-shrink-0 flex items-center">
+                                {session.fileUrl ? (
+                                  <a 
+                                    href={session.fileUrl} 
+                                    target="_blank" 
+                                    rel="noopener noreferrer"
+                                    className="px-6 py-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-500 font-bold hover:bg-amber-500/20 transition-all flex items-center justify-center gap-2 text-xs uppercase tracking-widest group/btn cursor-pointer"
+                                  >
+                                    <Download className="w-4 h-4 group-hover/btn:translate-y-0.5 transition-transform" />
+                                    Download Handout
+                                  </a>
+                                ) : (
+                                  <span className="text-xs font-bold uppercase tracking-widest text-zinc-600 bg-white/5 px-4 py-2 rounded-xl border border-white/5">
+                                    File Pending
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 {/* Registration Link */}
                 {!isMember && !checkingMember && (content?.registration?.registrationOpen !== false || isAdmin) && (

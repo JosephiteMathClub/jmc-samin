@@ -330,5 +330,18 @@ export const DEFAULT_CONTENT = {
       "Copy the Transaction ID (TrxID) and enter it below"
     ],
     cashInstructions: "Please pay your registration fee to the club treasurer."
+  },
+  handouts: {
+    title: "Session Handouts",
+    description: "Access official handouts, session notes, and resources compiled by the club moderators.",
+    sessions: [
+      {
+        id: "default-session-1",
+        name: "Day One",
+        description: "Introduction to basic problem-solving, arithmetic principles, and club orientation details.",
+        fileUrl: "",
+        date: "July 19, 2026"
+      }
+    ]
   }
 };

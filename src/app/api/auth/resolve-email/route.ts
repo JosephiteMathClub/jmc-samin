@@ -54,34 +54,47 @@ export async function POST(req: Request) {
         // Check profiles table (email column might hold phone string or matches phone)
         const { data: profilePhone } = await supabaseAdmin
           .from('profiles')
-          .select('full_name')
+          .select('full_name, email')
           .eq('email', cleanIdentifier)
           .maybeSingle();
 
         if (profilePhone?.full_name) {
+          if (profilePhone.email && (profilePhone.email.includes(cleanIdentifier) || profilePhone.email.includes('@'))) {
+            return NextResponse.json({ email: profilePhone.email });
+          }
           return NextResponse.json({ email: `${slugifyName(profilePhone.full_name)}@josephitre.club` });
         }
 
         // Find their registered email by checking member table
         const { data: memberData } = await supabaseAdmin
           .from('member')
-          .select('full_name')
+          .select('full_name, email')
           .eq('phone', cleanIdentifier)
           .maybeSingle();
 
-        if (memberData?.full_name) {
-          return NextResponse.json({ email: `${slugifyName(memberData.full_name)}@josephitre.club` });
+        if (memberData) {
+          if (memberData.email) {
+            return NextResponse.json({ email: memberData.email });
+          }
+          if (memberData.full_name) {
+            return NextResponse.json({ email: `${slugifyName(memberData.full_name)}@josephitre.club` });
+          }
         }
 
         // Check ec_member table
         const { data: ecData } = await supabaseAdmin
           .from('ec_member')
-          .select('full_name')
+          .select('full_name, email')
           .eq('phone', cleanIdentifier)
           .maybeSingle();
 
-        if (ecData?.full_name) {
-          return NextResponse.json({ email: `${slugifyName(ecData.full_name)}@josephitre.club` });
+        if (ecData) {
+          if (ecData.email) {
+            return NextResponse.json({ email: ecData.email });
+          }
+          if (ecData.full_name) {
+            return NextResponse.json({ email: `${slugifyName(ecData.full_name)}@josephitre.club` });
+          }
         }
       } catch (err) {
         console.error('Error in phone resolution DB query:', err);

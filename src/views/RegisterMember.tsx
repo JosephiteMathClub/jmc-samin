@@ -71,6 +71,146 @@ const RegisterMember = () => {
   const [foundUserId, setFoundUserId] = useState<string | null>(null);
   const [existingProfile, setExistingProfile] = useState<any>(null);
 
+  // New proxy state variables for General / EC Member Registration
+  const [isProxyRegistration, setIsProxyRegistration] = useState(false);
+  const [proxyMethod, setProxyMethod] = useState<'email' | 'phone'>('email');
+  const [proxyEmail, setProxyEmail] = useState('');
+  const [proxyPhoneNumber, setProxyPhoneNumber] = useState('');
+  const [proxyVerified, setProxyVerified] = useState(false);
+  const [proxyUserExists, setProxyUserExists] = useState(false);
+  const [proxyResolvedUserId, setProxyResolvedUserId] = useState<string | null>(null);
+  const [checkingProxyEmail, setCheckingProxyEmail] = useState(false);
+  const [proxyNameEditable, setProxyNameEditable] = useState(true);
+  const [proxyClassEditable, setProxyClassEditable] = useState(true);
+  const [proxySectionEditable, setProxySectionEditable] = useState(true);
+  const [proxyRollEditable, setProxyRollEditable] = useState(true);
+
+  const handleToggleProxy = (enable: boolean) => {
+    setIsProxyRegistration(enable);
+    if (enable) {
+      setRegisterFor('other');
+      setProxyMethod('email');
+      setProxyEmail('');
+      setProxyPhoneNumber('');
+      setProxyVerified(false);
+      setProxyUserExists(false);
+      setProxyResolvedUserId(null);
+      setFullName('');
+      setEmailAddress('');
+      setPhone('');
+      setClassName('');
+      setSection('');
+      setRoll('');
+    } else {
+      setRegisterFor('self');
+      resetForm();
+    }
+  };
+
+  const handleVerifyProxyEmail = async () => {
+    const searchVal = proxyMethod === 'email' ? proxyEmail.trim() : proxyPhoneNumber.trim();
+    if (!searchVal) {
+      showToast("Please provide a search identifier", "error");
+      return;
+    }
+
+    setCheckingProxyEmail(true);
+    setError(null);
+
+    try {
+      let finalEmail = searchVal;
+      if (proxyMethod === 'phone') {
+        const { data: memberData } = await supabase
+          .from('member')
+          .select('email')
+          .eq('phone', searchVal)
+          .maybeSingle();
+
+        if (memberData?.email) {
+          finalEmail = memberData.email;
+        } else {
+          const { data: ecData } = await supabase
+            .from('ec_member')
+            .select('email')
+            .eq('phone', searchVal)
+            .maybeSingle();
+
+          if (ecData?.email) {
+            finalEmail = ecData.email;
+          } else {
+            finalEmail = `${searchVal}@josephitre.club`;
+          }
+        }
+      } else {
+        finalEmail = finalEmail.toLowerCase();
+      }
+
+      const { data: profiles, error: searchError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('email', finalEmail)
+        .maybeSingle();
+
+      if (searchError) throw searchError;
+
+      if (profiles) {
+        setProxyUserExists(true);
+        setProxyVerified(true);
+        setProxyResolvedUserId(profiles.id);
+        setFullName(profiles.full_name || '');
+        setEmailAddress(profiles.email || '');
+        
+        const { data: memberData } = await supabase
+          .from('member')
+          .select('*')
+          .eq('id', profiles.id)
+          .maybeSingle();
+
+        if (memberData) {
+          setPhone(memberData.phone || '');
+          setSchool(memberData.school || 'St Joseph');
+          setClassName(memberData.class || '');
+          setSection(memberData.section || '');
+          setRoll(memberData.roll || '');
+          setPhotoUrl(memberData.photo_url || '');
+          setProxyNameEditable(false);
+          setProxyClassEditable(false);
+          setProxySectionEditable(false);
+          setProxyRollEditable(false);
+        } else {
+          setPhone(profiles.phone || '');
+          setProxyNameEditable(false);
+          setProxyClassEditable(true);
+          setProxySectionEditable(true);
+          setProxyRollEditable(true);
+        }
+        showToast("Registered account found!", "success");
+      } else {
+        setProxyUserExists(false);
+        setProxyVerified(true);
+        setProxyResolvedUserId(null);
+        setProxyNameEditable(true);
+        setProxyClassEditable(true);
+        setProxySectionEditable(true);
+        setProxyRollEditable(true);
+        setFullName('');
+        if (proxyMethod === 'email') {
+          setEmailAddress(finalEmail);
+          setPhone('');
+        } else {
+          setPhone(searchVal);
+          setEmailAddress(finalEmail);
+        }
+        showToast("No account found. Ready for unregistered spot creation.", "info");
+      }
+    } catch (err: any) {
+      console.error("Proxy verify error:", err);
+      showToast("Verification failed: " + err.message, "error");
+    } finally {
+      setCheckingProxyEmail(false);
+    }
+  };
+
   const resetForm = () => {
     setFullName('');
     setEmailAddress('');
@@ -339,7 +479,7 @@ const RegisterMember = () => {
     setError(null);
 
     // Basic Input Validation
-    if (/\s/.test(fullName)) {
+    if (!isProxyRegistration && /\s/.test(fullName)) {
       const spaceError = 'Please type in your name without spaces or just type in your surname';
       setError(spaceError);
       showToast(spaceError, 'error');
@@ -365,8 +505,8 @@ const RegisterMember = () => {
     try {
       let finalUserId = user?.id;
 
-      // If admin registering for someone else
-      if (isAdmin && registerFor === 'other') {
+      // If admin registering for someone else using old hasAccount/foundUserId
+      if (isAdmin && registerFor === 'other' && !isProxyRegistration) {
         if (!foundUserId) {
           showToast('Please find an existing user first', 'error');
           setLoading(false);
@@ -375,24 +515,75 @@ const RegisterMember = () => {
         finalUserId = foundUserId;
       }
 
+      // If admin registering via the new proxy/spot mode
+      if (isAdmin && isProxyRegistration) {
+        if (!proxyVerified) {
+          showToast("Please search and verify student identity first", "error");
+          setLoading(false);
+          return;
+        }
+
+        const resolvedPhone = proxyPhoneNumber.trim();
+        const resolvedEmail = proxyMethod === 'phone' ? `${resolvedPhone}@josephitre.club` : emailAddress.trim();
+
+        if (!resolvedPhone) {
+          showToast("Student's Phone Number is required for proxy registration", "error");
+          setLoading(false);
+          return;
+        }
+
+        if (!proxyUserExists || !proxyResolvedUserId) {
+          // Create new user account via admin endpoint
+          showToast("Creating spot registration account...", "info");
+          const createRes = await fetch('/api/admin/create-user', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              email: resolvedEmail,
+              password: resolvedPhone,
+              fullName: fullName.trim(),
+              usePhoneAsLogin: proxyMethod === 'phone'
+            })
+          });
+
+          const createData = await createRes.json();
+          if (!createRes.ok) {
+            throw new Error(createData.error || "Failed to create spot registration user account.");
+          }
+
+          if (!createData.userId) {
+            throw new Error("No user ID returned from spot account creation.");
+          }
+
+          finalUserId = createData.userId;
+          showToast("Spot registration account created successfully!", "success");
+        } else {
+          finalUserId = proxyResolvedUserId;
+        }
+      }
+
+      const finalEmailAddress = isProxyRegistration 
+        ? (proxyMethod === 'phone' ? `${proxyPhoneNumber.trim()}@josephitre.club` : emailAddress.trim())
+        : (registerFor === 'self' ? user?.email : emailAddress);
+
       // 1. Insert into member table
       const { error: memberError } = await supabase
         .from('member')
         .upsert({
           id: finalUserId,
           full_name: fullName,
-          email: registerFor === 'self' ? user?.email : emailAddress,
-          email_address: emailAddress,
-          phone,
+          email: finalEmailAddress,
+          email_address: finalEmailAddress,
+          phone: isProxyRegistration ? proxyPhoneNumber.trim() : phone,
           school,
           class: className,
           section,
           roll,
           photo_url: photoUrl,
-          payment_method: paymentMethod,
-          trxnid: paymentMethod === 'bkash' ? trxnid : null,
-          bkash_number: paymentMethod === 'bkash' ? bkashNumber : null,
-          verified: 'no'
+          payment_method: isProxyRegistration ? 'cash' : paymentMethod,
+          trxnid: isProxyRegistration ? ('PROXY-' + Math.floor(100000 + Math.random() * 900000)) : (paymentMethod === 'bkash' ? trxnid : null),
+          bkash_number: isProxyRegistration ? ('PROXY: ' + (user?.email || 'Admin')) : (paymentMethod === 'bkash' ? bkashNumber : null),
+          verified: isProxyRegistration ? 'yes' : 'no'
         });
 
       if (memberError) throw memberError;
@@ -418,7 +609,7 @@ const RegisterMember = () => {
       showToast('Registration successful!', 'success');
 
       // Send automatic notification email for pending member registration
-      const targetEmail = registerFor === 'self' ? (user?.email || emailAddress) : emailAddress;
+      const targetEmail = finalEmailAddress;
       if (targetEmail) {
         fetch('/api/admin/bulk-verification-email', {
           method: 'POST',
@@ -427,7 +618,7 @@ const RegisterMember = () => {
             members: [{
               email: targetEmail,
               fullName: fullName,
-              memberId: 'Pending Verification'
+              memberId: isProxyRegistration ? 'Registered Spot (Auto)' : 'Pending Verification'
             }]
           })
         }).catch(err => console.error("Failed to send automatic verification email:", err));
@@ -474,124 +665,282 @@ const RegisterMember = () => {
 
             {isAdmin && !success && (
               <div className="mb-12 flex flex-col items-center gap-6">
-                <div className="flex flex-col items-center gap-4">
-                  <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-[0.3em]">Select Registration Mode</p>
-                  <div className="flex gap-4 p-1 rounded-2xl bg-white/5 border border-white/10">
-                    <button 
-                      onClick={() => {
-                        setRegisterFor('self');
-                        if (profile) {
-                          setFullName(profile.full_name || '');
-                          setEmailAddress(user?.email || '');
-                        }
-                      }}
-                      className={`px-6 py-3 rounded-xl text-xs font-bold uppercase tracking-widest transition-all ${registerFor === 'self' ? 'bg-amber-500 text-black shadow-lg shadow-amber-500/20' : 'text-zinc-500 hover:text-white'}`}
+                {/* Proxy/Spot Registration Block */}
+                <div className="w-full flex flex-col p-6 rounded-3xl bg-amber-500/5 border border-amber-500/10 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5 text-left">
+                      <h4 className="text-xs font-black uppercase tracking-wider text-amber-500">Proxy / Spot Registration Mode</h4>
+                      <p className="text-[10px] text-zinc-400">Bypass payment gateway and manually register any participant instantly.</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleToggleProxy(!isProxyRegistration)}
+                      className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border cursor-pointer shrink-0 ${
+                        isProxyRegistration 
+                          ? 'bg-amber-500 border-amber-400 text-black shadow-lg shadow-amber-500/20' 
+                          : 'bg-zinc-900 hover:bg-zinc-800 border-white/5 text-zinc-400 hover:text-white'
+                      }`}
                     >
-                      Registering for Myself
-                    </button>
-                    <button 
-                      onClick={() => {
-                        setRegisterFor('other');
-                        resetForm();
-                        setRegisterFor('other'); // Restore after resetForm clears it
-                      }}
-                      className={`px-6 py-3 rounded-xl text-xs font-bold uppercase tracking-widest transition-all ${registerFor === 'other' ? 'bg-amber-500 text-black shadow-lg shadow-amber-500/20' : 'text-zinc-500 hover:text-white'}`}
-                    >
-                      Registering for Someone Else
+                      {isProxyRegistration ? 'Enabled' : 'Disabled'}
                     </button>
                   </div>
+
+                  {isProxyRegistration && (
+                    <div className="pt-4 border-t border-white/5 space-y-4 w-full text-left">
+                      <div className="space-y-2">
+                        <span className="text-[10px] font-black uppercase tracking-wider text-zinc-400">Search & Register Student using:</span>
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setProxyMethod('email');
+                              setProxyEmail('');
+                              setProxyVerified(false);
+                              setProxyUserExists(false);
+                              setProxyResolvedUserId(null);
+                              setFullName('');
+                              setPhone('');
+                            }}
+                            className={`flex-1 py-2.5 rounded-xl border text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                              proxyMethod === 'email'
+                                ? 'bg-amber-500/10 border-amber-500/30 text-amber-500 shadow-md'
+                                : 'bg-white/5 border-white/5 text-zinc-400 hover:bg-white/10'
+                            }`}
+                          >
+                            <Mail className="w-3.5 h-3.5" />
+                            Email Address
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setProxyMethod('phone');
+                              setProxyEmail('');
+                              setProxyVerified(false);
+                              setProxyUserExists(false);
+                              setProxyResolvedUserId(null);
+                              setFullName('');
+                              setEmailAddress('');
+                            }}
+                            className={`flex-1 py-2.5 rounded-xl border text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                              proxyMethod === 'phone'
+                                ? 'bg-amber-500/10 border-amber-500/30 text-amber-500 shadow-md'
+                                : 'bg-white/5 border-white/5 text-zinc-400 hover:bg-white/10'
+                            }`}
+                          >
+                            <Phone className="w-3.5 h-3.5" />
+                            Phone Number
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {proxyMethod === 'email' ? (
+                          <div className="space-y-2">
+                            <label className="text-[10px] font-black uppercase tracking-wider text-zinc-400">Student's Email Address (User ID)</label>
+                            <div className="flex gap-2">
+                              <div className="relative flex-1">
+                                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
+                                <input
+                                  type="email"
+                                  placeholder="student@example.com"
+                                  value={proxyEmail}
+                                  onChange={(e) => {
+                                    setProxyEmail(e.target.value);
+                                    setEmailAddress(e.target.value);
+                                    setProxyVerified(false);
+                                  }}
+                                  className="w-full pl-11 pr-4 py-3 bg-black/40 border border-white/10 rounded-xl text-xs font-bold text-white focus:outline-none focus:border-amber-500"
+                                />
+                              </div>
+                              <button
+                                type="button"
+                                onClick={handleVerifyProxyEmail}
+                                disabled={checkingProxyEmail}
+                                className="px-4 py-3 bg-amber-500 hover:bg-amber-400 text-black font-black text-[10px] uppercase tracking-wider rounded-xl transition-all flex items-center gap-1.5 shrink-0 cursor-pointer disabled:opacity-50"
+                              >
+                                {checkingProxyEmail ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+                                Search
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="space-y-2">
+                            <label className="text-[10px] font-black uppercase tracking-wider text-zinc-400">Student's Phone Number (User ID & Password)</label>
+                            <div className="flex gap-2">
+                              <div className="relative flex-1">
+                                <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
+                                <input
+                                  type="text"
+                                  placeholder="017XXXXXXXX"
+                                  value={proxyPhoneNumber}
+                                  onChange={(e) => {
+                                    setProxyPhoneNumber(e.target.value);
+                                    setPhone(e.target.value);
+                                    setProxyVerified(false);
+                                  }}
+                                  className="w-full pl-11 pr-4 py-3 bg-black/40 border border-white/10 rounded-xl text-xs font-bold text-white focus:outline-none focus:border-amber-500"
+                                />
+                              </div>
+                              <button
+                                type="button"
+                                onClick={handleVerifyProxyEmail}
+                                disabled={checkingProxyEmail}
+                                className="px-4 py-3 bg-amber-500 hover:bg-amber-400 text-black font-black text-[10px] uppercase tracking-wider rounded-xl transition-all flex items-center gap-1.5 shrink-0 cursor-pointer disabled:opacity-50"
+                              >
+                                {checkingProxyEmail ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+                                Search
+                              </button>
+                            </div>
+                          </div>
+                        )}
+
+                        {proxyMethod === 'email' && (
+                          <div className="space-y-2">
+                            <label className="text-[10px] font-black uppercase tracking-wider text-zinc-400">
+                              Student's Contact Phone Number {proxyVerified && !proxyUserExists && <span className="text-amber-500 font-bold">(Password)</span>}
+                            </label>
+                            <div className="relative">
+                              <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
+                              <input
+                                type="text"
+                                placeholder="017XXXXXXXX"
+                                value={proxyPhoneNumber}
+                                onChange={(e) => {
+                                  setProxyPhoneNumber(e.target.value);
+                                  setPhone(e.target.value);
+                                }}
+                                className="w-full pl-11 pr-4 py-3 bg-black/40 border border-white/10 rounded-xl text-xs font-bold text-white focus:outline-none focus:border-amber-500"
+                              />
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
 
-                {registerFor === 'other' && (
-                  <motion.div 
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="w-full space-y-6"
-                  >
-                    <div className="p-8 rounded-3xl bg-white/5 border border-white/10 space-y-4">
-                      <p className="text-[10px] font-bold text-zinc-300 uppercase tracking-[0.2em] text-center">Account Verification</p>
-                      <h4 className="text-sm font-bold text-white text-center">Does the user have an existing account on this website?</h4>
-                      <div className="flex flex-col sm:flex-row gap-4 justify-center pt-2">
+                {!isProxyRegistration && (
+                  <>
+                    <div className="flex flex-col items-center gap-4">
+                      <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-[0.3em]">Select Registration Mode</p>
+                      <div className="flex gap-4 p-1 rounded-2xl bg-white/5 border border-white/10">
                         <button 
-                          onClick={() => setHasAccount(true)}
-                          className={`flex-1 px-8 py-4 rounded-xl border text-xs font-bold uppercase tracking-widest transition-all ${hasAccount === true ? 'bg-white/10 border-amber-500/50 text-white shadow-lg shadow-amber-500/10' : 'border-white/5 text-zinc-500 hover:border-white/20'}`}
+                          onClick={() => {
+                            setRegisterFor('self');
+                            if (profile) {
+                              setFullName(profile.full_name || '');
+                              setEmailAddress(user?.email || '');
+                            }
+                          }}
+                          className={`px-6 py-3 rounded-xl text-xs font-bold uppercase tracking-widest transition-all ${registerFor === 'self' ? 'bg-amber-500 text-black shadow-lg shadow-amber-500/20' : 'text-zinc-500 hover:text-white'}`}
                         >
-                          Yes, Link Existing
+                          Registering for Myself
                         </button>
                         <button 
-                          onClick={() => setHasAccount(false)}
-                          className={`flex-1 px-8 py-4 rounded-xl border text-xs font-bold uppercase tracking-widest transition-all ${hasAccount === false ? 'bg-white/10 border-amber-500/50 text-white shadow-lg shadow-amber-500/10' : 'border-white/5 text-zinc-500 hover:border-white/20'}`}
+                          onClick={() => {
+                            setRegisterFor('other');
+                            resetForm();
+                            setRegisterFor('other'); // Restore after resetForm clears it
+                          }}
+                          className={`px-6 py-3 rounded-xl text-xs font-bold uppercase tracking-widest transition-all ${registerFor === 'other' ? 'bg-amber-500 text-black shadow-lg shadow-amber-500/20' : 'text-zinc-500 hover:text-white'}`}
                         >
-                          No, they don't have
+                          Registering for Someone Else
                         </button>
                       </div>
                     </div>
 
-                    {hasAccount === true && (
-                      <div className="space-y-6">
-                        {!foundUserId ? (
-                          <div className="flex gap-4">
-                            <input 
-                              type="text"
-                              placeholder="Enter user's account email, phone, or Full Name"
-                              value={searchEmail}
-                              onChange={(e) => setSearchEmail(e.target.value)}
-                              className="flex-1 px-6 py-4 bg-white/5 border border-white/10 rounded-2xl focus:outline-none focus:border-amber-500/50 text-white font-bold text-sm"
-                            />
+                    {registerFor === 'other' && (
+                      <motion.div 
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="w-full space-y-6"
+                      >
+                        <div className="p-8 rounded-3xl bg-white/5 border border-white/10 space-y-4">
+                          <p className="text-[10px] font-bold text-zinc-300 uppercase tracking-[0.2em] text-center">Account Verification</p>
+                          <h4 className="text-sm font-bold text-white text-center">Does the user have an existing account on this website?</h4>
+                          <div className="flex flex-col sm:flex-row gap-4 justify-center pt-2">
                             <button 
-                              onClick={handleSearchUser}
-                              disabled={searching}
-                              className="px-8 py-4 bg-white/10 border border-white/10 rounded-2xl text-white font-bold text-xs uppercase tracking-widest hover:bg-white/20 transition-all disabled:opacity-50"
+                              onClick={() => setHasAccount(true)}
+                              className={`flex-1 px-8 py-4 rounded-xl border text-xs font-bold uppercase tracking-widest transition-all ${hasAccount === true ? 'bg-white/10 border-amber-500/50 text-white shadow-lg shadow-amber-500/10' : 'border-white/5 text-zinc-500 hover:border-white/20'}`}
                             >
-                              {searching ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Search'}
+                              Yes, Link Existing
+                            </button>
+                            <button 
+                              onClick={() => setHasAccount(false)}
+                              className={`flex-1 px-8 py-4 rounded-xl border text-xs font-bold uppercase tracking-widest transition-all ${hasAccount === false ? 'bg-white/10 border-amber-500/50 text-white shadow-lg shadow-amber-500/10' : 'border-white/5 text-zinc-500 hover:border-white/20'}`}
+                            >
+                              No, they don't have
                             </button>
                           </div>
-                        ) : (
-                          <motion.div 
-                            initial={{ opacity: 0, scale: 0.95 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            className="p-6 rounded-3xl bg-white/[0.03] border border-white/10 flex items-center gap-6"
-                          >
-                            <div className="relative w-16 h-16 md:w-20 md:h-20 rounded-2xl overflow-hidden bg-zinc-900 border border-white/10 shrink-0">
-                              {existingProfile?.avatar_url ? (
-                                <Image 
-                                  src={resolveImageUrl(existingProfile.avatar_url)} 
-                                  alt={existingProfile.full_name || 'User'}
-                                  fill
-                                  className="object-cover"
-                                  referrerPolicy="no-referrer"
+                        </div>
+
+                        {hasAccount === true && (
+                          <div className="space-y-6">
+                            {!foundUserId ? (
+                              <div className="flex gap-4">
+                                <input 
+                                  type="text"
+                                  placeholder="Enter user's account email, phone, or Full Name"
+                                  value={searchEmail}
+                                  onChange={(e) => setSearchEmail(e.target.value)}
+                                  className="flex-1 px-6 py-4 bg-white/5 border border-white/10 rounded-2xl focus:outline-none focus:border-amber-500/50 text-white font-bold text-sm"
                                 />
-                              ) : (
-                                <GeometricAvatar name={existingProfile?.full_name || 'User'} size="100%" className="!rounded-2xl" />
-                              )}
-                            </div>
-                            <div className="flex-grow min-w-0">
-                              <div className="text-zinc-500 text-[8px] md:text-[9px] font-mono tracking-[0.2em] uppercase mb-1 flex items-center gap-2">
-                                <CheckCircle2 className="w-3 h-3 text-green-500" />
-                                Authenticated_Record
+                                <button 
+                                  onClick={handleSearchUser}
+                                  disabled={searching}
+                                  className="px-8 py-4 bg-white/10 border border-white/10 rounded-2xl text-white font-bold text-xs uppercase tracking-widest hover:bg-white/20 transition-all disabled:opacity-50"
+                                >
+                                  {searching ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Search'}
+                                </button>
                               </div>
-                              <h4 className="text-lg md:text-xl font-display font-medium text-white mb-1 truncate">{existingProfile?.full_name}</h4>
-                              <p className="text-zinc-500 text-xs truncate">{cleanDisplayEmail(existingProfile?.email)}</p>
-                            </div>
-                            <button 
-                              onClick={() => {
-                                setFoundUserId(null);
-                                setHasAccount(null);
-                                setExistingProfile(null);
-                                setSearchEmail('');
-                                setFullName('');
-                                setEmailAddress('');
-                              }}
-                              className="p-3 rounded-xl bg-white/5 hover:bg-red-500/10 text-zinc-500 hover:text-red-500 transition-all border border-transparent hover:border-red-500/20"
-                              title="Change User"
-                            >
-                              <Edit3 className="w-5 h-5" />
-                            </button>
-                          </motion.div>
+                            ) : (
+                              <motion.div 
+                                initial={{ opacity: 0, scale: 0.95 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                className="p-6 rounded-3xl bg-white/[0.03] border border-white/10 flex items-center gap-6"
+                              >
+                                <div className="relative w-16 h-16 md:w-20 md:h-20 rounded-2xl overflow-hidden bg-zinc-900 border border-white/10 shrink-0">
+                                  {existingProfile?.avatar_url ? (
+                                    <Image 
+                                      src={resolveImageUrl(existingProfile.avatar_url)} 
+                                      alt={existingProfile.full_name || 'User'}
+                                      fill
+                                      className="object-cover"
+                                      referrerPolicy="no-referrer"
+                                    />
+                                  ) : (
+                                    <GeometricAvatar name={existingProfile?.full_name || 'User'} size="100%" className="!rounded-2xl" />
+                                  )}
+                                </div>
+                                <div className="flex-grow min-w-0">
+                                  <div className="text-zinc-500 text-[8px] md:text-[9px] font-mono tracking-[0.2em] uppercase mb-1 flex items-center gap-2">
+                                    <CheckCircle2 className="w-3 h-3 text-green-500" />
+                                    Authenticated_Record
+                                  </div>
+                                  <h4 className="text-lg md:text-xl font-display font-medium text-white mb-1 truncate">{existingProfile?.full_name}</h4>
+                                  <p className="text-zinc-500 text-xs truncate">{cleanDisplayEmail(existingProfile?.email)}</p>
+                                </div>
+                                <button 
+                                  onClick={() => {
+                                    setFoundUserId(null);
+                                    setHasAccount(null);
+                                    setExistingProfile(null);
+                                    setSearchEmail('');
+                                    setFullName('');
+                                    setEmailAddress('');
+                                  }}
+                                  className="p-3 rounded-xl bg-white/5 hover:bg-red-500/10 text-zinc-500 hover:text-red-500 transition-all border border-transparent hover:border-red-500/20"
+                                  title="Change User"
+                                >
+                                  <Edit3 className="w-5 h-5" />
+                                </button>
+                              </motion.div>
+                            )}
+                          </div>
                         )}
-                      </div>
+                      </motion.div>
                     )}
-                  </motion.div>
+                  </>
                 )}
               </div>
             )}
@@ -719,7 +1068,7 @@ const RegisterMember = () => {
                   )}
                 </div>
               </div>
-            ) : (registerFor === 'self') || (registerFor === 'other' && (hasAccount === false || (hasAccount === true && foundUserId))) ? (
+            ) : (registerFor === 'self') || (isProxyRegistration ? proxyVerified : (registerFor === 'other' && (hasAccount === false || (hasAccount === true && foundUserId)))) ? (
               <div className="p-8 md:p-12 rounded-[40px] bg-white/[0.03] border border-white/10 backdrop-blur-xl">
                 <form onSubmit={handleRegisterMember} className="space-y-10">
                   {/* Photo Upload Section */}
@@ -744,9 +1093,10 @@ const RegisterMember = () => {
                         required
                         value={fullName}
                         onChange={(e) => setFullName(e.target.value)}
+                        disabled={isProxyRegistration && (!proxyVerified || !proxyNameEditable)}
                         placeholder="John"
                         autoComplete="off"
-                        className={`w-full px-6 py-5 bg-white/5 border ${/\s/.test(fullName) ? 'border-red-500/50 focus:border-red-500/50 focus:ring-red-500/10' : 'border-white/10 focus:border-amber-500/50 focus:ring-amber-500/10'} rounded-2xl focus:outline-none focus:ring-4 transition-all text-white font-medium text-sm tracking-wide`}
+                        className={`w-full px-6 py-5 bg-white/5 border ${/\s/.test(fullName) ? 'border-red-500/50 focus:border-red-500/50 focus:ring-red-500/10' : 'border-white/10 focus:border-amber-500/50 focus:ring-amber-500/10'} rounded-2xl focus:outline-none focus:ring-4 transition-all text-white font-medium text-sm tracking-wide disabled:opacity-60`}
                       />
                       {/\s/.test(fullName) && (
                         <p className="text-[10px] text-red-400 font-bold uppercase tracking-wider ml-1 mt-1">
@@ -764,12 +1114,13 @@ const RegisterMember = () => {
                         required
                         value={emailAddress}
                         onChange={(e) => setEmailAddress(e.target.value)}
+                        disabled={isProxyRegistration && (proxyMethod === 'email' || !proxyVerified)}
                         placeholder="name@example.com or phone number"
                         autoCapitalize="none"
                         autoComplete="off"
                         autoCorrect="off"
                         spellCheck="false"
-                        className="w-full px-6 py-5 bg-white/5 border border-white/10 rounded-2xl focus:outline-none focus:border-amber-500/50 transition-all text-white font-medium text-sm"
+                        className="w-full px-6 py-5 bg-white/5 border border-white/10 rounded-2xl focus:outline-none focus:border-amber-500/50 transition-all text-white font-medium text-sm disabled:opacity-60"
                       />
                     </div>
 
@@ -782,8 +1133,9 @@ const RegisterMember = () => {
                         required
                         value={phone}
                         onChange={(e) => setPhone(e.target.value)}
+                        disabled={isProxyRegistration && (proxyMethod === 'phone' || !proxyVerified)}
                         placeholder="01XXXXXXXXX"
-                        className="w-full px-6 py-5 bg-white/5 border border-white/10 rounded-2xl focus:outline-none focus:border-amber-500/50 transition-all text-white font-medium text-sm"
+                        className="w-full px-6 py-5 bg-white/5 border border-white/10 rounded-2xl focus:outline-none focus:border-amber-500/50 transition-all text-white font-medium text-sm disabled:opacity-60"
                       />
                     </div>
 
@@ -810,8 +1162,9 @@ const RegisterMember = () => {
                         required
                         value={className}
                         onChange={(e) => setClassName(e.target.value)}
+                        disabled={isProxyRegistration && (!proxyVerified || !proxyClassEditable)}
                         placeholder="e.g. 10"
-                        className="w-full px-6 py-5 bg-white/5 border border-white/10 rounded-2xl focus:outline-none focus:border-amber-500/50 transition-all text-white font-medium text-sm"
+                        className="w-full px-6 py-5 bg-white/5 border border-white/10 rounded-2xl focus:outline-none focus:border-amber-500/50 transition-all text-white font-medium text-sm disabled:opacity-60"
                       />
                     </div>
 
@@ -825,8 +1178,9 @@ const RegisterMember = () => {
                           required
                           value={section}
                           onChange={(e) => setSection(e.target.value)}
+                          disabled={isProxyRegistration && (!proxyVerified || !proxySectionEditable)}
                           placeholder="e.g. A"
-                          className="w-full px-6 py-5 bg-white/5 border border-white/10 rounded-2xl focus:outline-none focus:border-amber-500/50 transition-all text-white font-medium text-sm"
+                          className="w-full px-6 py-5 bg-white/5 border border-white/10 rounded-2xl focus:outline-none focus:border-amber-500/50 transition-all text-white font-medium text-sm disabled:opacity-60"
                         />
                       </div>
 
@@ -839,8 +1193,9 @@ const RegisterMember = () => {
                           required
                           value={roll}
                           onChange={(e) => setRoll(e.target.value)}
+                          disabled={isProxyRegistration && (!proxyVerified || !proxyRollEditable)}
                           placeholder="e.g. 42"
-                          className="w-full px-6 py-5 bg-white/5 border border-white/10 rounded-2xl focus:outline-none focus:border-amber-500/50 transition-all text-white font-medium text-sm"
+                          className="w-full px-6 py-5 bg-white/5 border border-white/10 rounded-2xl focus:outline-none focus:border-amber-500/50 transition-all text-white font-medium text-sm disabled:opacity-60"
                         />
                       </div>
                     </div>
@@ -856,123 +1211,137 @@ const RegisterMember = () => {
                     </div>
                   </div>
 
-                  <div className="p-8 rounded-3xl bg-white/5 border border-white/10 space-y-8">
-                    <div className="flex items-center justify-between">
-                      <h3 className="text-sm font-bold text-white uppercase tracking-widest">Payment Details</h3>
-                      <div className="px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-500 text-[8px] font-bold uppercase tracking-widest">
-                        Status: Pending
+                  {isProxyRegistration ? (
+                    <div className="p-8 rounded-3xl bg-amber-500/5 border border-amber-500/20 space-y-4 text-left">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-amber-500/10 flex items-center justify-center text-amber-500 shrink-0">
+                          <Sparkles className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <h4 className="text-sm font-black uppercase tracking-wider text-white">Proxy Mode Active</h4>
+                          <p className="text-[10px] text-zinc-400">Payment details and verification are bypassed. This registration will be immediately marked as fully verified in the system.</p>
+                        </div>
                       </div>
                     </div>
-
-                    <div className="space-y-4">
-                      <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 ml-1">Payment Method</label>
-                      <div className="grid grid-cols-2 gap-4">
-                        <button
-                          type="button"
-                          onClick={() => setPaymentMethod('bkash')}
-                          className={`py-4 rounded-2xl border transition-all font-bold text-xs uppercase tracking-widest ${
-                            paymentMethod === 'bkash' 
-                              ? 'bg-amber-500 border-amber-500 text-black' 
-                              : 'bg-white/5 border-white/10 text-zinc-400 hover:border-white/20'
-                          }`}
-                        >
-                          bKash
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setPaymentMethod('cash')}
-                          className={`py-4 rounded-2xl border transition-all font-bold text-xs uppercase tracking-widest ${
-                            paymentMethod === 'cash' 
-                              ? 'bg-amber-500 border-amber-500 text-black' 
-                              : 'bg-white/5 border-white/10 text-zinc-400 hover:border-white/20'
-                          }`}
-                        >
-                          Cash
-                        </button>
+                  ) : (
+                    <div className="p-8 rounded-3xl bg-white/5 border border-white/10 space-y-8 text-left">
+                      <div className="flex items-center justify-between">
+                        <h3 className="text-sm font-bold text-white uppercase tracking-widest">Payment Details</h3>
+                        <div className="px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-500 text-[8px] font-bold uppercase tracking-widest">
+                          Status: Pending
+                        </div>
                       </div>
-                    </div>
 
-                    {paymentMethod === 'bkash' && (
-                      <motion.div 
-                        initial={shouldReduceGfx ? { opacity: 0 } : { opacity: 0, y: 10 }}
-                        animate={shouldReduceGfx ? { opacity: 1 } : { opacity: 1, y: 0 }}
-                        className="space-y-6"
-                      >
-                        <div className="p-4 rounded-2xl bg-amber-500/5 border border-amber-500/10 space-y-3">
-                          <div className="flex items-center justify-between">
-                            <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">Send Money To (bKash)</span>
-                            <button 
-                              type="button"
-                              onClick={() => {
-                                navigator.clipboard.writeText(content?.registration?.bkashNumber || '01712345678');
-                                showToast('Number copied to clipboard', 'success');
-                              }}
-                              className="flex items-center gap-2 px-3 py-1 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-500 text-[10px] font-bold uppercase tracking-widest hover:bg-amber-500 hover:text-black transition-all"
-                            >
-                              <Copy className="w-3 h-3" />
-                              Copy
-                            </button>
-                          </div>
-                          <div className="text-xl font-mono font-bold text-white tracking-wider">{content?.registration?.bkashNumber || '01712345678'}</div>
-                          <div className="space-y-1">
-                            <p className="text-xs text-zinc-300 font-bold uppercase tracking-widest mb-2">
-                              Fee: {content?.registration?.fee || '200 BDT'}
-                            </p>
-                            {(content?.registration?.instructions || [
-                              "Go to your bKash app or dial *247#",
-                              "Select \"Send Money\" and enter the number above",
-                              "Enter the registration fee amount",
-                              "Copy the Transaction ID (TrxID) and enter it below"
-                            ]).map((step: string, i: number) => (
-                              <p key={i} className="text-[9px] text-zinc-500 uppercase tracking-widest leading-relaxed">
-                                {i + 1}. {step}
+                      <div className="space-y-4">
+                        <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 ml-1">Payment Method</label>
+                        <div className="grid grid-cols-2 gap-4">
+                          <button
+                            type="button"
+                            onClick={() => setPaymentMethod('bkash')}
+                            className={`py-4 rounded-2xl border transition-all font-bold text-xs uppercase tracking-widest ${
+                              paymentMethod === 'bkash' 
+                                ? 'bg-amber-500 border-amber-500 text-black' 
+                                : 'bg-white/5 border-white/10 text-zinc-400 hover:border-white/20'
+                            }`}
+                          >
+                            bKash
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setPaymentMethod('cash')}
+                            className={`py-4 rounded-2xl border transition-all font-bold text-xs uppercase tracking-widest ${
+                              paymentMethod === 'cash' 
+                                ? 'bg-amber-500 border-amber-500 text-black' 
+                                : 'bg-white/5 border-white/10 text-zinc-400 hover:border-white/20'
+                            }`}
+                          >
+                            Cash
+                          </button>
+                        </div>
+                      </div>
+
+                      {paymentMethod === 'bkash' && (
+                        <motion.div 
+                          initial={shouldReduceGfx ? { opacity: 0 } : { opacity: 0, y: 10 }}
+                          animate={shouldReduceGfx ? { opacity: 1 } : { opacity: 1, y: 0 }}
+                          className="space-y-6"
+                        >
+                          <div className="p-4 rounded-2xl bg-amber-500/5 border border-amber-500/10 space-y-3">
+                            <div className="flex items-center justify-between">
+                              <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">Send Money To (bKash)</span>
+                              <button 
+                                type="button"
+                                onClick={() => {
+                                  navigator.clipboard.writeText(content?.registration?.bkashNumber || '01712345678');
+                                  showToast('Number copied to clipboard', 'success');
+                                }}
+                                className="flex items-center gap-2 px-3 py-1 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-500 text-[10px] font-bold uppercase tracking-widest hover:bg-amber-500 hover:text-black transition-all"
+                              >
+                                <Copy className="w-3 h-3" />
+                                Copy
+                              </button>
+                            </div>
+                            <div className="text-xl font-mono font-bold text-white tracking-wider">{content?.registration?.bkashNumber || '01712345678'}</div>
+                            <div className="space-y-1">
+                              <p className="text-xs text-zinc-300 font-bold uppercase tracking-widest mb-2">
+                                Fee: {content?.registration?.fee || '200 BDT'}
                               </p>
-                            ))}
+                              {(content?.registration?.instructions || [
+                                "Go to your bKash app or dial *247#",
+                                "Select \"Send Money\" and enter the number above",
+                                "Enter the registration fee amount",
+                                "Copy the Transaction ID (TrxID) and enter it below"
+                              ]).map((step: string, i: number) => (
+                                <p key={i} className="text-[9px] text-zinc-500 uppercase tracking-widest leading-relaxed">
+                                  {i + 1}. {step}
+                                </p>
+                              ))}
+                            </div>
                           </div>
-                        </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                          <div className="space-y-2">
-                            <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 ml-1">TrxID</label>
-                            <input 
-                              type="text"
-                              required
-                              value={trxnid}
-                              onChange={(e) => setTrxnid(e.target.value)}
-                              placeholder="TRANSACTION ID"
-                              className="w-full px-6 py-5 bg-white/5 border border-white/10 rounded-2xl focus:outline-none focus:border-amber-500/50 transition-all text-white font-bold text-sm"
-                            />
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            <div className="space-y-2">
+                              <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 ml-1">TrxID</label>
+                              <input 
+                                type="text"
+                                required
+                                value={trxnid}
+                                onChange={(e) => setTrxnid(e.target.value)}
+                                placeholder="TRANSACTION ID"
+                                className="w-full px-6 py-5 bg-white/5 border border-white/10 rounded-2xl focus:outline-none focus:border-amber-500/50 transition-all text-white font-bold text-sm"
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 ml-1">Your bKash Number</label>
+                              <input 
+                                type="text"
+                                required
+                                value={bkashNumber}
+                                onChange={(e) => {
+                                  const val = e.target.value.replace(/\D/g, '');
+                                  if (val.length <= 11) setBkashNumber(val);
+                                }}
+                                placeholder="01XXXXXXXXX"
+                                className="w-full px-6 py-5 bg-white/5 border border-white/10 rounded-2xl focus:outline-none focus:border-[var(--c-6-start)]/50 transition-all text-white font-bold text-sm"
+                              />
+                            </div>
                           </div>
-                          <div className="space-y-2">
-                            <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 ml-1">Your bKash Number</label>
-                            <input 
-                              type="text"
-                              required
-                              value={bkashNumber}
-                              onChange={(e) => {
-                                const val = e.target.value.replace(/\D/g, '');
-                                if (val.length <= 11) setBkashNumber(val);
-                              }}
-                              placeholder="01XXXXXXXXX"
-                              className="w-full px-6 py-5 bg-white/5 border border-white/10 rounded-2xl focus:outline-none focus:border-[var(--c-6-start)]/50 transition-all text-white font-bold text-sm"
-                            />
-                          </div>
-                        </div>
-                      </motion.div>
-                    )}
+                        </motion.div>
+                      )}
 
-                    {paymentMethod === 'cash' && (
-                      <motion.div 
-                        initial={shouldReduceGfx ? { opacity: 0 } : { opacity: 0, y: 10 }}
-                        animate={shouldReduceGfx ? { opacity: 1 } : { opacity: 1, y: 0 }}
-                        className="p-4 rounded-2xl bg-[var(--c-6-start)]/10 border border-[var(--c-6-start)]/20"
-                      >
-                        <p className="text-[10px] text-[var(--c-6-start)] font-bold uppercase tracking-widest text-center">
-                          {content?.registration?.cashInstructions || "Please pay your registration fee to the club treasurer."}
-                        </p>
-                      </motion.div>
-                    )}
-                  </div>
+                      {paymentMethod === 'cash' && (
+                        <motion.div 
+                          initial={shouldReduceGfx ? { opacity: 0 } : { opacity: 0, y: 10 }}
+                          animate={shouldReduceGfx ? { opacity: 1 } : { opacity: 1, y: 0 }}
+                          className="p-4 rounded-2xl bg-[var(--c-6-start)]/10 border border-[var(--c-6-start)]/20"
+                        >
+                          <p className="text-[10px] text-[var(--c-6-start)] font-bold uppercase tracking-widest text-center">
+                            {content?.registration?.cashInstructions || "Please pay your registration fee to the club treasurer."}
+                          </p>
+                        </motion.div>
+                      )}
+                    </div>
+                  )}
 
                   {/* Declaration */}
                   <div className="p-8 rounded-3xl bg-white/5 border border-white/10 space-y-4">

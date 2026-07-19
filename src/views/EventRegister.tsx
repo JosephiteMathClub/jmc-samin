@@ -180,6 +180,7 @@ const EventRegister = () => {
 
   // Admin Proxy/Spot Registration States
   const [isProxyRegistration, setIsProxyRegistration] = useState(false);
+  const [proxyMethod, setProxyMethod] = useState<'email' | 'phone'>('email');
   const [proxyEmail, setProxyEmail] = useState('');
   const [proxyPhoneNumber, setProxyPhoneNumber] = useState('');
   const [proxyVerified, setProxyVerified] = useState(false);
@@ -698,6 +699,7 @@ const EventRegister = () => {
 
   const handleToggleProxy = (checked: boolean) => {
     setIsProxyRegistration(checked);
+    setProxyMethod('email');
     setProxyEmail('');
     setProxyPhoneNumber('');
     setProxyVerified(false);
@@ -740,46 +742,106 @@ const EventRegister = () => {
   };
 
   const handleVerifyProxyEmail = async () => {
-    const trimmedInput = (proxyEmail || '').trim();
-    if (!trimmedInput) {
-      showToast("Please enter a valid email address or phone number.", "error");
-      return;
-    }
-
-    const isPhoneInput = !trimmedInput.includes('@') && /^[0-9+\s\-()]+$/.test(trimmedInput);
-    if (!isPhoneInput && !trimmedInput.includes('@')) {
-      showToast("Please enter a valid email address or phone number.", "error");
-      return;
+    let trimmedInput = '';
+    if (proxyMethod === 'phone') {
+      trimmedInput = (proxyPhoneNumber || '').trim();
+      if (!trimmedInput || trimmedInput.length < 11) {
+        showToast("Please enter a valid student phone number (at least 11 digits).", "error");
+        return;
+      }
+    } else {
+      trimmedInput = (proxyEmail || '').trim();
+      if (!trimmedInput) {
+        showToast("Please enter a valid email address.", "error");
+        return;
+      }
+      const isPhoneInput = !trimmedInput.includes('@') && /^[0-9+\s\-()]+$/.test(trimmedInput);
+      if (!isPhoneInput && !trimmedInput.includes('@')) {
+        showToast("Please enter a valid email address or phone number.", "error");
+        return;
+      }
     }
 
     setCheckingProxyEmail(true);
     try {
-      let emailToCheck = trimmedInput.toLowerCase();
-      const originalPhone = trimmedInput;
+      let profileCheck = null;
+      let memberCheck = null;
+      let ecCheck = null;
+      const isPhoneInput = !trimmedInput.includes('@') && /^[0-9+\s\-()]+$/.test(trimmedInput);
 
-      if (isPhoneInput) {
-        emailToCheck = `${trimmedInput.toLowerCase()}@josephitre.club`;
+      if (proxyMethod === 'phone') {
+        // Search by phone
+        const { data: mCheck } = await supabase
+          .from('member')
+          .select('*')
+          .eq('phone', trimmedInput)
+          .maybeSingle();
+        memberCheck = mCheck;
+
+        const { data: eCheck } = await supabase
+          .from('ec_member')
+          .select('*')
+          .eq('phone', trimmedInput)
+          .maybeSingle();
+        ecCheck = eCheck;
+
+        const resolvedId = ecCheck?.id || memberCheck?.id;
+        if (resolvedId) {
+          const { data: pCheck } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', resolvedId)
+            .maybeSingle();
+          profileCheck = pCheck;
+        } else {
+          // Check profiles if there's an account with email: phone@josephitre.club
+          const { data: pCheck } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('email', `${trimmedInput}@josephitre.club`)
+            .maybeSingle();
+          profileCheck = pCheck;
+          if (profileCheck) {
+            const { data: mCheck } = await supabase
+              .from('member')
+              .select('*')
+              .eq('id', profileCheck.id)
+              .maybeSingle();
+            memberCheck = mCheck;
+          }
+        }
+      } else {
+        // Search by email
+        let emailToCheck = trimmedInput.toLowerCase();
+        const originalPhone = trimmedInput;
+
+        if (isPhoneInput) {
+          emailToCheck = `${trimmedInput.toLowerCase()}@josephitre.club`;
+        }
+        
+        const { data: pCheck, error: pError } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('email', emailToCheck)
+          .maybeSingle();
+
+        if (pError) throw pError;
+        profileCheck = pCheck;
+
+        const { data: mCheck } = await supabase
+          .from('member')
+          .select('*')
+          .or(`email.eq.${emailToCheck},email_address.eq.${emailToCheck}${isPhoneInput ? `,phone.eq.${originalPhone}` : ''}`)
+          .maybeSingle();
+        memberCheck = mCheck;
+
+        const { data: eCheck } = await supabase
+          .from('ec_member')
+          .select('*')
+          .or(`email.eq.${emailToCheck},email_address.eq.${emailToCheck}${isPhoneInput ? `,phone.eq.${originalPhone}` : ''}`)
+          .maybeSingle();
+        ecCheck = eCheck;
       }
-      
-      const { data: profileCheck, error: pError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('email', emailToCheck)
-        .maybeSingle();
-
-      if (pError) throw pError;
-
-      const { data: memberCheck } = await supabase
-        .from('member')
-        .select('*')
-        .or(`email.eq.${emailToCheck},email_address.eq.${emailToCheck}${isPhoneInput ? `,phone.eq.${originalPhone}` : ''}`)
-        .maybeSingle();
-
-      const { data: ecCheck } = await supabase
-        .from('ec_member')
-        .select('*')
-        .or(`email.eq.${emailToCheck},email_address.eq.${emailToCheck}${isPhoneInput ? `,phone.eq.${originalPhone}` : ''}`)
-        .maybeSingle();
 
       const activeMember = ecCheck || memberCheck;
       
@@ -803,7 +865,7 @@ const EventRegister = () => {
         setClassName(matchedClass);
         setSection(matchedSection);
         setRoll(matchedRoll);
-        setProxyPhoneNumber(matchedPhone || (isPhoneInput ? originalPhone : ''));
+        setProxyPhoneNumber(matchedPhone || (proxyMethod === 'phone' ? trimmedInput : (isPhoneInput ? trimmedInput : '')));
         setProxyResolvedUserId(profileCheck?.id || activeMember?.id || null);
         setProxyUserExists(true);
         setProxyVerified(true);
@@ -824,7 +886,7 @@ const EventRegister = () => {
         setClassName('');
         setSection('');
         setRoll('');
-        setProxyPhoneNumber(isPhoneInput ? originalPhone : '');
+        setProxyPhoneNumber(proxyMethod === 'phone' ? trimmedInput : (isPhoneInput ? trimmedInput : ''));
         setIsGeneralMember(false);
         setIsProxyUserEc(false);
         setProxyUserEcId(null);
@@ -858,11 +920,18 @@ const EventRegister = () => {
     }
 
     if (isProxyRegistration) {
-      const trimmedInput = proxyEmail.trim();
-      const isPhoneInput = !trimmedInput.includes('@') && /^[0-9+\s\-()]+$/.test(trimmedInput);
-      if (!trimmedInput || (!trimmedInput.includes('@') && !isPhoneInput)) {
-        showToast("Please enter a valid student email address or phone number.", "error");
-        return;
+      if (proxyMethod === 'phone') {
+        if (!proxyPhoneNumber.trim() || proxyPhoneNumber.trim().length < 11) {
+          showToast("Please enter a valid student phone number (at least 11 digits).", "error");
+          return;
+        }
+      } else {
+        const trimmedInput = proxyEmail.trim();
+        const isPhoneInput = !trimmedInput.includes('@') && /^[0-9+\s\-()]+$/.test(trimmedInput);
+        if (!trimmedInput || (!trimmedInput.includes('@') && !isPhoneInput)) {
+          showToast("Please enter a valid student email address.", "error");
+          return;
+        }
       }
       if (!proxyVerified) {
         showToast("Please search and verify the student's credentials first.", "error");
@@ -1165,9 +1234,10 @@ const EventRegister = () => {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              email: getVirtualEmail(proxyEmail),
+              email: proxyMethod === 'phone' ? `${proxyPhoneNumber.trim()}@josephitre.club` : getVirtualEmail(proxyEmail),
               password: proxyPhoneNumber.trim(),
-              fullName: fullName.trim()
+              fullName: fullName.trim(),
+              usePhoneAsLogin: proxyMethod === 'phone'
             })
           });
 
@@ -1363,13 +1433,17 @@ const EventRegister = () => {
         }
         existingMemberId = resolvedMemberId;
 
+        const resolvedProxyEmail = isProxyRegistration 
+          ? (proxyMethod === 'phone' ? `${proxyPhoneNumber.trim()}@josephitre.club` : getVirtualEmail(proxyEmail)) 
+          : '';
+
         const { error: autoGenError } = await supabase
           .from('member')
           .upsert({
             id: finalUserId,
             full_name: fullName,
-            email: isProxyRegistration ? getVirtualEmail(proxyEmail) : realUserEmail,
-            email_address: isProxyRegistration ? getVirtualEmail(proxyEmail) : realUserEmail,
+            email: isProxyRegistration ? resolvedProxyEmail : realUserEmail,
+            email_address: isProxyRegistration ? (proxyMethod === 'phone' ? null : getVirtualEmail(proxyEmail)) : realUserEmail,
             phone: isProxyRegistration ? proxyPhoneNumber : phone.trim(),
             school: 'St Joseph Higher Secondary School',
             class: className,
@@ -1395,6 +1469,7 @@ const EventRegister = () => {
       // Also trigger a notification email to the user
       try {
         if (isProxyRegistration && insertedRow) {
+          const resolvedProxyEmail = proxyMethod === 'phone' ? `${proxyPhoneNumber.trim()}@josephitre.club` : getVirtualEmail(proxyEmail);
           // Trigger instant admin-level verification to auto-create participation rows, verify, and email their UNIQUE 5-digit ID!
           const verifyRes = await fetch('/api/admin/verify-event-registration', {
             method: 'POST',
@@ -1403,7 +1478,7 @@ const EventRegister = () => {
               recordId: insertedRow.id,
               tableName: targetTable,
               action: 'approve',
-              emailAddress: getVirtualEmail(proxyEmail),
+              emailAddress: resolvedProxyEmail,
               verifiedBy: user?.email || 'Admin'
             })
           });
@@ -1793,51 +1868,128 @@ const EventRegister = () => {
                         </div>
 
                         {isProxyRegistration && (
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-white/5">
-                            {/* Student Email Input */}
+                          <div className="pt-4 border-t border-white/5 space-y-4">
+                            {/* Choice selector to register using Email or Phone */}
                             <div className="space-y-2">
-                              <label className="text-[10px] font-black uppercase tracking-wider text-zinc-400">Student's Email or Phone Number (User ID)</label>
+                              <span className="text-[10px] font-black uppercase tracking-wider text-zinc-400">Search & Register Student using:</span>
                               <div className="flex gap-2">
-                                <div className="relative flex-1">
-                                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
-                                  <input
-                                    type="text"
-                                    placeholder="student@example.com or 017XXXXXXXX"
-                                    value={proxyEmail}
-                                    onChange={(e) => {
-                                      setProxyEmail(e.target.value);
-                                      setProxyVerified(false);
-                                    }}
-                                    className="w-full pl-11 pr-4 py-3 bg-black/40 border border-white/10 rounded-xl text-xs font-bold text-white focus:outline-none focus:border-indigo-500"
-                                  />
-                                </div>
                                 <button
                                   type="button"
-                                  onClick={handleVerifyProxyEmail}
-                                  disabled={checkingProxyEmail}
-                                  className="px-4 py-3 bg-indigo-500 hover:bg-indigo-400 text-white font-black text-[10px] uppercase tracking-wider rounded-xl transition-all flex items-center gap-1.5 shrink-0"
+                                  onClick={() => {
+                                    setProxyMethod('email');
+                                    setProxyEmail('');
+                                    setProxyVerified(false);
+                                    setProxyUserExists(false);
+                                    setProxyResolvedUserId(null);
+                                  }}
+                                  className={`flex-1 py-2.5 rounded-xl border text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                                    proxyMethod === 'email'
+                                      ? 'bg-indigo-500/10 border-indigo-500/30 text-indigo-400 shadow-md shadow-indigo-500/5'
+                                      : 'bg-white/5 border-white/5 text-zinc-400 hover:bg-white/10'
+                                  }`}
                                 >
-                                  {checkingProxyEmail ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
-                                  Search
+                                  <Mail className="w-3.5 h-3.5" />
+                                  Email Address
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setProxyMethod('phone');
+                                    setProxyEmail('');
+                                    setProxyVerified(false);
+                                    setProxyUserExists(false);
+                                    setProxyResolvedUserId(null);
+                                  }}
+                                  className={`flex-1 py-2.5 rounded-xl border text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                                    proxyMethod === 'phone'
+                                      ? 'bg-indigo-500/10 border-indigo-500/30 text-indigo-400 shadow-md shadow-indigo-500/5'
+                                      : 'bg-white/5 border-white/5 text-zinc-400 hover:bg-white/10'
+                                  }`}
+                                >
+                                  <Phone className="w-3.5 h-3.5" />
+                                  Phone Number
                                 </button>
                               </div>
                             </div>
 
-                            {/* Student Phone Number Field */}
-                            <div className="space-y-2">
-                              <label className="text-[10px] font-black uppercase tracking-wider text-zinc-400">
-                                Student's Contact Phone Number {proxyVerified && !proxyUserExists && <span className="text-amber-500">(Password)</span>}
-                              </label>
-                              <div className="relative">
-                                <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
-                                <input
-                                  type="text"
-                                  placeholder="017XXXXXXXX"
-                                  value={proxyPhoneNumber}
-                                  onChange={(e) => setProxyPhoneNumber(e.target.value)}
-                                  className="w-full pl-11 pr-4 py-3 bg-black/40 border border-white/10 rounded-xl text-xs font-bold text-white focus:outline-none focus:border-indigo-500"
-                                />
-                              </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              {/* Student Input based on method */}
+                              {proxyMethod === 'email' ? (
+                                <div className="space-y-2">
+                                  <label className="text-[10px] font-black uppercase tracking-wider text-zinc-400">Student's Email Address (User ID)</label>
+                                  <div className="flex gap-2">
+                                    <div className="relative flex-1">
+                                      <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
+                                      <input
+                                        type="email"
+                                        placeholder="student@example.com"
+                                        value={proxyEmail}
+                                        onChange={(e) => {
+                                          setProxyEmail(e.target.value);
+                                          setProxyVerified(false);
+                                        }}
+                                        className="w-full pl-11 pr-4 py-3 bg-black/40 border border-white/10 rounded-xl text-xs font-bold text-white focus:outline-none focus:border-indigo-500"
+                                      />
+                                    </div>
+                                    <button
+                                      type="button"
+                                      onClick={handleVerifyProxyEmail}
+                                      disabled={checkingProxyEmail}
+                                      className="px-4 py-3 bg-indigo-500 hover:bg-indigo-400 text-white font-black text-[10px] uppercase tracking-wider rounded-xl transition-all flex items-center gap-1.5 shrink-0"
+                                    >
+                                      {checkingProxyEmail ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+                                      Search
+                                    </button>
+                                  </div>
+                                </div>
+                              ) : (
+                                <div className="space-y-2">
+                                  <label className="text-[10px] font-black uppercase tracking-wider text-zinc-400">Student's Phone Number (User ID & Password)</label>
+                                  <div className="flex gap-2">
+                                    <div className="relative flex-1">
+                                      <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
+                                      <input
+                                        type="text"
+                                        placeholder="017XXXXXXXX"
+                                        value={proxyPhoneNumber}
+                                        onChange={(e) => {
+                                          setProxyPhoneNumber(e.target.value);
+                                          setProxyVerified(false);
+                                        }}
+                                        className="w-full pl-11 pr-4 py-3 bg-black/40 border border-white/10 rounded-xl text-xs font-bold text-white focus:outline-none focus:border-indigo-500"
+                                      />
+                                    </div>
+                                    <button
+                                      type="button"
+                                      onClick={handleVerifyProxyEmail}
+                                      disabled={checkingProxyEmail}
+                                      className="px-4 py-3 bg-indigo-500 hover:bg-indigo-400 text-white font-black text-[10px] uppercase tracking-wider rounded-xl transition-all flex items-center gap-1.5 shrink-0"
+                                    >
+                                      {checkingProxyEmail ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+                                      Search
+                                    </button>
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* Student Phone Number Field (Only required/shown for email proxy mode) */}
+                              {proxyMethod === 'email' && (
+                                <div className="space-y-2">
+                                  <label className="text-[10px] font-black uppercase tracking-wider text-zinc-400">
+                                    Student's Contact Phone Number {proxyVerified && !proxyUserExists && <span className="text-amber-500">(Password)</span>}
+                                  </label>
+                                  <div className="relative">
+                                    <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
+                                    <input
+                                      type="text"
+                                      placeholder="017XXXXXXXX"
+                                      value={proxyPhoneNumber}
+                                      onChange={(e) => setProxyPhoneNumber(e.target.value)}
+                                      className="w-full pl-11 pr-4 py-3 bg-black/40 border border-white/10 rounded-xl text-xs font-bold text-white focus:outline-none focus:border-indigo-500"
+                                    />
+                                  </div>
+                                </div>
+                              )}
                             </div>
                           </div>
                         )}

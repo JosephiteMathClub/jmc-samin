@@ -65,7 +65,9 @@ export async function POST(req: Request) {
       bkashNumber,
       trxnid,
       amount,
-      selectedEvents
+      selectedEvents,
+      isProxyRegistration,
+      userId
     } = body;
 
     if (!fullName || !email || !phone || !className || !institute || !bkashNumber || !trxnid || !selectedEvents || selectedEvents.length === 0) {
@@ -85,29 +87,39 @@ export async function POST(req: Request) {
     let authEmail = null;
     let isNewUserCreated = false;
 
-    // Check if profile already exists with this real email
-    const { data: existingProfile } = await supabaseAdmin
-      .from('profiles')
-      .select('id, full_name, email')
-      .eq('email', cleanEmail)
-      .maybeSingle();
-
-    if (existingProfile) {
-      finalUserId = existingProfile.id;
-      const { data: userData } = await supabaseAdmin.auth.admin.getUserById(existingProfile.id);
-      authEmail = userData?.user?.email;
+    if (userId) {
+      finalUserId = userId;
+      try {
+        const { data: userData } = await supabaseAdmin.auth.admin.getUserById(userId);
+        authEmail = userData?.user?.email;
+      } catch (err) {
+        console.error("Error fetching user by ID in API:", err);
+      }
     } else {
-      // Check if a member already exists with this phone number
-      const { data: existingMember } = await supabaseAdmin
-        .from('member')
-        .select('id, full_name, email, phone')
-        .eq('phone', cleanPhone)
+      // Check if profile already exists with this real email
+      const { data: existingProfile } = await supabaseAdmin
+        .from('profiles')
+        .select('id, full_name, email')
+        .eq('email', cleanEmail)
         .maybeSingle();
 
-      if (existingMember) {
-        finalUserId = existingMember.id;
-        const { data: userData } = await supabaseAdmin.auth.admin.getUserById(existingMember.id);
+      if (existingProfile) {
+        finalUserId = existingProfile.id;
+        const { data: userData } = await supabaseAdmin.auth.admin.getUserById(existingProfile.id);
         authEmail = userData?.user?.email;
+      } else {
+        // Check if a member already exists with this phone number
+        const { data: existingMember } = await supabaseAdmin
+          .from('member')
+          .select('id, full_name, email, phone')
+          .eq('phone', cleanPhone)
+          .maybeSingle();
+
+        if (existingMember) {
+          finalUserId = existingMember.id;
+          const { data: userData } = await supabaseAdmin.auth.admin.getUserById(existingMember.id);
+          authEmail = userData?.user?.email;
+        }
       }
     }
 
@@ -257,10 +269,10 @@ export async function POST(req: Request) {
           section: cleanInstitute, // backup
           roll: cleanCaCode, // backup
           photo_url: '',
-          payment_method: 'bkash',
+          payment_method: isProxyRegistration ? 'Manual (Admin)' : 'bkash',
           trxnid: trxnid,
           bkash_number: bkashNumber,
-          verified: 'no',
+          verified: isProxyRegistration ? 'yes' : 'no',
           member_id: resolvedMemberId
         });
 
@@ -282,7 +294,7 @@ export async function POST(req: Request) {
       trxnid: trxnid,
       amount: amount,
       selected_events: selectedEvents.join(', '),
-      verified: 'no'
+      verified: isProxyRegistration ? 'yes' : 'no'
     };
 
     const { error: regInsertError } = await supabaseAdmin

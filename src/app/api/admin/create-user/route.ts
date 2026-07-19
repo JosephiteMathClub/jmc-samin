@@ -29,15 +29,18 @@ function getSupabaseAdmin() {
 
 export async function POST(req: Request) {
   try {
-    const { email, password, fullName } = await req.json();
+    const { email, password, fullName, usePhoneAsLogin, useGivenNameAsLogin } = await req.json();
 
     if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
       console.error('CRITICAL: SUPABASE_SERVICE_ROLE_KEY is missing in env');
       return NextResponse.json({ error: 'Server configuration error: Service Role Key missing' }, { status: 500 });
     }
 
-    if (!email || !password) {
-      return NextResponse.json({ error: 'Email and password are required' }, { status: 400 });
+    if (!password) {
+      return NextResponse.json({ error: 'Password is required' }, { status: 400 });
+    }
+    if (!usePhoneAsLogin && !useGivenNameAsLogin && !email) {
+      return NextResponse.json({ error: 'Email is required' }, { status: 400 });
     }
 
     // 1. Initialize admin client safely
@@ -98,11 +101,19 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Forbidden: Admin access required' }, { status: 403 });
     }
 
-    const cleanEmail = email.trim().toLowerCase();
+    const cleanEmail = (usePhoneAsLogin || useGivenNameAsLogin) ? null : (email ? email.trim().toLowerCase() : null);
     
-    // Assign the unique id to the provided name not to the provided email address
-    const slug = fullName.trim().toLowerCase().replace(/[^a-z0-9]/g, '_').replace(/__+/g, '_').replace(/^_+|_+$/g, '');
-    const virtualEmail = `${slug}@josephitre.club`;
+    // Assign the unique id
+    let virtualEmail;
+    if (usePhoneAsLogin) {
+      virtualEmail = `${password.trim()}@josephitre.club`;
+    } else if (useGivenNameAsLogin) {
+      const givenName = fullName.trim().split(/\s+/)[0].replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+      virtualEmail = `${givenName}@josephitre.club`;
+    } else {
+      const slug = fullName.trim().toLowerCase().replace(/[^a-z0-9]/g, '_').replace(/__+/g, '_').replace(/^_+|_+$/g, '');
+      virtualEmail = `${slug}@josephitre.club`;
+    }
 
     // 2. Create the new user
     const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
@@ -111,7 +122,8 @@ export async function POST(req: Request) {
       email_confirm: true, // Auto-confirm email
       user_metadata: {
         full_name: fullName,
-        real_email: cleanEmail
+        real_email: cleanEmail,
+        phone: password.trim()
       }
     });
 
@@ -136,36 +148,38 @@ export async function POST(req: Request) {
     }
 
     // 4. Send Welcome Email in background
-    sendEmail({
-      to: email,
-      subject: 'Your Account Creation Has Been Successful!',
-      html: `
-        <div style="font-family: sans-serif; padding: 20px; color: #333; border: 1px solid #e5e7eb; border-radius: 8px; max-width: 600px; margin: 0 auto;">
-          <h1 style="color: #0c4a6e; margin-bottom: 20px;">Account Creation Successful, ${fullName}!</h1>
-          <p style="font-size: 16px; line-height: 1.5;">Your account has been successfully created for Josephite Math Club event registration.</p>
-          
-          <div style="background-color: #f0f9ff; padding: 15px; border-radius: 6px; margin: 20px 0;">
-            <h2 style="font-size: 14px; color: #0369a1; margin-top: 0;">Login Credentials:</h2>
-            <p style="margin: 5px 0;"><strong>Username / Full Name:</strong> ${fullName}</p>
-            <p style="margin: 5px 0;"><strong>Email:</strong> ${email}</p>
-            <p style="margin: 5px 0;"><strong>Password:</strong> Your provided phone number (${password})</p>
-            <p style="margin: 5px 0; font-size: 12px; color: #666;"><em>Note: You can sign in using either your Full Name (as Username) or your email.</em></p>
+    if (cleanEmail && !cleanEmail.endsWith('@josephitre.club')) {
+      sendEmail({
+        to: cleanEmail,
+        subject: 'Your Account Creation Has Been Successful!',
+        html: `
+          <div style="font-family: sans-serif; padding: 20px; color: #333; border: 1px solid #e5e7eb; border-radius: 8px; max-width: 600px; margin: 0 auto;">
+            <h1 style="color: #0c4a6e; margin-bottom: 20px;">Account Creation Successful, ${fullName}!</h1>
+            <p style="font-size: 16px; line-height: 1.5;">Your account has been successfully created for Josephite Math Club event registration.</p>
+            
+            <div style="background-color: #f0f9ff; padding: 15px; border-radius: 6px; margin: 20px 0;">
+              <h2 style="font-size: 14px; color: #0369a1; margin-top: 0;">Login Credentials:</h2>
+              <p style="margin: 5px 0;"><strong>Username / Full Name:</strong> ${fullName}</p>
+              <p style="margin: 5px 0;"><strong>Email:</strong> ${cleanEmail}</p>
+              <p style="margin: 5px 0;"><strong>Password:</strong> Your provided phone number (${password})</p>
+              <p style="margin: 5px 0; font-size: 12px; color: #666;"><em>Note: You can sign in using either your Full Name (as Username) or your email.</em></p>
+            </div>
+            
+            <p style="font-size: 16px; line-height: 1.5;">You can now sign in to your dashboard to view your profile and participate in upcoming events using your phone number as password.</p>
+            
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="${process.env.NEXT_PUBLIC_APP_URL || ''}/auth?mode=login" style="background-color: #0c4a6e; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">Sign In Now</a>
+            </div>
+            
+            <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;" />
+            <p style="font-size: 12px; color: #6b7280; text-align: center;">Josephite Math Club Automated System</p>
           </div>
-          
-          <p style="font-size: 16px; line-height: 1.5;">You can now sign in to your dashboard to view your profile and participate in upcoming events using your phone number as password.</p>
-          
-          <div style="text-align: center; margin: 30px 0;">
-            <a href="${process.env.NEXT_PUBLIC_APP_URL || ''}/auth?mode=login" style="background-color: #0c4a6e; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">Sign In Now</a>
-          </div>
-          
-          <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;" />
-          <p style="font-size: 12px; color: #6b7280; text-align: center;">Josephite Math Club Automated System</p>
-        </div>
-      `,
-      text: `Your Account Creation Has Been Successful!\n\nWelcome to Josephite Math Club, ${fullName}!\n\nYour account has been successfully created. We are excited to have you.\n\nLogin Credentials:\nEmail: ${email}\nPassword: Your provided phone number (${password})\n\nYou can sign in at: ${process.env.NEXT_PUBLIC_APP_URL || ''}/auth?mode=login`,
-    }).catch(emailErr => {
-      console.error('Failed to send welcome email in background:', emailErr);
-    });
+        `,
+        text: `Your Account Creation Has Been Successful!\n\nWelcome to Josephite Math Club, ${fullName}!\n\nYour account has been successfully created. We are excited to have you.\n\nLogin Credentials:\nEmail: ${cleanEmail}\nPassword: Your provided phone number (${password})\n\nYou can sign in at: ${process.env.NEXT_PUBLIC_APP_URL || ''}/auth?mode=login`,
+      }).catch(emailErr => {
+        console.error('Failed to send welcome email in background:', emailErr);
+      });
+    }
 
     return NextResponse.json({ userId: newUser.user.id });
   } catch (err: any) {

@@ -40,7 +40,8 @@ interface DashboardMemberManagementSectionProps {
     roll: string,
     email: string,
     phone?: string,
-    hasAccount: boolean
+    hasAccount: boolean,
+    register_method?: 'both' | 'phone_only'
   }) => Promise<any>;
   handleMemberPhotoUpload: (e: React.ChangeEvent<HTMLInputElement>, memberId: string) => Promise<void>;
   uploading: string | null;
@@ -72,7 +73,18 @@ const DashboardMemberManagementSectionComponent: React.FC<DashboardMemberManagem
   const { showToast } = useToast();
   const [successData, setSuccessData] = useState<any | null>(null);
 
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<{
+    full_name: string;
+    class: string;
+    section: string;
+    roll: string;
+    email: string;
+    phone: string;
+    hasAccount: boolean;
+    is_ec: boolean;
+    custom_member_id: string;
+    register_method: 'both' | 'phone_only';
+  }>({
     full_name: '',
     class: '',
     section: '',
@@ -81,7 +93,8 @@ const DashboardMemberManagementSectionComponent: React.FC<DashboardMemberManagem
     phone: '',
     hasAccount: false,
     is_ec: false,
-    custom_member_id: ''
+    custom_member_id: '',
+    register_method: 'both'
   });
 
   const [matchingProfiles, setMatchingProfiles] = useState<any[]>([]);
@@ -104,10 +117,34 @@ const DashboardMemberManagementSectionComponent: React.FC<DashboardMemberManagem
     const searchEmails = async () => {
       setIsSearchingEmails(true);
       try {
+        const isPhone = !query.includes('@') && /^[0-9+\s\-()]+$/.test(query);
+        let resolvedEmail = query;
+        if (isPhone) {
+          const { data: memberByPhone } = await supabase
+            .from('member')
+            .select('email')
+            .eq('phone', query)
+            .maybeSingle();
+          if (memberByPhone?.email) {
+            resolvedEmail = memberByPhone.email;
+          } else {
+            const { data: ecByPhone } = await supabase
+              .from('ec_member')
+              .select('email')
+              .eq('phone', query)
+              .maybeSingle();
+            if (ecByPhone?.email) {
+              resolvedEmail = ecByPhone.email;
+            } else {
+              resolvedEmail = `${query}@josephitre.club`;
+            }
+          }
+        }
+
         const { data, error } = await supabase
           .from('profiles')
           .select('id, email, full_name')
-          .ilike('email', `%${query}%`)
+          .or(`email.ilike.%${resolvedEmail}%,email.ilike.%${query}%`)
           .limit(8);
 
         if (error) throw error;
@@ -133,13 +170,49 @@ const DashboardMemberManagementSectionComponent: React.FC<DashboardMemberManagem
     };
   }, [formData.email, formData.hasAccount]);
 
-  const handleSelectProfile = (profile: any) => {
+  const handleSelectProfile = async (profile: any) => {
     setFormData(prev => ({
       ...prev,
       email: profile.email || '',
       full_name: profile.full_name || prev.full_name || ''
     }));
     setShowSuggestions(false);
+
+    try {
+      const { data: memberData } = await supabase
+        .from('member')
+        .select('*')
+        .eq('id', profile.id)
+        .maybeSingle();
+
+      if (memberData) {
+        setFormData(prev => ({
+          ...prev,
+          class: memberData.class || prev.class,
+          section: memberData.section || prev.section,
+          roll: memberData.roll || prev.roll,
+          phone: memberData.phone || prev.phone
+        }));
+      } else {
+        const { data: ecData } = await supabase
+          .from('ec_member')
+          .select('*')
+          .eq('id', profile.id)
+          .maybeSingle();
+
+        if (ecData) {
+          setFormData(prev => ({
+            ...prev,
+            class: ecData.class || prev.class,
+            section: ecData.section || prev.section,
+            roll: ecData.roll || prev.roll,
+            phone: ecData.phone || prev.phone
+          }));
+        }
+      }
+    } catch (e) {
+      console.error("Error loading existing member details:", e);
+    }
   };
 
   const handleManualAdd = async (e: React.FormEvent) => {
@@ -157,7 +230,8 @@ const DashboardMemberManagementSectionComponent: React.FC<DashboardMemberManagem
         phone: '', 
         hasAccount: false, 
         is_ec: false, 
-        custom_member_id: '' 
+        custom_member_id: '',
+        register_method: 'both'
       });
       // Don't close immediately, show success first
     } catch (err) {
@@ -347,6 +421,28 @@ const DashboardMemberManagementSectionComponent: React.FC<DashboardMemberManagem
                 </div>
               ) : (
                 <form onSubmit={handleManualAdd} className="space-y-8">
+                  {/* Registration Method Selection */}
+                  <div className="p-6 rounded-2xl bg-white/5 border border-white/10 space-y-4">
+                    <p className="text-[10px] font-bold text-zinc-300 uppercase tracking-[0.2em] text-center">Registration Setup</p>
+                    <h4 className="text-sm font-bold text-white text-center">How would you like to register this member?</h4>
+                    <div className="flex gap-4 justify-center pt-2 max-w-xl mx-auto">
+                      <button 
+                        type="button"
+                        onClick={() => setFormData({...formData, register_method: 'both'})}
+                        className={`flex-1 px-4 py-3 rounded-xl border text-[10px] font-bold uppercase tracking-widest transition-all ${formData.register_method === 'both' ? 'bg-white/10 border-amber-500/50 text-white shadow-lg' : 'border-white/5 text-zinc-500 hover:border-white/20'}`}
+                      >
+                        Email & Phone Number
+                      </button>
+                      <button 
+                        type="button"
+                        onClick={() => setFormData({...formData, register_method: 'phone_only', email: ''})}
+                        className={`flex-1 px-4 py-3 rounded-xl border text-[10px] font-bold uppercase tracking-widest transition-all ${formData.register_method === 'phone_only' ? 'bg-white/10 border-amber-500/50 text-white shadow-lg' : 'border-white/5 text-zinc-500 hover:border-white/20'}`}
+                      >
+                        Only Phone Number
+                      </button>
+                    </div>
+                  </div>
+
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pb-4">
                     <div className="p-6 rounded-2xl bg-white/5 border border-white/10 space-y-4">
                       <p className="text-[10px] font-bold text-zinc-300 uppercase tracking-[0.2em] text-center">Account Verification</p>
@@ -425,72 +521,74 @@ const DashboardMemberManagementSectionComponent: React.FC<DashboardMemberManagem
                         className="w-full px-6 py-4 bg-white/5 border border-white/10 rounded-xl focus:outline-none focus:border-amber-500/50 transition-all text-white font-bold text-xs"
                       />
                     </div>
-                    <div className="space-y-2 relative">
-                      <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 ml-1">Email or Phone Number (User ID)</label>
-                      <input 
-                        type="text"
-                        required
-                        value={formData.email}
-                        onChange={(e) => {
-                          setFormData({...formData, email: e.target.value});
-                          setShowSuggestions(true);
-                        }}
-                        onFocus={() => setShowSuggestions(true)}
-                        onBlur={() => {
-                          setTimeout(() => {
-                            setShowSuggestions(false);
-                          }, 250);
-                        }}
-                        placeholder="EMAIL@EXAMPLE.COM OR PHONE NUMBER"
-                        className="w-full px-6 py-4 bg-white/5 border border-white/10 rounded-xl focus:outline-none focus:border-amber-500/50 transition-all text-white font-bold text-xs"
-                      />
+                    {formData.register_method !== 'phone_only' && (
+                      <div className="space-y-2 relative">
+                        <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 ml-1">Email or Phone Number (User ID)</label>
+                        <input 
+                          type="text"
+                          required
+                          value={formData.email}
+                          onChange={(e) => {
+                            setFormData({...formData, email: e.target.value});
+                            setShowSuggestions(true);
+                          }}
+                          onFocus={() => setShowSuggestions(true)}
+                          onBlur={() => {
+                            setTimeout(() => {
+                              setShowSuggestions(false);
+                            }, 250);
+                          }}
+                          placeholder="EMAIL@EXAMPLE.COM OR PHONE NUMBER"
+                          className="w-full px-6 py-4 bg-white/5 border border-white/10 rounded-xl focus:outline-none focus:border-amber-500/50 transition-all text-white font-bold text-xs"
+                        />
 
-                      {formData.hasAccount && showSuggestions && (formData.email.trim().length >= 2) && (
-                        <div className="absolute z-50 left-0 right-0 mt-1 bg-zinc-950 border border-white/10 rounded-xl shadow-2xl overflow-hidden max-h-60 overflow-y-auto divide-y divide-white/5 backdrop-blur-md">
-                          {isSearchingEmails && (
-                            <div className="px-6 py-3.5 text-xs text-zinc-500 flex items-center gap-2">
-                              <Loader2 className="w-3.5 h-3.5 animate-spin text-amber-500" />
-                              <span className="uppercase tracking-widest text-[9px] font-bold">Searching matching addresses...</span>
-                            </div>
-                          )}
-                          {!isSearchingEmails && matchingProfiles.length === 0 && (
-                            <div className="px-6 py-3.5 text-xs text-zinc-600 uppercase tracking-widest text-[9px] font-bold">
-                              No registered profile matches "{formData.email}"
-                            </div>
-                          )}
-                          {!isSearchingEmails && matchingProfiles.map((p) => (
-                            <button
-                              key={p.id}
-                              type="button"
-                              onClick={() => handleSelectProfile(p)}
-                              className="w-full px-6 py-3 text-left hover:bg-white/5 transition-colors flex flex-col justify-center gap-1 group"
-                            >
-                              <span className="text-white font-bold font-mono text-xs group-hover:text-amber-500 transition-colors">
-                                {p.email}
-                              </span>
-                              {p.full_name && (
-                                <span className="text-[10px] text-zinc-500 font-semibold uppercase tracking-wider block">
-                                  {p.full_name}
+                        {formData.hasAccount && showSuggestions && (formData.email.trim().length >= 2) && (
+                          <div className="absolute z-50 left-0 right-0 mt-1 bg-zinc-950 border border-white/10 rounded-xl shadow-2xl overflow-hidden max-h-60 overflow-y-auto divide-y divide-white/5 backdrop-blur-md">
+                            {isSearchingEmails && (
+                              <div className="px-6 py-3.5 text-xs text-zinc-500 flex items-center gap-2">
+                                <Loader2 className="w-3.5 h-3.5 animate-spin text-amber-500" />
+                                <span className="uppercase tracking-widest text-[9px] font-bold">Searching matching addresses...</span>
+                              </div>
+                            )}
+                            {!isSearchingEmails && matchingProfiles.length === 0 && (
+                              <div className="px-6 py-3.5 text-xs text-zinc-600 uppercase tracking-widest text-[9px] font-bold">
+                                No registered profile matches "{formData.email}"
+                              </div>
+                            )}
+                            {!isSearchingEmails && matchingProfiles.map((p) => (
+                              <button
+                                key={p.id}
+                                type="button"
+                                onClick={() => handleSelectProfile(p)}
+                                className="w-full px-6 py-3 text-left hover:bg-white/5 transition-colors flex flex-col justify-center gap-1 group"
+                              >
+                                <span className="text-white font-bold font-mono text-xs group-hover:text-amber-500 transition-colors">
+                                  {p.email}
                                 </span>
-                              )}
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                    {!formData.hasAccount && (
+                                {p.full_name && (
+                                  <span className="text-[10px] text-zinc-500 font-semibold uppercase tracking-wider block">
+                                    {p.full_name}
+                                  </span>
+                                )}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    {(formData.register_method !== 'phone_only' && !formData.hasAccount) || formData.register_method === 'phone_only' ? (
                       <div className="space-y-2">
                         <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 ml-1">Phone Number (Will be Password)</label>
                         <input 
                           type="tel"
-                          required={!formData.hasAccount}
+                          required
                           value={formData.phone}
                           onChange={(e) => setFormData({...formData, phone: e.target.value})}
                           placeholder="e.g. +8801..."
                           className="w-full px-6 py-4 bg-white/5 border border-white/10 rounded-xl focus:outline-none focus:border-amber-500/50 transition-all text-white font-bold text-xs"
                         />
                       </div>
-                    )}
+                    ) : null}
                     <div className="space-y-2">
                       <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 ml-1">Class</label>
                       <input 

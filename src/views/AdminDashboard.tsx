@@ -62,6 +62,7 @@ const EventRegistrationsSection = dynamic(() => import('../components/dashboard/
 const CaParticipantsSection = dynamic(() => import('../components/dashboard/sections/CaParticipantsSection').then(mod => mod.CaParticipantsSection), { loading: () => <Skeleton className="h-64 w-full rounded-3xl" /> });
 const StatisticsSection = dynamic(() => import('../components/dashboard/sections/StatisticsSection').then(mod => mod.StatisticsSection), { loading: () => <Skeleton className="h-64 w-full rounded-3xl" /> });
 const TicketPurchaseSection = dynamic(() => import('../components/dashboard/sections/TicketPurchaseSection').then(mod => mod.TicketPurchaseSection), { loading: () => <Skeleton className="h-64 w-full rounded-3xl" /> });
+const DashboardHandoutsSection = dynamic(() => import('../components/dashboard/sections/DashboardHandoutsSection').then(mod => mod.DashboardHandoutsSection), { loading: () => <Skeleton className="h-64 w-full rounded-3xl" /> });
 
 import ConfirmModal from '../components/ConfirmModal';
 import Image from 'next/image';
@@ -435,7 +436,8 @@ const AdminDashboard = () => {
     hasAccount: boolean,
     is_ec?: boolean,
     custom_member_id?: string,
-    department?: string
+    department?: string,
+    register_method?: 'both' | 'phone_only'
   }) => {
     if (!isSupabaseConfigured) return;
     try {
@@ -447,10 +449,18 @@ const AdminDashboard = () => {
         return isPhoneInput ? `${trimmed}@josephitre.club` : trimmed;
       };
 
-      const finalEmail = getVirtualEmail(memberData.email);
+      const getGivenNameUsername = (fullName: string): string => {
+        const parts = (fullName || '').trim().split(/\s+/);
+        const firstPart = parts[0] || '';
+        return firstPart.toLowerCase().replace(/[^a-z0-9]/g, '');
+      };
+
+      const finalEmail = memberData.register_method === 'phone_only'
+        ? `${getGivenNameUsername(memberData.full_name)}@josephitre.club`
+        : getVirtualEmail(memberData.email);
 
       // First, try to find an existing member record by email and full name to reuse their ID
-      if (memberData.email && memberData.full_name) {
+      if ((memberData.register_method === 'phone_only' || memberData.email) && memberData.full_name) {
         try {
           const { data: memByEmail } = await supabase
             .from('member')
@@ -499,7 +509,7 @@ const AdminDashboard = () => {
 
       // If they don't exist yet as a member record, create/locate their auth account
       if (!userId) {
-        if (!memberData.hasAccount && memberData.email && memberData.phone) {
+        if (!memberData.hasAccount && (memberData.register_method === 'phone_only' || memberData.email) && memberData.phone) {
           showToast("Creating user account...", "info");
           const createRes = await fetch('/api/admin/create-user', {
             method: 'POST',
@@ -507,10 +517,11 @@ const AdminDashboard = () => {
               'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-              email: finalEmail,
+              email: memberData.register_method === 'phone_only' ? null : finalEmail,
               phone: memberData.phone,
               password: memberData.phone, // Password is the phone number
-              fullName: memberData.full_name
+              fullName: memberData.full_name,
+              useGivenNameAsLogin: memberData.register_method === 'phone_only'
             }),
           });
 
@@ -520,7 +531,7 @@ const AdminDashboard = () => {
           }
           userId = createData.userId || createData.user?.id;
           showToast("User account created!", "success");
-        } else if (memberData.hasAccount && memberData.email) {
+        } else if (memberData.hasAccount && (memberData.register_method === 'phone_only' || memberData.email)) {
           // If user has an account, find their ID by email
           // Gracefully handle missing email column in profiles
           let userData = null;
@@ -1079,6 +1090,7 @@ const AdminDashboard = () => {
   const tabs = [
     { id: 'events', label: 'Events', icon: Calendar },
     { id: 'notices', label: 'Notices', icon: Bell },
+    { id: 'handouts', label: 'Session Handouts', icon: FileText },
     { id: 'participation', label: 'Participation', icon: Trophy },
     { id: 'articles', label: 'Articles', icon: BookOpen },
     { id: 'members', label: 'Members', icon: Award },
@@ -1173,6 +1185,19 @@ const AdminDashboard = () => {
             updateListItem={(field, index, val) => updateListItem('notices', field, index, val)}
             addListItem={(field, newItem) => addListItem('notices', field, newItem)}
             removeListItem={(field, index) => removeListItem('notices', field, index)}
+            shouldReduceGfx={shouldReduceGfx}
+            uploading={uploading}
+            handleFileUpload={handleFileUpload}
+          />
+        )}
+
+        {activeTab === 'handouts' && (
+          <DashboardHandoutsSection 
+            data={localContent?.handouts || { title: 'Session Handouts', description: 'Access resources and official handouts for club weekly sessions.', sessions: [] }}
+            updateField={(field, val) => updateField('handouts', field, val)}
+            updateListItem={(field, index, val) => updateListItem('handouts', field, index, val)}
+            addListItem={(field, newItem) => addListItem('handouts', field, newItem)}
+            removeListItem={(field, index) => removeListItem('handouts', field, index)}
             shouldReduceGfx={shouldReduceGfx}
             uploading={uploading}
             handleFileUpload={handleFileUpload}

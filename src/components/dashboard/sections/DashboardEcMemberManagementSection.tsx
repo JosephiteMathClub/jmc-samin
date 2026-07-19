@@ -109,10 +109,34 @@ export const DashboardEcMemberManagementSection: React.FC<DashboardEcMemberManag
     const searchEmails = async () => {
       setIsSearchingEmails(true);
       try {
+        const isPhone = !query.includes('@') && /^[0-9+\s\-()]+$/.test(query);
+        let resolvedEmail = query;
+        if (isPhone) {
+          const { data: memberByPhone } = await supabase
+            .from('member')
+            .select('email')
+            .eq('phone', query)
+            .maybeSingle();
+          if (memberByPhone?.email) {
+            resolvedEmail = memberByPhone.email;
+          } else {
+            const { data: ecByPhone } = await supabase
+              .from('ec_member')
+              .select('email')
+              .eq('phone', query)
+              .maybeSingle();
+            if (ecByPhone?.email) {
+              resolvedEmail = ecByPhone.email;
+            } else {
+              resolvedEmail = `${query}@josephitre.club`;
+            }
+          }
+        }
+
         const { data, error } = await supabase
           .from('profiles')
           .select('id, email, full_name')
-          .ilike('email', `%${query}%`)
+          .or(`email.ilike.%${resolvedEmail}%,email.ilike.%${query}%`)
           .limit(8);
 
         if (error) throw error;
@@ -138,13 +162,49 @@ export const DashboardEcMemberManagementSection: React.FC<DashboardEcMemberManag
     };
   }, [formData.email, formData.hasAccount]);
 
-  const handleSelectProfile = (profile: any) => {
+  const handleSelectProfile = async (profile: any) => {
     setFormData(prev => ({
       ...prev,
       email: profile.email || '',
       full_name: profile.full_name || prev.full_name || ''
     }));
     setShowSuggestions(false);
+
+    try {
+      const { data: memberData } = await supabase
+        .from('member')
+        .select('*')
+        .eq('id', profile.id)
+        .maybeSingle();
+
+      if (memberData) {
+        setFormData(prev => ({
+          ...prev,
+          class: memberData.class || prev.class,
+          section: memberData.section || prev.section,
+          roll: memberData.roll || prev.roll,
+          phone: memberData.phone || prev.phone
+        }));
+      } else {
+        const { data: ecData } = await supabase
+          .from('ec_member')
+          .select('*')
+          .eq('id', profile.id)
+          .maybeSingle();
+
+        if (ecData) {
+          setFormData(prev => ({
+            ...prev,
+            class: ecData.class || prev.class,
+            section: ecData.section || prev.section,
+            roll: ecData.roll || prev.roll,
+            phone: ecData.phone || prev.phone
+          }));
+        }
+      }
+    } catch (e) {
+      console.error("Error loading existing member details:", e);
+    }
   };
 
   const handleManualAdd = async (e: React.FormEvent) => {
