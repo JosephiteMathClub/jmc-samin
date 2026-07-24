@@ -170,6 +170,26 @@ BEGIN
     END IF;
 END $$;
 
+-- Create the alumni table for future addition of alumni by super admins
+CREATE TABLE IF NOT EXISTS public.alumni (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  full_name TEXT,
+  email TEXT,
+  phone TEXT,
+  school TEXT DEFAULT 'St Joseph',
+  class TEXT,
+  section TEXT,
+  roll TEXT,
+  photo_url TEXT,
+  member_id TEXT UNIQUE,
+  is_ec BOOLEAN DEFAULT FALSE,
+  department TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_alumni_email ON public.alumni(email);
+
 -- ==========================================
 -- 2. Create Helper Functions
 -- ==========================================
@@ -230,6 +250,7 @@ ALTER TABLE public.member ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.ec_member ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.event_participation ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.admin_audit_logs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.alumni ENABLE ROW LEVEL SECURITY;
 
 -- ==========================================
 -- 4. Create Triggers
@@ -263,6 +284,12 @@ CREATE TRIGGER on_ec_member_updated
 DROP TRIGGER IF EXISTS on_participation_updated ON public.event_participation;
 CREATE TRIGGER on_participation_updated
   BEFORE UPDATE ON public.event_participation
+  FOR EACH ROW EXECUTE FUNCTION handle_updated_at();
+
+-- Trigger for alumni
+DROP TRIGGER IF EXISTS on_alumni_updated ON public.alumni;
+CREATE TRIGGER on_alumni_updated
+  BEFORE UPDATE ON public.alumni
   FOR EACH ROW EXECUTE FUNCTION handle_updated_at();
 
 -- Function to handle new user signup
@@ -362,6 +389,13 @@ WITH CHECK (auth.uid() = id);
 
 DROP POLICY IF EXISTS "Allow admins to manage all ec_members" ON public.ec_member;
 CREATE POLICY "Allow admins to manage all ec_members" ON public.ec_member FOR ALL TO authenticated USING (public.is_admin());
+
+-- --- Policies for alumni ---
+DROP POLICY IF EXISTS "Allow public read alumni" ON public.alumni;
+CREATE POLICY "Allow public read alumni" ON public.alumni FOR SELECT USING (true);
+
+DROP POLICY IF EXISTS "Allow admins to manage all alumni" ON public.alumni;
+CREATE POLICY "Allow admins to manage all alumni" ON public.alumni FOR ALL TO authenticated USING (public.is_admin());
 
 -- --- Policies for admin_audit_logs ---
 DROP POLICY IF EXISTS "Allow admins to insert audit logs" ON public.admin_audit_logs;

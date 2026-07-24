@@ -171,8 +171,8 @@ export default function ChangeNamePage() {
               </p>
             </div>
 
-            {/* Clear Visual Guidelines with Requested Example */}
-            <div className="bg-amber-500/5 border border-amber-500/15 p-5 rounded-2xl space-y-3">
+            {/* Clear Visual Guidelines with Requested Example Image Mockup */}
+            <div className="bg-amber-500/5 border border-amber-500/15 p-5 rounded-2xl space-y-4">
               <h4 className="text-xs font-extrabold text-amber-400 uppercase tracking-wider flex items-center gap-1.5">
                 <HelpCircle className="w-4 h-4" /> Name Standards Rulebook
               </h4>
@@ -180,12 +180,73 @@ export default function ChangeNamePage() {
                 Your registered name must be your single-word given name. Multi-word full names must be simplified.
               </p>
               
-              {/* Literal example box as specified */}
-              <div className="bg-black/40 border border-white/5 p-3 rounded-xl space-y-1.5 font-mono text-[10px]">
-                <p className="text-zinc-500 font-bold uppercase tracking-widest">Standard Example:</p>
-                <div className="text-zinc-300">
-                  <p>• Full Name Registered: <span className="text-rose-400 font-extrabold line-through">Samin Tausif</span></p>
-                  <p>• Given Name Allowed: <span className="text-emerald-400 font-extrabold">Samin</span></p>
+              {/* High-Fidelity Visual Ticket Mockup (Representing the Example Image) */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between text-[9px] font-bold text-zinc-500 uppercase tracking-wider font-mono">
+                  <span>Visual Ticket Representation</span>
+                  <span className="text-rose-500 text-[8px] px-1.5 py-0.5 rounded bg-rose-500/10 border border-rose-500/20 font-black">
+                    EXAMPLE IMAGE
+                  </span>
+                </div>
+
+                <div className="relative overflow-hidden bg-neutral-950 border border-white/5 rounded-xl p-4 space-y-4 shadow-xl">
+                  {/* Watermark example text */}
+                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none opacity-[0.03]">
+                    <span className="text-white text-4xl font-mono font-black uppercase rotate-12">
+                      EXAMPLE
+                    </span>
+                  </div>
+
+                  {/* Header info */}
+                  <div className="flex justify-between items-start border-b border-white/5 pb-2">
+                    <div>
+                      <h5 className="text-[9px] font-mono font-extrabold text-zinc-400 tracking-wider">
+                        JOSEPHITE MATH CLUB
+                      </h5>
+                      <p className="text-[7.5px] text-zinc-600 font-mono">
+                        ROSTER SYNC & REGISTRATION
+                      </p>
+                    </div>
+                    <span className="text-[8px] font-mono font-bold uppercase tracking-widest px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                      EXAMPLE
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {/* Incorrect Ticket Example */}
+                    <div className="bg-red-950/10 border border-red-500/20 p-3 rounded-lg relative overflow-hidden">
+                      <div className="absolute top-1.5 right-1.5 px-1 py-0.2 rounded bg-red-500/15 text-red-400 text-[7px] font-mono font-black uppercase">
+                        INCORRECT
+                      </div>
+                      <p className="text-[8px] font-mono text-zinc-500 uppercase tracking-widest mb-1">Ticket Roster Name</p>
+                      <p className="text-xs font-sans font-extrabold text-rose-400 line-through">
+                        Samin Tausif
+                      </p>
+                      <div className="mt-2 text-[7.5px] text-rose-500/80 font-mono">
+                        ● Multi-word name blocked
+                      </div>
+                    </div>
+
+                    {/* Correct Ticket Example */}
+                    <div className="bg-emerald-950/10 border border-emerald-500/20 p-3 rounded-lg relative overflow-hidden">
+                      <div className="absolute top-1.5 right-1.5 px-1 py-0.2 rounded bg-emerald-500/15 text-emerald-400 text-[7px] font-mono font-black uppercase">
+                        CORRECT (EXAMPLE)
+                      </div>
+                      <p className="text-[8px] font-mono text-zinc-500 uppercase tracking-widest mb-1">Ticket Roster Name</p>
+                      <p className="text-xs font-sans font-extrabold text-emerald-400">
+                        Samin
+                      </p>
+                      <div className="mt-2 text-[7.5px] text-emerald-500/80 font-mono">
+                        ✓ Single-word given name
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Footer ticket bar */}
+                  <div className="flex items-center justify-between border-t border-white/5 pt-2 text-[8px] font-mono text-zinc-600">
+                    <span>REPRESENTATIONAL TICKET EXAMPLE</span>
+                    <span>ID: JMC-EXAMPLE-99</span>
+                  </div>
                 </div>
               </div>
             </div>

@@ -104,25 +104,26 @@ export async function POST(req: Request) {
       // Log profile error but proceed because account was successfully created
     }
 
-    // Generate a unique 5-digit ID for the member record
+    // Generate a unique 6-digit ID with "JMC-" prefix for the member record
     let resolvedMemberId = '';
     let isUnique = false;
     let attempts = 0;
     while (!isUnique && attempts < 100) {
       attempts++;
-      const digits = Math.floor(10000 + Math.random() * 90000).toString();
+      const digits = Math.floor(100000 + Math.random() * 900000).toString();
+      const generatedId = `JMC-${digits}`;
       const { data: check } = await supabaseAdmin
         .from('member')
         .select('id')
-        .eq('member_id', digits)
+        .eq('member_id', generatedId)
         .maybeSingle();
       if (!check) {
-        resolvedMemberId = digits;
+        resolvedMemberId = generatedId;
         isUnique = true;
       }
     }
     if (!resolvedMemberId) {
-      resolvedMemberId = Math.floor(10000 + Math.random() * 90000).toString();
+      resolvedMemberId = `JMC-${Math.floor(100000 + Math.random() * 900000).toString()}`;
     }
 
     // Insert a base record in the member table so login-by-phone and profile settings find it

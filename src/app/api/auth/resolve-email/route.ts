@@ -105,7 +105,34 @@ export async function POST(req: Request) {
     } else if (!isEmailInput) {
       // It's a Name!
       try {
-        // 1. Try exact/close match on full_name in profiles
+        // 1. Try to find they have a member or ec_member record with an email column first
+        const { data: memberByName } = await supabaseAdmin
+          .from('member')
+          .select('id, full_name, email')
+          .ilike('full_name', `%${cleanIdentifier}%`);
+
+        if (memberByName && memberByName.length > 0) {
+          const exactMatch = memberByName.find(m => m.full_name?.trim().toLowerCase() === cleanIdentifier.toLowerCase());
+          const targetMember = exactMatch || memberByName[0];
+          if (targetMember.email) {
+            return NextResponse.json({ email: targetMember.email });
+          }
+        }
+
+        const { data: ecByName } = await supabaseAdmin
+          .from('ec_member')
+          .select('id, full_name, email')
+          .ilike('full_name', `%${cleanIdentifier}%`);
+
+        if (ecByName && ecByName.length > 0) {
+          const exactMatch = ecByName.find(m => m.full_name?.trim().toLowerCase() === cleanIdentifier.toLowerCase());
+          const targetMember = exactMatch || ecByName[0];
+          if (targetMember.email) {
+            return NextResponse.json({ email: targetMember.email });
+          }
+        }
+
+        // 2. Try exact/close match on full_name in profiles
         const { data: profiles } = await supabaseAdmin
           .from('profiles')
           .select('id, full_name')

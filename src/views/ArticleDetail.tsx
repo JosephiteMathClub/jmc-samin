@@ -296,7 +296,8 @@ This elegant result allows us to evaluate area under curves analytically rather 
 };
 
 const ArticleDetailView = () => {
-  const { slug } = useParams();
+  const params = useParams();
+  const slug = params?.slug;
   const { content } = useContent();
   const articles = (content as any)?.articles || [];
   const article = articles.find((a: any) => a.slug === slug);

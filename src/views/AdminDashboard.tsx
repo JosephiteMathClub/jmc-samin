@@ -302,25 +302,31 @@ const AdminDashboard = () => {
         verified: newStatus
       };
       
-      if (newStatus === 'yes' && !member?.member_id) {
-        if (isEc) {
-          let generatedId = "";
-          for (let attempt = 0; attempt < 500; attempt++) {
-            const val = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
-            const { data } = await supabase.from('ec_member').select('id').eq('member_id', val).maybeSingle();
-            if (!data) {
-              generatedId = val;
-              break;
+      if (newStatus === 'yes') {
+        const hasValidId = isEc 
+          ? (member?.member_id && /^\d{3}$/.test(String(member.member_id).trim()))
+          : (member?.member_id && String(member.member_id).trim().startsWith('JMC-'));
+
+        if (!hasValidId) {
+          if (isEc) {
+            let generatedId = "";
+            for (let attempt = 0; attempt < 500; attempt++) {
+              const val = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+              const { data } = await supabase.from('ec_member').select('id').eq('member_id', val).maybeSingle();
+              if (!data) {
+                generatedId = val;
+                break;
+              }
             }
+            if (!generatedId) generatedId = Math.floor(100 + Math.random() * 900).toString();
+            updates.member_id = generatedId;
+          } else {
+            // Generate unique ID: JMC- + 6 random digits
+            const prefix = "JMC";
+            const digits = Math.floor(100000 + Math.random() * 900000).toString();
+            const generatedId = `${prefix}-${digits}`;
+            updates.member_id = generatedId;
           }
-          if (!generatedId) generatedId = Math.floor(100 + Math.random() * 900).toString();
-          updates.member_id = generatedId;
-        } else {
-          // Generate unique ID: JMC + 6 random digits
-          const prefix = "JMC";
-          const digits = Math.floor(100000 + Math.random() * 900000).toString();
-          const generatedId = `${prefix}-${digits}`;
-          updates.member_id = generatedId;
         }
       }
 
@@ -449,14 +455,17 @@ const AdminDashboard = () => {
         return isPhoneInput ? `${trimmed}@josephitre.club` : trimmed;
       };
 
-      const getGivenNameUsername = (fullName: string): string => {
-        const parts = (fullName || '').trim().split(/\s+/);
-        const firstPart = parts[0] || '';
-        return firstPart.toLowerCase().replace(/[^a-z0-9]/g, '');
+      const getSlugifiedUsername = (fullName: string): string => {
+        return (fullName || '')
+          .trim()
+          .toLowerCase()
+          .replace(/[^a-z0-9]/g, '_')
+          .replace(/__+/g, '_')
+          .replace(/^_+|_+$/g, '');
       };
 
       const finalEmail = memberData.register_method === 'phone_only'
-        ? `${getGivenNameUsername(memberData.full_name)}@josephitre.club`
+        ? `${getSlugifiedUsername(memberData.full_name)}@josephitre.club`
         : getVirtualEmail(memberData.email);
 
       // First, try to find an existing member record by email and full name to reuse their ID

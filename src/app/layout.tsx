@@ -47,6 +47,7 @@ export const viewport = {
   initialScale: 1,
   maximumScale: 1,
   viewportFit: "cover",
+  themeColor: "#050505",
 };
 
 export const metadata: Metadata = {
@@ -56,6 +57,15 @@ export const metadata: Metadata = {
     template: "%s | Josephite Math Club",
   },
   description: "The official platform of Josephite Math Club. Promoting analytical excellence, critical thinking, research, workshops, and mathematical olympiad spirit.",
+  applicationName: "Josephite Math Club",
+  appleWebApp: {
+    capable: true,
+    title: "Josephite Math Club",
+    statusBarStyle: "black-translucent",
+  },
+  formatDetection: {
+    telephone: false,
+  },
   keywords: [
     "Josephite Math Club",
     "JMC Official",
@@ -110,6 +120,10 @@ export const metadata: Metadata = {
   verification: {
     google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION || "9u84fdaJFeBCtbIt5KN2R8jLvL3oXe7O5stb5sWQMiE",
   },
+  other: {
+    "msapplication-TileColor": "#050505",
+    "msapplication-config": "/browserconfig.xml",
+  }
 };
 
 export default function RootLayout({

@@ -972,6 +972,10 @@ const Profile = () => {
     return isMember && (verified === 'yes' || isEc);
   }, [isMember, registeredEventsList, verified, isEc, memberId]);
 
+  const isRealGeneralMember = React.useMemo(() => {
+    return isGeneralMember && !isEc;
+  }, [isGeneralMember, isEc]);
+
   const unverifiedRegistrations = React.useMemo(() => {
     return registeredEventsList;
   }, [registeredEventsList]);
@@ -2076,7 +2080,7 @@ const Profile = () => {
             {/* Main Content */}
             <div className="lg:col-span-8 space-y-8">
               <ScrollReveal direction="right" delay={0.2}>
-                {isGeneralMember && (
+                {isGeneralMember && isRealGeneralMember && (
                   <div className="flex border-b border-white/10 gap-8 mb-6">
                     <button
                       type="button"
@@ -2110,7 +2114,7 @@ const Profile = () => {
                   </div>
                 )}
 
-                {activeSubTab === 'profile' ? (
+                {activeSubTab === 'profile' || !isRealGeneralMember ? (
                   <div className="p-8 md:p-12 rounded-[40px] bg-white/[0.03] border border-white/10 backdrop-blur-xl">
                     <AnimatePresence mode="wait">
                     {isEditing ? (

@@ -195,59 +195,71 @@ const Auth = () => {
             // It's a Name! Let's check if we can find an exact or fuzzy match in profiles/member/ec_member
             try {
               let matchedName = '';
-              
-              // Try profiles exact match
-              const { data: pExact } = await supabase
-                .from('profiles')
-                .select('full_name')
-                .ilike('full_name', finalEmail)
-                .maybeSingle();
-              if (pExact?.full_name) {
-                matchedName = pExact.full_name;
+              let resolvedEmail = '';
+
+              // Try member contains match first to get direct virtual email
+              const { data: mLike } = await supabase
+                .from('member')
+                .select('full_name, email')
+                .ilike('full_name', `%${finalEmail}%`);
+              if (mLike && mLike.length > 0) {
+                const exactMatch = mLike.find(m => m.full_name?.trim().toLowerCase() === finalEmail.toLowerCase());
+                const targetMember = exactMatch || mLike[0];
+                if (targetMember.email) {
+                  resolvedEmail = targetMember.email;
+                  matchedName = targetMember.full_name;
+                }
               }
-              
-              // Try profiles contains match
-              if (!matchedName) {
-                const { data: pLike } = await supabase
-                  .from('profiles')
-                  .select('full_name')
+
+              if (!resolvedEmail) {
+                const { data: ecLike } = await supabase
+                  .from('ec_member')
+                  .select('full_name, email')
                   .ilike('full_name', `%${finalEmail}%`);
-                if (pLike && pLike.length > 0) {
-                  const exactSlugMatch = pLike.find(p => slugifyName(p.full_name) === slugifyName(finalEmail));
-                  if (exactSlugMatch) {
-                    matchedName = exactSlugMatch.full_name;
-                  } else {
-                    matchedName = pLike[0].full_name;
+                if (ecLike && ecLike.length > 0) {
+                  const exactMatch = ecLike.find(m => m.full_name?.trim().toLowerCase() === finalEmail.toLowerCase());
+                  const targetMember = exactMatch || ecLike[0];
+                  if (targetMember.email) {
+                    resolvedEmail = targetMember.email;
+                    matchedName = targetMember.full_name;
                   }
                 }
               }
-              
-              // Try member contains match
-              if (!matchedName) {
-                const { data: mLike } = await supabase
-                  .from('member')
-                  .select('full_name')
-                  .ilike('full_name', `%${finalEmail}%`);
-                if (mLike && mLike.length > 0) {
-                  matchedName = mLike[0].full_name;
-                }
-              }
-              
-              // Try ec_member contains match
-              if (!matchedName) {
-                const { data: ecLike } = await supabase
-                  .from('ec_member')
-                  .select('full_name')
-                  .ilike('full_name', `%${finalEmail}%`);
-                if (ecLike && ecLike.length > 0) {
-                  matchedName = ecLike[0].full_name;
-                }
-              }
-              
-              if (matchedName) {
-                finalEmail = `${slugifyName(matchedName)}@josephitre.club`;
+
+              if (resolvedEmail) {
+                finalEmail = resolvedEmail;
               } else {
-                finalEmail = `${slugifyName(finalEmail)}@josephitre.club`;
+                // Try profiles exact match
+                const { data: pExact } = await supabase
+                  .from('profiles')
+                  .select('full_name')
+                  .ilike('full_name', finalEmail)
+                  .maybeSingle();
+                if (pExact?.full_name) {
+                  matchedName = pExact.full_name;
+                }
+                
+                // Try profiles contains match
+                if (!matchedName) {
+                  const { data: pLike } = await supabase
+                    .from('profiles')
+                    .select('full_name')
+                    .ilike('full_name', `%${finalEmail}%`);
+                  if (pLike && pLike.length > 0) {
+                    const exactSlugMatch = pLike.find(p => slugifyName(p.full_name) === slugifyName(finalEmail));
+                    if (exactSlugMatch) {
+                      matchedName = exactSlugMatch.full_name;
+                    } else {
+                      matchedName = pLike[0].full_name;
+                    }
+                  }
+                }
+
+                if (matchedName) {
+                  finalEmail = `${slugifyName(matchedName)}@josephitre.club`;
+                } else {
+                  finalEmail = `${slugifyName(finalEmail)}@josephitre.club`;
+                }
               }
             } catch (nameErr) {
               console.error('Error resolving name on client fallback:', nameErr);

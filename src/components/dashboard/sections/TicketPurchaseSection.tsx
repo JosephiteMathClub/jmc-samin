@@ -19,7 +19,8 @@ import {
   Check,
   User,
   Users,
-  Building
+  Building,
+  BookOpen
 } from 'lucide-react';
 import { supabase, isSupabaseConfigured } from '../../../lib/supabase';
 import { useAuth } from '../../../context/AuthContext';
@@ -43,7 +44,7 @@ interface TicketPurchase {
   snacks: boolean;
   certificate: boolean;
   souvenir: boolean;
-  candidateType: 'general' | 'ec' | 'non_general';
+  candidateType: 'general' | 'ec' | 'non_general' | 'spot';
 }
 
 interface Candidate {
@@ -56,7 +57,7 @@ interface Candidate {
   section: string;
   roll: string;
   school: string;
-  candidateType: 'general' | 'ec' | 'non_general';
+  candidateType: 'general' | 'ec' | 'non_general' | 'spot';
   eventsList: string[];
 }
 
@@ -71,10 +72,112 @@ export function TicketPurchaseSection() {
   const [refreshing, setRefreshing] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
+  // Subtab State
+  const [subTab, setSubTab] = useState<'validation' | 'spot_purchase'>('validation');
+
+  // Spot Purchase Form State
+  const [spotName, setSpotName] = useState('');
+  const [spotClass, setSpotClass] = useState('');
+  const [spotInstitute, setSpotInstitute] = useState('');
+  const [spotId, setSpotId] = useState('');
+  const [spotError, setSpotError] = useState<string | null>(null);
+  const [spotSuccess, setSpotSuccess] = useState<string | null>(null);
+  const [spotSubmitting, setSpotSubmitting] = useState(false);
+
   // Filters state
   const [searchQuery, setSearchQuery] = useState('');
-  const [typeFilter, setTypeFilter] = useState<'all' | 'general' | 'ec' | 'non_general'>('all');
+  const [typeFilter, setTypeFilter] = useState<'all' | 'general' | 'ec' | 'non_general' | 'spot'>('all');
   const [ticketFilter, setTicketFilter] = useState<'all' | 'purchased' | 'not_purchased' | 'validated'>('all');
+
+  const handleSpotPurchase = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSpotError(null);
+    setSpotSuccess(null);
+
+    // Validate inputs
+    if (!spotName.trim()) {
+      setSpotError("Registrant's Name is required.");
+      return;
+    }
+    if (!spotClass.trim()) {
+      setSpotError("Class is required.");
+      return;
+    }
+    if (!spotInstitute.trim()) {
+      setSpotError("Institute (School/College) is required.");
+      return;
+    }
+    if (!/^\d{4}$/.test(spotId)) {
+      setSpotError("ID must be exactly 4 digits (e.g. 1234).");
+      return;
+    }
+
+    // Check for duplicate ID
+    const idExists = candidates.some(cand => cand.memberId === spotId);
+    if (idExists) {
+      setSpotError(`ID "${spotId}" is already registered. Please use a unique 4-digit ID.`);
+      return;
+    }
+
+    setSpotSubmitting(true);
+
+    try {
+      const spotTicketId = `spot-${spotId}`;
+      const newSpotPurchase: TicketPurchase = {
+        id: spotTicketId,
+        fullName: spotName.trim(),
+        email: '',
+        phone: '',
+        memberId: spotId,
+        class: spotClass.trim(),
+        section: '',
+        roll: '',
+        confirmed: true,
+        confirmedAt: new Date().toISOString(),
+        confirmedBy: user?.email || 'Admin',
+        validated: false,
+        snacks: false,
+        certificate: false,
+        souvenir: false,
+        candidateType: 'spot'
+      };
+
+      const updated = {
+        ...purchases,
+        [spotTicketId]: newSpotPurchase
+      };
+
+      await savePurchaseState(updated);
+
+      const newCandidate: Candidate = {
+        id: spotTicketId,
+        fullName: spotName.trim(),
+        email: '',
+        phone: '',
+        memberId: spotId,
+        class: spotClass.trim(),
+        section: '',
+        roll: '',
+        school: spotInstitute.trim(),
+        candidateType: 'spot',
+        eventsList: ['Spot Ticket Registration']
+      };
+
+      setCandidates(prev => [newCandidate, ...prev]);
+      setSpotSuccess(`Spot Ticket with ID "${spotId}" purchased successfully!`);
+      
+      // Reset form
+      setSpotName('');
+      setSpotClass('');
+      setSpotInstitute('');
+      setSpotId('');
+    } catch (err: any) {
+      console.error('Failed to register spot ticket:', err);
+      setSpotError(err.message || 'An error occurred while saving the spot ticket.');
+    } finally {
+      setSpotSubmitting(false);
+    }
+  };
 
   // Load All Candidates and Ticket Purchases
   const loadData = useCallback(async (silent = false) => {
@@ -95,7 +198,13 @@ export function TicketPurchaseSection() {
       }
 
       const existingPurchases: Record<string, TicketPurchase> = ticketData?.data?.purchases || {};
-      setPurchases(existingPurchases);
+      const existingSpotTickets = ticketData?.data?.spotTickets || {};
+
+      const mergedPurchases = { ...existingPurchases };
+      Object.entries(existingSpotTickets).forEach(([spotId, ticket]: [string, any]) => {
+        mergedPurchases[`spot-${spotId}`] = ticket;
+      });
+      setPurchases(mergedPurchases);
 
       // 2. Fetch standard members
       const { data: memberData, error: memberErr } = await supabase
@@ -238,6 +347,23 @@ export function TicketPurchaseSection() {
         });
       });
 
+      // D. Add spot tickets
+      Object.entries(existingSpotTickets).forEach(([spotId, ticket]: [string, any]) => {
+        candidateList.push({
+          id: `spot-${spotId}`,
+          fullName: ticket.fullName || 'Anonymous Spot Registrant',
+          email: ticket.email || '',
+          phone: ticket.phone || '',
+          memberId: spotId, // 4-digit ID
+          class: ticket.class || '',
+          section: ticket.section || '',
+          roll: ticket.roll || '',
+          school: ticket.school || 'St Joseph',
+          candidateType: 'spot',
+          eventsList: ticket.eventsList || ['Spot Ticket Registration']
+        });
+      });
+
       setCandidates(candidateList);
     } catch (err: any) {
       console.error('Error loading ticket dashboard data:', err);
@@ -267,7 +393,15 @@ export function TicketPurchaseSection() {
         },
         (payload) => {
           if (payload.new && (payload.new as any).data) {
-            setPurchases((payload.new as any).data.purchases || {});
+            const data = (payload.new as any).data;
+            const regPurchases = data.purchases || {};
+            const spotTickets = data.spotTickets || {};
+
+            const mergedPurchases: Record<string, TicketPurchase> = { ...regPurchases };
+            Object.entries(spotTickets).forEach(([spotId, ticket]: [string, any]) => {
+              mergedPurchases[`spot-${spotId}`] = ticket;
+            });
+            setPurchases(mergedPurchases);
           }
         }
       )
@@ -287,11 +421,25 @@ export function TicketPurchaseSection() {
   const savePurchaseState = async (updatedPurchases: Record<string, TicketPurchase>) => {
     if (!isSupabaseConfigured) return;
     try {
+      const regularPurchases: Record<string, TicketPurchase> = {};
+      const spotTickets: Record<string, any> = {};
+
+      Object.entries(updatedPurchases).forEach(([key, value]) => {
+        if (key.startsWith('spot-')) {
+          spotTickets[key.replace('spot-', '')] = value;
+        } else {
+          regularPurchases[key] = value;
+        }
+      });
+
       const { error: upsertErr } = await supabase
         .from('site_content')
         .upsert({
           id: 'ticket_purchases',
-          data: { purchases: updatedPurchases },
+          data: { 
+            purchases: regularPurchases,
+            spotTickets: spotTickets
+          },
           updated_at: new Date().toISOString()
         });
 
@@ -412,6 +560,7 @@ export function TicketPurchaseSection() {
         if (typeFilter === 'general' && cand.candidateType !== 'general') return false;
         if (typeFilter === 'ec' && cand.candidateType !== 'ec') return false;
         if (typeFilter === 'non_general' && cand.candidateType !== 'non_general') return false;
+        if (typeFilter === 'spot' && cand.candidateType !== 'spot') return false;
       }
 
       // 3. Ticket Purchase status filter
@@ -491,6 +640,42 @@ export function TicketPurchaseSection() {
         </button>
       </div>
 
+      {/* Subtabs selection */}
+      <div className="flex p-1 rounded-full bg-white/[0.02] border border-white/5 backdrop-blur-md shadow-lg self-start">
+        <button
+          onClick={() => setSubTab('validation')}
+          className={`px-6 py-2.5 rounded-full text-xs font-semibold tracking-wider uppercase transition-all relative cursor-pointer flex items-center gap-2 ${
+            subTab === 'validation' ? 'text-black font-bold' : 'text-zinc-500 hover:text-zinc-300'
+          }`}
+        >
+          <ShieldCheck className="w-4 h-4 relative z-10" />
+          <span className="relative z-10">Ticket Validation</span>
+          {subTab === 'validation' && (
+            <motion.div 
+              layoutId="activeSubTabPill" 
+              className="absolute inset-0 bg-emerald-400 rounded-full"
+              transition={{ type: "spring", bounce: 0.15, duration: 0.5 }}
+            />
+          )}
+        </button>
+        <button
+          onClick={() => setSubTab('spot_purchase')}
+          className={`px-6 py-2.5 rounded-full text-xs font-semibold tracking-wider uppercase transition-all relative cursor-pointer flex items-center gap-2 ${
+            subTab === 'spot_purchase' ? 'text-black font-bold' : 'text-zinc-500 hover:text-zinc-300'
+          }`}
+        >
+          <Sparkles className="w-4 h-4 relative z-10" />
+          <span className="relative z-10">Spot Ticket Purchase</span>
+          {subTab === 'spot_purchase' && (
+            <motion.div 
+              layoutId="activeSubTabPill" 
+              className="absolute inset-0 bg-emerald-400 rounded-full"
+              transition={{ type: "spring", bounce: 0.15, duration: 0.5 }}
+            />
+          )}
+        </button>
+      </div>
+
       {error && (
         <div className="p-4 rounded-2xl bg-red-500/10 border border-red-500/20 flex items-start gap-3">
           <AlertCircle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
@@ -498,8 +683,130 @@ export function TicketPurchaseSection() {
         </div>
       )}
 
-      {/* Analytics Bento Grid */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      {subTab === 'spot_purchase' ? (
+        <motion.div
+          key="spot_purchase_form"
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -10 }}
+          transition={{ duration: 0.2 }}
+          className="max-w-2xl mx-auto p-8 rounded-[2.5rem] bg-white/[0.02] border border-white/5 space-y-6"
+        >
+          <div className="space-y-1">
+            <h3 className="text-lg font-bold text-white flex items-center gap-2 font-display">
+              <Sparkles className="w-5 h-5 text-emerald-400 animate-pulse" />
+              SPOT TICKET ISSUANCE FORM
+            </h3>
+            <p className="text-xs text-zinc-500">
+              Instantly register and issue a ticket on the spot. Input the registrant's name, class, institute, and 4-digit ID.
+            </p>
+          </div>
+
+          {spotError && (
+            <div className="p-4 rounded-2xl bg-red-500/10 border border-red-500/20 flex items-start gap-3">
+              <AlertCircle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
+              <div className="text-sm text-red-200">{spotError}</div>
+            </div>
+          )}
+
+          {spotSuccess && (
+            <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-start gap-3">
+              <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
+              <div className="text-sm text-emerald-200">{spotSuccess}</div>
+            </div>
+          )}
+
+          <form onSubmit={handleSpotPurchase} className="space-y-5">
+            <div className="space-y-2">
+              <label className="text-xs font-semibold text-zinc-400 uppercase tracking-wider block">
+                Registrant's Name <span className="text-red-500">*</span>
+              </label>
+              <div className="relative">
+                <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
+                <input
+                  type="text"
+                  placeholder="Enter registrant's full name"
+                  value={spotName}
+                  onChange={(e) => setSpotName(e.target.value)}
+                  className="w-full bg-black/40 border border-white/10 rounded-xl py-3 pl-11 pr-4 text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-emerald-500/50 transition-all font-mono"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <div className="space-y-2">
+                <label className="text-xs font-semibold text-zinc-400 uppercase tracking-wider block">
+                  Class <span className="text-red-500">*</span>
+                </label>
+                <div className="relative">
+                  <BookOpen className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
+                  <input
+                    type="text"
+                    placeholder="e.g. Class 10, HSC-25"
+                    value={spotClass}
+                    onChange={(e) => setSpotClass(e.target.value)}
+                    className="w-full bg-black/40 border border-white/10 rounded-xl py-3 pl-11 pr-4 text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-emerald-500/50 transition-all font-mono"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-xs font-semibold text-zinc-400 uppercase tracking-wider block">
+                  ID (4 Digits Only) <span className="text-red-500">*</span>
+                </label>
+                <div className="relative">
+                  <Ticket className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
+                  <input
+                    type="text"
+                    maxLength={4}
+                    placeholder="Input 4-digit ID (e.g. 1045)"
+                    value={spotId}
+                    onChange={(e) => {
+                      const val = e.target.value.replace(/\D/g, '').slice(0, 4);
+                      setSpotId(val);
+                    }}
+                    className="w-full bg-black/40 border border-white/10 rounded-xl py-3 pl-11 pr-4 text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-emerald-500/50 transition-all font-mono"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-xs font-semibold text-zinc-400 uppercase tracking-wider block">
+                Institute / School <span className="text-red-500">*</span>
+              </label>
+              <div className="relative">
+                <Building className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
+                <input
+                  type="text"
+                  placeholder="e.g. St. Joseph Higher Secondary School"
+                  value={spotInstitute}
+                  onChange={(e) => setSpotInstitute(e.target.value)}
+                  className="w-full bg-black/40 border border-white/10 rounded-xl py-3 pl-11 pr-4 text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-emerald-500/50 transition-all font-mono"
+                />
+              </div>
+            </div>
+
+            <div className="pt-4">
+              <button
+                type="submit"
+                disabled={spotSubmitting}
+                className="w-full flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 text-sm font-bold text-black shadow-lg shadow-emerald-500/10 hover:shadow-emerald-500/20 active:scale-[0.99] transition-all cursor-pointer"
+              >
+                {spotSubmitting ? (
+                  <Loader2 className="w-5 h-5 animate-spin text-black" />
+                ) : (
+                  <Sparkles className="w-5 h-5" />
+                )}
+                {spotSubmitting ? 'Issuing Spot Ticket...' : 'Issue Spot Ticket'}
+              </button>
+            </div>
+          </form>
+        </motion.div>
+      ) : (
+        <>
+          {/* Analytics Bento Grid */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="p-6 rounded-[2rem] bg-white/[0.02] border border-white/5 relative overflow-hidden group">
           <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:scale-110 transition-transform">
             <Users className="w-16 h-16 text-emerald-500" />
@@ -576,6 +883,7 @@ export function TicketPurchaseSection() {
               <option value="general" className="bg-zinc-950">General Members</option>
               <option value="ec" className="bg-zinc-950">EC Members</option>
               <option value="non_general" className="bg-zinc-950">Non-General (Event-Only)</option>
+              <option value="spot" className="bg-zinc-950">Spot Tickets</option>
             </select>
           </div>
 
@@ -650,6 +958,11 @@ export function TicketPurchaseSection() {
                         Event Registrant
                       </span>
                     )}
+                    {cand.candidateType === 'spot' && (
+                      <span className="px-2.5 py-0.5 rounded-full text-[9px] font-bold tracking-wider uppercase bg-purple-500/10 text-purple-400 border border-purple-500/20 animate-pulse">
+                        Spot Ticket
+                      </span>
+                    )}
                   </div>
 
                   {/* Main details */}
@@ -662,7 +975,9 @@ export function TicketPurchaseSection() {
                       {/* Secondary identifiers */}
                       <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-zinc-500 mt-1 font-mono">
                         {cand.memberId && (
-                          <span className="text-emerald-400/90 font-semibold">{cand.memberId}</span>
+                          <span className="text-emerald-400/90 font-semibold">
+                            {cand.candidateType === 'spot' ? `SPOT-${cand.memberId}` : cand.memberId}
+                          </span>
                         )}
                         {!cand.memberId && (
                           <span className="text-zinc-600">No Member ID</span>
@@ -828,6 +1143,8 @@ export function TicketPurchaseSection() {
             })}
           </AnimatePresence>
         </div>
+      )}
+        </>
       )}
     </div>
   );

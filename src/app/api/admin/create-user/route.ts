@@ -108,8 +108,8 @@ export async function POST(req: Request) {
     if (usePhoneAsLogin) {
       virtualEmail = `${password.trim()}@josephitre.club`;
     } else if (useGivenNameAsLogin) {
-      const givenName = fullName.trim().split(/\s+/)[0].replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
-      virtualEmail = `${givenName}@josephitre.club`;
+      const slug = fullName.trim().toLowerCase().replace(/[^a-z0-9]/g, '_').replace(/__+/g, '_').replace(/^_+|_+$/g, '');
+      virtualEmail = `${slug}@josephitre.club`;
     } else {
       const slug = fullName.trim().toLowerCase().replace(/[^a-z0-9]/g, '_').replace(/__+/g, '_').replace(/^_+|_+$/g, '');
       virtualEmail = `${slug}@josephitre.club`;

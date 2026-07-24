@@ -131,22 +131,28 @@ export const DEFAULT_CONTENT = {
           correspondingSecretary: [] 
         }
       },
-      recent: {
-        president: [],
-        generalSecretary: [],
-        deputyPresidents: [],
-        vicePresidents: [],
-        departments: [],
-        secretaries: { asstGeneralSecretary: [], jointSecretary: [], organizingSecretary: [], correspondingSecretary: [] }
-      },
-      former: {
-        president: [],
-        generalSecretary: [],
-        deputyPresidents: [],
-        vicePresidents: [],
-        departments: [],
-        secretaries: { asstGeneralSecretary: [], jointSecretary: [], organizingSecretary: [], correspondingSecretary: [] }
-      }
+      former: [
+        {
+          id: "panel-25",
+          year: "Panel 25 (2024-2025)",
+          president: [{ name: "Ziyad Mohammad", role: "President", imageUrl: "" }],
+          generalSecretary: [],
+          deputyPresidents: [],
+          vicePresidents: [],
+          departments: [],
+          secretaries: { asstGeneralSecretary: [], jointSecretary: [], organizingSecretary: [], correspondingSecretary: [] }
+        },
+        {
+          id: "panel-24",
+          year: "Panel 24 (2023-2024)",
+          president: [],
+          generalSecretary: [],
+          deputyPresidents: [],
+          vicePresidents: [],
+          departments: [],
+          secretaries: { asstGeneralSecretary: [], jointSecretary: [], organizingSecretary: [], correspondingSecretary: [] }
+        }
+      ]
     }
   },
   gallery_page: {
