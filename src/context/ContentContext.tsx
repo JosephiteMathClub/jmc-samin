@@ -95,8 +95,12 @@ export const ContentProvider: React.FC<{ children: React.ReactNode }> = ({ child
       
       // Merge content: newer source takes priority
       const mergedContent = localTime > remoteTime 
-        ? { ...remoteContent, ...localContent } 
-        : { ...localContent, ...remoteContent };
+        ? { ...DEFAULT_CONTENT, ...remoteContent, ...localContent } 
+        : { ...DEFAULT_CONTENT, ...localContent, ...remoteContent };
+
+      if (!mergedContent.resources || !Array.isArray(mergedContent.resources) || mergedContent.resources.length === 0) {
+        mergedContent.resources = DEFAULT_CONTENT.resources;
+      }
 
       setContent(mergedContent);
       setLoading(false);

@@ -31,6 +31,8 @@ import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { useRouter } from 'next/navigation';
 import { isSupabaseConfigured, supabase } from '../lib/supabase';
+import { DEFAULT_CONTENT } from '@/data/default-content';
+import { MATH_RESOURCES } from '@/data/resourcesData';
 import { DashboardLayout } from '../components/dashboard/DashboardLayout';
 import { DashboardSection } from '../components/dashboard/DashboardSection';
 import { DashboardFormField } from '../components/dashboard/DashboardFormField';
@@ -63,6 +65,7 @@ const CaParticipantsSection = dynamic(() => import('../components/dashboard/sect
 const StatisticsSection = dynamic(() => import('../components/dashboard/sections/StatisticsSection').then(mod => mod.StatisticsSection), { loading: () => <Skeleton className="h-64 w-full rounded-3xl" /> });
 const TicketPurchaseSection = dynamic(() => import('../components/dashboard/sections/TicketPurchaseSection').then(mod => mod.TicketPurchaseSection), { loading: () => <Skeleton className="h-64 w-full rounded-3xl" /> });
 const DashboardHandoutsSection = dynamic(() => import('../components/dashboard/sections/DashboardHandoutsSection').then(mod => mod.DashboardHandoutsSection), { loading: () => <Skeleton className="h-64 w-full rounded-3xl" /> });
+const DashboardResourcesSection = dynamic(() => import('../components/dashboard/sections/DashboardResourcesSection').then(mod => mod.DashboardResourcesSection), { loading: () => <Skeleton className="h-64 w-full rounded-3xl" /> });
 
 import ConfirmModal from '../components/ConfirmModal';
 import Image from 'next/image';
@@ -903,7 +906,11 @@ const AdminDashboard = () => {
 
   useEffect(() => {
     if (content) {
-      setLocalContent(JSON.parse(JSON.stringify(content)));
+      const cloned = JSON.parse(JSON.stringify(content));
+      if (!cloned.resources || !Array.isArray(cloned.resources) || cloned.resources.length === 0) {
+        cloned.resources = DEFAULT_CONTENT.resources || [];
+      }
+      setLocalContent(cloned);
     }
   }, [content]);
 
@@ -1100,6 +1107,7 @@ const AdminDashboard = () => {
     { id: 'events', label: 'Events', icon: Calendar },
     { id: 'notices', label: 'Notices', icon: Bell },
     { id: 'handouts', label: 'Session Handouts', icon: FileText },
+    { id: 'resources_mgmt', label: 'Resources Library', icon: BookOpen },
     { id: 'participation', label: 'Participation', icon: Trophy },
     { id: 'articles', label: 'Articles', icon: BookOpen },
     { id: 'members', label: 'Members', icon: Award },
@@ -1207,6 +1215,21 @@ const AdminDashboard = () => {
             updateListItem={(field, index, val) => updateListItem('handouts', field, index, val)}
             addListItem={(field, newItem) => addListItem('handouts', field, newItem)}
             removeListItem={(field, index) => removeListItem('handouts', field, index)}
+            shouldReduceGfx={shouldReduceGfx}
+            uploading={uploading}
+            handleFileUpload={handleFileUpload}
+          />
+        )}
+
+        {activeTab === 'resources_mgmt' && (
+          <DashboardResourcesSection 
+            resources={localContent?.resources || []}
+            updateResources={(newRes) => {
+              setLocalContent((prev: any) => ({
+                ...prev,
+                resources: newRes
+              }));
+            }}
             shouldReduceGfx={shouldReduceGfx}
             uploading={uploading}
             handleFileUpload={handleFileUpload}

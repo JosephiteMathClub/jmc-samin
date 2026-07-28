@@ -1,3 +1,5 @@
+import { MATH_RESOURCES } from './resourcesData';
+
 export const DEFAULT_CONTENT = {
   site: {
     clubName: "Josephite Math Club",
@@ -349,5 +351,6 @@ export const DEFAULT_CONTENT = {
         date: "July 19, 2026"
       }
     ]
-  }
+  },
+  resources: MATH_RESOURCES
 };

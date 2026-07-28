@@ -93,7 +93,7 @@ const Footer = () => {
                Operations
             </h4>
             <ul className="space-y-4">
-              {['Notices', 'Articles', 'Gallery'].map((link) => (
+              {['Notices', 'Articles', 'Resources', 'Gallery'].map((link) => (
                 <li key={link}>
                   <Link 
                     href={`/${link.toLowerCase()}`} 

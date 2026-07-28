@@ -3,6 +3,26 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { DEFAULT_ADMINS } from './lib/constants';
 
 export async function middleware(request: NextRequest) {
+  // Subdomain routing check for jmc-sjs.org
+  const host = request.headers.get('host') || '';
+  const pathname = request.nextUrl.pathname;
+
+  if (host.startsWith('know-math-symbols.') || host === 'symbols.jmc-sjs.org') {
+    if (pathname === '/' || (!pathname.startsWith('/know-math-symbols') && !pathname.startsWith('/_next') && !pathname.startsWith('/api'))) {
+      const url = request.nextUrl.clone();
+      url.pathname = '/know-math-symbols' + (pathname === '/' ? '' : pathname);
+      return NextResponse.rewrite(url);
+    }
+  }
+
+  if (host.startsWith('discover-math-play.') || host === 'play.jmc-sjs.org') {
+    if (pathname === '/' || (!pathname.startsWith('/discover-math-play') && !pathname.startsWith('/_next') && !pathname.startsWith('/api'))) {
+      const url = request.nextUrl.clone();
+      url.pathname = '/discover-math-play' + (pathname === '/' ? '' : pathname);
+      return NextResponse.rewrite(url);
+    }
+  }
+
   let supabaseResponse = NextResponse.next({
     request,
   });

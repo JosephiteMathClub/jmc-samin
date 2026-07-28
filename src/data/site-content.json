@@ -86,13 +86,13 @@
     "logoUrl": "/images/logo.png",
     "clubName": "Josephite Math Club",
     "established": "EST. 2015",
-    "maintenanceMode": false,
-    "showAnnouncements": true,
     "announcements": [
       "Welcome to Josephite Math Club!",
-      "National Math Olympiad Registration is now open!",
-      "Join us in our upcoming weekly math discussions."
+      "Josephite Math Mania is on it's way.",
+      "Keep an eye on our facebook and instagram"
     ],
+    "maintenanceMode": false,
+    "showAnnouncements": true,
     "maintenanceMessage": "The site is currently under maintenance"
   },
   "about": {
@@ -176,169 +176,574 @@
   },
   "panel": {
     "executive": {
-      "former": [
-        {
-          "id": "panel-25",
-          "year": "Panel 25 (2024-2025)",
-          "president": [
-            {
-              "id": "root-panel-executive-recent-president-0-zpdlhoo5x",
-              "name": "Ziyad Mohammad",
-              "role": "President",
-              "imageUrl": ""
-            }
-          ],
-          "deputyPresidents": [
-            {
-              "id": "root-panel-executive-recent-deputyPresidents-0-un29kwc62",
-              "name": "Rafiu Mohammad Mosharrof",
-              "role": "Deputy President",
-              "imageUrl": ""
-            },
-            {
-              "id": "root-panel-executive-recent-deputyPresidents-1-fjwypazce",
-              "name": "Shawon Rahman",
-              "role": "Deputy President",
-              "imageUrl": ""
-            }
-          ],
-          "generalSecretary": [
-            {
-              "id": "root-panel-executive-recent-generalSecretary-0-5vb375vtw",
-              "name": "Tahsin Ahnaf Mahir",
-              "role": "General Secretary",
-              "imageUrl": ""
-            }
-          ],
-          "vicePresidents": [
-            {
-              "id": "root-panel-executive-recent-vicePresidents-0-hxfi36fjk",
-              "name": "Al Sahad",
-              "role": "Vice President",
-              "imageUrl": ""
-            },
-            {
-              "id": "root-panel-executive-recent-vicePresidents-1-55u5xmfl5",
-              "name": "Arafat Karim Rahat",
-              "role": "Vice President",
-              "imageUrl": ""
-            },
-            {
-              "id": "root-panel-executive-recent-vicePresidents-2-cm97stvkj",
-              "name": "Muhammed Ayman",
-              "role": "Vice President",
-              "imageUrl": ""
-            },
-            {
-              "id": "root-panel-executive-recent-vicePresidents-3-rpbkr95ce",
-              "name": "Nayer Sharar",
-              "role": "Vice President",
-              "imageUrl": ""
-            },
-            {
-              "id": "root-panel-executive-recent-vicePresidents-4-dondx25aa",
-              "name": "Nilay Dutta",
-              "role": "Vice President",
-              "imageUrl": ""
-            },
-            {
-              "id": "root-panel-executive-recent-vicePresidents-5-dwbvauedg",
-              "name": "Priangshu Deb",
-              "role": "Vice President",
-              "imageUrl": ""
-            },
-            {
-              "id": "root-panel-executive-recent-vicePresidents-6-a0qh5fofw",
-              "name": "Sanan Sikder",
-              "role": "Vice President",
-              "imageUrl": ""
-            },
-            {
-              "id": "root-panel-executive-recent-vicePresidents-7-2stmm9hgd",
-              "name": "Tawhid-Bin-Omar",
-              "role": "Vice President",
-              "imageUrl": ""
-            },
-            {
-              "id": "root-panel-executive-recent-vicePresidents-8-aszv850mu",
-              "name": "Tayebur Naseef",
-              "role": "Vice President",
-              "imageUrl": ""
-            },
-            {
-              "id": "root-panel-executive-recent-vicePresidents-9-nfmfxyida",
-              "name": "Ziad Bin Azad",
-              "role": "Vice President",
-              "imageUrl": ""
-            }
-          ],
-          "departments": [
-            {
-              "id": "root-panel-executive-recent-departments-0-jkt7iocag",
-              "dept": "Internal Affairs",
-              "name": "N/A",
-              "imageUrl": ""
-            },
-            {
-              "id": "root-panel-executive-recent-departments-1-79gllwxx8",
-              "dept": "External Affairs",
-              "name": "N/A",
-              "imageUrl": ""
-            },
-            {
-              "id": "root-panel-executive-recent-departments-2-6aftb3s3w",
-              "dept": "Photography",
-              "name": "N/A",
-              "imageUrl": ""
-            },
-            {
-              "id": "root-panel-executive-recent-departments-3-jxm3gyo54",
-              "dept": "Events",
-              "name": "N/A",
-              "imageUrl": ""
-            },
-            {
-              "id": "root-panel-executive-recent-departments-4-2vdvgnt4p",
-              "dept": "Writings",
-              "name": "N/A",
-              "imageUrl": ""
-            },
-            {
-              "id": "root-panel-executive-recent-departments-5-olh6dbuc4",
-              "dept": "Equity",
-              "name": "N/A",
-              "imageUrl": ""
-            },
-            {
-              "id": "root-panel-executive-recent-departments-6-d2unmyto6",
-              "dept": "Decoration",
-              "name": "N/A",
-              "imageUrl": ""
-            }
-          ],
-          "secretaries": {
-            "jointSecretary": [],
-            "organizingSecretary": [],
-            "asstGeneralSecretary": [],
-            "correspondingSecretary": []
+      "former": {
+        "president": [
+          {
+            "id": "root-panel-executive-former-president-0-iwgb9rs33",
+            "name": "",
+            "role": "President",
+            "imageUrl": ""
           }
+        ],
+        "departments": [
+          {
+            "id": "root-panel-executive-former-departments-0-416nn8vgq",
+            "dept": "Internal Affairs",
+            "name": "",
+            "imageUrl": ""
+          },
+          {
+            "id": "root-panel-executive-former-departments-1-enab0o2hg",
+            "dept": "External Affairs",
+            "name": "",
+            "imageUrl": ""
+          },
+          {
+            "id": "root-panel-executive-former-departments-2-86lzwi2an",
+            "dept": "Photography",
+            "name": "",
+            "imageUrl": ""
+          },
+          {
+            "id": "root-panel-executive-former-departments-3-julbbasc8",
+            "dept": "Events",
+            "name": "",
+            "imageUrl": ""
+          },
+          {
+            "id": "root-panel-executive-former-departments-4-97wpcp1su",
+            "dept": "Writings",
+            "name": "",
+            "imageUrl": ""
+          },
+          {
+            "id": "root-panel-executive-former-departments-5-aa6v80rc6",
+            "dept": "Equity",
+            "name": "",
+            "imageUrl": ""
+          },
+          {
+            "id": "root-panel-executive-former-departments-6-q9jpo8bdt",
+            "dept": "Decoration",
+            "name": "",
+            "imageUrl": ""
+          }
+        ],
+        "secretaries": {
+          "jointSecretary": [
+            {
+              "id": "root-panel-executive-former-secretaries-jointSecretary-0-4zbqn4ohq",
+              "name": ""
+            },
+            {
+              "id": "root-panel-executive-former-secretaries-jointSecretary-1-db1qabwd4",
+              "name": ""
+            },
+            {
+              "id": "root-panel-executive-former-secretaries-jointSecretary-2-ptwxfvb8a",
+              "name": ""
+            },
+            {
+              "id": "root-panel-executive-former-secretaries-jointSecretary-3-t2kl18zu2",
+              "name": ""
+            },
+            {
+              "id": "root-panel-executive-former-secretaries-jointSecretary-4-0bdj4hjrf",
+              "name": ""
+            },
+            {
+              "id": "root-panel-executive-former-secretaries-jointSecretary-5-lmg4qv7re",
+              "name": ""
+            },
+            {
+              "id": "root-panel-executive-former-secretaries-jointSecretary-6-kr8oo4q18",
+              "name": ""
+            },
+            {
+              "id": "root-panel-executive-former-secretaries-jointSecretary-7-rq0j6sj6k",
+              "name": ""
+            },
+            {
+              "id": "root-panel-executive-former-secretaries-jointSecretary-8-oud83o30o",
+              "name": ""
+            },
+            {
+              "id": "root-panel-executive-former-secretaries-jointSecretary-9-kyd8utzgt",
+              "name": ""
+            }
+          ],
+          "organizingSecretary": [
+            {
+              "id": "root-panel-executive-former-secretaries-organizingSecretary-0-5y132e1f8",
+              "name": ""
+            },
+            {
+              "id": "root-panel-executive-former-secretaries-organizingSecretary-1-hci307ri4",
+              "name": ""
+            },
+            {
+              "id": "root-panel-executive-former-secretaries-organizingSecretary-2-x6u9hadsy",
+              "name": ""
+            },
+            {
+              "id": "root-panel-executive-former-secretaries-organizingSecretary-3-dtljcf39s",
+              "name": ""
+            },
+            {
+              "id": "root-panel-executive-former-secretaries-organizingSecretary-4-52wxayrao",
+              "name": ""
+            },
+            {
+              "id": "root-panel-executive-former-secretaries-organizingSecretary-5-af6zfw5r5",
+              "name": ""
+            }
+          ],
+          "asstGeneralSecretary": [
+            {
+              "id": "root-panel-executive-former-secretaries-asstGeneralSecretary-0-95990v1ej",
+              "name": ""
+            },
+            {
+              "id": "root-panel-executive-former-secretaries-asstGeneralSecretary-1-16ogkqn20",
+              "name": ""
+            },
+            {
+              "id": "root-panel-executive-former-secretaries-asstGeneralSecretary-2-068ldj38z",
+              "name": ""
+            },
+            {
+              "id": "root-panel-executive-former-secretaries-asstGeneralSecretary-3-pk85gv3cq",
+              "name": ""
+            },
+            {
+              "id": "root-panel-executive-former-secretaries-asstGeneralSecretary-4-obhvk1v3u",
+              "name": ""
+            },
+            {
+              "id": "root-panel-executive-former-secretaries-asstGeneralSecretary-5-26y3m7szp",
+              "name": ""
+            },
+            {
+              "id": "root-panel-executive-former-secretaries-asstGeneralSecretary-6-5v5cjt980",
+              "name": ""
+            },
+            {
+              "id": "root-panel-executive-former-secretaries-asstGeneralSecretary-7-gpq9mmlts",
+              "name": ""
+            },
+            {
+              "id": "root-panel-executive-former-secretaries-asstGeneralSecretary-8-oot5dx3mq",
+              "name": ""
+            },
+            {
+              "id": "root-panel-executive-former-secretaries-asstGeneralSecretary-9-ykqjpawot",
+              "name": ""
+            },
+            {
+              "id": "root-panel-executive-former-secretaries-asstGeneralSecretary-10-9irhg3syw",
+              "name": ""
+            }
+          ],
+          "correspondingSecretary": [
+            {
+              "id": "root-panel-executive-former-secretaries-correspondingSecretary-0-md1wk21rb",
+              "name": ""
+            },
+            {
+              "id": "root-panel-executive-former-secretaries-correspondingSecretary-1-0ji29v66b",
+              "name": ""
+            },
+            {
+              "id": "root-panel-executive-former-secretaries-correspondingSecretary-2-mu74a1b64",
+              "name": ""
+            },
+            {
+              "id": "root-panel-executive-former-secretaries-correspondingSecretary-3-5zsepepyn",
+              "name": ""
+            },
+            {
+              "id": "root-panel-executive-former-secretaries-correspondingSecretary-4-c1uenwirk",
+              "name": ""
+            },
+            {
+              "id": "root-panel-executive-former-secretaries-correspondingSecretary-5-6hwp699w0",
+              "name": ""
+            },
+            {
+              "id": "root-panel-executive-former-secretaries-correspondingSecretary-6-cvr9ig0t9",
+              "name": ""
+            }
+          ]
         },
-        {
-          "id": "panel-24",
-          "year": "Panel 24 (2023-2024)",
-          "president": [],
-          "deputyPresidents": [],
-          "generalSecretary": [],
-          "vicePresidents": [],
-          "departments": [],
-          "secretaries": {
-            "jointSecretary": [],
-            "organizingSecretary": [],
-            "asstGeneralSecretary": [],
-            "correspondingSecretary": []
+        "vicePresidents": [
+          {
+            "id": "root-panel-executive-former-vicePresidents-0-165k65srs",
+            "name": "",
+            "role": "Vice President",
+            "imageUrl": ""
+          },
+          {
+            "id": "root-panel-executive-former-vicePresidents-1-yytjrl0aa",
+            "name": "",
+            "role": "Vice President",
+            "imageUrl": ""
+          },
+          {
+            "id": "root-panel-executive-former-vicePresidents-2-sj69w86zx",
+            "name": "",
+            "role": "Vice President",
+            "imageUrl": ""
+          },
+          {
+            "id": "root-panel-executive-former-vicePresidents-3-g6r7ojt67",
+            "name": "",
+            "role": "Vice President",
+            "imageUrl": ""
+          },
+          {
+            "id": "root-panel-executive-former-vicePresidents-4-l5oaecons",
+            "name": "",
+            "role": "Vice President",
+            "imageUrl": ""
+          },
+          {
+            "id": "root-panel-executive-former-vicePresidents-5-otys7b1n5",
+            "name": "",
+            "role": "Vice President",
+            "imageUrl": ""
+          },
+          {
+            "id": "root-panel-executive-former-vicePresidents-6-ax86obdlf",
+            "name": "",
+            "role": "Vice President",
+            "imageUrl": ""
+          },
+          {
+            "id": "root-panel-executive-former-vicePresidents-7-ylmq6lpna",
+            "name": "",
+            "role": "Vice President",
+            "imageUrl": ""
+          },
+          {
+            "id": "root-panel-executive-former-vicePresidents-8-6n8dt5i7m",
+            "name": "",
+            "role": "Vice President",
+            "imageUrl": ""
+          },
+          {
+            "id": "root-panel-executive-former-vicePresidents-9-67m0uneg8",
+            "name": "",
+            "role": "Vice President",
+            "imageUrl": ""
           }
-        }
-      ],
+        ],
+        "deputyPresidents": [
+          {
+            "id": "root-panel-executive-former-deputyPresidents-0-jva2wvk8m",
+            "name": "",
+            "role": "Deputy President",
+            "imageUrl": ""
+          },
+          {
+            "id": "root-panel-executive-former-deputyPresidents-1-pcvrc2ol3",
+            "name": "",
+            "role": "Deputy President",
+            "imageUrl": ""
+          }
+        ],
+        "generalSecretary": [
+          {
+            "id": "root-panel-executive-former-generalSecretary-0-hxr2ywm28",
+            "name": "",
+            "role": "General Secretary",
+            "imageUrl": ""
+          }
+        ]
+      },
+      "recent": {
+        "president": [
+          {
+            "id": "root-panel-executive-recent-president-0-zpdlhoo5x",
+            "name": "Ziyad Mohammad",
+            "role": "President",
+            "imageUrl": ""
+          }
+        ],
+        "departments": [
+          {
+            "id": "root-panel-executive-recent-departments-0-jkt7iocag",
+            "dept": "Internal Affairs",
+            "name": "N/A",
+            "imageUrl": ""
+          },
+          {
+            "id": "root-panel-executive-recent-departments-1-79gllwxx8",
+            "dept": "External Affairs",
+            "name": "N/A",
+            "imageUrl": ""
+          },
+          {
+            "id": "root-panel-executive-recent-departments-2-6aftb3s3w",
+            "dept": "Photography",
+            "name": "N/A",
+            "imageUrl": ""
+          },
+          {
+            "id": "root-panel-executive-recent-departments-3-jxm3gyo54",
+            "dept": "Events",
+            "name": "N/A",
+            "imageUrl": ""
+          },
+          {
+            "id": "root-panel-executive-recent-departments-4-2vdvgnt4p",
+            "dept": "Writings",
+            "name": "N/A",
+            "imageUrl": ""
+          },
+          {
+            "id": "root-panel-executive-recent-departments-5-olh6dbuc4",
+            "dept": "Equity",
+            "name": "N/A",
+            "imageUrl": ""
+          },
+          {
+            "id": "root-panel-executive-recent-departments-6-d2unmyto6",
+            "dept": "Decoration",
+            "name": "N/A",
+            "imageUrl": ""
+          }
+        ],
+        "secretaries": {
+          "jointSecretary": [
+            {
+              "id": "root-panel-executive-recent-secretaries-jointSecretary-0-pjd7xwcxl",
+              "name": "N/A"
+            },
+            {
+              "id": "root-panel-executive-recent-secretaries-jointSecretary-1-ay8113sj3",
+              "name": "N/A"
+            },
+            {
+              "id": "root-panel-executive-recent-secretaries-jointSecretary-2-fhfkj5z25",
+              "name": "N/A"
+            },
+            {
+              "id": "root-panel-executive-recent-secretaries-jointSecretary-3-k7mhxaipq",
+              "name": "N/A"
+            },
+            {
+              "id": "root-panel-executive-recent-secretaries-jointSecretary-4-epbfmiyg6",
+              "name": "N/A"
+            },
+            {
+              "id": "root-panel-executive-recent-secretaries-jointSecretary-5-0k1m2u41f",
+              "name": "N/A"
+            },
+            {
+              "id": "root-panel-executive-recent-secretaries-jointSecretary-6-7p4ajo1w0",
+              "name": "N/A"
+            },
+            {
+              "id": "root-panel-executive-recent-secretaries-jointSecretary-7-57zdzquit",
+              "name": "N/A"
+            },
+            {
+              "id": "root-panel-executive-recent-secretaries-jointSecretary-8-n7itg746v",
+              "name": "N/A"
+            },
+            {
+              "id": "root-panel-executive-recent-secretaries-jointSecretary-9-x8dbni5p7",
+              "name": "N/A"
+            }
+          ],
+          "organizingSecretary": [
+            {
+              "id": "root-panel-executive-recent-secretaries-organizingSecretary-0-fb59u0skk",
+              "name": "N/A"
+            },
+            {
+              "id": "root-panel-executive-recent-secretaries-organizingSecretary-1-qc6fzfzpp",
+              "name": "N/A"
+            },
+            {
+              "id": "root-panel-executive-recent-secretaries-organizingSecretary-2-x1fkobbll",
+              "name": "N/A"
+            },
+            {
+              "id": "root-panel-executive-recent-secretaries-organizingSecretary-3-vy35gduwc",
+              "name": "N/A"
+            },
+            {
+              "id": "root-panel-executive-recent-secretaries-organizingSecretary-4-xgvcrsxun",
+              "name": "N/A"
+            },
+            {
+              "id": "root-panel-executive-recent-secretaries-organizingSecretary-5-bnegiu1x1",
+              "name": "N/A"
+            }
+          ],
+          "asstGeneralSecretary": [
+            {
+              "id": "root-panel-executive-recent-secretaries-asstGeneralSecretary-0-og93d3bw4",
+              "name": "N/A"
+            },
+            {
+              "id": "root-panel-executive-recent-secretaries-asstGeneralSecretary-1-qlby7xf64",
+              "name": "N/A"
+            },
+            {
+              "id": "root-panel-executive-recent-secretaries-asstGeneralSecretary-2-hor0n3jmm",
+              "name": "N/A"
+            },
+            {
+              "id": "root-panel-executive-recent-secretaries-asstGeneralSecretary-3-gft405kzm",
+              "name": "N/A"
+            },
+            {
+              "id": "root-panel-executive-recent-secretaries-asstGeneralSecretary-4-rztcb9m97",
+              "name": "N/A"
+            },
+            {
+              "id": "root-panel-executive-recent-secretaries-asstGeneralSecretary-5-az18txwc7",
+              "name": "N/A"
+            },
+            {
+              "id": "root-panel-executive-recent-secretaries-asstGeneralSecretary-6-xiz0chf4s",
+              "name": "N/A"
+            },
+            {
+              "id": "root-panel-executive-recent-secretaries-asstGeneralSecretary-7-qzqz9avkm",
+              "name": "N/A"
+            },
+            {
+              "id": "root-panel-executive-recent-secretaries-asstGeneralSecretary-8-tgt9iqfm4",
+              "name": "N/A"
+            },
+            {
+              "id": "root-panel-executive-recent-secretaries-asstGeneralSecretary-9-s04exm6tx",
+              "name": "N/A"
+            },
+            {
+              "id": "root-panel-executive-recent-secretaries-asstGeneralSecretary-10-2qd2zgpd7",
+              "name": "N/A"
+            }
+          ],
+          "correspondingSecretary": [
+            {
+              "id": "root-panel-executive-recent-secretaries-correspondingSecretary-0-og4sqawvx",
+              "name": "N/A"
+            },
+            {
+              "id": "root-panel-executive-recent-secretaries-correspondingSecretary-1-qcn5iflm8",
+              "name": "N/A"
+            },
+            {
+              "id": "root-panel-executive-recent-secretaries-correspondingSecretary-2-y39pppa1c",
+              "name": "N/A"
+            },
+            {
+              "id": "root-panel-executive-recent-secretaries-correspondingSecretary-3-et5xkfctf",
+              "name": "N/A"
+            },
+            {
+              "id": "root-panel-executive-recent-secretaries-correspondingSecretary-4-kvgl1k8b7",
+              "name": "N/A"
+            },
+            {
+              "id": "root-panel-executive-recent-secretaries-correspondingSecretary-5-fxlxdc1g3",
+              "name": "N/A"
+            },
+            {
+              "id": "root-panel-executive-recent-secretaries-correspondingSecretary-6-uy3vyuif7",
+              "name": "N/A"
+            }
+          ]
+        },
+        "vicePresidents": [
+          {
+            "id": "root-panel-executive-recent-vicePresidents-0-hxfi36fjk",
+            "name": "Al Sahad",
+            "role": "Vice President",
+            "imageUrl": ""
+          },
+          {
+            "id": "root-panel-executive-recent-vicePresidents-1-55u5xmfl5",
+            "name": "Arafat Karim Rahat",
+            "role": "Vice President",
+            "imageUrl": ""
+          },
+          {
+            "id": "root-panel-executive-recent-vicePresidents-2-cm97stvkj",
+            "name": "Muhammed Ayman",
+            "role": "Vice President",
+            "imageUrl": ""
+          },
+          {
+            "id": "root-panel-executive-recent-vicePresidents-3-rpbkr95ce",
+            "name": "Nayer Sharar",
+            "role": "Vice President",
+            "imageUrl": ""
+          },
+          {
+            "id": "root-panel-executive-recent-vicePresidents-4-dondx25aa",
+            "name": "Nilay Dutta",
+            "role": "Vice President",
+            "imageUrl": ""
+          },
+          {
+            "id": "root-panel-executive-recent-vicePresidents-5-dwbvauedg",
+            "name": "Priangshu Deb",
+            "role": "Vice President",
+            "imageUrl": ""
+          },
+          {
+            "id": "root-panel-executive-recent-vicePresidents-6-a0qh5fofw",
+            "name": "Sanan Sikder",
+            "role": "Vice President",
+            "imageUrl": ""
+          },
+          {
+            "id": "root-panel-executive-recent-vicePresidents-7-2stmm9hgd",
+            "name": "Tawhid-Bin-Omar",
+            "role": "Vice President",
+            "imageUrl": ""
+          },
+          {
+            "id": "root-panel-executive-recent-vicePresidents-8-aszv850mu",
+            "name": "Tayebur Naseef",
+            "role": "Vice President",
+            "imageUrl": ""
+          },
+          {
+            "id": "root-panel-executive-recent-vicePresidents-9-nfmfxyida",
+            "name": "Ziad Bin Azad",
+            "role": "Vice President",
+            "imageUrl": ""
+          }
+        ],
+        "deputyPresidents": [
+          {
+            "id": "root-panel-executive-recent-deputyPresidents-0-un29kwc62",
+            "name": "Rafiu Mohammad Mosharrof",
+            "role": "Deputy President",
+            "imageUrl": ""
+          },
+          {
+            "id": "root-panel-executive-recent-deputyPresidents-1-fjwypazce",
+            "name": "Shawon Rahman",
+            "role": "Deputy President",
+            "imageUrl": ""
+          }
+        ],
+        "generalSecretary": [
+          {
+            "id": "root-panel-executive-recent-generalSecretary-0-5vb375vtw",
+            "name": "Tahsin Ahnaf Mahir",
+            "role": "General Secretary",
+            "imageUrl": ""
+          }
+        ]
+      },
       "current": {
         "president": [
           {
@@ -760,11 +1165,11 @@
         "time": "TBA",
         "title": "Math Olympiad",
         "category": "Competition",
+        "imageUrl": "",
         "location": "St. Joseph Higher Secondary School",
         "description": "The Math Olympiad is a competitive platform designed to inspire young minds and\ncelebrate the beauty of mathematics. Participants will showcase their problem-solving skills across four categories:\n* Primary (Class 3–5)\n* Junior (Class 6–8)\n* Secondary (Class 9–10)\n* Higher Secondary (Class 11–12 and HSC 2025–HSC 2027)\n\nThe contest duration is 1 Hour and will consist of 8–12 challenging find based problems, carefully selected to assess creativity, logical reasoning, and mathematical depth. The questions will cover core areas of mathematics, including:\n* Number Theory\n* Algebra\n* Geometry\n* Combinatorics\nThe level of difficulty will be equivalent to the BdMO Regional Round, ensuring fairness and rigor for each category. This event aims to encourage analytical thinking and foster a deeper appreciation of problem-solving among students at different academic Stages.",
         "isTeamEvent": false,
-        "registrationLink": "#",
-        "imageUrl": ""
+        "registrationLink": "#"
       },
       {
         "id": "event-solo-2",
@@ -772,11 +1177,11 @@
         "time": "TBA",
         "title": "IQ Test",
         "category": "Competition",
+        "imageUrl": "",
         "location": "St. Joseph Higher Secondary School",
         "description": "IQ Test is a challenging and engaging event open to participants across all four categories:\n* Primary (Class 3–5)\n* Junior (Class 6–8)\n* Secondary (Class 9–10)\n* Higher Secondary (Class 11–12 and HSC 2025–HSC 2027)\nObjective:\nParticipants will attempt 20 brainteasers designed to test logical reasoning, analyt-\nical thinking, and problem-solving ability. Each question requires careful thought and a high level of IQ to arrive at the correct solution.\nEvent Structure:\n* The event will last for 30 minutes or more, depending on the difficulty .\n* All participants must work individually and rely solely on their own reasoning and Scoring and Winners\n* Correct answers will be awarded points according to difficulty.\n* The top three participants from each category will be rewarded.\n* Any attempt to tamper with another participant’s work or use unauthorized aids may result in disqualification.\nThis event emphasizes cognitive skills, quick thinking, and analytical reasoning, providing a fun yet challenging platform for participants to showcase their intelligence.",
         "isTeamEvent": false,
-        "registrationLink": "#",
-        "imageUrl": ""
+        "registrationLink": "#"
       },
       {
         "id": "event-solo-3",
@@ -784,11 +1189,11 @@
         "time": "TBA",
         "title": "Probability Pressure",
         "category": "Competition",
+        "imageUrl": "/images/event_banner/PR-PR.jpg",
         "location": "St. Joseph Higher Secondary School",
         "description": "Probability Pressure is a focused problem-solving event for participants in the Secondary (Class 9–10) and Higher Secondary (Class 11–12 and HSC 2025–HSC\n2027) categories.\nEvent Structure :\n* Participants will be given a set of 7–8 probability-based questions.\n* The problems may involve applications of geometry, number theory, and related\nmathematical fields.\n* The event will last for 45 minutes, during which participants must attempt to solve\nall questions.\nScoring and Winners :\n* Participants who provide a flawless solution will be awarded full marks.\n* Partial marks may be awarded for rough work or incomplete solutions that demon-\nstrate clear reasoning.\n* The top three participants from each category will be rewarded.\n* Any attempt to tamper with another participant’s work or use unauthorized aids may result in disqualification.\nThis event emphasizes logical reasoning, probabilistic thinking, and accuracy,\nencouraging participants to carefully analyze and solve problems within the given time.",
         "isTeamEvent": false,
-        "registrationLink": "#",
-        "imageUrl": "/images/event_banner/PR-PR.jpg"
+        "registrationLink": "#"
       },
       {
         "id": "event-solo-5",
@@ -796,11 +1201,11 @@
         "time": "TBA",
         "title": "Human Calculator",
         "category": "Competition",
+        "imageUrl": "/images/event_banner/Human_Calc-segment.jpg",
         "location": "St. Joseph Higher Secondary School",
         "description": "The Human Calculator challenge is a thrilling test of mental arithmetic and numerical\nagility designed for students across all categories. Participants will compete in a written round where they must solve a series of complex calculations using only their minds, with\nObjective:\nParticipants must accurately solve a set of mathematical problems under a strict time\nlimit. The questions will test speed and precision in various areas of mental calculation, including but not limited to addition, subtraction, multiplication, division, percentages, squares, and roots. The individual who correctly solves the most problems within the\nallotted time will be crowned the ”Human Calculator.”\nRules :\n* The event is open to participants from Primary (Class 3–5), Junior (Class 6–8),\nSecondary (Class 9–10), and Higher Secondary (Class 11–12) categories.\n* Each participant will receive a question paper and an answer sheet. Scratch paper\nwill be provided for working out calculations.\n* The use of calculators, electronic devices, or any pre-written formulas is strictly\nprohibited. All calculations must be performed by the participant.\n* All working must be shown on the provided scratch paper. The question paper\nmust not be used for rough work.\n* All final answers must be clearly written on the provided answer sheet.\n* The event will be a 60-minute written round.\n* Winners will be determined based on the highest number of correct answers. In\ncase of a tie, the participant who finished in the shortest time will be awarded the\nhigher position.\n* Top performers from each category will receive awards and recognition.\n* Any attempt to use unauthorized aids or communicate with another participant\nwill result in immediate disqualification.\nThis event challenges concentration, memory, and rapid problem-solving skills, celebrating the incredible power of the human mind as the ultimate computational toolsection",
         "isTeamEvent": false,
-        "registrationLink": "#",
-        "imageUrl": "/images/event_banner/Human_Calc-segment.jpg"
+        "registrationLink": "#"
       },
       {
         "id": "event-solo-6",
@@ -808,11 +1213,11 @@
         "time": "TBA",
         "title": "Calculus Bee",
         "category": "Competition",
+        "imageUrl": "",
         "location": "St. Joseph Higher Secondary School",
         "description": "This competition will focus exclusively on calculus problems. Participants will be challenged with questions from both Differentiation and Integration, covering key concepts and techniques from each area. From finding derivatives of functions to solving integrals, you'll need to apply your calculus knowledge to solve these problems accurately. This will test both problem-solving speed and precision of each participant.\n\nCATEGORIES: Secondary and Higher Secondary \nDURATION: 45 MIN\nFORMAT: SOLO\n\nRULES:\n1. No External Aids\nAll calculations must be done by hand; calculators, phones, or any other aids are strictly prohibited.\n\n2. Zero Tolerance for Unfair Means\nAny form of cheating or collusion will result in immediate disqualification.\n\n3. Merit Depends on Process\nMerit is awarded for a clear, step-by-step solution—even if the final answer is incorrect, a sound method earns partial credit.\n\n4. Winner Selection\na. Contestants will have to solve the problems which will be given from both differentiation and integration.\nb. There will be three winners from each category. Winners will be awarded.",
         "isTeamEvent": false,
-        "registrationLink": "#",
-        "imageUrl": ""
+        "registrationLink": "#"
       },
       {
         "id": "event-solo-7",
@@ -820,11 +1225,11 @@
         "time": "TBA",
         "title": "Geometry Dash",
         "category": "Competition",
+        "imageUrl": "/images/event_banner/Geo-Dash.jpg",
         "location": "St. Joseph Higher Secondary School",
         "description": "Geometry Dash is a thrilling problem-solving contest crafted exclusively for the Sec-\nondary (Class 9–10) and Higher Secondary (Class 11–12 and HSC 2025–HSC\n2027) categories. This event is dedicated to exploring the elegance, depth, and challenge\nof geometry.\nEvent Structure\n* The contest will feature 5–7 “find-based/proof-based” geometry problems,\ndesigned to test conceptual understanding, logical reasoning, and creative applica-\ntion.\n* Each problem requires participants to derive, prove, or find specific values, relations,\nor constructions through mathematical reasoning.\n* The total duration of the event will be 45 minutes.\nEvaluation\n* A flawless solution will be awarded full marks.\n* Partial credit will be given for substantial progress, rough work, or correct approaches even if the final solution is not reached.\n* Any kind of unfair means will lead to immediate disqualification.\nWinners:\n* The top three participants from each category (Secondary and Higher Secondary) will be declared winners.\nThis event emphasizes the beauty and power of geometry, encouraging participants to appreciate both precision and creativity in mathematical problem-solving.",
         "isTeamEvent": false,
-        "registrationLink": "#",
-        "imageUrl": "/images/event_banner/Geo-Dash.jpg"
+        "registrationLink": "#"
       },
       {
         "id": "event-solo-8",
@@ -832,11 +1237,11 @@
         "time": "TBA",
         "title": "Rubik's Cube",
         "category": "Competition",
+        "imageUrl": "",
         "location": "St. Joseph Higher Secondary School",
         "description": "The Rubik’s Cube Showdown is an exciting test of speed, focus, and problem-solving skills, where participants will battle it out to prove their cubing mastery. The event will be divided into two rounds, combining both individual performance and head-to-head competition.\n\nCategories :\n\n* Primary (Class 3–5)\n* Junior (Class 6–8)\n* Secondary (Class 9–10)\n* Higher Secondary (Class 11–12 and HSC 2025–HSC 2027)\n\nEvent Structure:\n\nRound 1 – Preliminary (Speed Round):\n\nAll registered participants will attempt to solve the Rubik’s Cube.\n\nEach participant will be given multiple solves (depending on time constraints), and their best time will be recorded.\n\nBased on performance, the top 6 participants with the fastest solving times will advance to the final round.\n\nRound 2 – Final (1v1 Knockout Matches):\n\nThe four finalists will compete in 1v1 head-to-head matches.\n\nPairings will be made based on seeding from Round 1 (fastest vs. slowest, etc.).\n\nIn each match, both participants will solve the same scrambled cube simultaneously.\n\nThe winner will be the participant who completes the solve first.\n\nMatches continue until a final champion is determined.\n\nWinners:\n\nChampion – Winner of the final duel.\n\nFirst Runner-Up – The finalist defeated in the championship match.\n\nSecond Runner-Up – Determined from the duel between the semi-final losers",
         "isTeamEvent": false,
-        "registrationLink": "#",
-        "imageUrl": ""
+        "registrationLink": "#"
       },
       {
         "id": "event-solo-9",
@@ -844,11 +1249,11 @@
         "time": "TBA",
         "title": "Sudoku",
         "category": "Competition",
+        "imageUrl": "/images/event_banner/Sudoku.jpg",
         "location": "St. Joseph Higher Secondary School",
         "description": "The Sudoku Challenge is an engaging puzzle competition designed to test participants’\nlogical reasoning, pattern recognition, and problem-solving speed. Participants will solve\nSudoku grids of varying difficulty within a limited time, aiming to fill each grid correctly\naccording to the classic rules of Sudoku.\nCategories :\nThe competition is open for the following four categories:\n* Primary (Class 3–5)\n* Junior (Class 6–8)\n* Secondary (Class 9–10)\n* Higher Secondary (Class 11–12 and HSC 2025–HSC 2027) Rules of Sudoku\n* Each Sudoku puzzle consists of a 9×9 grid, divided into nine 3×3 subgrids (also called\nboxes or regions).\n* The goal is to fill the empty cells with numbers from 1 to 9.\n* Each row, each column, and each 3.3 subgrid must contain all numbers from 1 to\n9 exactly once.\n* Participants cannot repeat any number in a row, column, or subgrid.\n* The time taken to complete the puzzle will be considered in determining the\nwinners.\n* Time duration of this event will be 30 minutes.\n* The three fastest participants in each category who complete the puzzle correctly\nwill be declared the winners. Three winners from each category .\n* Any incorrect entries or attempts to alter another participant’s puzzle may\nresult in disqualification.\nThis event encourages focus, logical reasoning, and careful planning, offering a fun and competitive way to strengthen numerical and analytical skills.",
         "isTeamEvent": false,
-        "registrationLink": "#",
-        "imageUrl": "/images/event_banner/Sudoku.jpg"
+        "registrationLink": "#"
       },
       {
         "id": "event-solo-10",
@@ -856,11 +1261,11 @@
         "time": "TBA",
         "title": "Cryptomania",
         "category": "Competition",
+        "imageUrl": "",
         "location": "St. Joseph Higher Secondary School",
         "description": "Cryptomania is an exciting solo event open to participants across all four categories:\n* Primary (Class 3–5)\n* Junior (Class 6–8)\n* Secondary (Class 9–10)\n* Higher Secondary (Class 11–12 and HSC 2025–HSC 2027)\nObjective :\nParticipants will solve cipher-decipher challenges or thrilling problem-based cases\nusing logical reasoning and analytical skills. A cipher is a method of transforming\ninformation to keep it secret, while deciphering is the process of decoding it to reveal the\noriginal message. Participants must extract clues and reason carefully to solve the tasks.\nRules\n* Each participant must solve the problems using sheer problem-solving skills; ex-\nternal aids are not allowed.\n* Participants will be provided all necessary information within the problem state\n* there will be three winners from each category.\n* Any attempt to tamper with another participant’s work or use unauthorized aids may result in disqualification.\nThis event encourages critical thinking, creativity, and logical deduction, offering participants a fun and challenging opportunity to crack codes and solve mysteries.",
         "isTeamEvent": false,
-        "registrationLink": "#",
-        "imageUrl": ""
+        "registrationLink": "#"
       },
       {
         "id": "event-solo-11",
@@ -868,11 +1273,11 @@
         "time": "TBA",
         "title": "Singularity",
         "category": "Competition",
+        "imageUrl": "/images/event_banner/Singularity-segment.jpg",
         "location": "St. Joseph Higher Secondary School",
         "description": "Participate in the exciting Singularity competition.",
         "isTeamEvent": false,
-        "registrationLink": "#",
-        "imageUrl": "/images/event_banner/Singularity-segment.jpg"
+        "registrationLink": "#"
       },
       {
         "id": "event-team-12",
@@ -880,12 +1285,12 @@
         "time": "TBA",
         "title": "Escape Room",
         "category": "Competition",
+        "imageUrl": "/images/event_banner/Escape-Room.jpg",
         "location": "St. Joseph Higher Secondary School",
         "teamSize": 3,
         "description": "A thrilling team event (Escape Room) where logic and teamwork matter.",
         "isTeamEvent": true,
-        "registrationLink": "#",
-        "imageUrl": "/images/event_banner/Escape-Room.jpg"
+        "registrationLink": "#"
       },
       {
         "id": "event-team-15",
@@ -893,12 +1298,12 @@
         "time": "TBA",
         "title": "Tic-Tac-Toe",
         "category": "Competition",
+        "imageUrl": "/images/event_banner/tic-tac-toe.jpg",
         "location": "St. Joseph Higher Secondary School",
         "teamSize": 3,
         "description": "A tactical grid match where math formulas and patterns meet board-game maneuvers. Exclusive to Primary and Junior categories.",
         "isTeamEvent": true,
-        "registrationLink": "#",
-        "imageUrl": "/images/event_banner/tic-tac-toe.jpg"
+        "registrationLink": "#"
       }
     ],
     "subtitle": "UPCOMING EVENTS",
@@ -988,6 +1393,136 @@
     "description": "Stay updated with the latest announcements, results, and important information from the Josephite Math Club."
   },
   "articles": [
+    {
+      "id": "article-1785164775893",
+      "date": "27 Jul 2026",
+      "slug": "new-math-article",
+      "title": "Worm Hole",
+      "author": "Tawhid Bin Omar",
+      "pdfUrl": "https://ikciatrploqznijspyuk.supabase.co/storage/v1/object/public/images/1785164982187-tiirrx6sx.pdf",
+      "content": "",
+      "excerpt": "Among the most astonishing hypothetical shortcuts in astrophysics, Wormholes challenge our very understanding of cosmic distance. What first appears as an impassable barrier of millions of light-years across the dark void becomes an immediate gateway when spacetime is folded upon itself.",
+      "category": "Mathematics",
+      "imageUrl": "",
+      "published": true
+    },
+    {
+      "id": "article-1785164642677",
+      "date": "27 Jul 2026",
+      "slug": "new-math-article",
+      "title": "Functional Equations",
+      "author": "Tawhid Bin Omar",
+      "pdfUrl": "https://ikciatrploqznijspyuk.supabase.co/storage/v1/object/public/images/1785164728533-ik4xhybcv.pdf",
+      "content": "",
+      "excerpt": "Among the most profoundly foundational enigmas in algebra, **Functional Equations** invert our traditional understanding of variables to question the very nature of mathematical mappings. What first appears as a chaotic puzzle of unconstrained conditions and elusive expressions becomes beautifully orderly when subjected to the laws of symmetry, injectivity, and substitution. Instead of searching for a hidden number, we hunt for an entire steadfast mathematical identity.",
+      "category": "Mathematics",
+      "imageUrl": "",
+      "published": true
+    },
+    {
+      "id": "article-1785164551708",
+      "date": "27 Jul 2026",
+      "slug": "new-math-article",
+      "title": "Permutations, Combinations and the Art of Counting",
+      "author": "Tawhid Bin Omar",
+      "pdfUrl": "https://ikciatrploqznijspyuk.supabase.co/storage/v1/object/public/images/1785164631439-pwyizwfil.pdf",
+      "content": "",
+      "excerpt": "Among the most astonishing hypothetical shortcuts in astrophysics, Wormholes challenge our very understanding of cosmic distance. What first appears as an impassable barrier of millions of light-years across the dark void becomes an immediate gateway when spacetime is folded upon itself.",
+      "category": "Mathematics",
+      "imageUrl": "",
+      "published": true
+    },
+    {
+      "id": "article-1785164425494",
+      "date": "27 Jul 2026",
+      "slug": "new-math-article",
+      "title": "Tensors.....",
+      "author": "Tawhid Bin Omar",
+      "pdfUrl": "https://ikciatrploqznijspyuk.supabase.co/storage/v1/object/public/images/1785164544162-q1fk2aen0.pdf",
+      "content": "",
+      "excerpt": "Among the most expressive languages in modern mathematics and physics, Tensors reveal the profound geometric truths that remain completely unchanged by our choice of perspective. What first appears as a terrifying maze of multi-dimensional arrays, upper and lower indices, and complex coordinate shifts becomes beautifully simple when viewed as a singular, invariant entity slicing through space and time.",
+      "category": "Mathematics",
+      "imageUrl": "",
+      "published": true
+    },
+    {
+      "id": "article-1785164316948",
+      "date": "27 Jul 2026",
+      "slug": "new-math-article",
+      "title": "Legendre Polynomials and Generating Funstions",
+      "author": "Tawhid Bin Omar",
+      "pdfUrl": "https://ikciatrploqznijspyuk.supabase.co/storage/v1/object/public/images/1785164418753-w9307ilvb.pdf",
+      "content": "",
+      "excerpt": "Among the most elegant constructs in mathematical physics, Legendre Polynomials and Generating Functions reveal the underlying symmetry of physical space. What first appears as a chaotic web of complex differential equations and intractable geometric potentials collapses into beautifully ordered orthogonal components when viewed through the lens of a single, masterful generating function. From the gravitational pull of planets to the quantum mechanics of the atom, these steadfast functions transform the geometry of the universe into an orchestra of perfect harmony.",
+      "category": "Mathematics",
+      "imageUrl": "",
+      "published": true
+    },
+    {
+      "id": "article-1785164200667",
+      "date": "27 Jul 2026",
+      "slug": "new-math-article",
+      "title": "Analytic Continuation and the Limits of Generalization",
+      "author": "Tawhid Bin Omar",
+      "pdfUrl": "https://ikciatrploqznijspyuk.supabase.co/storage/v1/object/public/images/1785164309039-4xufv6a3r.pdf",
+      "content": "",
+      "excerpt": "Among the most revolutionary intellectual achievements in human history, General Relativity unveils the elegant tapestry binding space, time, and gravity. What first appears as a chaotic and mysterious cosmic force acting across empty voids is beautifully unmasked as the simple, dynamic geometry of the universe itself.",
+      "category": "Mathematics",
+      "imageUrl": "",
+      "published": true
+    },
+    {
+      "id": "article-1785164122541",
+      "date": "27 Jul 2026",
+      "slug": "new-math-article",
+      "title": "General Relativity and Space Time",
+      "author": "Tawhid Bin Omar",
+      "pdfUrl": "https://ikciatrploqznijspyuk.supabase.co/storage/v1/object/public/images/1785164191695-d3c1d8cwy.pdf",
+      "content": "",
+      "excerpt": "Among the most revolutionary intellectual achievements in human history, General Relativity unveils the elegant tapestry binding space, time, and gravity. What first appears as a chaotic and mysterious cosmic force acting across empty voids is beautifully unmasked as the simple, dynamic geometry of the universe itself. the article...",
+      "category": "Mathematics",
+      "imageUrl": "",
+      "published": true
+    },
+    {
+      "id": "article-1785164050858",
+      "date": "27 Jul 2026",
+      "slug": "new-math-article",
+      "title": "Jacobian Matrix",
+      "author": "Tawhid Bin Omar",
+      "pdfUrl": "https://ikciatrploqznijspyuk.supabase.co/storage/v1/object/public/images/1785164115722-mmu2teew5.pdf",
+      "content": "",
+      "excerpt": "Among the most transformative concepts in multivariable calculus, the Jacobian Matrix reveals the hidden linearity within local chaos. What first appears as a complex, non-linear web of warping coordinates and shifting multidimensional spaces becomes beautifully simple when zoomed in closely along these steadfast local derivatives. It serves as the ultimate mathematical magnifying glass, capturing the precise degree of stretching, rotating, and scaling that occurs when we distort one coordinate system into another.",
+      "category": "Mathematics",
+      "imageUrl": "",
+      "published": true
+    },
+    {
+      "id": "article-1785163942610",
+      "date": "27 Jul 2026",
+      "slug": "new-math-article",
+      "title": "Graph Theory",
+      "author": "Tawhid Bin Omar",
+      "pdfUrl": "https://ikciatrploqznijspyuk.supabase.co/storage/v1/object/public/images/1785164038109-z0f8sagj3.pdf",
+      "content": "",
+      "excerpt": "Among the most profoundly interconnected fields of mathematics, Graph Theory maps the invisible architecture of relationships. What first appears as a chaotic web of tangled networks, sprawling data points, and isolated entities becomes beautifully simple when stripped down to its core elements: vertices and edges. It reveals that whether we are tracing the neural pathways of the brain, the vast infrastructure of the internet, or the delicate social bonds of humanity, the underlying geometry of connection obeys a steadfast, universal order.",
+      "category": "Mathematics",
+      "imageUrl": "",
+      "published": true
+    },
+    {
+      "id": "article-1785163841720",
+      "date": "27 Jul 2026",
+      "slug": "new-math-article",
+      "title": "Wrap Drive and Faster than Light Travel",
+      "author": "Tawhid Bin Omar",
+      "pdfUrl": "https://ikciatrploqznijspyuk.supabase.co/storage/v1/object/public/images/1785163852040-82sfn8m04.pdf",
+      "content": "",
+      "excerpt": "Among the most breathtaking frontiers of theoretical physics is the Warp Drive, anchored by the mathematics of the Alcubierre metric. What first appears as a violation of nature’s absolute speed limit becomes a masterful dance with gravity when viewed through the lens of general relativity. Rather than moving through space faster than light, a warp drive dynamically compresses the fabric of spacetime ahead of a vessel while expanding it behind, allowing humanity to outrun photons by manipulating the geometry of the universe itself.",
+      "category": "Mathematics",
+      "imageUrl": "",
+      "published": true
+    },
     {
       "id": "article-1779776879938",
       "date": "26 May 2026",
@@ -1093,7 +1628,7 @@
       "published": true
     }
   ],
-  "lastUpdated": "2026-06-25T12:00:00.000Z",
+  "lastUpdated": "2026-07-27T15:12:45.392Z",
   "_instruction": "Update 'lastUpdated' whenever you manually edit this file to ensure changes take precedence over the admin panel.",
   "gallery_page": {
     "images": [
