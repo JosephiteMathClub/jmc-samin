@@ -39,7 +39,16 @@ import {
   Layout,
   Globe,
   Building,
-  Coins
+  Coins,
+  Play,
+  Pause,
+  Volume2,
+  VolumeX,
+  Maximize,
+  Minimize,
+  Film,
+  Rocket,
+  ExternalLink
 } from 'lucide-react';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { useRouter } from 'next/navigation';
@@ -84,6 +93,22 @@ export default function InterEventRegister() {
   const [paymentDesc, setPaymentDesc] = useState("Please pay BDT 100 registration fee to our bKash personal/merchant account. Highlighted Phone: 01789456123.");
   const [pricePerSegment, setPricePerSegment] = useState(100);
   const [caCodesList, setCaCodesList] = useState<string[]>([]);
+
+  // Launch, Video Teaser & Coming Soon States
+  const [isEventPageLaunched, setIsEventPageLaunched] = useState(false);
+  const [teaserVideoEnabled, setTeaserVideoEnabled] = useState(true);
+  const [teaserVideoUrl, setTeaserVideoUrl] = useState("https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4");
+  const [showingVideo, setShowingVideo] = useState(false);
+  const [videoEnded, setVideoEnded] = useState(false);
+  
+  // Video Player Controls
+  const [isPlaying, setIsPlaying] = useState(true);
+  const [isMuted, setIsMuted] = useState(false);
+  const [hasStartedAudio, setHasStartedAudio] = useState(false);
+  const [videoProgress, setVideoProgress] = useState(0);
+
+  const videoRef = React.useRef<HTMLVideoElement | null>(null);
+  const videoContainerRef = React.useRef<HTMLDivElement | null>(null);
 
   // Presence of valid Email Address
   const [hasEmailAddress, setHasEmailAddress] = useState<boolean | null>(null);
@@ -152,16 +177,122 @@ export default function InterEventRegister() {
             setPaymentDesc(desc);
             setPricePerSegment(100);
             setCaCodesList(val.caCodes || []);
+
+            const launched = Boolean(val.isEventPageLaunched);
+            setIsEventPageLaunched(launched);
+            setTeaserVideoEnabled(val.teaserVideoEnabled !== false);
+            if (val.teaserVideoUrl) {
+              setTeaserVideoUrl(val.teaserVideoUrl);
+            }
+
+            if (!launched && val.teaserVideoEnabled !== false) {
+              setShowingVideo(true);
+            }
+          } else {
+            // Default unlaunched if no settings present
+            setIsEventPageLaunched(false);
+            setShowingVideo(true);
           }
         }
       } catch (err) {
         console.warn("Failed to retrieve system settings gracefully:", err);
+        setIsEventPageLaunched(false);
+        setShowingVideo(true);
       } finally {
         setCheckingStatuses(false);
       }
     }
     loadConfig();
   }, []);
+
+  // Video End and Fullscreen Audio Start Handlers
+  const handleVideoEnd = () => {
+    if (typeof document !== 'undefined' && document.fullscreenElement) {
+      document.exitFullscreen().catch(() => {});
+    }
+    setVideoEnded(true);
+    setShowingVideo(false);
+  };
+
+  const handleStartVideoWithAudio = async () => {
+    setHasStartedAudio(true);
+    if (videoContainerRef.current && videoContainerRef.current.requestFullscreen) {
+      try {
+        await videoContainerRef.current.requestFullscreen();
+      } catch (e) {
+        console.warn("Fullscreen request warning:", e);
+      }
+    }
+    if (videoRef.current) {
+      videoRef.current.muted = false;
+      videoRef.current.volume = 1.0;
+      setIsMuted(false);
+      videoRef.current.play().catch(err => {
+        console.warn("Play error:", err);
+      });
+      setIsPlaying(true);
+    }
+  };
+
+  const toggleVideoPlay = () => {
+    if (!videoRef.current) return;
+    if (isPlaying) {
+      videoRef.current.pause();
+      setIsPlaying(false);
+    } else {
+      videoRef.current.play().catch(() => {});
+      setIsPlaying(true);
+    }
+  };
+
+  const toggleVideoMute = () => {
+    if (!videoRef.current) return;
+    videoRef.current.muted = !isMuted;
+    setIsMuted(!isMuted);
+  };
+
+  const toggleVideoFullscreen = () => {
+    if (!videoContainerRef.current) return;
+    if (document.fullscreenElement) {
+      document.exitFullscreen().catch(() => {});
+    } else {
+      videoContainerRef.current.requestFullscreen?.().catch(() => {});
+    }
+  };
+
+  // Direct Admin Launch Handler
+  const handleAdminLaunchPage = async () => {
+    try {
+      const { data: currentSetting } = await supabase
+        .from('system_settings')
+        .select('value')
+        .eq('key', 'inter_registration_config')
+        .maybeSingle();
+
+      const existingVal = currentSetting?.value || {};
+      const updatedVal = {
+        ...existingVal,
+        isEventPageLaunched: true
+      };
+
+      const { error } = await supabase
+        .from('system_settings')
+        .upsert({
+          key: 'inter_registration_config',
+          value: updatedVal,
+          updated_at: new Date().toISOString()
+        });
+
+      if (error) throw error;
+      setIsEventPageLaunched(true);
+      setShowingVideo(false);
+      setVideoEnded(true);
+      alert("🚀 EVENT PAGE LAUNCH INITIATED! Registration portal is now live for all visitors.");
+    } catch (err: any) {
+      console.error("Failed to launch page:", err);
+      alert("Failed to initiate launch: " + (err.message || "Check connection"));
+    }
+  };
 
   // Fetch logged-in user's member details and auto-populate
   useEffect(() => {
@@ -628,6 +759,265 @@ export default function InterEventRegister() {
         <div className="text-center space-y-4">
           <Loader2 className="w-10 h-10 animate-spin text-pink-500 mx-auto" />
           <p className="text-xs font-black uppercase tracking-widest text-zinc-500 font-mono">Initializing Registration Gateways...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // TEASER INTRO VIDEO OVERLAY (Pre-Launch Mode)
+  if (!isEventPageLaunched && showingVideo && !videoEnded) {
+    return (
+      <div 
+        ref={videoContainerRef}
+        className="fixed inset-0 z-[9999] bg-black text-white flex flex-col justify-between overflow-hidden select-none font-sans"
+      >
+        {/* Fullscreen Video Element */}
+        <div className="absolute inset-0 z-0 flex items-center justify-center bg-black">
+          <video
+            ref={videoRef}
+            src={teaserVideoUrl}
+            autoPlay
+            playsInline
+            onEnded={handleVideoEnd}
+            onTimeUpdate={() => {
+              if (videoRef.current) {
+                const pct = (videoRef.current.currentTime / videoRef.current.duration) * 100;
+                setVideoProgress(isNaN(pct) ? 0 : pct);
+              }
+            }}
+            className="w-full h-full object-contain"
+          />
+        </div>
+
+        {/* TOP BAR OVERLAY */}
+        <div className="relative z-20 p-6 md:p-8 flex items-center justify-between bg-gradient-to-b from-black/90 via-black/40 to-transparent">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-pink-500/20 border border-pink-500/40 flex items-center justify-center text-pink-400 font-black text-xs">
+              JMC
+            </div>
+            <div>
+              <span className="text-[10px] font-black uppercase tracking-widest text-pink-400 font-mono block">OFFICIAL EVENT TEASER</span>
+              <h2 className="text-sm font-black text-white uppercase tracking-tight">2nd National Inter-School Mathematics Championship</h2>
+            </div>
+          </div>
+
+          <button
+            onClick={handleVideoEnd}
+            className="px-6 py-2.5 bg-white/10 hover:bg-white/20 backdrop-blur-md text-white border border-white/20 rounded-full text-xs font-black uppercase tracking-widest transition-all cursor-pointer flex items-center gap-2 hover:scale-105 active:scale-95 shadow-2xl"
+          >
+            SKIP INTRO <ArrowRight className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* AUDIO & FULLSCREEN TAP OVERLAY PROMPT (if audio not explicitly started) */}
+        {!hasStartedAudio && (
+          <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-black/60 backdrop-blur-sm p-6 text-center">
+            <div className="max-w-md bg-zinc-950/90 border border-pink-500/30 rounded-3xl p-8 space-y-6 shadow-2xl">
+              <div className="w-16 h-16 rounded-full bg-pink-500/20 text-pink-400 flex items-center justify-center mx-auto border border-pink-500/30 animate-pulse">
+                <Volume2 className="w-8 h-8" />
+              </div>
+
+              <div className="space-y-2">
+                <span className="text-[10px] font-mono uppercase tracking-widest text-pink-400 font-bold">JOSEPHITE MATH CLUB PRESENTS</span>
+                <h3 className="text-xl font-black uppercase tracking-tight text-white">Full Teaser Preview with Audio</h3>
+                <p className="text-xs text-zinc-400 leading-relaxed">
+                  Click below to watch the official championship teaser in full screen with full sound audio enabled.
+                </p>
+              </div>
+
+              <button
+                onClick={handleStartVideoWithAudio}
+                className="w-full py-4 bg-gradient-to-r from-pink-600 via-rose-600 to-purple-600 hover:from-pink-500 hover:to-purple-500 text-white font-black text-xs uppercase tracking-widest rounded-2xl shadow-xl shadow-pink-500/20 transition-all flex items-center justify-center gap-2 cursor-pointer hover:scale-105 active:scale-95"
+              >
+                <Play className="w-4 h-4 fill-white" /> TAP TO START WITH AUDIO & FULLSCREEN
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* BOTTOM CONTROLS & PROGRESS OVERLAY */}
+        <div className="relative z-20 p-6 md:p-8 space-y-3 bg-gradient-to-t from-black/90 via-black/40 to-transparent">
+          {/* Progress Bar */}
+          <div className="w-full h-1 bg-white/20 rounded-full overflow-hidden">
+            <div 
+              className="h-full bg-gradient-to-r from-pink-500 to-purple-500 transition-all duration-300"
+              style={{ width: `${videoProgress}%` }}
+            />
+          </div>
+
+          <div className="flex items-center justify-between text-xs text-zinc-400 font-mono">
+            <div className="flex items-center gap-4">
+              <button 
+                onClick={toggleVideoPlay}
+                className="hover:text-white transition-colors cursor-pointer flex items-center gap-1.5 font-bold"
+              >
+                {isPlaying ? <Pause className="w-4 h-4 text-pink-400" /> : <Play className="w-4 h-4 text-pink-400" />}
+                {isPlaying ? "PAUSE" : "PLAY"}
+              </button>
+
+              <button 
+                onClick={toggleVideoMute}
+                className="hover:text-white transition-colors cursor-pointer flex items-center gap-1.5 font-bold"
+              >
+                {isMuted ? <VolumeX className="w-4 h-4 text-red-400" /> : <Volume2 className="w-4 h-4 text-emerald-400" />}
+                {isMuted ? "UNMUTE" : "MUTE SOUND"}
+              </button>
+            </div>
+
+            <div className="flex items-center gap-4">
+              <button 
+                onClick={toggleVideoFullscreen}
+                className="hover:text-white transition-colors cursor-pointer flex items-center gap-1.5 font-bold"
+              >
+                <Maximize className="w-4 h-4" /> FULLSCREEN
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // COMING SOON WINDOW (Pre-Launch Mode)
+  if (!isEventPageLaunched) {
+    return (
+      <div className="min-h-screen bg-[#020205] text-white selection:bg-pink-500/30 font-sans pb-20">
+        {/* Top Header Navigation */}
+        <div className="border-b border-white/10 bg-black/40 backdrop-blur-xl sticky top-0 z-50 px-6 py-4">
+          <div className="max-w-7xl mx-auto flex items-center justify-between">
+            <button
+              onClick={() => router.push('/')}
+              className="flex items-center gap-2 text-xs font-bold text-zinc-400 hover:text-white transition-colors cursor-pointer"
+            >
+              <ArrowLeft className="w-4 h-4" /> Back to Home
+            </button>
+            <span className="px-3 py-1 bg-amber-500/10 text-amber-400 border border-amber-500/30 rounded-full text-[10px] font-mono font-black uppercase tracking-widest">
+              ⏳ PRE-LAUNCH TEASER MODE
+            </span>
+          </div>
+        </div>
+
+        {/* Hero Banner Area */}
+        <div className="relative pt-16 pb-12 px-6 max-w-5xl mx-auto text-center space-y-8">
+          <div className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-pink-500/20 to-purple-500/20 border border-pink-500/30 rounded-full">
+            <Sparkles className="w-4 h-4 text-pink-400 animate-spin" />
+            <span className="text-xs font-black uppercase tracking-widest text-pink-300">
+              OFFICIAL EVENT COMING SOON
+            </span>
+          </div>
+
+          <div className="space-y-4">
+            <h1 className="text-3xl md:text-6xl font-black tracking-tight text-white uppercase leading-tight">
+              2nd National Inter-School<br />
+              <span className="bg-clip-text text-transparent bg-gradient-to-r from-pink-500 via-rose-400 to-purple-500">
+                Mathematics Championship
+              </span>
+            </h1>
+            <p className="text-zinc-400 text-sm md:text-base max-w-2xl mx-auto leading-relaxed">
+              Bangladesh’s most awaited inter-school mathematics festival hosted by Josephite Math Club at St. Joseph Higher Secondary School.
+            </p>
+          </div>
+
+          {/* Super Admin Status Badge & Action Controls */}
+          <div className="bg-zinc-950/80 border border-white/10 rounded-3xl p-8 max-w-2xl mx-auto space-y-6 shadow-2xl relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-pink-500/10 rounded-full blur-3xl" />
+            
+            <div className="space-y-2">
+              <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-amber-400">
+                REGISTRATION STATUS
+              </span>
+              <h3 className="text-lg font-black text-white uppercase tracking-wider">
+                Registration Opening Shortly
+              </h3>
+              <p className="text-xs text-zinc-400 leading-relaxed">
+                The official inter event registration portal will go live as soon as the Super Admin initiates the Event Page Launch. In the meantime, preview the segment details below or re-watch the teaser video!
+              </p>
+            </div>
+
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-2">
+              <button
+                onClick={() => {
+                  setVideoEnded(false);
+                  setShowingVideo(true);
+                  setHasStartedAudio(false);
+                }}
+                className="w-full sm:w-auto px-6 py-3.5 bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-500 hover:to-purple-500 text-white font-black text-xs uppercase tracking-widest rounded-2xl shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer hover:scale-105"
+              >
+                <Film className="w-4 h-4" /> RE-WATCH INTRO VIDEO TEASER
+              </button>
+
+              <a
+                href="#segments"
+                className="w-full sm:w-auto px-6 py-3.5 bg-white/5 hover:bg-white/10 text-zinc-300 border border-white/10 rounded-2xl text-xs font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2"
+              >
+                <Trophy className="w-4 h-4 text-amber-400" /> EXPLORE 22 SEGMENTS
+              </a>
+            </div>
+
+            {/* SUPER ADMIN QUICK LAUNCH TRIGGER IF LOGGED IN */}
+            {(isAdmin || isSuperAdmin) && (
+              <div className="mt-6 pt-6 border-t border-white/10 bg-indigo-950/30 p-5 rounded-2xl border border-indigo-500/30 space-y-3">
+                <div className="flex items-center justify-center gap-2 text-indigo-400 text-xs font-bold uppercase tracking-wider">
+                  <Rocket className="w-4 h-4" /> Super Admin Quick Launch Controls
+                </div>
+                <p className="text-[11px] text-zinc-400 text-center">
+                  You are logged in as an administrator. You can launch the event page immediately below.
+                </p>
+                <div className="flex justify-center gap-3">
+                  <button
+                    onClick={handleAdminLaunchPage}
+                    className="px-6 py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs uppercase tracking-widest rounded-xl transition-all shadow-lg flex items-center gap-2 cursor-pointer"
+                  >
+                    <Rocket className="w-4 h-4" /> LAUNCH EVENT PAGE NOW
+                  </button>
+
+                  <button
+                    onClick={() => router.push('/admin')}
+                    className="px-6 py-3 bg-white/10 hover:bg-white/20 text-white font-black text-xs uppercase tracking-widest rounded-xl transition-all border border-white/10 cursor-pointer"
+                  >
+                    OPEN ADMIN PANEL
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* 22 Segments Catalog Grid Preview */}
+        <div id="segments" className="max-w-7xl mx-auto px-6 pt-12 space-y-8">
+          <div className="text-center space-y-2">
+            <span className="text-[10px] font-mono font-black uppercase tracking-widest text-pink-400">CHAMPIONSHIP CATALOG</span>
+            <h2 className="text-2xl font-black text-white uppercase tracking-tight">Explore All 22 Championship Segments</h2>
+            <p className="text-xs text-zinc-400 max-w-lg mx-auto">Get your mathematical squad prepared across solo, team, olympiad, and creative tracks.</p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {INTER_SEGMENTS.map((seg) => {
+              const IconComp = seg.icon;
+              return (
+                <div key={seg.id} className="bg-zinc-950/60 border border-white/10 rounded-2xl p-5 space-y-3 relative overflow-hidden group hover:border-pink-500/40 transition-all">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-pink-400 px-2.5 py-1 bg-pink-500/10 rounded-md border border-pink-500/20">
+                      {seg.category}
+                    </span>
+                    <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-amber-400 flex items-center gap-1">
+                      <Lock className="w-3 h-3" /> LOCKED
+                    </span>
+                  </div>
+
+                  <div className="flex items-start gap-3">
+                    <div className="p-3 rounded-xl bg-white/5 border border-white/10 text-white group-hover:scale-110 transition-transform">
+                      <IconComp className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h3 className="text-base font-black text-white uppercase tracking-tight">{seg.name}</h3>
+                      <p className="text-xs text-zinc-400 mt-1 leading-relaxed">{seg.tagline}</p>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
       </div>
     );

@@ -936,11 +936,20 @@ export function InterEventRegistrationConfigEditor({ showToast }: { showToast: (
   const [caCodes, setCaCodes] = useState<string[]>([]);
   const [newCaCode, setNewCaCode] = useState<string>('');
 
+  // Event Page Launch & Teaser Video States
+  const [isEventPageLaunched, setIsEventPageLaunched] = useState<boolean>(false);
+  const [teaserVideoEnabled, setTeaserVideoEnabled] = useState<boolean>(true);
+  const [teaserVideoUrl, setTeaserVideoUrl] = useState<string>('https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4');
+  const [uploadingVideo, setUploadingVideo] = useState<boolean>(false);
+
   const DEFAULT_INTER_CONFIG = {
     bkashNumber: "01789456123",
     paymentDescription: "Please pay BDT 150 per event segment to our bKash personal/merchant account. Highlighted Phone: 01789456123. If you use a valid Campus Ambassador (CA) code, you will get a discount!",
     pricePerSegment: 150,
-    caCodes: []
+    caCodes: [],
+    isEventPageLaunched: false,
+    teaserVideoEnabled: true,
+    teaserVideoUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
   };
 
   useEffect(() => {
@@ -960,6 +969,9 @@ export function InterEventRegistrationConfigEditor({ showToast }: { showToast: (
           setPaymentDescription(val.paymentDescription || DEFAULT_INTER_CONFIG.paymentDescription);
           setPricePerSegment(typeof val.pricePerSegment === 'number' ? val.pricePerSegment : DEFAULT_INTER_CONFIG.pricePerSegment);
           setCaCodes(val.caCodes || DEFAULT_INTER_CONFIG.caCodes);
+          setIsEventPageLaunched(Boolean(val.isEventPageLaunched));
+          setTeaserVideoEnabled(val.teaserVideoEnabled !== false);
+          setTeaserVideoUrl(val.teaserVideoUrl || DEFAULT_INTER_CONFIG.teaserVideoUrl);
         } else {
           // Seed
           await supabase
@@ -970,6 +982,9 @@ export function InterEventRegistrationConfigEditor({ showToast }: { showToast: (
           setPaymentDescription(DEFAULT_INTER_CONFIG.paymentDescription);
           setPricePerSegment(DEFAULT_INTER_CONFIG.pricePerSegment);
           setCaCodes(DEFAULT_INTER_CONFIG.caCodes);
+          setIsEventPageLaunched(DEFAULT_INTER_CONFIG.isEventPageLaunched);
+          setTeaserVideoEnabled(DEFAULT_INTER_CONFIG.teaserVideoEnabled);
+          setTeaserVideoUrl(DEFAULT_INTER_CONFIG.teaserVideoUrl);
         }
       } catch (err) {
         console.warn("Failed to load inter config", err);
@@ -977,6 +992,9 @@ export function InterEventRegistrationConfigEditor({ showToast }: { showToast: (
         setPaymentDescription(DEFAULT_INTER_CONFIG.paymentDescription);
         setPricePerSegment(DEFAULT_INTER_CONFIG.pricePerSegment);
         setCaCodes(DEFAULT_INTER_CONFIG.caCodes);
+        setIsEventPageLaunched(DEFAULT_INTER_CONFIG.isEventPageLaunched);
+        setTeaserVideoEnabled(DEFAULT_INTER_CONFIG.teaserVideoEnabled);
+        setTeaserVideoUrl(DEFAULT_INTER_CONFIG.teaserVideoUrl);
       } finally {
         setLoading(false);
       }
@@ -984,13 +1002,17 @@ export function InterEventRegistrationConfigEditor({ showToast }: { showToast: (
     loadInterConfig();
   }, []);
 
-  const handleSave = async () => {
+  const handleSave = async (updatedLaunchState?: boolean) => {
     setSaving(true);
+    const targetLaunch = updatedLaunchState !== undefined ? updatedLaunchState : isEventPageLaunched;
     const payload = {
       bkashNumber,
       paymentDescription,
       pricePerSegment: Number(pricePerSegment),
-      caCodes
+      caCodes,
+      isEventPageLaunched: targetLaunch,
+      teaserVideoEnabled,
+      teaserVideoUrl
     };
     try {
       const { error } = await supabase
@@ -1008,6 +1030,73 @@ export function InterEventRegistrationConfigEditor({ showToast }: { showToast: (
       showToast("Failed to save inter configuration: " + (err.message || "Check Supabase settings"), "error");
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleToggleLaunch = async (launch: boolean) => {
+    setIsEventPageLaunched(launch);
+    await handleSave(launch);
+    if (launch) {
+      showToast("🚀 EVENT PAGE LAUNCHED SUCCESSFULLY! Visitors now access the registration form directly.", "success");
+    } else {
+      showToast("↺ REVERTED TO PRE-LAUNCH MODE! Video teaser & Coming Soon window are active.", "info");
+    }
+  };
+
+  const handleVideoFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('video/')) {
+      showToast("Please select a valid video file (.mp4, .webm, .mov)", "error");
+      return;
+    }
+
+    setUploadingVideo(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        if (data.url || data.publicUrl || data.fileUrl) {
+          const url = data.url || data.publicUrl || data.fileUrl;
+          setTeaserVideoUrl(url);
+          showToast("Teaser video uploaded successfully!", "success");
+          setUploadingVideo(false);
+          return;
+        }
+      }
+
+      // Supabase direct bucket upload fallback
+      const sanitizeName = file.name.replace(/[^a-zA-Z0-9.-]/g, '-');
+      const filename = `teaser-video-${Date.now()}-${sanitizeName}`;
+      const { error: uploadErr } = await supabase.storage
+        .from('images')
+        .upload(filename, file, { upsert: true });
+
+      if (uploadErr) throw uploadErr;
+
+      const { data: publicUrlData } = supabase.storage
+        .from('images')
+        .getPublicUrl(filename);
+
+      if (publicUrlData?.publicUrl) {
+        setTeaserVideoUrl(publicUrlData.publicUrl);
+        showToast("Teaser video uploaded to storage bucket!", "success");
+      } else {
+        throw new Error("Could not retrieve public video URL");
+      }
+    } catch (err: any) {
+      console.error("Video upload error:", err);
+      showToast("Video upload failed: " + (err.message || "You can paste a direct video URL instead"), "error");
+    } finally {
+      setUploadingVideo(false);
     }
   };
 
@@ -1039,6 +1128,137 @@ export function InterEventRegistrationConfigEditor({ showToast }: { showToast: (
 
   return (
     <div className="bg-white/[0.01] border border-white/5 rounded-3xl p-8 shadow-2xl space-y-8">
+      {/* SUPER ADMIN EVENT PAGE LAUNCH CONTROL */}
+      <div className="p-6 md:p-8 rounded-3xl bg-gradient-to-br from-indigo-950/40 via-purple-950/20 to-black border border-indigo-500/30 space-y-6">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 border-b border-white/10 pb-6">
+          <div className="space-y-1">
+            <div className="flex items-center gap-3">
+              <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border ${
+                isEventPageLaunched 
+                  ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' 
+                  : 'bg-amber-500/20 text-amber-400 border-amber-500/30'
+              }`}>
+                {isEventPageLaunched ? "🟢 STATUS: EVENT PAGE LAUNCHED (LIVE)" : "⏳ STATUS: PRE-LAUNCH TEASER & COMING SOON ACTIVE"}
+              </span>
+            </div>
+            <h3 className="text-xl font-black text-white uppercase tracking-tight pt-2">Super Admin Event Page Launch Trigger</h3>
+            <p className="text-xs text-zinc-400 max-w-xl leading-relaxed">
+              When <strong>Unlaunched</strong>, visitors clicking the Inter Event page will be presented with the forceful full-screen video teaser with sound, which transitions into the Coming Soon window. Initiating <strong>EVENT PAGE LAUNCH</strong> will bypass both the video and Coming Soon window, loading visitors directly into the inter event registration form.
+            </p>
+          </div>
+
+          <div className="flex flex-col sm:flex-row gap-3">
+            {!isEventPageLaunched ? (
+              <button
+                onClick={() => handleToggleLaunch(true)}
+                disabled={saving}
+                className="px-8 py-4 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white font-black text-xs uppercase tracking-widest rounded-2xl shadow-lg shadow-emerald-500/20 transition-all flex items-center justify-center gap-2 cursor-pointer hover:scale-105 active:scale-95"
+              >
+                {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : "🚀 INITIATE EVENT PAGE LAUNCH"}
+              </button>
+            ) : (
+              <button
+                onClick={() => handleToggleLaunch(false)}
+                disabled={saving}
+                className="px-8 py-4 bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 border border-amber-500/30 font-black text-xs uppercase tracking-widest rounded-2xl transition-all flex items-center justify-center gap-2 cursor-pointer"
+              >
+                {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : "↺ REVERT TO PRE-LAUNCH (SHOW TEASER & COMING SOON)"}
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* TEASER INTRO VIDEO MANAGEMENT */}
+        <div className="space-y-6 pt-2">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h4 className="text-sm font-extrabold text-white uppercase tracking-wider flex items-center gap-2">
+                🎥 Teaser Intro Video Configuration
+              </h4>
+              <p className="text-[11px] text-zinc-400 mt-0.5">
+                Upload or set the video that will play with sounds in full-screen mode before transitioning to the Coming Soon window.
+              </p>
+            </div>
+
+            <label className="flex items-center gap-3 cursor-pointer bg-black/40 px-4 py-2 rounded-xl border border-white/10 hover:border-indigo-500/30 transition-all">
+              <input
+                type="checkbox"
+                checked={teaserVideoEnabled}
+                onChange={(e) => setTeaserVideoEnabled(e.target.checked)}
+                className="w-4 h-4 rounded accent-indigo-500 cursor-pointer"
+              />
+              <span className="text-xs font-bold text-white uppercase tracking-wider">Enable Teaser Video</span>
+            </label>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Input & Upload */}
+            <div className="space-y-4 bg-black/40 p-5 rounded-2xl border border-white/5">
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase tracking-wider text-zinc-400 font-mono">Teaser Video Direct URL (MP4 / WebM)</label>
+                <input
+                  type="text"
+                  value={teaserVideoUrl}
+                  onChange={(e) => setTeaserVideoUrl(e.target.value)}
+                  placeholder="https://.../teaser-video.mp4"
+                  className="w-full bg-black/60 border border-white/10 rounded-xl px-4 py-3 text-xs font-mono text-white focus:outline-none focus:border-indigo-500/50 transition-all"
+                />
+              </div>
+
+              <div className="flex flex-wrap items-center gap-3 pt-2">
+                <label className="px-5 py-2.5 bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-300 border border-indigo-500/30 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 cursor-pointer">
+                  {uploadingVideo ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" /> Uploading Video...
+                    </>
+                  ) : (
+                    <>
+                      <Plus className="w-4 h-4" /> Upload Video File (.mp4/.webm)
+                    </>
+                  )}
+                  <input
+                    type="file"
+                    accept="video/mp4,video/webm,video/quicktime"
+                    className="hidden"
+                    onChange={handleVideoFileUpload}
+                    disabled={uploadingVideo}
+                  />
+                </label>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setTeaserVideoUrl("https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4");
+                    showToast("Loaded preset sample teaser video URL", "info");
+                  }}
+                  className="px-4 py-2.5 bg-white/5 hover:bg-white/10 text-zinc-300 rounded-xl text-xs font-bold uppercase tracking-wider transition-all border border-white/5 cursor-pointer"
+                >
+                  Use Sample Video
+                </button>
+              </div>
+            </div>
+
+            {/* Video Preview Player */}
+            <div className="space-y-2 bg-black/40 p-4 rounded-2xl border border-white/5">
+              <span className="text-[10px] font-black uppercase tracking-wider text-zinc-400 font-mono block mb-2">Video Preview</span>
+              {teaserVideoUrl ? (
+                <div className="relative rounded-xl overflow-hidden aspect-video bg-black border border-white/10">
+                  <video
+                    src={teaserVideoUrl}
+                    controls
+                    className="w-full h-full object-contain"
+                  />
+                </div>
+              ) : (
+                <div className="aspect-video bg-zinc-900 rounded-xl flex items-center justify-center text-xs text-zinc-600 font-mono border border-white/5">
+                  No Teaser Video Set
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pb-6 border-b border-white/5">
         <div className="space-y-2 col-span-1 md:col-span-2">
           <label className="text-[10px] font-black uppercase tracking-wider text-zinc-500 font-mono">Payment Instruction Description (Highlights Phone Number)</label>
@@ -1125,7 +1345,7 @@ export function InterEventRegistrationConfigEditor({ showToast }: { showToast: (
       <div className="flex justify-end gap-4 pt-4">
         <button
           type="button"
-          onClick={handleSave}
+          onClick={() => handleSave()}
           disabled={saving}
           className="w-full sm:w-auto px-8 py-3 rounded-xl bg-pink-600 hover:bg-pink-500 text-white font-black text-xs uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-2 shadow-lg shadow-pink-600/20 cursor-pointer"
         >
