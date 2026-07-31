@@ -1254,13 +1254,17 @@ export function InterEventRegistrationConfigEditor({ showToast }: { showToast: (
                 <div className="relative rounded-xl overflow-hidden aspect-video bg-black border border-white/10">
                   {teaserVideoUrl.includes('youtube.com') || teaserVideoUrl.includes('youtu.be') || teaserVideoUrl.includes('vimeo.com') || teaserVideoUrl.includes('drive.google.com') ? (
                     <iframe
-                      src={
-                        teaserVideoUrl.includes('youtube.com') || teaserVideoUrl.includes('youtu.be')
-                          ? `https://www.youtube.com/embed/${(teaserVideoUrl.match(/^.*(youtu.be\/|v\/|u\/\w\/|embed\/|shorts\/|watch\?v=|\&v=)([^#\&\?]*).*/)|[])[2] || ''}`
-                          : teaserVideoUrl.includes('drive.google.com')
-                          ? `https://drive.google.com/file/d/${(teaserVideoUrl.match(/\/file\/d\/([a-zA-Z0-9_-]+)/) || teaserVideoUrl.match(/id=([a-zA-Z0-9_-]+)/) || [])[1] || ''}/preview`
-                          : teaserVideoUrl
-                      }
+                      src={(() => {
+                        if (teaserVideoUrl.includes('youtube.com') || teaserVideoUrl.includes('youtu.be')) {
+                          const m = teaserVideoUrl.match(/^.*(youtu.be\/|v\/|u\/\w\/|embed\/|shorts\/|watch\?v=|\&v=)([^#\&\?]*).*/);
+                          return m && m[2] ? `https://www.youtube.com/embed/${m[2]}` : teaserVideoUrl;
+                        }
+                        if (teaserVideoUrl.includes('drive.google.com')) {
+                          const m = teaserVideoUrl.match(/\/file\/d\/([a-zA-Z0-9_-]+)/) || teaserVideoUrl.match(/id=([a-zA-Z0-9_-]+)/);
+                          return m && m[1] ? `https://drive.google.com/file/d/${m[1]}/preview` : teaserVideoUrl;
+                        }
+                        return teaserVideoUrl;
+                      })()}
                       title="Teaser Preview"
                       className="w-full h-full border-0"
                       allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
