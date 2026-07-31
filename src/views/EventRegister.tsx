@@ -86,7 +86,8 @@ const EventRegister = () => {
   const searchParams = useSearchParams();
 
   // Inter Mode States
-  const [isInterMode, setIsInterMode] = useState(false);
+  const isInterParam = searchParams ? searchParams.get('type') === 'inter' : false;
+  const [isInterMode, setIsInterMode] = useState(isInterParam);
   const [interIsGeneralMemberQuestion, setInterIsGeneralMemberQuestion] = useState<boolean | null>(null);
   const [interGeneralMemberEmail, setInterGeneralMemberEmail] = useState('');
   const [interVerifyingEmail, setInterVerifyingEmail] = useState(false);
@@ -1514,7 +1515,7 @@ const EventRegister = () => {
     }
   };
 
-  if (isInterMode) {
+  if (isInterMode || isInterParam) {
     return <InterEventRegister />;
   }
 

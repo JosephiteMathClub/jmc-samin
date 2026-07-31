@@ -964,14 +964,23 @@ export function InterEventRegistrationConfigEditor({ showToast }: { showToast: (
         if (error) throw error;
 
         if (data && data.value) {
-          const val = data.value;
-          setBkashNumber(val.bkashNumber || DEFAULT_INTER_CONFIG.bkashNumber);
-          setPaymentDescription(val.paymentDescription || DEFAULT_INTER_CONFIG.paymentDescription);
-          setPricePerSegment(typeof val.pricePerSegment === 'number' ? val.pricePerSegment : DEFAULT_INTER_CONFIG.pricePerSegment);
-          setCaCodes(val.caCodes || DEFAULT_INTER_CONFIG.caCodes);
-          setIsEventPageLaunched(Boolean(val.isEventPageLaunched));
-          setTeaserVideoEnabled(val.teaserVideoEnabled !== false);
-          setTeaserVideoUrl(val.teaserVideoUrl || DEFAULT_INTER_CONFIG.teaserVideoUrl);
+          let val = data.value;
+          if (typeof val === 'string') {
+            try {
+              val = JSON.parse(val);
+            } catch (e) {
+              console.warn("Could not parse inter_registration_config JSON string in admin panel:", e);
+            }
+          }
+          if (val && typeof val === 'object') {
+            setBkashNumber(val.bkashNumber || DEFAULT_INTER_CONFIG.bkashNumber);
+            setPaymentDescription(val.paymentDescription || DEFAULT_INTER_CONFIG.paymentDescription);
+            setPricePerSegment(typeof val.pricePerSegment === 'number' ? val.pricePerSegment : DEFAULT_INTER_CONFIG.pricePerSegment);
+            setCaCodes(val.caCodes || DEFAULT_INTER_CONFIG.caCodes);
+            setIsEventPageLaunched(Boolean(val.isEventPageLaunched));
+            setTeaserVideoEnabled(val.teaserVideoEnabled !== false);
+            setTeaserVideoUrl(val.teaserVideoUrl || DEFAULT_INTER_CONFIG.teaserVideoUrl);
+          }
         } else {
           // Seed
           await supabase
@@ -1243,11 +1252,27 @@ export function InterEventRegistrationConfigEditor({ showToast }: { showToast: (
               <span className="text-[10px] font-black uppercase tracking-wider text-zinc-400 font-mono block mb-2">Video Preview</span>
               {teaserVideoUrl ? (
                 <div className="relative rounded-xl overflow-hidden aspect-video bg-black border border-white/10">
-                  <video
-                    src={teaserVideoUrl}
-                    controls
-                    className="w-full h-full object-contain"
-                  />
+                  {teaserVideoUrl.includes('youtube.com') || teaserVideoUrl.includes('youtu.be') || teaserVideoUrl.includes('vimeo.com') || teaserVideoUrl.includes('drive.google.com') ? (
+                    <iframe
+                      src={
+                        teaserVideoUrl.includes('youtube.com') || teaserVideoUrl.includes('youtu.be')
+                          ? `https://www.youtube.com/embed/${(teaserVideoUrl.match(/^.*(youtu.be\/|v\/|u\/\w\/|embed\/|shorts\/|watch\?v=|\&v=)([^#\&\?]*).*/)|[])[2] || ''}`
+                          : teaserVideoUrl.includes('drive.google.com')
+                          ? `https://drive.google.com/file/d/${(teaserVideoUrl.match(/\/file\/d\/([a-zA-Z0-9_-]+)/) || teaserVideoUrl.match(/id=([a-zA-Z0-9_-]+)/) || [])[1] || ''}/preview`
+                          : teaserVideoUrl
+                      }
+                      title="Teaser Preview"
+                      className="w-full h-full border-0"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      allowFullScreen
+                    />
+                  ) : (
+                    <video
+                      src={teaserVideoUrl}
+                      controls
+                      className="w-full h-full object-contain"
+                    />
+                  )}
                 </div>
               ) : (
                 <div className="aspect-video bg-zinc-900 rounded-xl flex items-center justify-center text-xs text-zinc-600 font-mono border border-white/5">

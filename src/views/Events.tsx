@@ -108,14 +108,18 @@ const Events = () => {
       if (view === 'intra') {
         setCurrentTab('intra');
       } else if (view === 'inter') {
-        setCurrentTab('inter');
+        router.push('/events/register?type=inter');
       } else {
         setCurrentTab('hub');
       }
     }
-  }, []);
+  }, [router]);
 
   const handleToggleView = (view: 'hub' | 'intra' | 'inter') => {
+    if (view === 'inter') {
+      router.push('/events/register?type=inter');
+      return;
+    }
     setCurrentTab(view);
     if (typeof window !== 'undefined') {
       const url = view === 'hub' ? '/events' : `/events?view=${view}`;

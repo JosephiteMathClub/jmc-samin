@@ -98,7 +98,7 @@ export default function InterEventRegister() {
   const [isEventPageLaunched, setIsEventPageLaunched] = useState(false);
   const [teaserVideoEnabled, setTeaserVideoEnabled] = useState(true);
   const [teaserVideoUrl, setTeaserVideoUrl] = useState("https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4");
-  const [showingVideo, setShowingVideo] = useState(false);
+  const [showingVideo, setShowingVideo] = useState(true);
   const [videoEnded, setVideoEnded] = useState(false);
   
   // Video Player Controls
@@ -147,6 +147,53 @@ export default function InterEventRegister() {
   const [successInfo, setSuccessInfo] = useState<any>(null);
   const [errorMessage, setErrorMessage] = useState("");
 
+  // Helper to parse video URLs (Direct MP4, YouTube, Vimeo, Google Drive)
+  const getVideoMediaInfo = (rawUrl: string) => {
+    if (!rawUrl || typeof rawUrl !== 'string') {
+      return { type: 'none', url: '' };
+    }
+
+    const url = rawUrl.trim();
+
+    // YouTube
+    const ytRegExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|shorts\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+    const ytMatch = url.match(ytRegExp);
+    if (ytMatch && ytMatch[2] && ytMatch[2].length === 11) {
+      const videoId = ytMatch[2];
+      return {
+        type: 'youtube',
+        embedUrl: `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&controls=1&enablejsapi=1&rel=0`
+      };
+    }
+
+    // Vimeo
+    const vimeoRegExp = /vimeo\.com\/(?:channels\/(?:\w+\/)?|groups\/([^\/]*)\/videos\/|album\/(\d+)\/video\/|video\/|)(\d+)/;
+    const vimeoMatch = url.match(vimeoRegExp);
+    if (vimeoMatch && vimeoMatch[3]) {
+      return {
+        type: 'vimeo',
+        embedUrl: `https://player.vimeo.com/video/${vimeoMatch[3]}?autoplay=1&muted=1`
+      };
+    }
+
+    // Google Drive
+    if (url.includes('drive.google.com')) {
+      const gdriveMatch = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/) || url.match(/id=([a-zA-Z0-9_-]+)/);
+      if (gdriveMatch && gdriveMatch[1]) {
+        const fileId = gdriveMatch[1];
+        return {
+          type: 'gdrive',
+          embedUrl: `https://drive.google.com/file/d/${fileId}/preview`
+        };
+      }
+    }
+
+    return {
+      type: 'direct',
+      url: url
+    };
+  };
+
   // Load gatekeepers and configuration parameters
   useEffect(() => {
     async function loadConfig() {
@@ -157,42 +204,71 @@ export default function InterEventRegister() {
 
         if (error) throw error;
 
+        let settingsMap: Record<string, any> = {};
         if (settings) {
-          // Check global reg form toggle & inter reg specific toggle
-          const globalToggle = settings.find(s => s.key === 'event_registration_enabled');
-          const interToggle = settings.find(s => s.key === 'inter_registration_enabled');
-          
-          const isGlobalOn = globalToggle ? globalToggle.value === true : true;
-          const isInterOn = interToggle ? interToggle.value === true : true;
-          
-          setIsLocked(!isGlobalOn || !isInterOn);
+          settings.forEach(item => {
+            settingsMap[item.key] = item.value;
+          });
+        }
 
-          // Fetch inter registration config parameters
-          const interConfig = settings.find(s => s.key === 'inter_registration_config');
-          if (interConfig && interConfig.value) {
-            const val = interConfig.value;
-            setBkashTarget(val.bkashNumber || "01789456123");
-            let desc = val.paymentDescription || "Please pay BDT 100 registration fee.";
-            desc = desc.replace(/150/g, "100").replace(/per event segment/gi, "registration fee");
+        const globalToggle = settingsMap['event_registration_enabled'];
+        const interToggle = settingsMap['inter_registration_enabled'];
+        const isGlobalOn = globalToggle !== false;
+        const isInterOn = interToggle !== false;
+        setIsLocked(!isGlobalOn || !isInterOn);
+
+        let configVal = settingsMap['inter_registration_config'];
+
+        // Direct database query fallback if not found in array
+        if (!configVal) {
+          const { data: directData } = await supabase
+            .from('system_settings')
+            .select('value')
+            .eq('key', 'inter_registration_config')
+            .maybeSingle();
+          if (directData && directData.value) {
+            configVal = directData.value;
+          }
+        }
+
+        // Safely parse JSON string if value is stringified in DB
+        if (typeof configVal === 'string') {
+          try {
+            configVal = JSON.parse(configVal);
+          } catch (e) {
+            console.warn("Could not parse inter_registration_config JSON string:", e);
+          }
+        }
+
+        if (configVal && typeof configVal === 'object') {
+          setBkashTarget(configVal.bkashNumber || "01789456123");
+          if (configVal.paymentDescription) {
+            let desc = String(configVal.paymentDescription).replace(/150/g, "100").replace(/per event segment/gi, "registration fee");
             setPaymentDesc(desc);
-            setPricePerSegment(100);
-            setCaCodesList(val.caCodes || []);
+          }
+          setPricePerSegment(100);
+          if (Array.isArray(configVal.caCodes)) {
+            setCaCodesList(configVal.caCodes);
+          }
 
-            const launched = Boolean(val.isEventPageLaunched);
-            setIsEventPageLaunched(launched);
-            setTeaserVideoEnabled(val.teaserVideoEnabled !== false);
-            if (val.teaserVideoUrl) {
-              setTeaserVideoUrl(val.teaserVideoUrl);
-            }
+          const launched = Boolean(configVal.isEventPageLaunched);
+          setIsEventPageLaunched(launched);
 
-            if (!launched && val.teaserVideoEnabled !== false) {
-              setShowingVideo(true);
-            }
+          const enabled = configVal.teaserVideoEnabled !== false;
+          setTeaserVideoEnabled(enabled);
+
+          if (configVal.teaserVideoUrl && typeof configVal.teaserVideoUrl === 'string' && configVal.teaserVideoUrl.trim().length > 0) {
+            setTeaserVideoUrl(configVal.teaserVideoUrl.trim());
+          }
+
+          if (!enabled) {
+            setShowingVideo(false);
           } else {
-            // Default unlaunched if no settings present
-            setIsEventPageLaunched(false);
             setShowingVideo(true);
           }
+        } else {
+          setIsEventPageLaunched(false);
+          setShowingVideo(true);
         }
       } catch (err) {
         console.warn("Failed to retrieve system settings gracefully:", err);
@@ -204,6 +280,17 @@ export default function InterEventRegister() {
     }
     loadConfig();
   }, []);
+
+  // Programmatically trigger video playback when video overlay is active
+  useEffect(() => {
+    if (teaserVideoEnabled && showingVideo && !videoEnded && videoRef.current) {
+      videoRef.current.play().then(() => {
+        setIsPlaying(true);
+      }).catch((err) => {
+        console.warn("Autoplay deferred or handled by browser policy:", err);
+      });
+    }
+  }, [teaserVideoEnabled, showingVideo, videoEnded, teaserVideoUrl]);
 
   // Video End and Fullscreen Audio Start Handlers
   const handleVideoEnd = () => {
@@ -753,40 +840,45 @@ export default function InterEventRegister() {
     }
   };
 
-  if (checkingStatuses) {
-    return (
-      <div className="min-h-screen bg-[#020205] flex items-center justify-center text-white">
-        <div className="text-center space-y-4">
-          <Loader2 className="w-10 h-10 animate-spin text-pink-500 mx-auto" />
-          <p className="text-xs font-black uppercase tracking-widest text-zinc-500 font-mono">Initializing Registration Gateways...</p>
-        </div>
-      </div>
-    );
-  }
+  // TEASER INTRO VIDEO OVERLAY (Pre-Launch Mode & Initial Entrance)
+  if (teaserVideoEnabled && showingVideo && !videoEnded) {
+    const videoMedia = getVideoMediaInfo(teaserVideoUrl);
 
-  // TEASER INTRO VIDEO OVERLAY (Pre-Launch Mode)
-  if (!isEventPageLaunched && showingVideo && !videoEnded) {
     return (
       <div 
         ref={videoContainerRef}
         className="fixed inset-0 z-[9999] bg-black text-white flex flex-col justify-between overflow-hidden select-none font-sans"
       >
-        {/* Fullscreen Video Element */}
+        {/* Fullscreen Video Element or Embed Iframe */}
         <div className="absolute inset-0 z-0 flex items-center justify-center bg-black">
-          <video
-            ref={videoRef}
-            src={teaserVideoUrl}
-            autoPlay
-            playsInline
-            onEnded={handleVideoEnd}
-            onTimeUpdate={() => {
-              if (videoRef.current) {
-                const pct = (videoRef.current.currentTime / videoRef.current.duration) * 100;
-                setVideoProgress(isNaN(pct) ? 0 : pct);
-              }
-            }}
-            className="w-full h-full object-contain"
-          />
+          {videoMedia.type === 'direct' ? (
+            <video
+              ref={videoRef}
+              src={videoMedia.url}
+              autoPlay
+              playsInline
+              muted={isMuted}
+              onEnded={handleVideoEnd}
+              onError={(e) => {
+                console.warn("Video failed or unplayable URL:", videoMedia.url, e);
+              }}
+              onTimeUpdate={() => {
+                if (videoRef.current) {
+                  const pct = (videoRef.current.currentTime / videoRef.current.duration) * 100;
+                  setVideoProgress(isNaN(pct) ? 0 : pct);
+                }
+              }}
+              className="w-full h-full object-contain pointer-events-auto"
+            />
+          ) : (
+            <iframe
+              src={videoMedia.embedUrl}
+              title="Teaser Video"
+              className="w-full h-full border-0 pointer-events-auto"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+              allowFullScreen
+            />
+          )}
         </div>
 
         {/* TOP BAR OVERLAY */}
@@ -809,29 +901,16 @@ export default function InterEventRegister() {
           </button>
         </div>
 
-        {/* AUDIO & FULLSCREEN TAP OVERLAY PROMPT (if audio not explicitly started) */}
+        {/* FLOATING AUDIO & FULLSCREEN ACTION PILL (Un-obscured floating prompt) */}
         {!hasStartedAudio && (
-          <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-black/60 backdrop-blur-sm p-6 text-center">
-            <div className="max-w-md bg-zinc-950/90 border border-pink-500/30 rounded-3xl p-8 space-y-6 shadow-2xl">
-              <div className="w-16 h-16 rounded-full bg-pink-500/20 text-pink-400 flex items-center justify-center mx-auto border border-pink-500/30 animate-pulse">
-                <Volume2 className="w-8 h-8" />
-              </div>
-
-              <div className="space-y-2">
-                <span className="text-[10px] font-mono uppercase tracking-widest text-pink-400 font-bold">JOSEPHITE MATH CLUB PRESENTS</span>
-                <h3 className="text-xl font-black uppercase tracking-tight text-white">Full Teaser Preview with Audio</h3>
-                <p className="text-xs text-zinc-400 leading-relaxed">
-                  Click below to watch the official championship teaser in full screen with full sound audio enabled.
-                </p>
-              </div>
-
-              <button
-                onClick={handleStartVideoWithAudio}
-                className="w-full py-4 bg-gradient-to-r from-pink-600 via-rose-600 to-purple-600 hover:from-pink-500 hover:to-purple-500 text-white font-black text-xs uppercase tracking-widest rounded-2xl shadow-xl shadow-pink-500/20 transition-all flex items-center justify-center gap-2 cursor-pointer hover:scale-105 active:scale-95"
-              >
-                <Play className="w-4 h-4 fill-white" /> TAP TO START WITH AUDIO & FULLSCREEN
-              </button>
-            </div>
+          <div className="relative z-30 flex justify-center my-auto pointer-events-auto px-4">
+            <button
+              onClick={handleStartVideoWithAudio}
+              className="px-8 py-4 bg-gradient-to-r from-pink-600 via-rose-600 to-purple-600 hover:from-pink-500 hover:to-purple-500 text-white font-black text-xs uppercase tracking-widest rounded-full shadow-2xl shadow-pink-500/50 border border-pink-400/40 flex items-center gap-3 transition-all cursor-pointer hover:scale-105 active:scale-95 animate-pulse"
+            >
+              <Volume2 className="w-5 h-5 text-white" />
+              <span>TAP FOR FULL SOUND & FULLSCREEN</span>
+            </button>
           </div>
         )}
 
@@ -873,6 +952,17 @@ export default function InterEventRegister() {
               </button>
             </div>
           </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (checkingStatuses) {
+    return (
+      <div className="min-h-screen bg-[#020205] flex items-center justify-center text-white">
+        <div className="text-center space-y-4">
+          <Loader2 className="w-10 h-10 animate-spin text-pink-500 mx-auto" />
+          <p className="text-xs font-black uppercase tracking-widest text-zinc-500 font-mono">Initializing Registration Gateways...</p>
         </div>
       </div>
     );
