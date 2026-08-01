@@ -3598,8 +3598,12 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ isSuperAdmin =
                       {tableData.map((row, i) => (
                         <tr key={i} className="border-b border-white/5 group hover:bg-white/[0.01]">
                           {Object.entries(row).slice(0, 6).map(([key, val]: any, j) => (
-                            <td key={j} className="py-4 px-6 overflow-hidden truncate whitespace-nowrap text-[10px] font-mono text-zinc-400 group-hover:text-zinc-200 transition-colors" title={String(val)}>
-                              {typeof val === 'object' ? JSON.stringify(val) : String(val)}
+                            <td key={j} className="py-4 px-6 overflow-hidden truncate whitespace-nowrap text-[10px] font-mono text-zinc-400 group-hover:text-zinc-200 transition-colors" title={val !== null && val !== undefined ? String(val) : ''}>
+                              {val === null || val === undefined 
+                                ? '' 
+                                : typeof val === 'object' 
+                                  ? (React.isValidElement(val) ? val : '[Object]') 
+                                  : String(val)}
                             </td>
                           ))}
                           <td className="py-4 px-6 text-right">

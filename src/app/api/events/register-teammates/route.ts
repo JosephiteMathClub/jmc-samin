@@ -202,8 +202,9 @@ export async function POST(req: Request) {
       const payload = {
         user_id: resolvedUserId,
         full_name: teammate.name,
+        gender: teammate.gender || '',
         class: teammate.class || '',
-        section: teammate.section || '',
+        section: teammate.section || teammate.institute || '',
         roll: teammate.roll || '',
         bkash_number: bkash_number,
         trxnid: teammateTrxnId,

@@ -386,7 +386,7 @@ const AdminDashboard = () => {
       await logActivity(actionName, logTarget, logDetails);
     } catch (err: any) {
       console.error('Error updating member:', err);
-      const errorMessage = err?.message || (typeof err === 'object' ? JSON.stringify(err) : String(err));
+      const errorMessage = err?.message || (typeof err === 'string' ? err : 'Unknown error');
       showToast(`Failed to update member: ${errorMessage}`, 'error');
     }
   };

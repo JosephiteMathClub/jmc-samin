@@ -57,6 +57,7 @@ export async function POST(req: Request) {
     const body = await req.json();
     const {
       fullName,
+      gender,
       email,
       phone,
       className,
@@ -67,11 +68,12 @@ export async function POST(req: Request) {
       amount,
       selectedEvents,
       isProxyRegistration,
-      userId
+      userId,
+      teammatesList
     } = body;
 
-    if (!fullName || !email || !phone || !className || !institute || !bkashNumber || !trxnid || !selectedEvents || selectedEvents.length === 0) {
-      return NextResponse.json({ error: 'All general information fields and at least one event segment are required.' }, { status: 400 });
+    if (!fullName || !gender || !email || !phone || !className || !institute || !bkashNumber || !trxnid || !selectedEvents || selectedEvents.length === 0) {
+      return NextResponse.json({ error: 'All general information fields (including gender) and at least one event segment are required.' }, { status: 400 });
     }
 
     const cleanEmail = email.trim().toLowerCase();
@@ -225,6 +227,7 @@ export async function POST(req: Request) {
         .from('member')
         .update({
           full_name: fullName,
+          gender: gender,
           class: className,
           section: cleanInstitute, // store school/college
           roll: cleanCaCode, // store CA code
@@ -261,6 +264,7 @@ export async function POST(req: Request) {
         .insert({
           id: finalUserId,
           full_name: fullName,
+          gender: gender,
           email: authEmail,
           email_address: cleanEmail,
           phone: cleanPhone,
@@ -286,6 +290,7 @@ export async function POST(req: Request) {
     const registrationPayload = {
       user_id: finalUserId,
       full_name: fullName,
+      gender: gender,
       class: className,
       section: cleanInstitute, // maps to section in DB to avoid migration
       roll: cleanCaCode, // maps to roll in DB to avoid migration
@@ -307,6 +312,40 @@ export async function POST(req: Request) {
       }
       console.error('Failed to insert inter-event registration:', regInsertError);
       return NextResponse.json({ error: regInsertError.message }, { status: 500 });
+    }
+
+    // Process teammates if provided
+    if (teammatesList && Array.isArray(teammatesList) && teammatesList.length > 0) {
+      for (let i = 0; i < teammatesList.length; i++) {
+        const tm = teammatesList[i];
+        if (tm && tm.fullName && tm.fullName.trim()) {
+          const tmSuffix = `-T${i + 2}`;
+          const tmClass = tm.className || className;
+          const tmTargetTable = getTargetTable(tmClass);
+          const tmPayload = {
+            user_id: null,
+            full_name: tm.fullName.trim(),
+            gender: tm.gender || '',
+            class: tmClass,
+            section: (tm.institute || cleanInstitute).trim(),
+            roll: cleanCaCode,
+            phone: cleanPhone,
+            bkash_number: bkashNumber,
+            trxnid: `${trxnid}${tmSuffix}`,
+            amount: 0,
+            selected_events: selectedEvents.join(', '),
+            verified: isProxyRegistration ? 'yes' : 'no'
+          };
+
+          const { error: tmErr } = await supabaseAdmin
+            .from(tmTargetTable)
+            .insert([tmPayload]);
+
+          if (tmErr) {
+            console.error(`Failed to insert teammate ${i + 2} inter registration:`, tmErr);
+          }
+        }
+      }
     }
 
     // Send Registration Confirmation Email

@@ -48,7 +48,8 @@ import {
   Minimize,
   Film,
   Rocket,
-  ExternalLink
+  ExternalLink,
+  UserCheck
 } from 'lucide-react';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { useRouter } from 'next/navigation';
@@ -70,13 +71,13 @@ const INTER_SEGMENTS = [
   { id: "Rubik’s Cube Showdown", name: "Rubik’s Cube Showdown", tagline: "Manipulate cubic modules and solve cubes in record times.", category: "Solo track", icon: Layers, color: "from-emerald-500/10 to-teal-500/10 text-emerald-400 border-emerald-500/20" },
   { id: "5 min Professor", name: "5 min Professor", tagline: "Deliver a lightning lecture explaining abstract concepts simply.", category: "Solo track", icon: Award, color: "from-yellow-500/10 to-orange-500/10 text-yellow-400 border-yellow-500/20" },
   { id: "Calculus Bee", name: "Calculus Bee", tagline: "Solve derivatives and integral equations in real-time playoffs.", category: "Solo track", icon: Activity, color: "from-red-500/10 to-rose-500/10 text-red-400 border-red-500/20" },
-  { id: "Escape Room", name: "Escape Room", tagline: "Decrypt physical room locks and spatial logic systems.", category: "Team track", icon: Home, color: "from-violet-500/10 to-fuchsia-500/10 text-violet-400 border-violet-500/20" },
+  { id: "Escape Room", name: "Escape Room", tagline: "Decrypt physical room locks and spatial logic systems. (Team Event • Class 9-12)", category: "Team track", icon: Home, color: "from-violet-500/10 to-fuchsia-500/10 text-violet-400 border-violet-500/20" },
   { id: "Combi Verse", name: "Combi Verse", tagline: "Navigate combinatorics, permutations, graph theory networks.", category: "Solo track", icon: Share2, color: "from-cyan-500/10 to-blue-500/10 text-cyan-400 border-cyan-500/20" },
   { id: "Math Memes", name: "Math Memes", tagline: "Design humorous and intellectually witty math memes.", category: "Creative track", icon: Smile, color: "from-yellow-500/10 to-green-500/10 text-yellow-400 border-yellow-500/20" },
   { id: "Math Article", name: "Math Article", tagline: "Draft a well-researched article on advanced mathematical theories.", category: "Writing track", icon: BookOpen, color: "from-zinc-500/10 to-slate-500/10 text-zinc-400 border-zinc-500/20" },
   { id: "Math Vision", name: "Math Vision", tagline: "Design digital graphic art illustrating geometric formulas.", category: "Creative track", icon: ImageIcon, color: "from-pink-500/10 to-purple-500/10 text-pink-400 border-pink-500/20" },
   { id: "Math Drawing", name: "Math Drawing", tagline: "Create pristine hand-drawn sketches of golden ratios and fractals.", category: "Creative track", icon: Edit, color: "from-purple-500/10 to-indigo-500/10 text-purple-400 border-purple-500/20" },
-  { id: "Truss", name: "Truss", tagline: "Build high-load structurally sound physical bridge trusses.", category: "Team / Solo track", icon: Construction, color: "from-amber-500/10 to-orange-500/10 text-amber-400 border-amber-500/20" },
+  { id: "Truss", name: "Truss", tagline: "Build high-load structurally sound physical bridge trusses. (Team Event • Class 3-8)", category: "Team track", icon: Construction, color: "from-amber-500/10 to-orange-500/10 text-amber-400 border-amber-500/20" },
   { id: "Wall Magazine Display", name: "Wall Magazine Display", tagline: "Design physical wall posters mapping historical math breakthroughs.", category: "Exhibition track", icon: Layout, color: "from-emerald-500/10 to-green-500/10 text-emerald-400 border-emerald-500/20" }
 ];
 
@@ -123,6 +124,7 @@ export default function InterEventRegister() {
   const [proxyResolvedUserId, setProxyResolvedUserId] = useState<string | null>(null);
   const [checkingProxyEmail, setCheckingProxyEmail] = useState(false);
   const [proxyNameEditable, setProxyNameEditable] = useState(true);
+  const [proxyGenderEditable, setProxyGenderEditable] = useState(true);
   const [proxyClassEditable, setProxyClassEditable] = useState(true);
   const [proxyInstituteEditable, setProxyInstituteEditable] = useState(true);
   const [proxyEmailEditable, setProxyEmailEditable] = useState(true);
@@ -131,6 +133,7 @@ export default function InterEventRegister() {
   // Registration form states
   const [step, setStep] = useState(1);
   const [fullName, setFullName] = useState("");
+  const [gender, setGender] = useState("");
   const [className, setClassName] = useState("");
   const [institute, setInstitute] = useState("");
   const [email, setEmail] = useState("");
@@ -138,6 +141,49 @@ export default function InterEventRegister() {
   const [caCode, setCaCode] = useState("N/A");
   
   const [selectedSegments, setSelectedSegments] = useState<string[]>([]);
+
+  // Teammate 2 States (Name, Class, Institute, Gender required for team events)
+  const [teamMember2Name, setTeamMember2Name] = useState('');
+  const [teamMember2Class, setTeamMember2Class] = useState('');
+  const [teamMember2Institute, setTeamMember2Institute] = useState('');
+  const [teamMember2Gender, setTeamMember2Gender] = useState('');
+
+  // Teammate 3 States (Name, Class, Institute, Gender required for 3-member team events)
+  const [teamMember3Name, setTeamMember3Name] = useState('');
+  const [teamMember3Class, setTeamMember3Class] = useState('');
+  const [teamMember3Institute, setTeamMember3Institute] = useState('');
+  const [teamMember3Gender, setTeamMember3Gender] = useState('');
+
+  const hasTeamSegment = selectedSegments.some(id => {
+    const seg = INTER_SEGMENTS.find(s => s.id === id);
+    return id === "Escape Room" || id === "Truss" || id === "Murder Mystery" || (seg && seg.category.toLowerCase().includes("team"));
+  });
+
+  // Helper function to validate segment class eligibility
+  const isSegmentEligible = (segmentId: string, classVal: string): { eligible: boolean; reason?: string } => {
+    if (!classVal) return { eligible: true };
+    const numClass = parseInt(classVal, 10);
+
+    if (segmentId === "Escape Room") {
+      if (isNaN(numClass) || numClass < 9 || numClass > 12) {
+        return {
+          eligible: false,
+          reason: "Escape Room is for Secondary (Class 9-10) & Higher Secondary (Class 11-12)."
+        };
+      }
+    }
+
+    if (segmentId === "Truss") {
+      if (isNaN(numClass) || numClass < 3 || numClass > 8) {
+        return {
+          eligible: false,
+          reason: "Truss is for Primary (Class 3-5) & Secondary (Class 6-8)."
+        };
+      }
+    }
+
+    return { eligible: true };
+  };
   
   const [senderBkash, setSenderBkash] = useState("");
   const [trxnId, setTrxnId] = useState("");
@@ -148,7 +194,7 @@ export default function InterEventRegister() {
   const [errorMessage, setErrorMessage] = useState("");
 
   // Helper to parse video URLs (Direct MP4, YouTube, Vimeo, Google Drive)
-  const getVideoMediaInfo = (rawUrl: string) => {
+  const getVideoMediaInfo = (rawUrl: string, mutedState: boolean = true) => {
     if (!rawUrl || typeof rawUrl !== 'string') {
       return { type: 'none', url: '' };
     }
@@ -162,7 +208,7 @@ export default function InterEventRegister() {
       const videoId = ytMatch[2];
       return {
         type: 'youtube',
-        embedUrl: `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&controls=1&enablejsapi=1&rel=0`
+        embedUrl: `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=${mutedState ? 1 : 0}&controls=1&enablejsapi=1&rel=0`
       };
     }
 
@@ -172,7 +218,7 @@ export default function InterEventRegister() {
     if (vimeoMatch && vimeoMatch[3]) {
       return {
         type: 'vimeo',
-        embedUrl: `https://player.vimeo.com/video/${vimeoMatch[3]}?autoplay=1&muted=1`
+        embedUrl: `https://player.vimeo.com/video/${vimeoMatch[3]}?autoplay=1&muted=${mutedState ? 1 : 0}`
       };
     }
 
@@ -287,7 +333,7 @@ export default function InterEventRegister() {
       videoRef.current.play().then(() => {
         setIsPlaying(true);
       }).catch((err) => {
-        console.warn("Autoplay deferred or handled by browser policy:", err);
+        console.warn("Autoplay deferred or handled by browser policy:", err?.message || String(err));
       });
     }
   }, [teaserVideoEnabled, showingVideo, videoEnded, teaserVideoUrl]);
@@ -301,23 +347,32 @@ export default function InterEventRegister() {
     setShowingVideo(false);
   };
 
-  const handleStartVideoWithAudio = async () => {
+  const handleStartVideoWithAudio = () => {
     setHasStartedAudio(true);
-    if (videoContainerRef.current && videoContainerRef.current.requestFullscreen) {
-      try {
-        await videoContainerRef.current.requestFullscreen();
-      } catch (e) {
-        console.warn("Fullscreen request warning:", e);
-      }
-    }
+    setIsMuted(false);
+
     if (videoRef.current) {
       videoRef.current.muted = false;
       videoRef.current.volume = 1.0;
-      setIsMuted(false);
-      videoRef.current.play().catch(err => {
-        console.warn("Play error:", err);
-      });
+      const playPromise = videoRef.current.play();
+      if (playPromise !== undefined) {
+        playPromise.catch(err => {
+          console.warn("Unmuted playback deferred or prevented by browser policy:", err?.message || String(err));
+          if (videoRef.current) {
+            videoRef.current.muted = true;
+            setIsMuted(true);
+            videoRef.current.play().catch(() => {});
+          }
+        });
+      }
       setIsPlaying(true);
+    }
+
+    // Request fullscreen asynchronously so video play user gesture context is not lost
+    if (videoContainerRef.current && videoContainerRef.current.requestFullscreen) {
+      videoContainerRef.current.requestFullscreen().catch(e => {
+        console.warn("Fullscreen request warning (e.g. iframe sandbox or policy):", e?.message || String(e));
+      });
     }
   };
 
@@ -404,6 +459,7 @@ export default function InterEventRegister() {
 
         if (activeData) {
           if (activeData.full_name) setFullName(activeData.full_name);
+          if (activeData.gender) setGender(activeData.gender);
           if (activeData.class) setClassName(activeData.class);
           if (activeData.school) {
             setInstitute(activeData.school);
@@ -491,6 +547,7 @@ export default function InterEventRegister() {
     
     // Reset standard form fields
     setFullName('');
+    setGender('');
     setClassName('');
     setInstitute('');
     setCaCode('N/A');
@@ -498,6 +555,7 @@ export default function InterEventRegister() {
     setPhone('');
     setErrorMessage('');
     setHasEmailAddress(null);
+    setProxyGenderEditable(true);
   };
 
   const handleVerifyProxyEmail = async () => {
@@ -607,6 +665,7 @@ export default function InterEventRegister() {
       
       if (profileCheck || activeMember) {
         const matchedName = activeMember?.full_name || profileCheck?.full_name || '';
+        const matchedGender = activeMember?.gender || profileCheck?.gender || '';
         const matchedClass = activeMember?.class || '';
         const matchedSection = activeMember?.section || ''; // For inter events, section is school name
         const matchedRoll = activeMember?.roll || ''; // For inter events, roll is ca code
@@ -614,6 +673,7 @@ export default function InterEventRegister() {
         const matchedEmail = activeMember?.email_address || activeMember?.email || profileCheck?.email || '';
 
         setFullName(matchedName);
+        if (matchedGender) setGender(matchedGender);
         setClassName(matchedClass);
         setInstitute(matchedSection || activeMember?.school || '');
         setCaCode(matchedRoll || 'N/A');
@@ -635,6 +695,7 @@ export default function InterEventRegister() {
 
         // Editability
         setProxyNameEditable(!matchedName);
+        setProxyGenderEditable(!matchedGender);
         setProxyClassEditable(!matchedClass);
         setProxyInstituteEditable(!(matchedSection || activeMember?.school));
         setProxyEmailEditable(!matchedEmail);
@@ -688,6 +749,12 @@ export default function InterEventRegister() {
 
   // Toggle selection
   const handleToggleSegment = (id: string) => {
+    const eligibility = isSegmentEligible(id, className);
+    if (!eligibility.eligible) {
+      setErrorMessage(eligibility.reason || "This segment is not eligible for your selected class level.");
+      return;
+    }
+    setErrorMessage("");
     if (selectedSegments.includes(id)) {
       setSelectedSegments(selectedSegments.filter(s => s !== id));
     } else {
@@ -697,10 +764,14 @@ export default function InterEventRegister() {
 
   // Select all / Deselect all events
   const handleSelectAllSegments = () => {
-    if (selectedSegments.length === INTER_SEGMENTS.length) {
+    const eligibleIds = INTER_SEGMENTS
+      .filter(seg => isSegmentEligible(seg.id, className).eligible)
+      .map(seg => seg.id);
+
+    if (selectedSegments.length === eligibleIds.length && eligibleIds.every(id => selectedSegments.includes(id))) {
       setSelectedSegments([]);
     } else {
-      setSelectedSegments(INTER_SEGMENTS.map(seg => seg.id));
+      setSelectedSegments(eligibleIds);
     }
   };
 
@@ -713,8 +784,8 @@ export default function InterEventRegister() {
 
     const emailRequired = hasEmailAddress !== false;
 
-    if (!fullName.trim() || !className || !institute.trim() || (emailRequired && !email.trim()) || !phone.trim()) {
-      setErrorMessage("Please complete all general information fields before continuing.");
+    if (!fullName.trim() || !gender || !className || !institute.trim() || (emailRequired && !email.trim()) || !phone.trim()) {
+      setErrorMessage("Please complete all general information fields (including Gender) before continuing.");
       return;
     }
     
@@ -742,6 +813,24 @@ export default function InterEventRegister() {
       setErrorMessage("You must select at least one mathematical event segment to register.");
       return;
     }
+
+    if (hasTeamSegment) {
+      const tm2Inst = teamMember2Institute.trim() || institute.trim();
+      if (!teamMember2Name.trim() || !teamMember2Class || !tm2Inst || !teamMember2Gender) {
+        setErrorMessage("Please fill all required details (Name, Class, Institute, and Gender) for Team Member 2.");
+        return;
+      }
+
+      const is3MemberEvent = selectedSegments.some(id => id === "Escape Room" || id === "Truss");
+      if (is3MemberEvent) {
+        const tm3Inst = teamMember3Institute.trim() || institute.trim();
+        if (!teamMember3Name.trim() || !teamMember3Class || !tm3Inst || !teamMember3Gender) {
+          setErrorMessage("Please fill all required details (Name, Class, Institute, and Gender) for Team Member 3.");
+          return;
+        }
+      }
+    }
+
     setErrorMessage("");
     setStep(3);
   };
@@ -802,11 +891,32 @@ export default function InterEventRegister() {
         }
       }
 
+      const teammatesList = [];
+      if (hasTeamSegment) {
+        if (teamMember2Name.trim()) {
+          teammatesList.push({
+            fullName: teamMember2Name.trim(),
+            className: teamMember2Class || className,
+            institute: (teamMember2Institute.trim() || institute.trim()),
+            gender: teamMember2Gender
+          });
+        }
+        if (teamMember3Name.trim()) {
+          teammatesList.push({
+            fullName: teamMember3Name.trim(),
+            className: teamMember3Class || className,
+            institute: (teamMember3Institute.trim() || institute.trim()),
+            gender: teamMember3Gender
+          });
+        }
+      }
+
       const response = await fetch('/api/events/register-inter', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           fullName: fullName.trim(),
+          gender,
           email: finalEmail,
           phone: isProxyRegistration ? proxyPhoneNumber.trim() : phone.trim(),
           className,
@@ -817,7 +927,8 @@ export default function InterEventRegister() {
           amount: finalPrice,
           selectedEvents: selectedSegments,
           isProxyRegistration: isProxyRegistration,
-          userId: resolvedUserId
+          userId: resolvedUserId,
+          teammatesList
         })
       });
 
@@ -842,7 +953,7 @@ export default function InterEventRegister() {
 
   // TEASER INTRO VIDEO OVERLAY (Pre-Launch Mode & Initial Entrance)
   if (teaserVideoEnabled && showingVideo && !videoEnded) {
-    const videoMedia = getVideoMediaInfo(teaserVideoUrl);
+    const videoMedia = getVideoMediaInfo(teaserVideoUrl, isMuted);
 
     return (
       <div 
@@ -859,8 +970,8 @@ export default function InterEventRegister() {
               playsInline
               muted={isMuted}
               onEnded={handleVideoEnd}
-              onError={(e) => {
-                console.warn("Video failed or unplayable URL:", videoMedia.url, e);
+              onError={() => {
+                console.warn("Video failed or unplayable URL:", videoMedia.url);
               }}
               onTimeUpdate={() => {
                 if (videoRef.current) {
@@ -1527,6 +1638,31 @@ export default function InterEventRegister() {
                     </div>
                   </div>
 
+                  {/* Gender */}
+                  <div className="space-y-3">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500 flex items-center gap-2 font-mono">
+                      Gender <span className="text-pink-500">*</span>
+                      {isProxyRegistration && (!proxyVerified || !proxyGenderEditable) && (
+                        <span className="text-[9px] text-amber-400 flex items-center gap-1 font-mono lowercase">
+                          (<Lock className="w-2.5 h-2.5" /> locked)
+                        </span>
+                      )}
+                    </label>
+                    <div className="relative">
+                      <UserCheck className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
+                      <select
+                        value={gender}
+                        onChange={(e) => setGender(e.target.value)}
+                        disabled={isProxyRegistration && (!proxyVerified || !proxyGenderEditable)}
+                        className="w-full bg-[#050508] border border-white/10 rounded-xl pl-12 pr-4 py-4 text-xs font-bold text-white focus:outline-none focus:border-pink-500/50 focus:ring-4 focus:ring-pink-500/5 transition-all cursor-pointer disabled:opacity-50"
+                      >
+                        <option value="" className="text-zinc-600 bg-zinc-950">SELECT GENDER</option>
+                        <option value="Male" className="bg-zinc-950 text-white">Male</option>
+                        <option value="Female" className="bg-zinc-950 text-white">Female</option>
+                      </select>
+                    </div>
+                  </div>
+
                   {/* Selective Class */}
                   <div className="space-y-3">
                     <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500 flex items-center gap-2 font-mono">
@@ -1536,7 +1672,13 @@ export default function InterEventRegister() {
                       <BookOpen className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
                       <select
                         value={className}
-                        onChange={(e) => setClassName(e.target.value)}
+                        onChange={(e) => {
+                          const newCls = e.target.value;
+                          setClassName(newCls);
+                          if (newCls) {
+                            setSelectedSegments(prev => prev.filter(id => isSegmentEligible(id, newCls).eligible));
+                          }
+                        }}
                         disabled={isProxyRegistration && (!proxyVerified || !proxyClassEditable)}
                         className="w-full bg-[#050508] border border-white/10 rounded-xl pl-12 pr-4 py-4 text-xs font-bold text-white focus:outline-none focus:border-pink-500/50 focus:ring-4 focus:ring-pink-500/5 transition-all cursor-pointer disabled:opacity-50"
                       >
@@ -1733,15 +1875,20 @@ export default function InterEventRegister() {
                   {INTER_SEGMENTS.map((seg) => {
                     const isSelected = selectedSegments.includes(seg.id);
                     const SegIcon = seg.icon;
+                    const eligibility = isSegmentEligible(seg.id, className);
+                    const isTeamEvent = seg.id === "Escape Room" || seg.id === "Truss" || seg.category.toLowerCase().includes("team");
                     
                     return (
                       <button
                         key={seg.id}
+                        type="button"
                         onClick={() => handleToggleSegment(seg.id)}
-                        className={`p-6 rounded-2xl text-left border transition-all flex flex-col justify-between cursor-pointer relative overflow-hidden select-none h-[220px] ${
-                          isSelected 
-                            ? 'bg-gradient-to-b from-indigo-950/40 via-[#0a0525]/30 to-[#020108]/90 border-pink-500/60 shadow-lg shadow-pink-500/5 hover:border-pink-400' 
-                            : 'bg-zinc-900/30 border-white/5 hover:border-white/10 hover:bg-zinc-900/50'
+                        className={`p-6 rounded-2xl text-left border transition-all flex flex-col justify-between relative overflow-hidden select-none min-h-[230px] ${
+                          !eligibility.eligible
+                            ? 'bg-zinc-950/40 border-white/5 opacity-60 cursor-not-allowed hover:border-rose-500/30'
+                            : isSelected 
+                              ? 'bg-gradient-to-b from-indigo-950/40 via-[#0a0525]/30 to-[#020108]/90 border-pink-500/60 shadow-lg shadow-pink-500/5 hover:border-pink-400 cursor-pointer' 
+                              : 'bg-zinc-900/30 border-white/5 hover:border-white/10 hover:bg-zinc-900/50 cursor-pointer'
                         }`}
                       >
                         {isSelected && (
@@ -1750,25 +1897,189 @@ export default function InterEventRegister() {
                           </div>
                         )}
 
-                        <div className="space-y-4">
-                          <div className={`w-10 h-10 rounded-xl flex items-center justify-center border bg-gradient-to-br ${seg.color}`}>
-                            <SegIcon className="w-4 h-4" />
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-between">
+                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center border bg-gradient-to-br ${seg.color}`}>
+                              <SegIcon className="w-4 h-4" />
+                            </div>
+                            {isTeamEvent && (
+                              <span className="text-[9px] font-mono font-black uppercase tracking-widest text-amber-400 px-2 py-0.5 bg-amber-500/10 rounded border border-amber-500/20 flex items-center gap-1">
+                                👥 TEAM EVENT
+                              </span>
+                            )}
                           </div>
 
                           <div className="space-y-1">
                             <h4 className="text-sm font-bold text-white uppercase tracking-wide">{seg.name}</h4>
-                            <p className="text-[10px] text-zinc-500 leading-relaxed font-medium">{seg.tagline}</p>
+                            <p className="text-[10px] text-zinc-400 leading-relaxed font-medium">{seg.tagline}</p>
                           </div>
+
+                          {!eligibility.eligible && (
+                            <div className="mt-2 p-2 rounded-lg bg-rose-500/10 border border-rose-500/20 text-[9px] font-mono text-rose-400 leading-tight">
+                              ⚠️ {eligibility.reason}
+                            </div>
+                          )}
                         </div>
 
-                        <div className="pt-2 border-t border-white/5 w-full flex items-center justify-between text-[9px] font-black uppercase tracking-wider font-mono">
+                        <div className="pt-3 border-t border-white/5 w-full flex items-center justify-between text-[9px] font-black uppercase tracking-wider font-mono mt-3">
                           <span className="text-zinc-500">{seg.category}</span>
-                          <span className={`${isSelected ? 'text-pink-400' : 'text-zinc-400'}`}>{isSelected ? '✓ SELECTED' : 'SELECT'}</span>
+                          <span className={`${!eligibility.eligible ? 'text-rose-500' : isSelected ? 'text-pink-400' : 'text-zinc-400'}`}>
+                            {!eligibility.eligible ? 'INELIGIBLE' : isSelected ? '✓ SELECTED' : 'SELECT'}
+                          </span>
                         </div>
                       </button>
                     );
                   })}
                 </div>
+
+                {/* TEAM MEMBERS SECTION IF A TEAM EVENT IS SELECTED */}
+                {hasTeamSegment && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 15 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="mt-8 space-y-6 p-6 rounded-3xl bg-zinc-900/60 border border-pink-500/20"
+                  >
+                    <div className="border-b border-white/10 pb-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                      <div>
+                        <h3 className="text-sm font-black uppercase tracking-wider text-pink-400 flex items-center gap-2 font-mono">
+                          <User className="w-4 h-4" /> Team Members Information
+                        </h3>
+                        <p className="text-[10px] text-zinc-400 mt-1 uppercase font-mono font-bold">
+                          Leader: {fullName || 'Registrant'} ({className ? `Class ${className}` : ''}) — Only Name, Class, Institute & Gender required
+                        </p>
+                      </div>
+                      <span className="px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider bg-pink-500/10 text-pink-400 border border-pink-500/20 w-fit">
+                        Team Event Selected
+                      </span>
+                    </div>
+
+                    {/* TEAM MEMBER 2 */}
+                    <div className="p-5 bg-black/40 border border-white/5 rounded-2xl space-y-4">
+                      <h4 className="text-xs font-black uppercase tracking-wider text-zinc-300 flex items-center gap-2 font-mono">
+                        <span className="w-5 h-5 rounded-full bg-pink-500/20 text-pink-400 flex items-center justify-center text-[10px] font-mono">2</span>
+                        Team Member 2
+                      </h4>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {/* Name */}
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-black uppercase tracking-wider text-zinc-400 font-mono">Teammate Full Name <span className="text-pink-500">*</span></label>
+                          <input
+                            type="text"
+                            placeholder="FULL NAME"
+                            value={teamMember2Name}
+                            onChange={(e) => setTeamMember2Name(e.target.value)}
+                            className="w-full bg-black/60 border border-white/10 rounded-xl py-3 px-4 text-xs font-bold text-white focus:outline-none focus:border-pink-500 uppercase"
+                          />
+                        </div>
+
+                        {/* Gender */}
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-black uppercase tracking-wider text-zinc-400 font-mono">Gender <span className="text-pink-500">*</span></label>
+                          <select
+                            value={teamMember2Gender}
+                            onChange={(e) => setTeamMember2Gender(e.target.value)}
+                            className="w-full bg-black/60 border border-white/10 rounded-xl py-3 px-4 text-xs font-bold text-white focus:outline-none focus:border-pink-500 uppercase cursor-pointer"
+                          >
+                            <option value="" className="bg-zinc-950 text-zinc-500 font-extrabold">SELECT GENDER</option>
+                            <option value="male" className="bg-zinc-950 text-white font-extrabold">Male</option>
+                            <option value="female" className="bg-zinc-950 text-white font-extrabold">Female</option>
+                          </select>
+                        </div>
+
+                        {/* Class */}
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-black uppercase tracking-wider text-zinc-400 font-mono">Class Level <span className="text-pink-500">*</span></label>
+                          <select
+                            value={teamMember2Class}
+                            onChange={(e) => setTeamMember2Class(e.target.value)}
+                            className="w-full bg-black/60 border border-white/10 rounded-xl py-3 px-4 text-xs font-bold text-white focus:outline-none focus:border-pink-500 uppercase cursor-pointer"
+                          >
+                            <option value="" className="bg-zinc-950 text-zinc-500 font-extrabold">SELECT CLASS</option>
+                            {[3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(n => (
+                              <option key={n} value={String(n)} className="bg-zinc-950 text-white font-extrabold">Class {n}</option>
+                            ))}
+                          </select>
+                        </div>
+
+                        {/* Institute */}
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-black uppercase tracking-wider text-zinc-400 font-mono">Institution / School <span className="text-pink-500">*</span></label>
+                          <input
+                            type="text"
+                            placeholder="INSTITUTE / SCHOOL NAME"
+                            value={teamMember2Institute || institute}
+                            onChange={(e) => setTeamMember2Institute(e.target.value)}
+                            className="w-full bg-black/60 border border-white/10 rounded-xl py-3 px-4 text-xs font-bold text-white focus:outline-none focus:border-pink-500 uppercase"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* TEAM MEMBER 3 */}
+                    <div className="p-5 bg-black/40 border border-white/5 rounded-2xl space-y-4">
+                      <h4 className="text-xs font-black uppercase tracking-wider text-zinc-300 flex items-center gap-2 font-mono">
+                        <span className="w-5 h-5 rounded-full bg-pink-500/20 text-pink-400 flex items-center justify-center text-[10px] font-mono">3</span>
+                        Team Member 3 {selectedSegments.some(id => id === "Escape Room" || id === "Truss") ? '(Required)' : '(Optional)'}
+                      </h4>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {/* Name */}
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-black uppercase tracking-wider text-zinc-400 font-mono">Teammate Full Name</label>
+                          <input
+                            type="text"
+                            placeholder="FULL NAME"
+                            value={teamMember3Name}
+                            onChange={(e) => setTeamMember3Name(e.target.value)}
+                            className="w-full bg-black/60 border border-white/10 rounded-xl py-3 px-4 text-xs font-bold text-white focus:outline-none focus:border-pink-500 uppercase"
+                          />
+                        </div>
+
+                        {/* Gender */}
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-black uppercase tracking-wider text-zinc-400 font-mono">Gender</label>
+                          <select
+                            value={teamMember3Gender}
+                            onChange={(e) => setTeamMember3Gender(e.target.value)}
+                            className="w-full bg-black/60 border border-white/10 rounded-xl py-3 px-4 text-xs font-bold text-white focus:outline-none focus:border-pink-500 uppercase cursor-pointer"
+                          >
+                            <option value="" className="bg-zinc-950 text-zinc-500 font-extrabold">SELECT GENDER</option>
+                            <option value="male" className="bg-zinc-950 text-white font-extrabold">Male</option>
+                            <option value="female" className="bg-zinc-950 text-white font-extrabold">Female</option>
+                          </select>
+                        </div>
+
+                        {/* Class */}
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-black uppercase tracking-wider text-zinc-400 font-mono">Class Level</label>
+                          <select
+                            value={teamMember3Class}
+                            onChange={(e) => setTeamMember3Class(e.target.value)}
+                            className="w-full bg-black/60 border border-white/10 rounded-xl py-3 px-4 text-xs font-bold text-white focus:outline-none focus:border-pink-500 uppercase cursor-pointer"
+                          >
+                            <option value="" className="bg-zinc-950 text-zinc-500 font-extrabold">SELECT CLASS</option>
+                            {[3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(n => (
+                              <option key={n} value={String(n)} className="bg-zinc-950 text-white font-extrabold">Class {n}</option>
+                            ))}
+                          </select>
+                        </div>
+
+                        {/* Institute */}
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-black uppercase tracking-wider text-zinc-400 font-mono">Institution / School</label>
+                          <input
+                            type="text"
+                            placeholder="INSTITUTE / SCHOOL NAME"
+                            value={teamMember3Institute || institute}
+                            onChange={(e) => setTeamMember3Institute(e.target.value)}
+                            className="w-full bg-black/60 border border-white/10 rounded-xl py-3 px-4 text-xs font-bold text-white focus:outline-none focus:border-pink-500 uppercase"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
 
                 <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-8 mt-12 border-t border-white/5">
                   <button

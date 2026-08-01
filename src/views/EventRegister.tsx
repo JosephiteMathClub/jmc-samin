@@ -144,6 +144,7 @@ const EventRegister = () => {
   const [teamMember2Name, setTeamMember2Name] = useState('');
   const [teamMember2Class, setTeamMember2Class] = useState('');
   const [teamMember2Section, setTeamMember2Section] = useState('');
+  const [teamMember2Gender, setTeamMember2Gender] = useState('');
   const [teamMember2Roll, setTeamMember2Roll] = useState('');
   const [teamMember2Email, setTeamMember2Email] = useState('');
   const [member2Profile, setMember2Profile] = useState<any>(null);
@@ -152,6 +153,7 @@ const EventRegister = () => {
   const [teamMember3Name, setTeamMember3Name] = useState('');
   const [teamMember3Class, setTeamMember3Class] = useState('');
   const [teamMember3Section, setTeamMember3Section] = useState('');
+  const [teamMember3Gender, setTeamMember3Gender] = useState('');
   const [teamMember3Roll, setTeamMember3Roll] = useState('');
   const [teamMember3Email, setTeamMember3Email] = useState('');
   const [member3Profile, setMember3Profile] = useState<any>(null);
@@ -971,55 +973,17 @@ const EventRegister = () => {
         return;
       }
 
-      // Auto-initialize teammate 2 profile if typed but not explicitly verified
-      let m2Profile = member2Profile;
-      if (!m2Profile && teamMember2Email.trim() && teamMember2Name.trim()) {
-        m2Profile = { id: null, email: teamMember2Email.trim().toLowerCase(), isGeneralMember: false };
-        setMember2Profile(m2Profile);
-      }
-      
-      // Validation for Teammate 2
-      if (!teamMember2Email.trim() || !teamMember2Name.trim() || !teamMember2Class.trim() || !teamMember2Section.trim() || !teamMember2Roll.trim()) {
-        showToast("Please fill all details for Teammate 2.", "error");
-        return;
-      }
-      
-      if (!m2Profile) {
-        showToast("Please verify Teammate 2 email first using the verify icon button.", "error");
-        return;
-      }
-
-      if (teamMember2Email.trim().toLowerCase() === user?.email?.toLowerCase()) {
-        showToast("You cannot add yourself as Teammate 2.", "error");
+      // Validation for Teammate 2 (Name, Class, Institute/Section, Gender required)
+      if (!teamMember2Name.trim() || !teamMember2Class.trim() || !teamMember2Section.trim() || !teamMember2Gender) {
+        showToast("Please fill all required details (Name, Class, Section/Institute, and Gender) for Teammate 2.", "error");
         return;
       }
 
       // Additional Teammate 3 validation based on dynamic config member Count
       const activeTeamConf = teamEventsList.find(tc => tc.name === selectedEvent);
       if (activeTeamConf && activeTeamConf.memberCount === 3) {
-        let m3Profile = member3Profile;
-        if (!m3Profile && teamMember3Email.trim() && teamMember3Name.trim()) {
-          m3Profile = { id: null, email: teamMember3Email.trim().toLowerCase(), isGeneralMember: false };
-          setMember3Profile(m3Profile);
-        }
-
-        if (!teamMember3Email.trim() || !teamMember3Name.trim() || !teamMember3Class.trim() || !teamMember3Section.trim() || !teamMember3Roll.trim()) {
-          showToast("Please fill all details for Teammate 3.", "error");
-          return;
-        }
-        
-        if (!m3Profile) {
-          showToast("Please verify Teammate 3 email first using the verify icon button.", "error");
-          return;
-        }
-
-        if (teamMember3Email.trim().toLowerCase() === user?.email?.toLowerCase()) {
-          showToast("You cannot add yourself as Teammate 3.", "error");
-          return;
-        }
-
-        if (teamMember2Email.trim().toLowerCase() === teamMember3Email.trim().toLowerCase()) {
-          showToast("Teammate 2 and Teammate 3 must be different registered individuals.", "error");
+        if (!teamMember3Name.trim() || !teamMember3Class.trim() || !teamMember3Section.trim() || !teamMember3Gender) {
+          showToast("Please fill all required details (Name, Class, Section/Institute, and Gender) for Teammate 3.", "error");
           return;
         }
       }
@@ -1151,24 +1115,22 @@ const EventRegister = () => {
         // If team events, save teammate records using the existing teammate endpoint
         if (eventTab === 'team') {
           const teammatesList = [];
-          if (member2Profile) {
+          if (teamMember2Name.trim()) {
             teammatesList.push({
-              id: member2Profile.id,
-              email: member2Profile.email,
-              name: teamMember2Name,
+              name: teamMember2Name.trim(),
               class: teamMember2Class,
               section: teamMember2Section,
+              gender: teamMember2Gender,
               roll: teamMember2Roll
             });
           }
           const activeTeamConf = teamEventsList.find(tc => tc.name === selectedEvents[0]);
-          if (activeTeamConf && activeTeamConf.memberCount === 3 && member3Profile) {
+          if (activeTeamConf && activeTeamConf.memberCount === 3 && teamMember3Name.trim()) {
             teammatesList.push({
-              id: member3Profile.id,
-              email: member3Profile.email,
-              name: teamMember3Name,
+              name: teamMember3Name.trim(),
               class: teamMember3Class,
               section: teamMember3Section,
+              gender: teamMember3Gender,
               roll: teamMember3Roll
             });
           }
@@ -1316,24 +1278,22 @@ const EventRegister = () => {
       // If team events, save teammate records to database server-side
       if (eventTab === 'team') {
         const teammatesList = [];
-        if (member2Profile) {
+        if (teamMember2Name.trim()) {
           teammatesList.push({
-            id: member2Profile.id,
-            email: member2Profile.email,
-            name: teamMember2Name,
+            name: teamMember2Name.trim(),
             class: teamMember2Class,
             section: teamMember2Section,
+            gender: teamMember2Gender,
             roll: teamMember2Roll
           });
         }
         const activeTeamConf = teamEventsList.find(tc => tc.name === selectedEvents[0]);
-        if (activeTeamConf && activeTeamConf.memberCount === 3 && member3Profile) {
+        if (activeTeamConf && activeTeamConf.memberCount === 3 && teamMember3Name.trim()) {
           teammatesList.push({
-            id: member3Profile.id,
-            email: member3Profile.email,
-            name: teamMember3Name,
+            name: teamMember3Name.trim(),
             class: teamMember3Class,
             section: teamMember3Section,
+            gender: teamMember3Gender,
             roll: teamMember3Roll
           });
         }
@@ -2517,99 +2477,136 @@ const EventRegister = () => {
                                   <div className="p-6 bg-white/[0.02] border border-white/5 rounded-2xl space-y-4">
                                     <div className="flex items-center justify-between">
                                       <h4 className="text-xs font-black uppercase tracking-wider text-zinc-300">Team Member 2</h4>
-                                      {member2Profile && (
-                                        <div className="flex items-center gap-2">
-                                          {member2Profile.isGeneralMember ? (
-                                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider bg-green-500/10 text-green-400 border border-green-500/20">
-                                              <CheckCircle2 className="w-2.5 h-2.5" /> JMC Member Auto-Pulled
-                                            </span>
-                                          ) : (
-                                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider bg-amber-500/10 text-amber-500 border border-amber-500/20">
-                                              <AlertCircle className="w-2.5 h-2.5" /> Manual Entry Mode
-                                            </span>
-                                          )}
-                                          <button
-                                            type="button"
-                                            onClick={() => {
-                                              setMember2Profile(null);
-                                              setTeamMember2Name('');
-                                              setTeamMember2Class('');
-                                              setTeamMember2Section('');
-                                              setTeamMember2Roll('');
-                                              setTeamMember2Email('');
-                                            }}
-                                            className="text-[9px] underline font-bold text-zinc-500 hover:text-zinc-300"
-                                          >
-                                            Change
-                                          </button>
-                                        </div>
-                                      )}
+                                      <span className="text-[9px] font-black uppercase tracking-wider text-indigo-400">Required</span>
                                     </div>
 
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                      {/* Name */}
                                       <div className="space-y-1">
-                                        <label className="text-[10px] font-black uppercase tracking-wider text-zinc-500">Teammate Email, Phone, or Full Name</label>
-                                        <div className="flex gap-2">
-                                          <div className="relative flex-1">
-                                            <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-600" />
-                                            <input
-                                              type="text"
-                                              placeholder="teammate's email, phone, or Full Name"
-                                              disabled={!!member2Profile}
-                                              value={teamMember2Email}
-                                              onChange={(e) => setTeamMember2Email(e.target.value)}
-                                              className="w-full bg-black/40 border border-white/5 rounded-xl py-3 pl-11 pr-4 text-xs font-bold text-white focus:outline-none focus:border-indigo-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                                            />
-                                          </div>
-                                          {!member2Profile && (
-                                            <button
-                                              type="button"
-                                              onClick={() => verifyTeammateEmail(teamMember2Email, 2)}
-                                              disabled={checkingTeammates}
-                                              className="px-4 py-3 bg-indigo-500 hover:bg-indigo-400 text-white font-black text-[10px] uppercase tracking-wider rounded-xl transition-all flex items-center gap-1.5 disabled:opacity-50 shadow-lg shadow-indigo-500/10"
-                                            >
-                                              {checkingTeammates ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
-                                              Verify
-                                            </button>
-                                          )}
-                                        </div>
-                                        <p className="text-[9px] text-zinc-500">Verification checks general membership and loads records.</p>
-                                      </div>
-
-                                      <div className="space-y-1">
-                                        <label className="text-[10px] font-black uppercase tracking-wider text-zinc-500">Teammate Name</label>
+                                        <label className="text-[10px] font-black uppercase tracking-wider text-zinc-500">Teammate Full Name <span className="text-indigo-400">*</span></label>
                                         <div className="relative">
                                           <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-600" />
                                           <input
                                             type="text"
-                                            placeholder={member2Profile ? "Member Name" : "Verify Email First"}
-                                            disabled={!member2Profile || (member2Profile.isGeneralMember && !!teamMember2Name)}
+                                            placeholder="Member Name"
                                             value={teamMember2Name}
                                             onChange={(e) => setTeamMember2Name(e.target.value)}
-                                            className={`w-full bg-black/40 border border-white/5 rounded-xl py-3 pl-11 pr-4 text-xs font-bold transition-all focus:outline-none focus:border-indigo-500 ${
-                                              (!member2Profile || (member2Profile.isGeneralMember && !!teamMember2Name))
-                                                ? 'text-zinc-500 cursor-not-allowed opacity-60' 
-                                                : 'text-white border-white/15'
-                                            }`}
+                                            className="w-full bg-black/40 border border-white/10 rounded-xl py-3 pl-11 pr-4 text-xs font-bold text-white focus:outline-none focus:border-indigo-500"
                                           />
                                         </div>
                                       </div>
 
-                                      <div className="grid grid-cols-3 md:col-span-2 gap-3">
-                                        <div className="space-y-1">
-                                          <label className="text-[10px] font-black uppercase tracking-wider text-zinc-500">Class</label>
+                                      {/* Gender */}
+                                      <div className="space-y-1">
+                                        <label className="text-[10px] font-black uppercase tracking-wider text-zinc-500">Gender <span className="text-indigo-400">*</span></label>
+                                        <select
+                                          value={teamMember2Gender}
+                                          onChange={(e) => setTeamMember2Gender(e.target.value)}
+                                          className="w-full bg-black/40 border border-white/10 rounded-xl py-3 px-4 text-xs font-bold text-white focus:outline-none focus:border-indigo-500 appearance-none cursor-pointer"
+                                        >
+                                          <option value="" className="bg-zinc-950 text-zinc-500 font-extrabold uppercase">SELECT GENDER</option>
+                                          <option value="male" className="bg-zinc-950 text-white font-extrabold uppercase">Male</option>
+                                          <option value="female" className="bg-zinc-950 text-white font-extrabold uppercase">Female</option>
+                                        </select>
+                                      </div>
+
+                                      {/* Class */}
+                                      <div className="space-y-1">
+                                        <label className="text-[10px] font-black uppercase tracking-wider text-zinc-500">Class <span className="text-indigo-400">*</span></label>
+                                        <select
+                                          value={teamMember2Class}
+                                          onChange={(e) => {
+                                            setTeamMember2Class(e.target.value);
+                                            setTeamMember2Section('');
+                                          }}
+                                          className="w-full bg-black/40 border border-white/10 rounded-xl py-3 px-4 text-xs font-bold text-white focus:outline-none focus:border-indigo-500 appearance-none cursor-pointer"
+                                        >
+                                          <option value="" className="bg-zinc-950 text-zinc-500 font-extrabold uppercase">CLASS</option>
+                                          {[3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(n => (
+                                            <option key={n} value={String(n)} className="bg-zinc-950 text-white font-extrabold uppercase">Class {n}</option>
+                                          ))}
+                                        </select>
+                                      </div>
+
+                                      {/* Section / Institute */}
+                                      <div className="space-y-1">
+                                        <label className="text-[10px] font-black uppercase tracking-wider text-zinc-500">Section / Institute <span className="text-indigo-400">*</span></label>
+                                        {teamMember2Class ? (
                                           <select
-                                            disabled={!member2Profile || (member2Profile.isGeneralMember && !!teamMember2Class)}
-                                            value={teamMember2Class}
+                                            value={teamMember2Section}
+                                            onChange={(e) => setTeamMember2Section(e.target.value)}
+                                            className="w-full bg-black/40 border border-white/10 rounded-xl py-3 px-4 text-xs font-bold text-white focus:outline-none focus:border-indigo-500 appearance-none cursor-pointer"
+                                          >
+                                            <option value="" className="bg-zinc-950 text-zinc-500 font-extrabold uppercase">SELECT SECTION / INSTITUTE</option>
+                                            {(teamMember2Section && !(classSectionsMap[teamMember2Class] || []).includes(teamMember2Section)
+                                              ? [...(classSectionsMap[teamMember2Class] || []), teamMember2Section]
+                                              : (classSectionsMap[teamMember2Class] || [])
+                                            ).map((sec: string) => (
+                                              <option key={sec} value={sec} className="bg-zinc-950 text-white font-extrabold uppercase">{sec}</option>
+                                            ))}
+                                            <option value="Other" className="bg-zinc-950 text-zinc-400 font-extrabold uppercase">Other</option>
+                                          </select>
+                                        ) : (
+                                          <input
+                                            type="text"
+                                            placeholder="Section or Institute Name"
+                                            value={teamMember2Section}
+                                            onChange={(e) => setTeamMember2Section(e.target.value)}
+                                            className="w-full bg-black/40 border border-white/10 rounded-xl py-3 px-4 text-xs font-bold text-white focus:outline-none focus:border-indigo-500"
+                                          />
+                                        )}
+                                      </div>
+                                    </div>
+                                  </div>
+
+                                  {/* TEAMMATE 3 CARD */}
+                                  {(selectedEvents.includes("Tic-Tac-Toe") || teamEventsList.find(tc => tc.name === selectedEvents[0])?.memberCount === 3) && (
+                                    <div className="p-6 bg-white/[0.02] border border-white/5 rounded-2xl space-y-4">
+                                      <div className="flex items-center justify-between">
+                                        <h4 className="text-xs font-black uppercase tracking-wider text-zinc-300">Team Member 3</h4>
+                                        <span className="text-[9px] font-black uppercase tracking-wider text-indigo-400">Required</span>
+                                      </div>
+
+                                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        {/* Name */}
+                                        <div className="space-y-1">
+                                          <label className="text-[10px] font-black uppercase tracking-wider text-zinc-500">Teammate Full Name <span className="text-indigo-400">*</span></label>
+                                          <div className="relative">
+                                            <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-600" />
+                                            <input
+                                              type="text"
+                                              placeholder="Member Name"
+                                              value={teamMember3Name}
+                                              onChange={(e) => setTeamMember3Name(e.target.value)}
+                                              className="w-full bg-black/40 border border-white/10 rounded-xl py-3 pl-11 pr-4 text-xs font-bold text-white focus:outline-none focus:border-indigo-500"
+                                            />
+                                          </div>
+                                        </div>
+
+                                        {/* Gender */}
+                                        <div className="space-y-1">
+                                          <label className="text-[10px] font-black uppercase tracking-wider text-zinc-500">Gender <span className="text-indigo-400">*</span></label>
+                                          <select
+                                            value={teamMember3Gender}
+                                            onChange={(e) => setTeamMember3Gender(e.target.value)}
+                                            className="w-full bg-black/40 border border-white/10 rounded-xl py-3 px-4 text-xs font-bold text-white focus:outline-none focus:border-indigo-500 appearance-none cursor-pointer"
+                                          >
+                                            <option value="" className="bg-zinc-950 text-zinc-500 font-extrabold uppercase">SELECT GENDER</option>
+                                            <option value="male" className="bg-zinc-950 text-white font-extrabold uppercase">Male</option>
+                                            <option value="female" className="bg-zinc-950 text-white font-extrabold uppercase">Female</option>
+                                          </select>
+                                        </div>
+
+                                        {/* Class */}
+                                        <div className="space-y-1">
+                                          <label className="text-[10px] font-black uppercase tracking-wider text-zinc-500">Class <span className="text-indigo-400">*</span></label>
+                                          <select
+                                            value={teamMember3Class}
                                             onChange={(e) => {
-                                              setTeamMember2Class(e.target.value);
-                                              setTeamMember2Section('');
+                                              setTeamMember3Class(e.target.value);
+                                              setTeamMember3Section('');
                                             }}
-                                            className={`w-full bg-black/40 border border-white/5 rounded-xl py-3 px-4 text-xs font-bold transition-all focus:outline-none focus:border-indigo-500 appearance-none cursor-pointer ${
-                                              (!member2Profile || (member2Profile.isGeneralMember && !!teamMember2Class))
-                                                ? 'text-zinc-500 cursor-not-allowed opacity-60' 
-                                                : 'text-white border-white/15'
-                                            }`}
+                                            className="w-full bg-black/40 border border-white/10 rounded-xl py-3 px-4 text-xs font-bold text-white focus:outline-none focus:border-indigo-500 appearance-none cursor-pointer"
                                           >
                                             <option value="" className="bg-zinc-950 text-zinc-500 font-extrabold uppercase">CLASS</option>
                                             {[3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(n => (
@@ -2617,201 +2614,34 @@ const EventRegister = () => {
                                             ))}
                                           </select>
                                         </div>
-                                        <div className="space-y-1">
-                                          <label className="text-[10px] font-black uppercase tracking-wider text-zinc-500">Section</label>
-                                          <select
-                                            disabled={!member2Profile || (member2Profile.isGeneralMember && !!teamMember2Section)}
-                                            value={teamMember2Section}
-                                            onChange={(e) => setTeamMember2Section(e.target.value)}
-                                            className={`w-full bg-black/40 border border-white/5 rounded-xl py-3 px-4 text-xs font-bold transition-all focus:outline-none focus:border-indigo-500 appearance-none cursor-pointer ${
-                                              (!member2Profile || (member2Profile.isGeneralMember && !!teamMember2Section))
-                                                ? 'text-zinc-500 cursor-not-allowed opacity-60' 
-                                                : 'text-white border-white/15'
-                                            }`}
-                                          >
-                                            {!teamMember2Class ? (
-                                              <option value="" className="bg-zinc-950 text-zinc-500 font-extrabold uppercase">SELECT CLASS FIRST</option>
-                                            ) : (
-                                              <>
-                                                <option value="" className="bg-zinc-950 text-zinc-500 font-extrabold uppercase">SELECT SECTION</option>
-                                                {(teamMember2Section && !(classSectionsMap[teamMember2Class] || []).includes(teamMember2Section)
-                                                  ? [...(classSectionsMap[teamMember2Class] || []), teamMember2Section]
-                                                  : (classSectionsMap[teamMember2Class] || [])
-                                                ).map((sec: string) => (
-                                                  <option key={sec} value={sec} className="bg-zinc-950 text-white font-extrabold uppercase">{sec}</option>
-                                                ))}
-                                                <option value="Other" className="bg-zinc-950 text-zinc-400 font-extrabold uppercase">Other</option>
-                                              </>
-                                            )}
-                                          </select>
-                                        </div>
-                                        <div className="space-y-1">
-                                          <label className="text-[10px] font-black uppercase tracking-wider text-zinc-500">Roll Number</label>
-                                          <input
-                                            type="text"
-                                            placeholder="Roll"
-                                            disabled={!member2Profile || (member2Profile.isGeneralMember && !!teamMember2Roll)}
-                                            value={teamMember2Roll}
-                                            onChange={(e) => setTeamMember2Roll(e.target.value)}
-                                            className={`w-full bg-black/40 border border-white/5 rounded-xl py-3 px-4 text-xs font-bold transition-all focus:outline-none focus:border-indigo-500 ${
-                                              (!member2Profile || (member2Profile.isGeneralMember && !!teamMember2Roll))
-                                                ? 'text-zinc-500 cursor-not-allowed opacity-60' 
-                                                : 'text-white border-white/15'
-                                            }`}
-                                          />
-                                        </div>
-                                      </div>
-                                    </div>
-                                  </div>
 
-                                  {/* TEAMMATE 3 CARD (TIC-TAC-TOE ONLY) */}
-                                  {selectedEvents.includes("Tic-Tac-Toe") && (
-                                    <div className="p-6 bg-white/[0.02] border border-white/5 rounded-2xl space-y-4">
-                                      <div className="flex items-center justify-between">
-                                        <h4 className="text-xs font-black uppercase tracking-wider text-zinc-300">Team Member 3</h4>
-                                        {member3Profile && (
-                                          <div className="flex items-center gap-2">
-                                            {member3Profile.isGeneralMember ? (
-                                              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider bg-green-500/10 text-green-400 border border-green-500/20">
-                                                <CheckCircle2 className="w-2.5 h-2.5" /> JMC Member Auto-Pulled
-                                              </span>
-                                            ) : (
-                                              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider bg-amber-500/10 text-amber-500 border border-amber-500/20">
-                                                <AlertCircle className="w-2.5 h-2.5" /> Manual Entry Mode
-                                              </span>
-                                            )}
-                                            <button
-                                              type="button"
-                                              onClick={() => {
-                                                setMember3Profile(null);
-                                                setTeamMember3Name('');
-                                                setTeamMember3Class('');
-                                                setTeamMember3Section('');
-                                                setTeamMember3Roll('');
-                                                setTeamMember3Email('');
-                                              }}
-                                              className="text-[9px] underline font-bold text-zinc-500 hover:text-zinc-300"
-                                            >
-                                              Change
-                                            </button>
-                                          </div>
-                                        )}
-                                      </div>
-
-                                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        {/* Section / Institute */}
                                         <div className="space-y-1">
-                                          <label className="text-[10px] font-black uppercase tracking-wider text-zinc-500">Teammate Email, Phone, or Full Name</label>
-                                          <div className="flex gap-2">
-                                            <div className="relative flex-1">
-                                              <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-600" />
-                                              <input
-                                                type="text"
-                                                placeholder="teammate's email, phone, or Full Name"
-                                                disabled={!!member3Profile}
-                                                value={teamMember3Email}
-                                                onChange={(e) => setTeamMember3Email(e.target.value)}
-                                                className="w-full bg-black/40 border border-white/5 rounded-xl py-3 pl-11 pr-4 text-xs font-bold text-white focus:outline-none focus:border-indigo-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                                              />
-                                            </div>
-                                            {!member3Profile && (
-                                              <button
-                                                type="button"
-                                                onClick={() => verifyTeammateEmail(teamMember3Email, 3)}
-                                                disabled={checkingTeammates}
-                                                className="px-4 py-3 bg-indigo-500 hover:bg-indigo-400 text-white font-black text-[10px] uppercase tracking-wider rounded-xl transition-all flex items-center gap-1.5 disabled:opacity-50 shadow-lg shadow-indigo-500/10"
-                                              >
-                                                {checkingTeammates ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
-                                                Verify
-                                              </button>
-                                            )}
-                                          </div>
-                                          <p className="text-[9px] text-zinc-500">Verification checks general membership and loads records.</p>
-                                        </div>
-
-                                        <div className="space-y-1">
-                                          <label className="text-[10px] font-black uppercase tracking-wider text-zinc-500">Teammate Name</label>
-                                          <div className="relative">
-                                            <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-600" />
-                                            <input
-                                              type="text"
-                                              placeholder={member3Profile ? "Member Name" : "Verify Email First"}
-                                              disabled={!member3Profile || (member3Profile.isGeneralMember && !!teamMember3Name)}
-                                              value={teamMember3Name}
-                                              onChange={(e) => setTeamMember3Name(e.target.value)}
-                                              className={`w-full bg-black/40 border border-white/5 rounded-xl py-3 pl-11 pr-4 text-xs font-bold transition-all focus:outline-none focus:border-indigo-500 ${
-                                                (!member3Profile || (member3Profile.isGeneralMember && !!teamMember3Name))
-                                                  ? 'text-zinc-500 cursor-not-allowed opacity-60' 
-                                                  : 'text-white border-white/15'
-                                              }`}
-                                            />
-                                          </div>
-                                        </div>
-
-                                        <div className="grid grid-cols-3 md:col-span-2 gap-3">
-                                          <div className="space-y-1">
-                                            <label className="text-[10px] font-black uppercase tracking-wider text-zinc-500">Class</label>
+                                          <label className="text-[10px] font-black uppercase tracking-wider text-zinc-500">Section / Institute <span className="text-indigo-400">*</span></label>
+                                          {teamMember3Class ? (
                                             <select
-                                              disabled={!member3Profile || (member3Profile.isGeneralMember && !!teamMember3Class)}
-                                              value={teamMember3Class}
-                                              onChange={(e) => {
-                                                setTeamMember3Class(e.target.value);
-                                                setTeamMember3Section('');
-                                              }}
-                                              className={`w-full bg-black/40 border border-white/5 rounded-xl py-3 px-4 text-xs font-bold transition-all focus:outline-none focus:border-indigo-500 appearance-none cursor-pointer ${
-                                                (!member3Profile || member3Profile.isGeneralMember)
-                                                  ? 'text-zinc-500 cursor-not-allowed opacity-60' 
-                                                  : 'text-white border-white/15'
-                                              }`}
-                                            >
-                                              <option value="" className="bg-zinc-950 text-zinc-500 font-extrabold uppercase">CLASS</option>
-                                              {[3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(n => (
-                                                <option key={n} value={String(n)} className="bg-zinc-950 text-white font-extrabold uppercase">Class {n}</option>
-                                              ))}
-                                            </select>
-                                          </div>
-                                          <div className="space-y-1">
-                                            <label className="text-[10px] font-black uppercase tracking-wider text-zinc-500">Section</label>
-                                            <select
-                                              disabled={!member3Profile || (member3Profile.isGeneralMember && !!teamMember3Section)}
                                               value={teamMember3Section}
                                               onChange={(e) => setTeamMember3Section(e.target.value)}
-                                              className={`w-full bg-black/40 border border-white/5 rounded-xl py-3 px-4 text-xs font-bold transition-all focus:outline-none focus:border-indigo-500 appearance-none cursor-pointer ${
-                                                (!member3Profile || member3Profile.isGeneralMember)
-                                                  ? 'text-zinc-500 cursor-not-allowed opacity-60' 
-                                                  : 'text-white border-white/15'
-                                              }`}
+                                              className="w-full bg-black/40 border border-white/10 rounded-xl py-3 px-4 text-xs font-bold text-white focus:outline-none focus:border-indigo-500 appearance-none cursor-pointer"
                                             >
-                                              {!teamMember3Class ? (
-                                                <option value="" className="bg-zinc-950 text-zinc-500 font-extrabold uppercase">SELECT CLASS FIRST</option>
-                                              ) : (
-                                                <>
-                                                  <option value="" className="bg-zinc-950 text-zinc-500 font-extrabold uppercase">SELECT SECTION</option>
-                                                  {(teamMember3Section && !(classSectionsMap[teamMember3Class] || []).includes(teamMember3Section)
-                                                    ? [...(classSectionsMap[teamMember3Class] || []), teamMember3Section]
-                                                    : (classSectionsMap[teamMember3Class] || [])
-                                                  ).map((sec: string) => (
-                                                    <option key={sec} value={sec} className="bg-zinc-950 text-white font-extrabold uppercase">{sec}</option>
-                                                  ))}
-                                                  <option value="Other" className="bg-zinc-950 text-zinc-400 font-extrabold uppercase">Other</option>
-                                                </>
-                                              )}
+                                              <option value="" className="bg-zinc-950 text-zinc-500 font-extrabold uppercase">SELECT SECTION / INSTITUTE</option>
+                                              {(teamMember3Section && !(classSectionsMap[teamMember3Class] || []).includes(teamMember3Section)
+                                                ? [...(classSectionsMap[teamMember3Class] || []), teamMember3Section]
+                                                : (classSectionsMap[teamMember3Class] || [])
+                                              ).map((sec: string) => (
+                                                <option key={sec} value={sec} className="bg-zinc-950 text-white font-extrabold uppercase">{sec}</option>
+                                              ))}
+                                              <option value="Other" className="bg-zinc-950 text-zinc-400 font-extrabold uppercase">Other</option>
                                             </select>
-                                          </div>
-                                          <div className="space-y-1">
-                                            <label className="text-[10px] font-black uppercase tracking-wider text-zinc-500">Roll Number</label>
+                                          ) : (
                                             <input
                                               type="text"
-                                              placeholder="Roll"
-                                              disabled={!member3Profile || (member3Profile.isGeneralMember && !!teamMember3Roll)}
-                                              value={teamMember3Roll}
-                                              onChange={(e) => setTeamMember3Roll(e.target.value)}
-                                              className={`w-full bg-black/40 border border-white/5 rounded-xl py-3 px-4 text-xs font-bold transition-all focus:outline-none focus:border-indigo-500 ${
-                                                (!member3Profile || member3Profile.isGeneralMember)
-                                                  ? 'text-zinc-500 cursor-not-allowed opacity-60' 
-                                                  : 'text-white border-white/15'
-                                              }`}
+                                              placeholder="Section or Institute Name"
+                                              value={teamMember3Section}
+                                              onChange={(e) => setTeamMember3Section(e.target.value)}
+                                              className="w-full bg-black/40 border border-white/10 rounded-xl py-3 px-4 text-xs font-bold text-white focus:outline-none focus:border-indigo-500"
                                             />
-                                          </div>
+                                          )}
                                         </div>
                                       </div>
                                     </div>

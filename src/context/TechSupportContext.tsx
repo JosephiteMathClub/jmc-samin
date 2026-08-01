@@ -23,23 +23,66 @@ export const TechSupportProvider: React.FC<{ children: React.ReactNode }> = ({ c
   // Listen for global technical errors
   useEffect(() => {
     const handleError = (event: ErrorEvent) => {
+      let errMsg = 'Unknown error';
+      if (typeof event.message === 'string' && event.message) {
+        errMsg = event.message;
+      } else if (event.error?.message) {
+        errMsg = String(event.error.message);
+      }
+
+      let errDetail = 'Unknown error';
+      if (event.error?.stack) {
+        errDetail = String(event.error.stack);
+      } else if (event.error?.message) {
+        errDetail = String(event.error.message);
+      } else if (typeof event.error === 'string') {
+        errDetail = event.error;
+      } else if (event.message) {
+        errDetail = String(event.message);
+      }
+
       setLastError({
-        message: event.message,
-        filename: event.filename,
-        lineno: event.lineno,
-        colno: event.colno,
-        error: event.error?.stack || event.error?.message || 'Unknown error',
+        message: errMsg,
+        filename: String(event.filename || ''),
+        lineno: Number(event.lineno || 0),
+        colno: Number(event.colno || 0),
+        error: errDetail,
         timestamp: new Date().toISOString(),
-        url: window.location.href
+        url: typeof window !== 'undefined' ? window.location.href : ''
       });
     };
 
     const handlePromiseError = (event: PromiseRejectionEvent) => {
+      let msg = 'Unhandled Promise Rejection';
+      let errDetail = 'Unknown reason';
+
+      const reason = event.reason;
+      if (reason instanceof Error) {
+        msg = reason.message || msg;
+        errDetail = reason.stack || reason.message || errDetail;
+      } else if (typeof reason === 'string') {
+        errDetail = reason;
+        msg = reason;
+      } else if (reason && typeof reason === 'object') {
+        if (reason instanceof HTMLElement) {
+          errDetail = `<${reason.tagName.toLowerCase()}> element rejection`;
+        } else if (reason.message) {
+          msg = String(reason.message);
+          errDetail = reason.stack ? String(reason.stack) : String(reason.message);
+        } else {
+          try {
+            errDetail = String(reason);
+          } catch {
+            errDetail = 'Object rejection';
+          }
+        }
+      }
+
       setLastError({
-        message: event.reason?.message || 'Unhandled Promise Rejection',
-        error: event.reason?.stack || event.reason || 'Unknown reason',
+        message: msg,
+        error: errDetail,
         timestamp: new Date().toISOString(),
-        url: window.location.href,
+        url: typeof window !== 'undefined' ? window.location.href : '',
         type: 'promise_rejection'
       });
     };
