@@ -787,3 +787,70 @@ CREATE POLICY "Allow super admins to delete submissions" ON public.challenge_sub
 -- prefixed with '[SMS] ' or recipients without '@' characters. Privacy is strictly respected
 -- by masking phone numbers in public and admin UI views.
 
+
+-- ==========================================
+-- 12. System Settings & Form Enhancements
+-- ==========================================
+
+-- System Settings table for app configuration, registration targets, and feature flags
+CREATE TABLE IF NOT EXISTS public.system_settings (
+    key TEXT PRIMARY KEY,
+    value JSONB NOT NULL,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Ensure RLS is enabled for system_settings
+ALTER TABLE public.system_settings ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Allow public read access to system settings" ON public.system_settings;
+CREATE POLICY "Allow public read access to system settings" ON public.system_settings FOR SELECT USING (true);
+
+DROP POLICY IF EXISTS "Allow admins to insert/update system settings" ON public.system_settings;
+CREATE POLICY "Allow admins to insert/update system settings" ON public.system_settings FOR ALL USING (public.is_admin());
+
+-- Insert default system settings if missing
+INSERT INTO public.system_settings (key, value) VALUES
+  ('event_registration_enabled', 'true'::jsonb),
+  ('visit_intra_enabled', 'true'::jsonb),
+  ('visit_inter_enabled', 'true'::jsonb),
+  ('inter_registration_enabled', 'true'::jsonb),
+  ('primary_registration_target', '"inter"'::jsonb)
+ON CONFLICT (key) DO NOTHING;
+
+-- Ensure gender and verified_by exist in event tables
+DO $$
+BEGIN
+    -- primary_events
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='primary_events' AND column_name='gender') THEN
+        ALTER TABLE public.primary_events ADD COLUMN gender TEXT DEFAULT '';
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='primary_events' AND column_name='verified_by') THEN
+        ALTER TABLE public.primary_events ADD COLUMN verified_by TEXT;
+    END IF;
+
+    -- junior_events
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='junior_events' AND column_name='gender') THEN
+        ALTER TABLE public.junior_events ADD COLUMN gender TEXT DEFAULT '';
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='junior_events' AND column_name='verified_by') THEN
+        ALTER TABLE public.junior_events ADD COLUMN verified_by TEXT;
+    END IF;
+
+    -- secondary_events
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='secondary_events' AND column_name='gender') THEN
+        ALTER TABLE public.secondary_events ADD COLUMN gender TEXT DEFAULT '';
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='secondary_events' AND column_name='verified_by') THEN
+        ALTER TABLE public.secondary_events ADD COLUMN verified_by TEXT;
+    END IF;
+
+    -- higher_secondary_events
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='higher_secondary_events' AND column_name='gender') THEN
+        ALTER TABLE public.higher_secondary_events ADD COLUMN gender TEXT DEFAULT '';
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='higher_secondary_events' AND column_name='verified_by') THEN
+        ALTER TABLE public.higher_secondary_events ADD COLUMN verified_by TEXT;
+    END IF;
+END $$;
+
+

@@ -97,12 +97,40 @@ const EventRegister = () => {
   const [interAccountPassword, setInterAccountPassword] = useState('');
 
   useEffect(() => {
-    if (searchParams) {
-      const type = searchParams.get('type');
-      if (type === 'inter') {
-        setIsInterMode(true);
+    async function resolveRegistrationTarget() {
+      if (searchParams) {
+        const type = searchParams.get('type');
+        if (type === 'inter') {
+          setIsInterMode(true);
+          return;
+        } else if (type === 'intra') {
+          setIsInterMode(false);
+          return;
+        }
+      }
+
+      // Check system settings for admin-configured primary target
+      if (isSupabaseConfigured) {
+        try {
+          const { data } = await supabase
+            .from('system_settings')
+            .select('value')
+            .eq('key', 'primary_registration_target')
+            .maybeSingle();
+
+          if (data && data.value) {
+            setIsInterMode(data.value === 'inter');
+          } else {
+            // Default fallback to Inter-school form
+            setIsInterMode(true);
+          }
+        } catch (e) {
+          setIsInterMode(true);
+        }
       }
     }
+
+    resolveRegistrationTarget();
   }, [searchParams]);
 
   // Dynamic config states loaded from db

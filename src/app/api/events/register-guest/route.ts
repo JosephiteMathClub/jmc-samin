@@ -309,7 +309,7 @@ export async function POST(req: Request) {
             <p style="margin: 5px 0;"><strong>Your Ticket ID:</strong> ${existingMemberId}</p>
           </div>
 
-          <p style="font-size: 16px; line-height: 1.5;">Please allow up to a few hours for JMC administrators to verify your payment transaction ID with the Bkash statement. Once verified, you will receive another confirmation email with your printable digital ticket!</p>
+          <p style="font-size: 16px; line-height: 1.5;">Please allow up to a few hours for JMC administrators to verify your payment transaction ID with the Bkash statement. Once verified, your unique ID will be activated and viewable on your Profile Dashboard!</p>
 
           <div style="text-align: center; margin: 30px 0;">
             <a href="${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/profile" style="background-color: #0c4a6e; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">Go to Profile Page</a>

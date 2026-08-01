@@ -31,7 +31,10 @@ import {
   Save,
   Trophy,
   SlidersHorizontal,
-  Globe
+  Globe,
+  ImageIcon,
+  Upload,
+  Check
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useToast } from '../../context/ToastContext';
@@ -54,6 +57,7 @@ export function RegistrationToggleControl() {
   const [isIntraEnabled, setIsIntraEnabled] = useState<boolean>(true);
   const [isInterEnabled, setIsInterEnabled] = useState<boolean>(true);
   const [isInterRegEnabled, setIsInterRegEnabled] = useState<boolean>(true);
+  const [primaryRegTarget, setPrimaryRegTarget] = useState<'intra' | 'inter'>('inter');
   const [loading, setLoading] = useState<boolean>(true);
   const [updating, setUpdating] = useState<boolean>(false);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
@@ -72,11 +76,13 @@ export function RegistrationToggleControl() {
           const intra = data.find(item => item.key === 'visit_intra_enabled');
           const inter = data.find(item => item.key === 'visit_inter_enabled');
           const interReg = data.find(item => item.key === 'inter_registration_enabled');
+          const targetItem = data.find(item => item.key === 'primary_registration_target');
 
           if (reg) setIsEnabled(reg.value === true);
           if (intra) setIsIntraEnabled(intra.value === true);
           if (inter) setIsInterEnabled(inter.value === true);
           if (interReg) setIsInterRegEnabled(interReg.value === true);
+          if (targetItem) setPrimaryRegTarget(targetItem.value === 'intra' ? 'intra' : 'inter');
 
           // Insert defaults if missing
           if (!intra) {
@@ -91,12 +97,17 @@ export function RegistrationToggleControl() {
             await supabase.from('system_settings').upsert({ key: 'inter_registration_enabled', value: true });
             setIsInterRegEnabled(true);
           }
+          if (!targetItem) {
+            await supabase.from('system_settings').upsert({ key: 'primary_registration_target', value: 'inter' });
+            setPrimaryRegTarget('inter');
+          }
         } else {
           // Attempt to insert default values
           await supabase.from('system_settings').upsert({ key: 'event_registration_enabled', value: true });
           await supabase.from('system_settings').upsert({ key: 'visit_intra_enabled', value: true });
           await supabase.from('system_settings').upsert({ key: 'visit_inter_enabled', value: true });
           await supabase.from('system_settings').upsert({ key: 'inter_registration_enabled', value: true });
+          await supabase.from('system_settings').upsert({ key: 'primary_registration_target', value: 'inter' });
         }
       } catch (err: any) {
         if (err?.code === '42P01') {
@@ -110,6 +121,34 @@ export function RegistrationToggleControl() {
     }
     fetchStatuses();
   }, []);
+
+  const handleToggleRegTarget = async (target: 'intra' | 'inter') => {
+    setUpdating(true);
+    setStatusMessage(null);
+    try {
+      const { error } = await supabase
+        .from('system_settings')
+        .upsert({
+          key: 'primary_registration_target',
+          value: target,
+          updated_at: new Date().toISOString()
+        });
+
+      if (error) {
+        if (error.message?.includes("relation") || error.code === '42P01') {
+          throw new Error("The settings table ('system_settings') is not yet created in Supabase.");
+        }
+        throw error;
+      }
+      setPrimaryRegTarget(target);
+      setStatusMessage(`Default "Register Now" form target set to ${target.toUpperCase()}-SCHOOL REGISTRATION.`);
+    } catch (err: any) {
+      console.error('Failed to update primary_registration_target status', err);
+      setStatusMessage(`Error: ${err.message || 'Could not update target.'}`);
+    } finally {
+      setUpdating(false);
+    }
+  };
 
   const handleToggleKey = async (key: string, currentValue: boolean, setter: (val: boolean) => void, label: string) => {
     setUpdating(true);
@@ -246,7 +285,7 @@ export function RegistrationToggleControl() {
       </div>
 
       {/* 4. Inter events registration gateway toggle */}
-      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 pb-6 border-b border-white/5">
         <div className="flex items-start gap-4">
           <div className={`p-4 rounded-2xl flex items-center justify-center border transition-all ${isInterRegEnabled ? 'bg-pink-500/10 border-pink-500/20 text-pink-400' : 'bg-red-500/10 border-red-500/20 text-red-500 animate-pulse'}`}>
             <Globe className="w-7 h-7" />
@@ -272,6 +311,53 @@ export function RegistrationToggleControl() {
             }`}
           />
         </button>
+      </div>
+
+      {/* 5. Primary Registration Form Target Toggle (Intra vs Inter) */}
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+        <div className="flex items-start gap-4">
+          <div className="p-4 rounded-2xl flex items-center justify-center border bg-gradient-to-br from-pink-500/20 to-purple-500/20 border-pink-500/30 text-pink-400">
+            <SlidersHorizontal className="w-7 h-7" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <h3 className="font-extrabold text-white text-lg uppercase tracking-tight">Default "Register Now" Target</h3>
+              <span className="text-[9px] font-mono font-black uppercase tracking-widest text-pink-400 px-2 py-0.5 bg-pink-500/10 rounded border border-pink-500/20">
+                ACTIVE: {primaryRegTarget.toUpperCase()}
+              </span>
+            </div>
+            <p className="text-xs text-zinc-500 mt-1 max-w-md leading-relaxed">
+              Select which registration form opens when visitors click "Register Now" buttons across the platform.
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2 bg-zinc-900/90 p-1.5 rounded-2xl border border-white/10 shadow-inner">
+          <button
+            type="button"
+            onClick={() => handleToggleRegTarget('intra')}
+            disabled={updating}
+            className={`px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer flex items-center gap-2 select-none ${
+              primaryRegTarget === 'intra' 
+                ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/30 border border-indigo-400/30' 
+                : 'text-zinc-400 hover:text-white bg-white/5 hover:bg-white/10 border border-transparent'
+            } ${updating ? 'opacity-50 cursor-not-allowed' : ''}`}
+          >
+            🏫 Intra-School
+          </button>
+          <button
+            type="button"
+            onClick={() => handleToggleRegTarget('inter')}
+            disabled={updating}
+            className={`px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer flex items-center gap-2 select-none ${
+              primaryRegTarget === 'inter' 
+                ? 'bg-gradient-to-r from-pink-600 to-purple-600 text-white shadow-lg shadow-pink-500/30 border border-pink-400/30' 
+                : 'text-zinc-400 hover:text-white bg-white/5 hover:bg-white/10 border border-transparent'
+            } ${updating ? 'opacity-50 cursor-not-allowed' : ''}`}
+          >
+            🌐 Inter-School
+          </button>
+        </div>
       </div>
 
       {statusMessage && (
@@ -939,8 +1025,41 @@ export function InterEventRegistrationConfigEditor({ showToast }: { showToast: (
   // Event Page Launch & Teaser Video States
   const [isEventPageLaunched, setIsEventPageLaunched] = useState<boolean>(false);
   const [teaserVideoEnabled, setTeaserVideoEnabled] = useState<boolean>(true);
-  const [teaserVideoUrl, setTeaserVideoUrl] = useState<string>('https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4');
+  const [teaserVideoUrl, setTeaserVideoUrl] = useState<string>('https://vjs.zencdn.net/v/oceans.mp4');
   const [uploadingVideo, setUploadingVideo] = useState<boolean>(false);
+
+  // Segment Banners & Brief Descriptions Customizer States
+  const [segmentBanners, setSegmentBanners] = useState<Record<string, string>>({});
+  const [segmentDescriptions, setSegmentDescriptions] = useState<Record<string, string>>({});
+  const [selectedSegmentForEdit, setSelectedSegmentForEdit] = useState<string>("Math Olympiad (Find-based)");
+  const [editingBannerUrl, setEditingBannerUrl] = useState<string>("");
+  const [editingDescription, setEditingDescription] = useState<string>("");
+  const [uploadingSegmentBanner, setUploadingSegmentBanner] = useState<boolean>(false);
+
+  const ALL_INTER_SEGMENT_NAMES = [
+    "Math Olympiad (Find-based)",
+    "Math Olympiad (Proof-based)",
+    "IQ Test",
+    "Human Calculator",
+    "Genesis",
+    "Geometry Dash",
+    "Probability Pressure",
+    "Murder Mystery",
+    "Crack the Code",
+    "Complex Calamity",
+    "Sudoku",
+    "Rubik’s Cube Showdown",
+    "5 min Professor",
+    "Calculus Bee",
+    "Escape Room",
+    "Combi Verse",
+    "Math Memes",
+    "Math Article",
+    "Math Vision",
+    "Math Drawing",
+    "Truss",
+    "Wall Magazine Display"
+  ];
 
   const DEFAULT_INTER_CONFIG = {
     bkashNumber: "01789456123",
@@ -949,7 +1068,9 @@ export function InterEventRegistrationConfigEditor({ showToast }: { showToast: (
     caCodes: [],
     isEventPageLaunched: false,
     teaserVideoEnabled: true,
-    teaserVideoUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
+    teaserVideoUrl: "https://vjs.zencdn.net/v/oceans.mp4",
+    segmentBanners: {},
+    segmentDescriptions: {}
   };
 
   useEffect(() => {
@@ -980,6 +1101,12 @@ export function InterEventRegistrationConfigEditor({ showToast }: { showToast: (
             setIsEventPageLaunched(Boolean(val.isEventPageLaunched));
             setTeaserVideoEnabled(val.teaserVideoEnabled !== false);
             setTeaserVideoUrl(val.teaserVideoUrl || DEFAULT_INTER_CONFIG.teaserVideoUrl);
+            if (val.segmentBanners && typeof val.segmentBanners === 'object') {
+              setSegmentBanners(val.segmentBanners);
+            }
+            if (val.segmentDescriptions && typeof val.segmentDescriptions === 'object') {
+              setSegmentDescriptions(val.segmentDescriptions);
+            }
           }
         } else {
           // Seed
@@ -994,6 +1121,8 @@ export function InterEventRegistrationConfigEditor({ showToast }: { showToast: (
           setIsEventPageLaunched(DEFAULT_INTER_CONFIG.isEventPageLaunched);
           setTeaserVideoEnabled(DEFAULT_INTER_CONFIG.teaserVideoEnabled);
           setTeaserVideoUrl(DEFAULT_INTER_CONFIG.teaserVideoUrl);
+          setSegmentBanners({});
+          setSegmentDescriptions({});
         }
       } catch (err) {
         console.warn("Failed to load inter config", err);
@@ -1011,6 +1140,56 @@ export function InterEventRegistrationConfigEditor({ showToast }: { showToast: (
     loadInterConfig();
   }, []);
 
+  // Synchronize active segment being edited in Super Admin editor
+  useEffect(() => {
+    setEditingBannerUrl(segmentBanners[selectedSegmentForEdit] || '');
+    setEditingDescription(segmentDescriptions[selectedSegmentForEdit] || '');
+  }, [selectedSegmentForEdit, segmentBanners, segmentDescriptions]);
+
+  const handleApplySegmentEdit = () => {
+    setSegmentBanners(prev => ({ ...prev, [selectedSegmentForEdit]: editingBannerUrl }));
+    setSegmentDescriptions(prev => ({ ...prev, [selectedSegmentForEdit]: editingDescription }));
+    showToast(`Updated parameters for "${selectedSegmentForEdit}". Click 'Save System Settings' to publish!`, "success");
+  };
+
+  const handleSegmentBannerFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      showToast("Please select a valid image file (.png, .jpg, .webp, .jpeg)", "error");
+      return;
+    }
+
+    setUploadingSegmentBanner(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        const url = data.url || data.publicUrl || data.fileUrl;
+        if (url) {
+          setEditingBannerUrl(url);
+          setSegmentBanners(prev => ({ ...prev, [selectedSegmentForEdit]: url }));
+          showToast(`Banner image uploaded & set for "${selectedSegmentForEdit}"!`, "success");
+        }
+      } else {
+        showToast("Upload failed, please try an external image URL or check network", "error");
+      }
+    } catch (err) {
+      console.error(err);
+      showToast("Error uploading segment banner image", "error");
+    } finally {
+      setUploadingSegmentBanner(false);
+    }
+  };
+
   const handleSave = async (updatedLaunchState?: boolean) => {
     setSaving(true);
     const targetLaunch = updatedLaunchState !== undefined ? updatedLaunchState : isEventPageLaunched;
@@ -1021,7 +1200,9 @@ export function InterEventRegistrationConfigEditor({ showToast }: { showToast: (
       caCodes,
       isEventPageLaunched: targetLaunch,
       teaserVideoEnabled,
-      teaserVideoUrl
+      teaserVideoUrl,
+      segmentBanners,
+      segmentDescriptions
     };
     try {
       const { error } = await supabase
@@ -1237,7 +1418,7 @@ export function InterEventRegistrationConfigEditor({ showToast }: { showToast: (
                 <button
                   type="button"
                   onClick={() => {
-                    setTeaserVideoUrl("https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4");
+                    setTeaserVideoUrl("https://vjs.zencdn.net/v/oceans.mp4");
                     showToast("Loaded preset sample teaser video URL", "info");
                   }}
                   className="px-4 py-2.5 bg-white/5 hover:bg-white/10 text-zinc-300 rounded-xl text-xs font-bold uppercase tracking-wider transition-all border border-white/5 cursor-pointer"
@@ -1368,6 +1549,114 @@ export function InterEventRegistrationConfigEditor({ showToast }: { showToast: (
             ))}
           </div>
         )}
+      </div>
+
+      {/* Segment Banners & Brief Descriptions Customizer */}
+      <div className="space-y-6 pb-6 border-b border-white/5 bg-zinc-950/60 border border-white/10 rounded-2xl p-6">
+        <div>
+          <h4 className="text-sm font-extrabold text-white uppercase tracking-wider flex items-center gap-2">
+            <ImageIcon className="w-4 h-4 text-pink-400" /> Event Segment Banners & Brief Descriptions Customizer
+          </h4>
+          <p className="text-[10px] text-zinc-400 mt-1 uppercase tracking-wider font-semibold font-mono">
+            Upload custom banner images and write custom brief descriptions for any of the 22 championship segments. Changes appear inside expandable segment cards on the registration portal.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Segment Selector & Edit Controls */}
+          <div className="lg:col-span-2 space-y-4">
+            <div className="space-y-2">
+              <label className="text-[10px] font-black uppercase tracking-wider text-pink-400 font-mono">Select Championship Segment to Customize</label>
+              <select
+                value={selectedSegmentForEdit}
+                onChange={(e) => setSelectedSegmentForEdit(e.target.value)}
+                className="w-full bg-black/60 border border-white/10 rounded-xl px-4 py-3 text-xs font-bold text-white focus:outline-none focus:border-pink-500 transition-all cursor-pointer"
+              >
+                {ALL_INTER_SEGMENT_NAMES.map(name => (
+                  <option key={name} value={name} className="bg-zinc-950 text-white font-sans">
+                    {name} {segmentBanners[name] ? '🖼️ (Custom Banner Set)' : ''}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-[10px] font-black uppercase tracking-wider text-zinc-400 font-mono">Segment Banner Image URL</label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={editingBannerUrl}
+                  onChange={(e) => setEditingBannerUrl(e.target.value)}
+                  placeholder="https://.../segment-banner.jpg"
+                  className="flex-1 bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-xs font-mono text-white focus:outline-none focus:border-pink-500/50 transition-all"
+                />
+                <label className="px-4 py-3 bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-300 border border-indigo-500/30 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 cursor-pointer shrink-0">
+                  {uploadingSegmentBanner ? (
+                    <Loader2 className="w-4 h-4 animate-spin text-indigo-400" />
+                  ) : (
+                    <Upload className="w-4 h-4 text-indigo-400" />
+                  )}
+                  <span>Upload Image</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleSegmentBannerFileUpload}
+                    disabled={uploadingSegmentBanner}
+                  />
+                </label>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-[10px] font-black uppercase tracking-wider text-zinc-400 font-mono">Brief Segment Description / Rules / Guidelines</label>
+              <textarea
+                value={editingDescription}
+                onChange={(e) => setEditingDescription(e.target.value)}
+                rows={4}
+                placeholder={`Detailed rules and brief description for ${selectedSegmentForEdit}...`}
+                className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-xs font-medium text-white focus:outline-none focus:border-pink-500/50 transition-all [resize:none]"
+              />
+            </div>
+
+            <button
+              type="button"
+              onClick={handleApplySegmentEdit}
+              className="px-6 py-2.5 bg-pink-500/20 hover:bg-pink-500/30 border border-pink-500/40 text-pink-300 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer flex items-center gap-2"
+            >
+              <Check className="w-4 h-4" /> Apply Changes to Segment
+            </button>
+          </div>
+
+          {/* Banner Preview Card */}
+          <div className="space-y-2 bg-black/40 p-4 rounded-2xl border border-white/5 flex flex-col justify-between">
+            <div>
+              <span className="text-[10px] font-black uppercase tracking-wider text-zinc-400 font-mono block mb-2">Banner & Card Preview</span>
+              <div className="relative rounded-xl overflow-hidden aspect-video bg-zinc-900 border border-white/10 group">
+                {editingBannerUrl ? (
+                  <img
+                    src={editingBannerUrl}
+                    alt={selectedSegmentForEdit}
+                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                  />
+                ) : (
+                  <div className="w-full h-full flex flex-col items-center justify-center p-4 text-center text-zinc-600 font-mono text-[11px] space-y-1">
+                    <ImageIcon className="w-6 h-6 opacity-40 mb-1" />
+                    <span>No custom banner uploaded</span>
+                    <span className="text-[9px] text-zinc-500">Default math banner will be displayed</span>
+                  </div>
+                )}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent p-3 flex flex-col justify-end">
+                  <span className="text-xs font-black text-white uppercase tracking-tight line-clamp-1">{selectedSegmentForEdit}</span>
+                </div>
+              </div>
+            </div>
+
+            <p className="text-[10px] text-zinc-400 line-clamp-3 italic pt-2 border-t border-white/5">
+              "{editingDescription || 'Default brief description will be shown on expandable card.'}"
+            </p>
+          </div>
+        </div>
       </div>
 
       {/* Save Action */}

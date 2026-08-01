@@ -1,4 +1,17 @@
 {
+  "site": {
+    "logoUrl": "/images/logo.png",
+    "clubName": "Josephite Math Club",
+    "established": "EST. 2015",
+    "announcements": [
+      "Welcome to Josephite Math Club!",
+      "Josephite Math Mania is on it's way.",
+      "Keep an eye on our facebook and instagram"
+    ],
+    "maintenanceMode": true,
+    "showAnnouncements": true,
+    "maintenanceMessage": "The site is currently under maintenance"
+  },
   "home": {
     "gallery": [
       "/images/gallery/gallery1.jpg",
@@ -81,19 +94,6 @@
     "agendaDescription": "We aim to bridge the gap between theoretical mathematics and practical innovation through a series of structured programs.",
     "testimonialsTitle": "People About JMC",
     "testimonialsTagline": "Voices of JMC"
-  },
-  "site": {
-    "logoUrl": "/images/logo.png",
-    "clubName": "Josephite Math Club",
-    "established": "EST. 2015",
-    "announcements": [
-      "Welcome to Josephite Math Club!",
-      "Josephite Math Mania is on it's way.",
-      "Keep an eye on our facebook and instagram"
-    ],
-    "maintenanceMode": true,
-    "showAnnouncements": true,
-    "maintenanceMessage": "The site is currently under maintenance"
   },
   "about": {
     "stats": [
@@ -1156,6 +1156,58 @@
     "executiveSubtitle": "The Core Leadership",
     "departmentsSubtitle": "Department Heads"
   },
+  "gallery_page": {
+    "images": [
+      "/images/gallery/gallery1.jpg",
+      "/images/gallery/gallery2.jpg",
+      "/images/gallery/gallery3.jpg",
+      "/images/gallery/gallery4.jpg",
+      "/images/gallery/gallery5.jpg",
+      "/images/gallery/gallery6.jpg"
+    ]
+  },
+  "notices": {
+    "title": "NOTICE BOARD",
+    "notices": [
+      {
+        "id": "notice-1779374210960",
+        "tag": "success",
+        "date": "5/21/2026",
+        "link": "",
+        "type": "General",
+        "title": "JMC Web launch",
+        "pdfUrl": "",
+        "content": "Thanks to all of your support, I, Samin Tausif was successfully able to launch the website into production. The website still undergoing various stages of debugging and development. If you find any issue, click \"Report Issue\" from the bottom right corner to reach out to us. Your cooperation is highly valuable and expected. Thank you very much",
+        "imageUrl": "https://ikciatrploqznijspyuk.supabase.co/storage/v1/object/public/images/1779374367176-olpep7sfv.jpeg",
+        "isPinned": false,
+        "linkText": ""
+      }
+    ],
+    "subtitle": "ANNOUNCEMENTS",
+    "categories": [
+      {
+        "id": "all",
+        "icon": "Bell",
+        "name": "All"
+      },
+      {
+        "id": "important",
+        "icon": "AlertTriangle",
+        "name": "Important"
+      },
+      {
+        "id": "general",
+        "icon": "Info",
+        "name": "General"
+      },
+      {
+        "id": "success",
+        "icon": "CheckCircle",
+        "name": "Success"
+      }
+    ],
+    "description": "Stay updated with the latest announcements, results, and important information from the Josephite Math Club."
+  },
   "events": {
     "title": "BEYOND NUMBERS",
     "events": [
@@ -1331,303 +1383,21 @@
     ],
     "description": "Join us for a series of challenging competitions, insightful workshops, and engaging seminars designed to push your mathematical boundaries."
   },
-  "contact": {
-    "email": "N/A",
-    "phone": "N/A",
-    "socials": {
-      "facebook": "https://www.facebook.com/2015JMC/",
-      "instagram": "https://www.instagram.com/jmc_.official/"
-    },
-    "location": "St. Joseph Higher Secondary School"
+  "members_list": {
+    "title": "OUR MEMBERS",
+    "members": [],
+    "subtitle": "COMMUNITY",
+    "description": "The heartbeat of Josephite Math Club - our diverse and passionate community of mathematicians."
   },
-  "gallery": {
-    "images": [
-      "/images/gallery/gallery1.jpg",
-      "/images/gallery/gallery2.jpg",
-      "/images/gallery/gallery3.jpg",
-      "/images/gallery/gallery4.jpg",
-      "/images/gallery/gallery5.jpg",
-      "/images/gallery/gallery6.jpg"
-    ]
+  "registration": {
+    "fee": "N/A",
+    "bkashNumber": "N/A",
+    "declaration": "I am willing to join the Josephite Math Club, I promise to perform my duties with honesty, respect the club values, and work for its development",
+    "instructions": [],
+    "cashInstructions": "Please pay your registration fee to the club treasurer.",
+    "registrationOpen": false,
+    "registrationClosedMessage": "Registration for the current intra-events is currently closed. Please stay tuned for future updates."
   },
-  "notices": {
-    "title": "NOTICE BOARD",
-    "notices": [
-      {
-        "id": "notice-1779374210960",
-        "tag": "success",
-        "date": "5/21/2026",
-        "link": "",
-        "type": "General",
-        "title": "JMC Web launch",
-        "pdfUrl": "",
-        "content": "Thanks to all of your support, I, Samin Tausif was successfully able to launch the website into production. The website still undergoing various stages of debugging and development. If you find any issue, click \"Report Issue\" from the bottom right corner to reach out to us. Your cooperation is highly valuable and expected. Thank you very much",
-        "imageUrl": "https://ikciatrploqznijspyuk.supabase.co/storage/v1/object/public/images/1779374367176-olpep7sfv.jpeg",
-        "isPinned": false,
-        "linkText": ""
-      }
-    ],
-    "subtitle": "ANNOUNCEMENTS",
-    "categories": [
-      {
-        "id": "all",
-        "icon": "Bell",
-        "name": "All"
-      },
-      {
-        "id": "important",
-        "icon": "AlertTriangle",
-        "name": "Important"
-      },
-      {
-        "id": "general",
-        "icon": "Info",
-        "name": "General"
-      },
-      {
-        "id": "success",
-        "icon": "CheckCircle",
-        "name": "Success"
-      }
-    ],
-    "description": "Stay updated with the latest announcements, results, and important information from the Josephite Math Club."
-  },
-  "articles": [
-    {
-      "id": "article-1785164775893",
-      "date": "27 Jul 2026",
-      "slug": "new-math-article",
-      "title": "Worm Hole",
-      "author": "Tawhid Bin Omar",
-      "pdfUrl": "https://ikciatrploqznijspyuk.supabase.co/storage/v1/object/public/images/1785164982187-tiirrx6sx.pdf",
-      "content": "",
-      "excerpt": "Among the most astonishing hypothetical shortcuts in astrophysics, Wormholes challenge our very understanding of cosmic distance. What first appears as an impassable barrier of millions of light-years across the dark void becomes an immediate gateway when spacetime is folded upon itself.",
-      "category": "Mathematics",
-      "imageUrl": "",
-      "published": true
-    },
-    {
-      "id": "article-1785164642677",
-      "date": "27 Jul 2026",
-      "slug": "new-math-article",
-      "title": "Functional Equations",
-      "author": "Tawhid Bin Omar",
-      "pdfUrl": "https://ikciatrploqznijspyuk.supabase.co/storage/v1/object/public/images/1785164728533-ik4xhybcv.pdf",
-      "content": "",
-      "excerpt": "Among the most profoundly foundational enigmas in algebra, **Functional Equations** invert our traditional understanding of variables to question the very nature of mathematical mappings. What first appears as a chaotic puzzle of unconstrained conditions and elusive expressions becomes beautifully orderly when subjected to the laws of symmetry, injectivity, and substitution. Instead of searching for a hidden number, we hunt for an entire steadfast mathematical identity.",
-      "category": "Mathematics",
-      "imageUrl": "",
-      "published": true
-    },
-    {
-      "id": "article-1785164551708",
-      "date": "27 Jul 2026",
-      "slug": "new-math-article",
-      "title": "Permutations, Combinations and the Art of Counting",
-      "author": "Tawhid Bin Omar",
-      "pdfUrl": "https://ikciatrploqznijspyuk.supabase.co/storage/v1/object/public/images/1785164631439-pwyizwfil.pdf",
-      "content": "",
-      "excerpt": "Among the most astonishing hypothetical shortcuts in astrophysics, Wormholes challenge our very understanding of cosmic distance. What first appears as an impassable barrier of millions of light-years across the dark void becomes an immediate gateway when spacetime is folded upon itself.",
-      "category": "Mathematics",
-      "imageUrl": "",
-      "published": true
-    },
-    {
-      "id": "article-1785164425494",
-      "date": "27 Jul 2026",
-      "slug": "new-math-article",
-      "title": "Tensors.....",
-      "author": "Tawhid Bin Omar",
-      "pdfUrl": "https://ikciatrploqznijspyuk.supabase.co/storage/v1/object/public/images/1785164544162-q1fk2aen0.pdf",
-      "content": "",
-      "excerpt": "Among the most expressive languages in modern mathematics and physics, Tensors reveal the profound geometric truths that remain completely unchanged by our choice of perspective. What first appears as a terrifying maze of multi-dimensional arrays, upper and lower indices, and complex coordinate shifts becomes beautifully simple when viewed as a singular, invariant entity slicing through space and time.",
-      "category": "Mathematics",
-      "imageUrl": "",
-      "published": true
-    },
-    {
-      "id": "article-1785164316948",
-      "date": "27 Jul 2026",
-      "slug": "new-math-article",
-      "title": "Legendre Polynomials and Generating Funstions",
-      "author": "Tawhid Bin Omar",
-      "pdfUrl": "https://ikciatrploqznijspyuk.supabase.co/storage/v1/object/public/images/1785164418753-w9307ilvb.pdf",
-      "content": "",
-      "excerpt": "Among the most elegant constructs in mathematical physics, Legendre Polynomials and Generating Functions reveal the underlying symmetry of physical space. What first appears as a chaotic web of complex differential equations and intractable geometric potentials collapses into beautifully ordered orthogonal components when viewed through the lens of a single, masterful generating function. From the gravitational pull of planets to the quantum mechanics of the atom, these steadfast functions transform the geometry of the universe into an orchestra of perfect harmony.",
-      "category": "Mathematics",
-      "imageUrl": "",
-      "published": true
-    },
-    {
-      "id": "article-1785164200667",
-      "date": "27 Jul 2026",
-      "slug": "new-math-article",
-      "title": "Analytic Continuation and the Limits of Generalization",
-      "author": "Tawhid Bin Omar",
-      "pdfUrl": "https://ikciatrploqznijspyuk.supabase.co/storage/v1/object/public/images/1785164309039-4xufv6a3r.pdf",
-      "content": "",
-      "excerpt": "Among the most revolutionary intellectual achievements in human history, General Relativity unveils the elegant tapestry binding space, time, and gravity. What first appears as a chaotic and mysterious cosmic force acting across empty voids is beautifully unmasked as the simple, dynamic geometry of the universe itself.",
-      "category": "Mathematics",
-      "imageUrl": "",
-      "published": true
-    },
-    {
-      "id": "article-1785164122541",
-      "date": "27 Jul 2026",
-      "slug": "new-math-article",
-      "title": "General Relativity and Space Time",
-      "author": "Tawhid Bin Omar",
-      "pdfUrl": "https://ikciatrploqznijspyuk.supabase.co/storage/v1/object/public/images/1785164191695-d3c1d8cwy.pdf",
-      "content": "",
-      "excerpt": "Among the most revolutionary intellectual achievements in human history, General Relativity unveils the elegant tapestry binding space, time, and gravity. What first appears as a chaotic and mysterious cosmic force acting across empty voids is beautifully unmasked as the simple, dynamic geometry of the universe itself. the article...",
-      "category": "Mathematics",
-      "imageUrl": "",
-      "published": true
-    },
-    {
-      "id": "article-1785164050858",
-      "date": "27 Jul 2026",
-      "slug": "new-math-article",
-      "title": "Jacobian Matrix",
-      "author": "Tawhid Bin Omar",
-      "pdfUrl": "https://ikciatrploqznijspyuk.supabase.co/storage/v1/object/public/images/1785164115722-mmu2teew5.pdf",
-      "content": "",
-      "excerpt": "Among the most transformative concepts in multivariable calculus, the Jacobian Matrix reveals the hidden linearity within local chaos. What first appears as a complex, non-linear web of warping coordinates and shifting multidimensional spaces becomes beautifully simple when zoomed in closely along these steadfast local derivatives. It serves as the ultimate mathematical magnifying glass, capturing the precise degree of stretching, rotating, and scaling that occurs when we distort one coordinate system into another.",
-      "category": "Mathematics",
-      "imageUrl": "",
-      "published": true
-    },
-    {
-      "id": "article-1785163942610",
-      "date": "27 Jul 2026",
-      "slug": "new-math-article",
-      "title": "Graph Theory",
-      "author": "Tawhid Bin Omar",
-      "pdfUrl": "https://ikciatrploqznijspyuk.supabase.co/storage/v1/object/public/images/1785164038109-z0f8sagj3.pdf",
-      "content": "",
-      "excerpt": "Among the most profoundly interconnected fields of mathematics, Graph Theory maps the invisible architecture of relationships. What first appears as a chaotic web of tangled networks, sprawling data points, and isolated entities becomes beautifully simple when stripped down to its core elements: vertices and edges. It reveals that whether we are tracing the neural pathways of the brain, the vast infrastructure of the internet, or the delicate social bonds of humanity, the underlying geometry of connection obeys a steadfast, universal order.",
-      "category": "Mathematics",
-      "imageUrl": "",
-      "published": true
-    },
-    {
-      "id": "article-1785163841720",
-      "date": "27 Jul 2026",
-      "slug": "new-math-article",
-      "title": "Wrap Drive and Faster than Light Travel",
-      "author": "Tawhid Bin Omar",
-      "pdfUrl": "https://ikciatrploqznijspyuk.supabase.co/storage/v1/object/public/images/1785163852040-82sfn8m04.pdf",
-      "content": "",
-      "excerpt": "Among the most breathtaking frontiers of theoretical physics is the Warp Drive, anchored by the mathematics of the Alcubierre metric. What first appears as a violation of nature’s absolute speed limit becomes a masterful dance with gravity when viewed through the lens of general relativity. Rather than moving through space faster than light, a warp drive dynamically compresses the fabric of spacetime ahead of a vessel while expanding it behind, allowing humanity to outrun photons by manipulating the geometry of the universe itself.",
-      "category": "Mathematics",
-      "imageUrl": "",
-      "published": true
-    },
-    {
-      "id": "article-1779776879938",
-      "date": "26 May 2026",
-      "slug": "new-math-article",
-      "title": "Eigen Vectors",
-      "author": "Tawhid BIn Omar",
-      "pdfUrl": "https://ikciatrploqznijspyuk.supabase.co/storage/v1/object/public/images/1779776935673-fmmpxv35n.pdf",
-      "content": "",
-      "excerpt": "Eigenvalues and eigenvectors are fundamental concepts in linear algebra used to understand complex matrix transformations. An eigenvector is a special, non-zero vector that does not change direction when a linear transformation is applied. An eigenvalue is simply the scalar factor by which that eigenvector is scaled or stretched.",
-      "category": "Mathematics",
-      "imageUrl": "",
-      "published": true
-    },
-    {
-      "id": "article-1779374593078",
-      "date": "21 May 2026",
-      "slug": "new-math-article",
-      "title": "Power of a Point & Radical Axis",
-      "author": "Tawhid Bin Omar",
-      "pdfUrl": "https://ikciatrploqznijspyuk.supabase.co/storage/v1/object/public/images/1779374657663-d8kh30kqv.pdf",
-      "content": "",
-      "excerpt": "The Power of a Point is a value measuring the relative distance of a point to a circle. The Radical Axis is the straight line containing all points that have the exact same power with respect to two separate circles.",
-      "category": "Mathematics",
-      "imageUrl": "",
-      "published": true
-    },
-    {
-      "id": "article-1779374532573",
-      "date": "21 May 2026",
-      "slug": "new-math-article",
-      "title": "Applications of Category Theory in Computer Science and Physics",
-      "author": "Tawhid Bin Omar",
-      "pdfUrl": "https://ikciatrploqznijspyuk.supabase.co/storage/v1/object/public/images/1779374588590-8ji8r49f3.pdf",
-      "content": "",
-      "excerpt": "Category theory unifies various fields of mathematics by stripping away complex details to reveal underlying structural patterns. The quote perfectly summarizes its power: by standardizing broad concepts, it reframes seemingly difficult, disconnected theorems as intuitive, mechanical consequences",
-      "category": "Mathematics",
-      "imageUrl": "",
-      "published": true
-    },
-    {
-      "id": "article-1779374009630",
-      "date": "21 May 2026",
-      "slug": "new-math-article",
-      "title": "The Gamma Function",
-      "author": "SHARAN HAQUE SAKIN",
-      "pdfUrl": "https://ikciatrploqznijspyuk.supabase.co/storage/v1/object/public/images/1779374065103-n5pne4qm0.pdf",
-      "content": "",
-      "excerpt": "The Gamma Function (denoted by \\(\\Gamma(z)\\)) is a fundamental mathematical tool that extends the concept of the factorial to all real and complex numbers, except for zero and negative integers. For positive integers, it is essentially the factorial of the number minus one.",
-      "category": "Mathematics",
-      "imageUrl": "",
-      "published": true
-    },
-    {
-      "id": "article-1779373940551",
-      "date": "21 May 2026",
-      "slug": "new-math-article",
-      "title": "Statistical Physics-Where Worlds Collide",
-      "author": "Shuvro Anindya Bapari",
-      "pdfUrl": "https://ikciatrploqznijspyuk.supabase.co/storage/v1/object/public/images/1779373989209-0rgmppzmf.pdf",
-      "content": "",
-      "excerpt": "Statistical physics is the bridge between the microscopic world of atoms and the macroscopic world of observable phenomena. By applying probability and statistics, it explains how the collective, randomized behavior of billions of particles directly gives rise to everyday thermodynamic properties like temperature, pressure, and heat.",
-      "category": "Mathematics",
-      "imageUrl": "",
-      "published": true
-    },
-    {
-      "id": "article-1779373890660",
-      "date": "21 May 2026",
-      "slug": "new-math-article",
-      "title": "Projective Geometry",
-      "author": "Tawhid Bin Omar",
-      "pdfUrl": "https://ikciatrploqznijspyuk.supabase.co/storage/v1/object/public/images/1779373927520-7zs6nk3mq.pdf",
-      "content": "",
-      "excerpt": "Projective geometry is a branch of mathematics that studies geometric properties which remain unchanged (invariant) under projections, such as perspective or shadows. Unlike Euclidean geometry, it discards measurements like lengths and angles, focusing instead on concepts like collinearity (straight lines) and the intersection of lines.",
-      "category": "Mathematics",
-      "imageUrl": "",
-      "published": true
-    },
-    {
-      "id": "article-1779373719243",
-      "date": "21 May 2026",
-      "slug": "new-math-article",
-      "title": "Circles in Coordinate Geometry",
-      "author": "Tawhid Bin Omar",
-      "pdfUrl": "https://ikciatrploqznijspyuk.supabase.co/storage/v1/object/public/images/1779373803384-otk21kwhz.pdf",
-      "content": "",
-      "excerpt": "A circle in the coordinate system is the set of all points equidistant from a fixed center point, forming a perfectly round shape. Its size and position are defined by its radius and the coordinates of its center.",
-      "category": "Mathematics",
-      "imageUrl": "",
-      "published": true
-    },
-    {
-      "id": "article-1778853653072",
-      "date": "15 May 2026",
-      "slug": "new-math-article",
-      "title": "Straight Lines: Basic to Best",
-      "author": "Sudipto Sen",
-      "pdfUrl": "https://ikciatrploqznijspyuk.supabase.co/storage/v1/object/public/images/1778853710297-xic85pvpc.pdf",
-      "content": "",
-      "excerpt": "A structured and enriched theory document on Straight Lines,\nspanning foundational coordinate geometry, engineering-level\nproblem solving, Olympiad extensions, transformations,\nprojective geometry, 3D lines, and applications in physics.",
-      "category": "Mathematics",
-      "imageUrl": "",
-      "published": true
-    }
-  ],
   "handouts": {
     "title": "Session Handouts",
     "sessions": [
@@ -2936,9 +2706,16 @@
       "description": "Textbook chapter covering formal statement, proof by characteristic functions, and applications of PIE."
     }
   ],
-  "lastUpdated": "2026-08-01T14:25:19.007Z",
-  "_instruction": "Update 'lastUpdated' whenever you manually edit this file to ensure changes take precedence over the admin panel.",
-  "gallery_page": {
+  "contact": {
+    "email": "N/A",
+    "phone": "N/A",
+    "socials": {
+      "facebook": "https://www.facebook.com/2015JMC/",
+      "instagram": "https://www.instagram.com/jmc_.official/"
+    },
+    "location": "St. Joseph Higher Secondary School"
+  },
+  "gallery": {
     "images": [
       "/images/gallery/gallery1.jpg",
       "/images/gallery/gallery2.jpg",
@@ -2948,19 +2725,242 @@
       "/images/gallery/gallery6.jpg"
     ]
   },
-  "members_list": {
-    "title": "OUR MEMBERS",
-    "members": [],
-    "subtitle": "COMMUNITY",
-    "description": "The heartbeat of Josephite Math Club - our diverse and passionate community of mathematicians."
-  },
-  "registration": {
-    "fee": "N/A",
-    "bkashNumber": "N/A",
-    "declaration": "I am willing to join the Josephite Math Club, I promise to perform my duties with honesty, respect the club values, and work for its development",
-    "instructions": [],
-    "cashInstructions": "Please pay your registration fee to the club treasurer.",
-    "registrationOpen": false,
-    "registrationClosedMessage": "Registration for the current intra-events is currently closed. Please stay tuned for future updates."
-  }
+  "articles": [
+    {
+      "id": "article-1785164775893",
+      "date": "27 Jul 2026",
+      "slug": "new-math-article",
+      "title": "Worm Hole",
+      "author": "Tawhid Bin Omar",
+      "pdfUrl": "https://ikciatrploqznijspyuk.supabase.co/storage/v1/object/public/images/1785164982187-tiirrx6sx.pdf",
+      "content": "",
+      "excerpt": "Among the most astonishing hypothetical shortcuts in astrophysics, Wormholes challenge our very understanding of cosmic distance. What first appears as an impassable barrier of millions of light-years across the dark void becomes an immediate gateway when spacetime is folded upon itself.",
+      "category": "Mathematics",
+      "imageUrl": "",
+      "published": true
+    },
+    {
+      "id": "article-1785164642677",
+      "date": "27 Jul 2026",
+      "slug": "new-math-article",
+      "title": "Functional Equations",
+      "author": "Tawhid Bin Omar",
+      "pdfUrl": "https://ikciatrploqznijspyuk.supabase.co/storage/v1/object/public/images/1785164728533-ik4xhybcv.pdf",
+      "content": "",
+      "excerpt": "Among the most profoundly foundational enigmas in algebra, **Functional Equations** invert our traditional understanding of variables to question the very nature of mathematical mappings. What first appears as a chaotic puzzle of unconstrained conditions and elusive expressions becomes beautifully orderly when subjected to the laws of symmetry, injectivity, and substitution. Instead of searching for a hidden number, we hunt for an entire steadfast mathematical identity.",
+      "category": "Mathematics",
+      "imageUrl": "",
+      "published": true
+    },
+    {
+      "id": "article-1785164551708",
+      "date": "27 Jul 2026",
+      "slug": "new-math-article",
+      "title": "Permutations, Combinations and the Art of Counting",
+      "author": "Tawhid Bin Omar",
+      "pdfUrl": "https://ikciatrploqznijspyuk.supabase.co/storage/v1/object/public/images/1785164631439-pwyizwfil.pdf",
+      "content": "",
+      "excerpt": "Among the most astonishing hypothetical shortcuts in astrophysics, Wormholes challenge our very understanding of cosmic distance. What first appears as an impassable barrier of millions of light-years across the dark void becomes an immediate gateway when spacetime is folded upon itself.",
+      "category": "Mathematics",
+      "imageUrl": "",
+      "published": true
+    },
+    {
+      "id": "article-1785164425494",
+      "date": "27 Jul 2026",
+      "slug": "new-math-article",
+      "title": "Tensors.....",
+      "author": "Tawhid Bin Omar",
+      "pdfUrl": "https://ikciatrploqznijspyuk.supabase.co/storage/v1/object/public/images/1785164544162-q1fk2aen0.pdf",
+      "content": "",
+      "excerpt": "Among the most expressive languages in modern mathematics and physics, Tensors reveal the profound geometric truths that remain completely unchanged by our choice of perspective. What first appears as a terrifying maze of multi-dimensional arrays, upper and lower indices, and complex coordinate shifts becomes beautifully simple when viewed as a singular, invariant entity slicing through space and time.",
+      "category": "Mathematics",
+      "imageUrl": "",
+      "published": true
+    },
+    {
+      "id": "article-1785164316948",
+      "date": "27 Jul 2026",
+      "slug": "new-math-article",
+      "title": "Legendre Polynomials and Generating Funstions",
+      "author": "Tawhid Bin Omar",
+      "pdfUrl": "https://ikciatrploqznijspyuk.supabase.co/storage/v1/object/public/images/1785164418753-w9307ilvb.pdf",
+      "content": "",
+      "excerpt": "Among the most elegant constructs in mathematical physics, Legendre Polynomials and Generating Functions reveal the underlying symmetry of physical space. What first appears as a chaotic web of complex differential equations and intractable geometric potentials collapses into beautifully ordered orthogonal components when viewed through the lens of a single, masterful generating function. From the gravitational pull of planets to the quantum mechanics of the atom, these steadfast functions transform the geometry of the universe into an orchestra of perfect harmony.",
+      "category": "Mathematics",
+      "imageUrl": "",
+      "published": true
+    },
+    {
+      "id": "article-1785164200667",
+      "date": "27 Jul 2026",
+      "slug": "new-math-article",
+      "title": "Analytic Continuation and the Limits of Generalization",
+      "author": "Tawhid Bin Omar",
+      "pdfUrl": "https://ikciatrploqznijspyuk.supabase.co/storage/v1/object/public/images/1785164309039-4xufv6a3r.pdf",
+      "content": "",
+      "excerpt": "Among the most revolutionary intellectual achievements in human history, General Relativity unveils the elegant tapestry binding space, time, and gravity. What first appears as a chaotic and mysterious cosmic force acting across empty voids is beautifully unmasked as the simple, dynamic geometry of the universe itself.",
+      "category": "Mathematics",
+      "imageUrl": "",
+      "published": true
+    },
+    {
+      "id": "article-1785164122541",
+      "date": "27 Jul 2026",
+      "slug": "new-math-article",
+      "title": "General Relativity and Space Time",
+      "author": "Tawhid Bin Omar",
+      "pdfUrl": "https://ikciatrploqznijspyuk.supabase.co/storage/v1/object/public/images/1785164191695-d3c1d8cwy.pdf",
+      "content": "",
+      "excerpt": "Among the most revolutionary intellectual achievements in human history, General Relativity unveils the elegant tapestry binding space, time, and gravity. What first appears as a chaotic and mysterious cosmic force acting across empty voids is beautifully unmasked as the simple, dynamic geometry of the universe itself. the article...",
+      "category": "Mathematics",
+      "imageUrl": "",
+      "published": true
+    },
+    {
+      "id": "article-1785164050858",
+      "date": "27 Jul 2026",
+      "slug": "new-math-article",
+      "title": "Jacobian Matrix",
+      "author": "Tawhid Bin Omar",
+      "pdfUrl": "https://ikciatrploqznijspyuk.supabase.co/storage/v1/object/public/images/1785164115722-mmu2teew5.pdf",
+      "content": "",
+      "excerpt": "Among the most transformative concepts in multivariable calculus, the Jacobian Matrix reveals the hidden linearity within local chaos. What first appears as a complex, non-linear web of warping coordinates and shifting multidimensional spaces becomes beautifully simple when zoomed in closely along these steadfast local derivatives. It serves as the ultimate mathematical magnifying glass, capturing the precise degree of stretching, rotating, and scaling that occurs when we distort one coordinate system into another.",
+      "category": "Mathematics",
+      "imageUrl": "",
+      "published": true
+    },
+    {
+      "id": "article-1785163942610",
+      "date": "27 Jul 2026",
+      "slug": "new-math-article",
+      "title": "Graph Theory",
+      "author": "Tawhid Bin Omar",
+      "pdfUrl": "https://ikciatrploqznijspyuk.supabase.co/storage/v1/object/public/images/1785164038109-z0f8sagj3.pdf",
+      "content": "",
+      "excerpt": "Among the most profoundly interconnected fields of mathematics, Graph Theory maps the invisible architecture of relationships. What first appears as a chaotic web of tangled networks, sprawling data points, and isolated entities becomes beautifully simple when stripped down to its core elements: vertices and edges. It reveals that whether we are tracing the neural pathways of the brain, the vast infrastructure of the internet, or the delicate social bonds of humanity, the underlying geometry of connection obeys a steadfast, universal order.",
+      "category": "Mathematics",
+      "imageUrl": "",
+      "published": true
+    },
+    {
+      "id": "article-1785163841720",
+      "date": "27 Jul 2026",
+      "slug": "new-math-article",
+      "title": "Wrap Drive and Faster than Light Travel",
+      "author": "Tawhid Bin Omar",
+      "pdfUrl": "https://ikciatrploqznijspyuk.supabase.co/storage/v1/object/public/images/1785163852040-82sfn8m04.pdf",
+      "content": "",
+      "excerpt": "Among the most breathtaking frontiers of theoretical physics is the Warp Drive, anchored by the mathematics of the Alcubierre metric. What first appears as a violation of nature’s absolute speed limit becomes a masterful dance with gravity when viewed through the lens of general relativity. Rather than moving through space faster than light, a warp drive dynamically compresses the fabric of spacetime ahead of a vessel while expanding it behind, allowing humanity to outrun photons by manipulating the geometry of the universe itself.",
+      "category": "Mathematics",
+      "imageUrl": "",
+      "published": true
+    },
+    {
+      "id": "article-1779776879938",
+      "date": "26 May 2026",
+      "slug": "new-math-article",
+      "title": "Eigen Vectors",
+      "author": "Tawhid BIn Omar",
+      "pdfUrl": "https://ikciatrploqznijspyuk.supabase.co/storage/v1/object/public/images/1779776935673-fmmpxv35n.pdf",
+      "content": "",
+      "excerpt": "Eigenvalues and eigenvectors are fundamental concepts in linear algebra used to understand complex matrix transformations. An eigenvector is a special, non-zero vector that does not change direction when a linear transformation is applied. An eigenvalue is simply the scalar factor by which that eigenvector is scaled or stretched.",
+      "category": "Mathematics",
+      "imageUrl": "",
+      "published": true
+    },
+    {
+      "id": "article-1779374593078",
+      "date": "21 May 2026",
+      "slug": "new-math-article",
+      "title": "Power of a Point & Radical Axis",
+      "author": "Tawhid Bin Omar",
+      "pdfUrl": "https://ikciatrploqznijspyuk.supabase.co/storage/v1/object/public/images/1779374657663-d8kh30kqv.pdf",
+      "content": "",
+      "excerpt": "The Power of a Point is a value measuring the relative distance of a point to a circle. The Radical Axis is the straight line containing all points that have the exact same power with respect to two separate circles.",
+      "category": "Mathematics",
+      "imageUrl": "",
+      "published": true
+    },
+    {
+      "id": "article-1779374532573",
+      "date": "21 May 2026",
+      "slug": "new-math-article",
+      "title": "Applications of Category Theory in Computer Science and Physics",
+      "author": "Tawhid Bin Omar",
+      "pdfUrl": "https://ikciatrploqznijspyuk.supabase.co/storage/v1/object/public/images/1779374588590-8ji8r49f3.pdf",
+      "content": "",
+      "excerpt": "Category theory unifies various fields of mathematics by stripping away complex details to reveal underlying structural patterns. The quote perfectly summarizes its power: by standardizing broad concepts, it reframes seemingly difficult, disconnected theorems as intuitive, mechanical consequences",
+      "category": "Mathematics",
+      "imageUrl": "",
+      "published": true
+    },
+    {
+      "id": "article-1779374009630",
+      "date": "21 May 2026",
+      "slug": "new-math-article",
+      "title": "The Gamma Function",
+      "author": "SHARAN HAQUE SAKIN",
+      "pdfUrl": "https://ikciatrploqznijspyuk.supabase.co/storage/v1/object/public/images/1779374065103-n5pne4qm0.pdf",
+      "content": "",
+      "excerpt": "The Gamma Function (denoted by \\(\\Gamma(z)\\)) is a fundamental mathematical tool that extends the concept of the factorial to all real and complex numbers, except for zero and negative integers. For positive integers, it is essentially the factorial of the number minus one.",
+      "category": "Mathematics",
+      "imageUrl": "",
+      "published": true
+    },
+    {
+      "id": "article-1779373940551",
+      "date": "21 May 2026",
+      "slug": "new-math-article",
+      "title": "Statistical Physics-Where Worlds Collide",
+      "author": "Shuvro Anindya Bapari",
+      "pdfUrl": "https://ikciatrploqznijspyuk.supabase.co/storage/v1/object/public/images/1779373989209-0rgmppzmf.pdf",
+      "content": "",
+      "excerpt": "Statistical physics is the bridge between the microscopic world of atoms and the macroscopic world of observable phenomena. By applying probability and statistics, it explains how the collective, randomized behavior of billions of particles directly gives rise to everyday thermodynamic properties like temperature, pressure, and heat.",
+      "category": "Mathematics",
+      "imageUrl": "",
+      "published": true
+    },
+    {
+      "id": "article-1779373890660",
+      "date": "21 May 2026",
+      "slug": "new-math-article",
+      "title": "Projective Geometry",
+      "author": "Tawhid Bin Omar",
+      "pdfUrl": "https://ikciatrploqznijspyuk.supabase.co/storage/v1/object/public/images/1779373927520-7zs6nk3mq.pdf",
+      "content": "",
+      "excerpt": "Projective geometry is a branch of mathematics that studies geometric properties which remain unchanged (invariant) under projections, such as perspective or shadows. Unlike Euclidean geometry, it discards measurements like lengths and angles, focusing instead on concepts like collinearity (straight lines) and the intersection of lines.",
+      "category": "Mathematics",
+      "imageUrl": "",
+      "published": true
+    },
+    {
+      "id": "article-1779373719243",
+      "date": "21 May 2026",
+      "slug": "new-math-article",
+      "title": "Circles in Coordinate Geometry",
+      "author": "Tawhid Bin Omar",
+      "pdfUrl": "https://ikciatrploqznijspyuk.supabase.co/storage/v1/object/public/images/1779373803384-otk21kwhz.pdf",
+      "content": "",
+      "excerpt": "A circle in the coordinate system is the set of all points equidistant from a fixed center point, forming a perfectly round shape. Its size and position are defined by its radius and the coordinates of its center.",
+      "category": "Mathematics",
+      "imageUrl": "",
+      "published": true
+    },
+    {
+      "id": "article-1778853653072",
+      "date": "15 May 2026",
+      "slug": "new-math-article",
+      "title": "Straight Lines: Basic to Best",
+      "author": "Sudipto Sen",
+      "pdfUrl": "https://ikciatrploqznijspyuk.supabase.co/storage/v1/object/public/images/1778853710297-xic85pvpc.pdf",
+      "content": "",
+      "excerpt": "A structured and enriched theory document on Straight Lines,\nspanning foundational coordinate geometry, engineering-level\nproblem solving, Olympiad extensions, transformations,\nprojective geometry, 3D lines, and applications in physics.",
+      "category": "Mathematics",
+      "imageUrl": "",
+      "published": true
+    }
+  ],
+  "lastUpdated": "2026-08-01T15:07:20.322Z",
+  "_instruction": "Update 'lastUpdated' whenever you manually edit this file to ensure changes take precedence over the admin panel."
 }

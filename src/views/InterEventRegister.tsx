@@ -49,8 +49,62 @@ import {
   Film,
   Rocket,
   ExternalLink,
-  UserCheck
+  UserCheck,
+  ChevronDown,
+  ChevronUp,
+  Upload,
+  Plus
 } from 'lucide-react';
+
+const DEFAULT_SEGMENT_BANNERS: Record<string, string> = {
+  "Math Olympiad (Find-based)": "https://images.unsplash.com/photo-1509228468518-180dd4864904?auto=format&fit=crop&w=1200&q=80",
+  "Math Olympiad (Proof-based)": "https://images.unsplash.com/photo-1635070041078-e363dbe005cb?auto=format&fit=crop&w=1200&q=80",
+  "IQ Test": "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=1200&q=80",
+  "Human Calculator": "https://images.unsplash.com/photo-1596495578065-6e0763fa1178?auto=format&fit=crop&w=1200&q=80",
+  "Genesis": "https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=1200&q=80",
+  "Geometry Dash": "https://images.unsplash.com/photo-1509228627152-72ae946807b1?auto=format&fit=crop&w=1200&q=80",
+  "Probability Pressure": "https://images.unsplash.com/photo-1518609878373-06d740f60d8b?auto=format&fit=crop&w=1200&q=80",
+  "Murder Mystery": "https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?auto=format&fit=crop&w=1200&q=80",
+  "Crack the Code": "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=format&fit=crop&w=1200&q=80",
+  "Complex Calamity": "https://images.unsplash.com/photo-1509228468518-180dd4864904?auto=format&fit=crop&w=1200&q=80",
+  "Sudoku": "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=1200&q=80",
+  "Rubik’s Cube Showdown": "https://images.unsplash.com/photo-1563089145-599997674d42?auto=format&fit=crop&w=1200&q=80",
+  "5 min Professor": "https://images.unsplash.com/photo-1524178232363-1fb2b075b655?auto=format&fit=crop&w=1200&q=80",
+  "Calculus Bee": "https://images.unsplash.com/photo-1635070041078-e363dbe005cb?auto=format&fit=crop&w=1200&q=80",
+  "Escape Room": "https://images.unsplash.com/photo-1519074069444-1ba4eff56022?auto=format&fit=crop&w=1200&q=80",
+  "Combi Verse": "https://images.unsplash.com/photo-1509228627152-72ae946807b1?auto=format&fit=crop&w=1200&q=80",
+  "Math Memes": "https://images.unsplash.com/photo-1531403009284-440f080d1e12?auto=format&fit=crop&w=1200&q=80",
+  "Math Article": "https://images.unsplash.com/photo-1455390582262-044cdead277a?auto=format&fit=crop&w=1200&q=80",
+  "Math Vision": "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=1200&q=80",
+  "Math Drawing": "https://images.unsplash.com/photo-1513364776144-60967b0f800f?auto=format&fit=crop&w=1200&q=80",
+  "Truss": "https://images.unsplash.com/photo-1541888946425-d0fbb186a5b3?auto=format&fit=crop&w=1200&q=80",
+  "Wall Magazine Display": "https://images.unsplash.com/photo-1526721940322-10fb6e3ae94a?auto=format&fit=crop&w=1200&q=80"
+};
+
+const DEFAULT_SEGMENT_DESCRIPTIONS: Record<string, string> = {
+  "Math Olympiad (Find-based)": "Test your numeric intuition and mathematical pattern recognition under time constraints. Find exact numerical values without writing long proofs.",
+  "Math Olympiad (Proof-based)": "Demonstrate rigorous logical deduction and mathematical elegance by constructing full formal proofs across geometry, number theory, and algebra.",
+  "IQ Test": "A rapid-fire series of spatial, visual, and analytical logic puzzles designed to evaluate fluid intelligence and cognitive processing speed.",
+  "Human Calculator": "Battle time and mental fatigue in rapid mental math playoffs! Calculate complex multiplications, square roots, and percentages without scratch paper.",
+  "Genesis": "Explore the origin stories of fundamental mathematical constants, geometric theorems, and historical mathematical breakthroughs.",
+  "Geometry Dash": "Navigate spatial reasoning, coordinate plane geometry, circle theorems, and 3D vector geometry problems in a high-octane quiz format.",
+  "Probability Pressure": "Calculate odds, permutations, combinations, and conditional probabilities under intense countdown timer pressure.",
+  "Murder Mystery": "Channel your inner mathematical detective! Use cryptanalysis, logic grids, and probability elimination to solve a fictional crime scene case.",
+  "Crack the Code": "Decrypt complex ciphers, frequency analysis substitution puzzles, binary strings, and modular arithmetic cryptography.",
+  "Complex Calamity": "A specialized solo challenge tackling imaginary axes, Euler's formula, polar coordinates, and complex plane transformations.",
+  "Sudoku": "Compete in speed-solving custom high-difficulty Sudoku grids, testing spatial placement and structural constraint solving.",
+  "Rubik’s Cube Showdown": "Speedcubing tournament for 3x3, 4x4, and custom puzzle cubes. Speed, finger tricks, and algorithmic muscle memory win the day.",
+  "5 min Professor": "Prepare and deliver a 5-minute concise presentation explaining an advanced or abstract mathematical topic to a panel of judges.",
+  "Calculus Bee": "Live playoff competition calculating derivatives, definite integrals, differential equations, and limits on a whiteboard.",
+  "Escape Room": "Team physical & mental escape room challenge. Solve locked chests, hidden mathematical ciphers, and physical puzzle locks to escape within 30 minutes.",
+  "Combi Verse": "Deep dive into graph theory networks, pigeonhole principle, recurrence relations, and combinatorial game strategy.",
+  "Math Memes": "Unleash your humor and witty mathematical intellect! Create hilarious, high-concept memes blending popular culture with mathematical theory.",
+  "Math Article": "Write and submit an insightful research or expository paper highlighting a fascinating mathematical application or historical theorem.",
+  "Math Vision": "Digital graphic design competition. Create stunning digital artwork illustrating mathematical fractals, golden spirals, or geometric art.",
+  "Math Drawing": "Hand-drawn artistic competition. Sketch pristine artwork illustrating mathematical concepts, tessellations, or non-Euclidean geometry.",
+  "Truss": "Engineering team competition! Build high-load structurally sound physical bridge trusses using popsicles and glue to withstand maximum mechanical weights.",
+  "Wall Magazine Display": "Design an informative, visually captivating physical wall poster/magazine showcasing mathematical discoveries, history, or modern research."
+};
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../context/AuthContext';
@@ -94,19 +148,39 @@ export default function InterEventRegister() {
   const [paymentDesc, setPaymentDesc] = useState("Please pay BDT 100 registration fee to our bKash personal/merchant account. Highlighted Phone: 01789456123.");
   const [pricePerSegment, setPricePerSegment] = useState(100);
   const [caCodesList, setCaCodesList] = useState<string[]>([]);
+  const [segmentBanners, setSegmentBanners] = useState<Record<string, string>>({});
+  const [segmentDescriptions, setSegmentDescriptions] = useState<Record<string, string>>({});
+  const [expandedSegments, setExpandedSegments] = useState<string[]>([]);
+
+  const toggleExpandSegment = (id: string) => {
+    setExpandedSegments(prev =>
+      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+    );
+  };
+
+  const handleExpandAllSegments = () => {
+    if (expandedSegments.length === INTER_SEGMENTS.length) {
+      setExpandedSegments([]);
+    } else {
+      setExpandedSegments(INTER_SEGMENTS.map(s => s.id));
+    }
+  };
 
   // Launch, Video Teaser & Coming Soon States
   const [isEventPageLaunched, setIsEventPageLaunched] = useState(false);
   const [teaserVideoEnabled, setTeaserVideoEnabled] = useState(true);
-  const [teaserVideoUrl, setTeaserVideoUrl] = useState("https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4");
+  const [teaserVideoUrl, setTeaserVideoUrl] = useState("https://vjs.zencdn.net/v/oceans.mp4");
   const [showingVideo, setShowingVideo] = useState(true);
   const [videoEnded, setVideoEnded] = useState(false);
   
-  // Video Player Controls
+  // Video Player Controls & Fallback Recovery
   const [isPlaying, setIsPlaying] = useState(true);
   const [isMuted, setIsMuted] = useState(false);
   const [hasStartedAudio, setHasStartedAudio] = useState(false);
   const [videoProgress, setVideoProgress] = useState(0);
+  const [videoFallbackIndex, setVideoFallbackIndex] = useState(0);
+  const [videoHasError, setVideoHasError] = useState(false);
+  const [isVideoLoading, setIsVideoLoading] = useState(true);
 
   const videoRef = React.useRef<HTMLVideoElement | null>(null);
   const videoContainerRef = React.useRef<HTMLDivElement | null>(null);
@@ -156,8 +230,22 @@ export default function InterEventRegister() {
 
   const hasTeamSegment = selectedSegments.some(id => {
     const seg = INTER_SEGMENTS.find(s => s.id === id);
-    return id === "Escape Room" || id === "Truss" || id === "Murder Mystery" || (seg && seg.category.toLowerCase().includes("team"));
+    return id === "Escape Room" || id === "Truss" || (seg && seg.category.toLowerCase() === "team track");
   });
+
+  // Automatically reset teammate fields if team segments are deselected
+  useEffect(() => {
+    if (!hasTeamSegment) {
+      setTeamMember2Name('');
+      setTeamMember2Class('');
+      setTeamMember2Institute('');
+      setTeamMember2Gender('');
+      setTeamMember3Name('');
+      setTeamMember3Class('');
+      setTeamMember3Institute('');
+      setTeamMember3Gender('');
+    }
+  }, [hasTeamSegment]);
 
   // Helper function to validate segment class eligibility
   const isSegmentEligible = (segmentId: string, classVal: string): { eligible: boolean; reason?: string } => {
@@ -206,9 +294,10 @@ export default function InterEventRegister() {
     const ytMatch = url.match(ytRegExp);
     if (ytMatch && ytMatch[2] && ytMatch[2].length === 11) {
       const videoId = ytMatch[2];
+      const origin = typeof window !== 'undefined' ? `&origin=${encodeURIComponent(window.location.origin)}` : '';
       return {
         type: 'youtube',
-        embedUrl: `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=${mutedState ? 1 : 0}&controls=1&enablejsapi=1&rel=0`
+        embedUrl: `https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&mute=${mutedState ? 1 : 0}&controls=1&enablejsapi=1&rel=0&playsinline=1${origin}`
       };
     }
 
@@ -218,7 +307,7 @@ export default function InterEventRegister() {
     if (vimeoMatch && vimeoMatch[3]) {
       return {
         type: 'vimeo',
-        embedUrl: `https://player.vimeo.com/video/${vimeoMatch[3]}?autoplay=1&muted=${mutedState ? 1 : 0}`
+        embedUrl: `https://player.vimeo.com/video/${vimeoMatch[3]}?autoplay=1&muted=${mutedState ? 1 : 0}&playsinline=1`
       };
     }
 
@@ -297,6 +386,14 @@ export default function InterEventRegister() {
             setCaCodesList(configVal.caCodes);
           }
 
+          if (configVal.segmentBanners && typeof configVal.segmentBanners === 'object') {
+            setSegmentBanners(configVal.segmentBanners);
+          }
+
+          if (configVal.segmentDescriptions && typeof configVal.segmentDescriptions === 'object') {
+            setSegmentDescriptions(configVal.segmentDescriptions);
+          }
+
           const launched = Boolean(configVal.isEventPageLaunched);
           setIsEventPageLaunched(launched);
 
@@ -307,7 +404,7 @@ export default function InterEventRegister() {
             setTeaserVideoUrl(configVal.teaserVideoUrl.trim());
           }
 
-          if (!enabled) {
+          if (launched || !enabled) {
             setShowingVideo(false);
           } else {
             setShowingVideo(true);
@@ -336,7 +433,32 @@ export default function InterEventRegister() {
         console.warn("Autoplay deferred or handled by browser policy:", err?.message || String(err));
       });
     }
-  }, [teaserVideoEnabled, showingVideo, videoEnded, teaserVideoUrl]);
+  }, [teaserVideoEnabled, showingVideo, videoEnded, teaserVideoUrl, videoFallbackIndex]);
+
+  // Reset video state when URL changes
+  useEffect(() => {
+    setVideoFallbackIndex(0);
+    setVideoHasError(false);
+    setIsVideoLoading(true);
+  }, [teaserVideoUrl]);
+
+  // Safety timer to prevent black screen stuck states if video stalls or fails without error event
+  useEffect(() => {
+    if (teaserVideoEnabled && showingVideo && !videoEnded && isVideoLoading && !videoHasError) {
+      const timer = setTimeout(() => {
+        if (videoProgress === 0) {
+          console.warn("Teaser video loading safety timeout reached. Trying fallback video source...");
+          if (videoFallbackIndex < 2) {
+            setVideoFallbackIndex(prev => prev + 1);
+          } else {
+            setVideoHasError(true);
+            setIsVideoLoading(false);
+          }
+        }
+      }, 4500);
+      return () => clearTimeout(timer);
+    }
+  }, [teaserVideoEnabled, showingVideo, videoEnded, isVideoLoading, videoProgress, videoFallbackIndex, videoHasError]);
 
   // Video End and Fullscreen Audio Start Handlers
   const handleVideoEnd = () => {
@@ -952,8 +1074,16 @@ export default function InterEventRegister() {
   };
 
   // TEASER INTRO VIDEO OVERLAY (Pre-Launch Mode & Initial Entrance)
-  if (teaserVideoEnabled && showingVideo && !videoEnded) {
+  if (!isEventPageLaunched && teaserVideoEnabled && showingVideo && !videoEnded) {
     const videoMedia = getVideoMediaInfo(teaserVideoUrl, isMuted);
+
+    const directFallbacks = Array.from(new Set([
+      videoMedia.url,
+      "https://vjs.zencdn.net/v/oceans.mp4",
+      "https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4"
+    ].filter(Boolean)));
+
+    const activeDirectUrl = directFallbacks[videoFallbackIndex] || directFallbacks[0] || "https://vjs.zencdn.net/v/oceans.mp4";
 
     return (
       <div 
@@ -963,32 +1093,91 @@ export default function InterEventRegister() {
         {/* Fullscreen Video Element or Embed Iframe */}
         <div className="absolute inset-0 z-0 flex items-center justify-center bg-black">
           {videoMedia.type === 'direct' ? (
-            <video
-              ref={videoRef}
-              src={videoMedia.url}
-              autoPlay
-              playsInline
-              muted={isMuted}
-              onEnded={handleVideoEnd}
-              onError={() => {
-                console.warn("Video failed or unplayable URL:", videoMedia.url);
-              }}
-              onTimeUpdate={() => {
-                if (videoRef.current) {
-                  const pct = (videoRef.current.currentTime / videoRef.current.duration) * 100;
-                  setVideoProgress(isNaN(pct) ? 0 : pct);
-                }
-              }}
-              className="w-full h-full object-contain pointer-events-auto"
-            />
+            !videoHasError ? (
+              <video
+                ref={videoRef}
+                key={activeDirectUrl}
+                src={activeDirectUrl}
+                autoPlay
+                playsInline
+                preload="auto"
+                muted={isMuted}
+                onEnded={handleVideoEnd}
+                onCanPlay={() => setIsVideoLoading(false)}
+                onPlaying={() => setIsVideoLoading(false)}
+                onWaiting={() => setIsVideoLoading(true)}
+                onError={() => {
+                  console.warn("Direct video stream error at index:", videoFallbackIndex, activeDirectUrl);
+                  if (videoFallbackIndex < directFallbacks.length - 1) {
+                    setVideoFallbackIndex(prev => prev + 1);
+                    setIsVideoLoading(true);
+                  } else {
+                    setVideoHasError(true);
+                    setIsVideoLoading(false);
+                  }
+                }}
+                onTimeUpdate={() => {
+                  if (videoRef.current && videoRef.current.duration) {
+                    const pct = (videoRef.current.currentTime / videoRef.current.duration) * 100;
+                    setVideoProgress(isNaN(pct) ? 0 : pct);
+                    if (pct > 0) setIsVideoLoading(false);
+                  }
+                }}
+                className="w-full h-full object-contain pointer-events-auto"
+              />
+            ) : null
           ) : (
             <iframe
+              key={videoMedia.embedUrl}
               src={videoMedia.embedUrl}
               title="Teaser Video"
               className="w-full h-full border-0 pointer-events-auto"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen"
               allowFullScreen
+              onLoad={() => setIsVideoLoading(false)}
             />
+          )}
+
+          {/* Buffering Loader Overlay */}
+          {isVideoLoading && !videoHasError && (
+            <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-black/60 backdrop-blur-xs text-white gap-3">
+              <Loader2 className="w-10 h-10 text-pink-500 animate-spin" />
+              <span className="text-xs font-mono uppercase tracking-widest text-zinc-300 font-bold">Loading Event Teaser...</span>
+            </div>
+          )}
+
+          {/* Stream Recovery / Error View */}
+          {videoHasError && (
+            <div className="relative z-30 max-w-md w-full mx-auto p-8 rounded-3xl bg-zinc-900/90 border border-white/10 backdrop-blur-xl text-center space-y-6 shadow-2xl">
+              <div className="w-16 h-16 mx-auto rounded-2xl bg-pink-500/10 border border-pink-500/20 flex items-center justify-center text-pink-400">
+                <Play className="w-8 h-8" />
+              </div>
+              <div>
+                <h3 className="text-lg font-black text-white uppercase tracking-tight">2nd National Inter-School Championship</h3>
+                <p className="text-xs text-zinc-400 mt-2 leading-relaxed">
+                  The teaser video stream is taking longer than expected to load on this connection.
+                </p>
+              </div>
+              <div className="flex flex-col gap-3">
+                <button
+                  onClick={handleVideoEnd}
+                  className="w-full py-3.5 bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-500 hover:to-purple-500 text-white font-black text-xs uppercase tracking-widest rounded-xl transition-all cursor-pointer shadow-lg shadow-pink-500/20 flex items-center justify-center gap-2"
+                >
+                  <span>PROCEED TO REGISTRATION PORTAL</span>
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => {
+                    setVideoFallbackIndex(0);
+                    setVideoHasError(false);
+                    setIsVideoLoading(true);
+                  }}
+                  className="w-full py-2.5 bg-white/5 hover:bg-white/10 text-zinc-300 font-bold text-xs uppercase tracking-wider rounded-xl transition-all border border-white/10 cursor-pointer"
+                >
+                  RETRY PLAYBACK
+                </button>
+              </div>
+            </div>
           )}
         </div>
 
@@ -1186,35 +1375,133 @@ export default function InterEventRegister() {
 
         {/* 22 Segments Catalog Grid Preview */}
         <div id="segments" className="max-w-7xl mx-auto px-6 pt-12 space-y-8">
-          <div className="text-center space-y-2">
-            <span className="text-[10px] font-mono font-black uppercase tracking-widest text-pink-400">CHAMPIONSHIP CATALOG</span>
-            <h2 className="text-2xl font-black text-white uppercase tracking-tight">Explore All 22 Championship Segments</h2>
-            <p className="text-xs text-zinc-400 max-w-lg mx-auto">Get your mathematical squad prepared across solo, team, olympiad, and creative tracks.</p>
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="text-left space-y-1">
+              <span className="text-[10px] font-mono font-black uppercase tracking-widest text-pink-400">CHAMPIONSHIP CATALOG</span>
+              <h2 className="text-2xl font-black text-white uppercase tracking-tight">Explore All 22 Championship Segments</h2>
+              <p className="text-xs text-zinc-400 max-w-lg">Get your mathematical squad prepared across solo, team, olympiad, and creative tracks. Expand cards to view banners & descriptions.</p>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleExpandAllSegments}
+              className="px-5 py-2.5 bg-white/5 border border-white/10 hover:border-pink-500/30 hover:bg-pink-500/10 text-[10px] font-black uppercase tracking-wider text-zinc-300 hover:text-pink-400 rounded-full transition-all cursor-pointer flex items-center gap-2 font-mono shrink-0 select-none"
+            >
+              <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-300 ${expandedSegments.length === INTER_SEGMENTS.length ? 'rotate-180 text-pink-400' : ''}`} />
+              {expandedSegments.length === INTER_SEGMENTS.length ? 'Collapse All Cards' : 'Expand All Banners & Descriptions'}
+            </button>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {INTER_SEGMENTS.map((seg) => {
               const IconComp = seg.icon;
-              return (
-                <div key={seg.id} className="bg-zinc-950/60 border border-white/10 rounded-2xl p-5 space-y-3 relative overflow-hidden group hover:border-pink-500/40 transition-all">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-pink-400 px-2.5 py-1 bg-pink-500/10 rounded-md border border-pink-500/20">
-                      {seg.category}
-                    </span>
-                    <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-amber-400 flex items-center gap-1">
-                      <Lock className="w-3 h-3" /> LOCKED
-                    </span>
-                  </div>
+              const isExpanded = expandedSegments.includes(seg.id);
+              const isTeamEvent = seg.id === "Escape Room" || seg.id === "Truss" || seg.category.toLowerCase() === "team track";
+              const bannerUrl = segmentBanners[seg.id] || DEFAULT_SEGMENT_BANNERS[seg.id] || "https://images.unsplash.com/photo-1509228468518-180dd4864904?auto=format&fit=crop&w=1200&q=80";
+              const descriptionText = segmentDescriptions[seg.id] || DEFAULT_SEGMENT_DESCRIPTIONS[seg.id] || "Challenge your mind and represent your institution across problem solving, speed calculation, and creative tracks.";
 
-                  <div className="flex items-start gap-3">
-                    <div className="p-3 rounded-xl bg-white/5 border border-white/10 text-white group-hover:scale-110 transition-transform">
-                      <IconComp className="w-5 h-5" />
+              return (
+                <div 
+                  key={seg.id} 
+                  className={`rounded-2xl border transition-all overflow-hidden flex flex-col justify-between ${
+                    isExpanded 
+                      ? 'bg-gradient-to-b from-zinc-900/90 via-zinc-950/90 to-black border-pink-500/50 shadow-xl shadow-pink-500/10' 
+                      : 'bg-zinc-950/70 border-white/10 hover:border-white/20'
+                  }`}
+                >
+                  {/* Card Main Info Header */}
+                  <div className="p-5 space-y-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <div className={`w-9 h-9 rounded-xl flex items-center justify-center border bg-gradient-to-br ${seg.color}`}>
+                          <IconComp className="w-4 h-4" />
+                        </div>
+                        <span className="text-[9px] font-mono font-bold uppercase tracking-widest text-pink-400 px-2.5 py-1 bg-pink-500/10 rounded-md border border-pink-500/20">
+                          {seg.category}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        {isTeamEvent && (
+                          <span className="text-[9px] font-mono font-black uppercase tracking-widest text-amber-400 px-2 py-0.5 bg-amber-500/10 rounded border border-amber-500/20">
+                            👥 TEAM
+                          </span>
+                        )}
+                        <span className="text-[9px] font-mono font-bold uppercase tracking-widest text-zinc-400 flex items-center gap-1 bg-white/5 px-2 py-0.5 rounded border border-white/10">
+                          <Lock className="w-3 h-3 text-zinc-500" /> LOCKED
+                        </span>
+                      </div>
                     </div>
+
                     <div>
                       <h3 className="text-base font-black text-white uppercase tracking-tight">{seg.name}</h3>
                       <p className="text-xs text-zinc-400 mt-1 leading-relaxed">{seg.tagline}</p>
                     </div>
                   </div>
+
+                  {/* Expand / Collapse Trigger Bar */}
+                  <button
+                    type="button"
+                    onClick={() => toggleExpandSegment(seg.id)}
+                    className="w-full px-5 py-2.5 bg-white/[0.03] hover:bg-white/[0.08] border-t border-white/10 flex items-center justify-between text-[10px] font-mono font-bold text-pink-400 transition-colors cursor-pointer"
+                  >
+                    <span className="flex items-center gap-1.5 uppercase tracking-wider">
+                      <ChevronDown className={`w-4 h-4 transition-transform duration-300 ${isExpanded ? 'rotate-180 text-pink-500' : ''}`} />
+                      {isExpanded ? 'Hide Segment Banner & Brief' : 'Expand Banner & Description'}
+                    </span>
+                    <span className="text-zinc-500 text-[9px] uppercase tracking-wider font-semibold">
+                      {isExpanded ? 'Tap to close' : 'Tap to expand'}
+                    </span>
+                  </button>
+
+                  {/* Expanded Content Drawer */}
+                  <AnimatePresence>
+                    {isExpanded && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        exit={{ opacity: 0, height: 0 }}
+                        transition={{ duration: 0.25 }}
+                        className="overflow-hidden border-t border-pink-500/20 bg-black/80"
+                      >
+                        <div className="p-5 space-y-4">
+                          {/* Banner Image */}
+                          <div className="relative rounded-xl overflow-hidden aspect-video bg-zinc-900 border border-white/10 group shadow-xl">
+                            <img 
+                              src={bannerUrl} 
+                              alt={seg.name}
+                              className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" 
+                            />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent p-3 flex flex-col justify-end">
+                              <span className="text-[9px] font-mono font-black uppercase tracking-widest text-pink-400 bg-black/70 px-2 py-0.5 rounded w-fit border border-pink-500/30">
+                                Segment Banner
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Brief Description */}
+                          <div className="space-y-1.5">
+                            <h4 className="text-[10px] font-black uppercase tracking-widest text-zinc-400 font-mono">BRIEF DESCRIPTION & RULES</h4>
+                            <p className="text-xs text-zinc-300 leading-relaxed font-medium">
+                              {descriptionText}
+                            </p>
+                          </div>
+
+                          {/* Spec Sheet */}
+                          <div className="grid grid-cols-2 gap-2 pt-2 border-t border-white/5 text-[10px] font-mono">
+                            <div className="bg-white/5 p-2 rounded-lg border border-white/5">
+                              <span className="text-zinc-500 block uppercase font-bold text-[8px]">Type</span>
+                              <span className="text-white font-bold">{isTeamEvent ? 'Team (2-3 Members)' : 'Solo Individual'}</span>
+                            </div>
+                            <div className="bg-white/5 p-2 rounded-lg border border-white/5">
+                              <span className="text-zinc-500 block uppercase font-bold text-[8px]">Eligibility</span>
+                              <span className="text-pink-400 font-bold">{seg.id === "Escape Room" ? "Class 9 - 12" : seg.id === "Truss" ? "Class 3 - 8" : "Class 3 - 12"}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </div>
               );
             })}
@@ -1846,72 +2133,102 @@ export default function InterEventRegister() {
                   </div>
                 )}
 
-                {/* Select All Option */}
-                <div className="flex justify-between items-center mb-6 bg-zinc-900/40 border border-white/5 rounded-2xl p-4 md:px-6">
+                {/* Select All / Expand All Option */}
+                <div className="flex flex-col sm:flex-row justify-between items-center gap-3 mb-6 bg-zinc-900/40 border border-white/5 rounded-2xl p-4 md:px-6">
                   <div className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 font-mono">
                     Selected Segments: <span className="text-pink-400 font-black">{selectedSegments.length}</span> of {INTER_SEGMENTS.length}
                   </div>
-                  <button
-                    type="button"
-                    onClick={handleSelectAllSegments}
-                    className="px-5 py-2.5 bg-white/5 border border-white/10 hover:border-pink-500/30 hover:bg-pink-500/10 text-[10px] font-black uppercase tracking-wider text-zinc-300 hover:text-pink-400 rounded-full transition-all cursor-pointer flex items-center gap-2 font-mono select-none"
-                  >
-                    {selectedSegments.length === INTER_SEGMENTS.length ? (
-                      <>
-                        <Check className="w-3.5 h-3.5 text-pink-400" />
-                        Deselect All
-                      </>
-                    ) : (
-                      <>
-                        <CheckCircle2 className="w-3.5 h-3.5" />
-                        Select All
-                      </>
-                    )}
-                  </button>
+                  <div className="flex items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={handleExpandAllSegments}
+                      className="px-4 py-2 bg-white/5 border border-white/10 hover:border-pink-500/30 hover:bg-pink-500/10 text-[10px] font-black uppercase tracking-wider text-zinc-300 hover:text-pink-400 rounded-full transition-all cursor-pointer flex items-center gap-1.5 font-mono select-none"
+                    >
+                      <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-300 ${expandedSegments.length === INTER_SEGMENTS.length ? 'rotate-180 text-pink-400' : ''}`} />
+                      {expandedSegments.length === INTER_SEGMENTS.length ? 'Collapse All Cards' : 'Expand All Banners'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleSelectAllSegments}
+                      className="px-4 py-2 bg-pink-500/10 border border-pink-500/20 hover:bg-pink-500/20 text-[10px] font-black uppercase tracking-wider text-pink-300 rounded-full transition-all cursor-pointer flex items-center gap-1.5 font-mono select-none"
+                    >
+                      {selectedSegments.length === INTER_SEGMENTS.length ? (
+                        <>
+                          <Check className="w-3.5 h-3.5 text-pink-400" />
+                          Deselect All
+                        </>
+                      ) : (
+                        <>
+                          <CheckCircle2 className="w-3.5 h-3.5" />
+                          Select All
+                        </>
+                      )}
+                    </button>
+                  </div>
                 </div>
 
                 {/* Segment selection grids */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {INTER_SEGMENTS.map((seg) => {
                     const isSelected = selectedSegments.includes(seg.id);
+                    const isExpanded = expandedSegments.includes(seg.id);
                     const SegIcon = seg.icon;
                     const eligibility = isSegmentEligible(seg.id, className);
-                    const isTeamEvent = seg.id === "Escape Room" || seg.id === "Truss" || seg.category.toLowerCase().includes("team");
-                    
+                    const isTeamEvent = seg.id === "Escape Room" || seg.id === "Truss" || seg.category.toLowerCase() === "team track";
+                    const bannerUrl = segmentBanners[seg.id] || DEFAULT_SEGMENT_BANNERS[seg.id] || "https://images.unsplash.com/photo-1509228468518-180dd4864904?auto=format&fit=crop&w=1200&q=80";
+                    const descriptionText = segmentDescriptions[seg.id] || DEFAULT_SEGMENT_DESCRIPTIONS[seg.id] || "Challenge your mind and represent your institution across problem solving, speed calculation, and creative tracks.";
+
                     return (
-                      <button
+                      <div
                         key={seg.id}
-                        type="button"
-                        onClick={() => handleToggleSegment(seg.id)}
-                        className={`p-6 rounded-2xl text-left border transition-all flex flex-col justify-between relative overflow-hidden select-none min-h-[230px] ${
+                        className={`rounded-2xl border transition-all flex flex-col justify-between overflow-hidden select-none ${
                           !eligibility.eligible
-                            ? 'bg-zinc-950/40 border-white/5 opacity-60 cursor-not-allowed hover:border-rose-500/30'
+                            ? 'bg-zinc-950/40 border-white/5 opacity-60'
                             : isSelected 
-                              ? 'bg-gradient-to-b from-indigo-950/40 via-[#0a0525]/30 to-[#020108]/90 border-pink-500/60 shadow-lg shadow-pink-500/5 hover:border-pink-400 cursor-pointer' 
-                              : 'bg-zinc-900/30 border-white/5 hover:border-white/10 hover:bg-zinc-900/50 cursor-pointer'
+                              ? 'bg-gradient-to-b from-indigo-950/50 via-[#0a0525]/40 to-[#020108]/90 border-pink-500/70 shadow-xl shadow-pink-500/10' 
+                              : 'bg-zinc-900/30 border-white/10 hover:border-white/20'
                         }`}
                       >
-                        {isSelected && (
-                          <div className="absolute top-3 right-3 h-5 w-5 rounded-full bg-pink-500 text-white flex items-center justify-center border border-pink-400">
-                            <Check className="w-3.5 h-3.5" />
-                          </div>
-                        )}
-
-                        <div className="space-y-3">
-                          <div className="flex items-center justify-between">
-                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center border bg-gradient-to-br ${seg.color}`}>
-                              <SegIcon className="w-4 h-4" />
-                            </div>
-                            {isTeamEvent && (
-                              <span className="text-[9px] font-mono font-black uppercase tracking-widest text-amber-400 px-2 py-0.5 bg-amber-500/10 rounded border border-amber-500/20 flex items-center gap-1">
-                                👥 TEAM EVENT
+                        {/* Primary Card View */}
+                        <div className="p-5 space-y-3">
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-2">
+                              <div className={`w-9 h-9 rounded-xl flex items-center justify-center border bg-gradient-to-br ${seg.color}`}>
+                                <SegIcon className="w-4 h-4" />
+                              </div>
+                              <span className="text-[9px] font-mono font-bold uppercase tracking-widest text-pink-400 px-2.5 py-0.5 bg-pink-500/10 rounded-md border border-pink-500/20">
+                                {seg.category}
                               </span>
-                            )}
+                            </div>
+
+                            <div className="flex items-center gap-2">
+                              {isTeamEvent && (
+                                <span className="text-[9px] font-mono font-black uppercase tracking-widest text-amber-400 px-2 py-0.5 bg-amber-500/10 rounded border border-amber-500/20">
+                                  👥 TEAM
+                                </span>
+                              )}
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  if (eligibility.eligible) handleToggleSegment(seg.id);
+                                }}
+                                disabled={!eligibility.eligible}
+                                className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer flex items-center gap-1 ${
+                                  !eligibility.eligible
+                                    ? 'bg-zinc-800 text-zinc-500 cursor-not-allowed'
+                                    : isSelected 
+                                      ? 'bg-pink-500 text-white shadow-md shadow-pink-500/30' 
+                                      : 'bg-white/5 hover:bg-white/10 text-zinc-300 border border-white/10'
+                                }`}
+                              >
+                                {isSelected ? <><Check className="w-3 h-3 text-white" /> Selected</> : 'Select'}
+                              </button>
+                            </div>
                           </div>
 
-                          <div className="space-y-1">
-                            <h4 className="text-sm font-bold text-white uppercase tracking-wide">{seg.name}</h4>
-                            <p className="text-[10px] text-zinc-400 leading-relaxed font-medium">{seg.tagline}</p>
+                          <div>
+                            <h4 className="text-base font-black text-white uppercase tracking-wide">{seg.name}</h4>
+                            <p className="text-xs text-zinc-400 mt-1 leading-relaxed">{seg.tagline}</p>
                           </div>
 
                           {!eligibility.eligible && (
@@ -1921,13 +2238,96 @@ export default function InterEventRegister() {
                           )}
                         </div>
 
-                        <div className="pt-3 border-t border-white/5 w-full flex items-center justify-between text-[9px] font-black uppercase tracking-wider font-mono mt-3">
-                          <span className="text-zinc-500">{seg.category}</span>
-                          <span className={`${!eligibility.eligible ? 'text-rose-500' : isSelected ? 'text-pink-400' : 'text-zinc-400'}`}>
-                            {!eligibility.eligible ? 'INELIGIBLE' : isSelected ? '✓ SELECTED' : 'SELECT'}
+                        {/* Expand / Collapse Action Trigger */}
+                        <button
+                          type="button"
+                          onClick={() => toggleExpandSegment(seg.id)}
+                          className="w-full px-5 py-2.5 bg-white/[0.03] hover:bg-white/[0.08] border-t border-white/10 flex items-center justify-between text-[10px] font-mono font-bold text-pink-400 transition-colors cursor-pointer"
+                        >
+                          <span className="flex items-center gap-1.5 uppercase tracking-wider">
+                            <ChevronDown className={`w-4 h-4 transition-transform duration-300 ${isExpanded ? 'rotate-180 text-pink-500' : ''}`} />
+                            {isExpanded ? 'Hide Segment Banner & Brief' : 'Expand Banner & Description'}
                           </span>
-                        </div>
-                      </button>
+                          <span className="text-zinc-500 text-[9px] uppercase tracking-wider font-semibold">
+                            {isExpanded ? 'Tap to close' : 'Tap to expand'}
+                          </span>
+                        </button>
+
+                        {/* Expanded Drawer Details */}
+                        <AnimatePresence>
+                          {isExpanded && (
+                            <motion.div
+                              initial={{ opacity: 0, height: 0 }}
+                              animate={{ opacity: 1, height: 'auto' }}
+                              exit={{ opacity: 0, height: 0 }}
+                              transition={{ duration: 0.25 }}
+                              className="overflow-hidden border-t border-pink-500/20 bg-black/80"
+                            >
+                              <div className="p-5 space-y-4">
+                                {/* Banner Image Display */}
+                                <div className="relative rounded-xl overflow-hidden aspect-video bg-zinc-900 border border-white/10 group shadow-xl">
+                                  <img 
+                                    src={bannerUrl} 
+                                    alt={seg.name}
+                                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" 
+                                  />
+                                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent p-3 flex flex-col justify-end">
+                                    <span className="text-[9px] font-mono font-black uppercase tracking-widest text-pink-400 bg-black/70 px-2 py-0.5 rounded w-fit border border-pink-500/30">
+                                      Segment Banner
+                                    </span>
+                                  </div>
+                                </div>
+
+                                {/* Brief Description */}
+                                <div className="space-y-1.5">
+                                  <h5 className="text-[10px] font-black uppercase tracking-widest text-zinc-400 font-mono">BRIEF DESCRIPTION & RULES</h5>
+                                  <p className="text-xs text-zinc-300 leading-relaxed font-medium">
+                                    {descriptionText}
+                                  </p>
+                                </div>
+
+                                {/* Quick Spec Grid */}
+                                <div className="grid grid-cols-2 gap-2 pt-2 border-t border-white/5 text-[10px] font-mono">
+                                  <div className="bg-white/5 p-2 rounded-lg border border-white/5">
+                                    <span className="text-zinc-500 block uppercase font-bold text-[8px]">Type</span>
+                                    <span className="text-white font-bold">{isTeamEvent ? 'Team (2-3 Members)' : 'Solo Individual'}</span>
+                                  </div>
+                                  <div className="bg-white/5 p-2 rounded-lg border border-white/5">
+                                    <span className="text-zinc-500 block uppercase font-bold text-[8px]">Eligibility</span>
+                                    <span className="text-pink-400 font-bold">{seg.id === "Escape Room" ? "Class 9 - 12" : seg.id === "Truss" ? "Class 3 - 8" : "Class 3 - 12"}</span>
+                                  </div>
+                                </div>
+
+                                {/* Select Button inside Expanded View */}
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    if (eligibility.eligible) handleToggleSegment(seg.id);
+                                  }}
+                                  disabled={!eligibility.eligible}
+                                  className={`w-full py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all cursor-pointer flex items-center justify-center gap-2 ${
+                                    !eligibility.eligible
+                                      ? 'bg-zinc-800 text-zinc-500 cursor-not-allowed'
+                                      : isSelected 
+                                        ? 'bg-gradient-to-r from-pink-600 to-purple-600 text-white shadow-lg shadow-pink-500/20' 
+                                        : 'bg-white/10 hover:bg-white/20 text-white border border-white/10'
+                                  }`}
+                                >
+                                  {isSelected ? (
+                                    <>
+                                      <Check className="w-4 h-4 text-white" /> Segment Selected for Registration
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Plus className="w-4 h-4 text-pink-400" /> Select Segment (BDT 100 Flat Fee)
+                                    </>
+                                  )}
+                                </button>
+                              </div>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                      </div>
                     );
                   })}
                 </div>

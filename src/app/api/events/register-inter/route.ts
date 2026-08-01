@@ -180,7 +180,7 @@ export async function POST(req: Request) {
             </div>
             
             <p style="font-size: 15px; line-height: 1.6; color: #334155;">Hello <strong>${fullName}</strong>,</p>
-            <p style="font-size: 15px; line-height: 1.6; color: #334155;">Thank you for registering for the National Inter-School Mathematics Championship! An automatic profile has been initialized for you so you can track your registration status and retrieve your printable digital pass.</p>
+            <p style="font-size: 15px; line-height: 1.6; color: #334155;">Thank you for registering for the National Inter-School Mathematics Championship! An automatic profile has been initialized for you so you can track your registration status and retrieve your verified unique ID.</p>
             
             <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; padding: 20px; border-radius: 12px; margin: 24px 0;">
               <h2 style="font-size: 14px; color: #4f46e5; margin: 0 0 12px 0; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;">Login Credentials:</h2>
@@ -290,7 +290,6 @@ export async function POST(req: Request) {
     const registrationPayload = {
       user_id: finalUserId,
       full_name: fullName,
-      gender: gender,
       class: className,
       section: cleanInstitute, // maps to section in DB to avoid migration
       roll: cleanCaCode, // maps to roll in DB to avoid migration
@@ -325,7 +324,6 @@ export async function POST(req: Request) {
           const tmPayload = {
             user_id: null,
             full_name: tm.fullName.trim(),
-            gender: tm.gender || '',
             class: tmClass,
             section: (tm.institute || cleanInstitute).trim(),
             roll: cleanCaCode,

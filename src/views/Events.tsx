@@ -1,7 +1,7 @@
 "use client";
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Calendar, MapPin, Clock, ArrowRight, Filter, Search, Trophy, Users, BookOpen, Sparkles, Zap, Shield, HelpCircle, ExternalLink, Globe, Loader2 } from 'lucide-react';
+import { Calendar, MapPin, Clock, ArrowRight, Filter, Search, Trophy, Users, BookOpen, Sparkles, Zap, Shield, HelpCircle, ExternalLink, Globe, Loader2, ChevronDown, ChevronUp, CheckCircle2 } from 'lucide-react';
 import { useContent } from '../context/ContentContext';
 import ScrollReveal from '../components/ScrollReveal';
 import Image from 'next/image';
@@ -13,6 +13,56 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '../lib/supabase';
 import dynamic from 'next/dynamic';
 import { QrCode, Printer, AlertCircle, Sparkle, Tag, FileText, Lock, Brain, Compass, Timer, Eye, Grid, Layers, Award, Activity, Home, Share2, Smile, Edit, Construction, Layout, Coins } from 'lucide-react';
+
+const DEFAULT_EVENT_BANNERS: Record<string, string> = {
+  "Math Olympiad (Find-based)": "https://images.unsplash.com/photo-1509228468518-180dd4864904?auto=format&fit=crop&w=1200&q=80",
+  "Math Olympiad (Proof-based)": "https://images.unsplash.com/photo-1635070041078-e363dbe005cb?auto=format&fit=crop&w=1200&q=80",
+  "IQ Test": "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=1200&q=80",
+  "Human Calculator": "https://images.unsplash.com/photo-1596495578065-6e0763fa1178?auto=format&fit=crop&w=1200&q=80",
+  "Genesis": "https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=1200&q=80",
+  "Geometry Dash": "https://images.unsplash.com/photo-1509228627152-72ae946807b1?auto=format&fit=crop&w=1200&q=80",
+  "Probability Pressure": "https://images.unsplash.com/photo-1518609878373-06d740f60d8b?auto=format&fit=crop&w=1200&q=80",
+  "Murder Mystery": "https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?auto=format&fit=crop&w=1200&q=80",
+  "Crack the Code": "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=format&fit=crop&w=1200&q=80",
+  "Complex Calamity": "https://images.unsplash.com/photo-1509228468518-180dd4864904?auto=format&fit=crop&w=1200&q=80",
+  "Sudoku": "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=1200&q=80",
+  "Rubik’s Cube Showdown": "https://images.unsplash.com/photo-1563089145-599997674d42?auto=format&fit=crop&w=1200&q=80",
+  "5 min Professor": "https://images.unsplash.com/photo-1524178232363-1fb2b075b655?auto=format&fit=crop&w=1200&q=80",
+  "Calculus Bee": "https://images.unsplash.com/photo-1635070041078-e363dbe005cb?auto=format&fit=crop&w=1200&q=80",
+  "Escape Room": "https://images.unsplash.com/photo-1519074069444-1ba4eff56022?auto=format&fit=crop&w=1200&q=80",
+  "Combi Verse": "https://images.unsplash.com/photo-1509228627152-72ae946807b1?auto=format&fit=crop&w=1200&q=80",
+  "Math Memes": "https://images.unsplash.com/photo-1531403009284-440f080d1e12?auto=format&fit=crop&w=1200&q=80",
+  "Math Article": "https://images.unsplash.com/photo-1455390582262-044cdead277a?auto=format&fit=crop&w=1200&q=80",
+  "Math Vision": "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=1200&q=80",
+  "Math Drawing": "https://images.unsplash.com/photo-1513364776144-60967b0f800f?auto=format&fit=crop&w=1200&q=80",
+  "Truss": "https://images.unsplash.com/photo-1541888946425-d0fbb186a5b3?auto=format&fit=crop&w=1200&q=80",
+  "Wall Magazine Display": "https://images.unsplash.com/photo-1526721940322-10fb6e3ae94a?auto=format&fit=crop&w=1200&q=80"
+};
+
+const DEFAULT_EVENT_DESCRIPTIONS: Record<string, string> = {
+  "Math Olympiad (Find-based)": "Test your numeric intuition and mathematical pattern recognition under time constraints. Find exact numerical values without writing long proofs.",
+  "Math Olympiad (Proof-based)": "Demonstrate rigorous logical deduction and mathematical elegance by constructing full formal proofs across geometry, number theory, and algebra.",
+  "IQ Test": "A rapid-fire series of spatial, visual, and analytical logic puzzles designed to evaluate fluid intelligence and cognitive processing speed.",
+  "Human Calculator": "Battle time and mental fatigue in rapid mental math playoffs! Calculate complex multiplications, square roots, and percentages without scratch paper.",
+  "Genesis": "Explore the origin stories of fundamental mathematical constants, geometric theorems, and historical mathematical breakthroughs.",
+  "Geometry Dash": "Navigate spatial reasoning, coordinate plane geometry, circle theorems, and 3D vector geometry problems in a high-octane quiz format.",
+  "Probability Pressure": "Calculate odds, permutations, combinations, and conditional probabilities under intense countdown timer pressure.",
+  "Murder Mystery": "Channel your inner mathematical detective! Use cryptanalysis, logic grids, and probability elimination to solve a fictional crime scene case.",
+  "Crack the Code": "Decrypt complex ciphers, frequency analysis substitution puzzles, binary strings, and modular arithmetic cryptography.",
+  "Complex Calamity": "A specialized solo challenge tackling imaginary axes, Euler's formula, polar coordinates, and complex plane transformations.",
+  "Sudoku": "Compete in speed-solving custom high-difficulty Sudoku grids, testing spatial placement and structural constraint solving.",
+  "Rubik’s Cube Showdown": "Speedcubing tournament for 3x3, 4x4, and custom puzzle cubes. Speed, finger tricks, and algorithmic muscle memory win the day.",
+  "5 min Professor": "Prepare and deliver a 5-minute concise presentation explaining an advanced or abstract mathematical topic to a panel of judges.",
+  "Calculus Bee": "Live playoff competition calculating derivatives, definite integrals, differential equations, and limits on a whiteboard.",
+  "Escape Room": "Team physical & mental escape room challenge. Solve locked chests, hidden mathematical ciphers, and physical puzzle locks to escape within 30 minutes.",
+  "Combi Verse": "Deep dive into graph theory networks, pigeonhole principle, recurrence relations, and combinatorial game strategy.",
+  "Math Memes": "Unleash your humor and witty mathematical intellect! Create hilarious, high-concept memes blending popular culture with mathematical theory.",
+  "Math Article": "Write and submit an insightful research or expository paper highlighting a fascinating mathematical application or historical theorem.",
+  "Math Vision": "Digital graphic design competition. Create stunning digital artwork illustrating mathematical fractals, golden spirals, or geometric art.",
+  "Math Drawing": "Hand-drawn artistic competition. Sketch pristine artwork illustrating mathematical concepts, tessellations, or non-Euclidean geometry.",
+  "Truss": "Engineering team competition! Build high-load structurally sound physical bridge trusses using popsicles and glue to withstand maximum mechanical weights.",
+  "Wall Magazine Display": "Design an informative, visually captivating physical wall poster/magazine showcasing mathematical discoveries, history, or modern research."
+};
 
 const QRCode = dynamic(() => import('../components/QRCode'), { ssr: false });
 
@@ -80,6 +130,17 @@ const Events = () => {
   const [preRegSubmitted, setPreRegSubmitted] = useState(false);
   const [preRegLoading, setPreRegLoading] = useState(false);
 
+  // Inter segment banner & description state
+  const [segmentBanners, setSegmentBanners] = useState<Record<string, string>>({});
+  const [segmentDescriptions, setSegmentDescriptions] = useState<Record<string, string>>({});
+  const [expandedSegments, setExpandedSegments] = useState<string[]>([]);
+
+  const toggleExpandSegment = (name: string) => {
+    setExpandedSegments(prev =>
+      prev.includes(name) ? prev.filter(x => x !== name) : [...prev, name]
+    );
+  };
+
   useEffect(() => {
     async function loadPortalSettings() {
       try {
@@ -92,6 +153,22 @@ const Events = () => {
             const inter = data.find(item => item.key === 'visit_inter_enabled');
             if (intra) setIsIntraEnabled(intra.value === true);
             if (inter) setIsInterEnabled(inter.value === true);
+
+            const interConfig = data.find(item => item.key === 'inter_registration_config');
+            if (interConfig && interConfig.value) {
+              let val = interConfig.value;
+              if (typeof val === 'string') {
+                try { val = JSON.parse(val); } catch (e) {}
+              }
+              if (val && typeof val === 'object') {
+                if (val.segmentBanners && typeof val.segmentBanners === 'object') {
+                  setSegmentBanners(val.segmentBanners);
+                }
+                if (val.segmentDescriptions && typeof val.segmentDescriptions === 'object') {
+                  setSegmentDescriptions(val.segmentDescriptions);
+                }
+              }
+            }
           }
         }
       } catch (err) {
@@ -108,7 +185,7 @@ const Events = () => {
       if (view === 'intra') {
         setCurrentTab('intra');
       } else if (view === 'inter') {
-        router.push('/events/register?type=inter');
+        setCurrentTab('inter');
       } else {
         setCurrentTab('hub');
       }
@@ -116,10 +193,6 @@ const Events = () => {
   }, [router]);
 
   const handleToggleView = (view: 'hub' | 'intra' | 'inter') => {
-    if (view === 'inter') {
-      router.push('/events/register?type=inter');
-      return;
-    }
     setCurrentTab(view);
     if (typeof window !== 'undefined') {
       const url = view === 'hub' ? '/events' : `/events?view=${view}`;
@@ -888,9 +961,33 @@ const Events = () => {
 
                 {/* INTER-SCHOOL TRACKS */}
                 <div>
-                  <h3 className="text-xl font-black text-white uppercase tracking-wider mb-8 flex items-center gap-3">
-                    <Trophy className="w-5 h-5 text-indigo-400" /> 22 Championship Segments
-                  </h3>
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
+                    <h3 className="text-xl font-black text-white uppercase tracking-wider flex items-center gap-3">
+                      <Trophy className="w-5 h-5 text-indigo-400" /> 22 Championship Segments
+                    </h3>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const allNames = [
+                          "Math Olympiad (Find-based)", "Math Olympiad (Proof-based)", "IQ Test", "Human Calculator",
+                          "Genesis", "Geometry Dash", "Probability Pressure", "Murder Mystery", "Crack the Code",
+                          "Complex Calamity", "Sudoku", "Rubik’s Cube Showdown", "5 min Professor", "Calculus Bee",
+                          "Escape Room", "Combi Verse", "Math Memes", "Math Article", "Math Vision", "Math Drawing",
+                          "Truss", "Wall Magazine Display"
+                        ];
+                        if (expandedSegments.length === allNames.length) {
+                          setExpandedSegments([]);
+                        } else {
+                          setExpandedSegments(allNames);
+                        }
+                      }}
+                      className="px-4 py-2 bg-indigo-500/10 border border-indigo-500/20 hover:bg-indigo-500/20 text-indigo-300 text-xs font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer flex items-center gap-2"
+                    >
+                      <ChevronDown className={`w-4 h-4 transition-transform duration-300 ${expandedSegments.length === 22 ? 'rotate-180 text-indigo-400' : ''}`} />
+                      {expandedSegments.length === 22 ? 'Collapse All Cards' : 'Expand All Segment Banners'}
+                    </button>
+                  </div>
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                     {[
@@ -918,25 +1015,95 @@ const Events = () => {
                       { name: "Wall Magazine Display", tagline: "Design physical wall posters mapping historical math breakthroughs.", category: "Exhibition track", icon: Layout, bg: "from-emerald-500/10 to-green-500/10 text-emerald-400 border-emerald-500/20" }
                     ].map((seg, idx) => {
                       const SegIcon = seg.icon;
+                      const isExpanded = expandedSegments.includes(seg.name);
+                      const bannerUrl = segmentBanners[seg.name] || DEFAULT_EVENT_BANNERS[seg.name];
+                      const descText = segmentDescriptions[seg.name] || DEFAULT_EVENT_DESCRIPTIONS[seg.name];
+
                       return (
                         <div 
                           key={idx}
-                          className="p-8 rounded-3xl bg-zinc-900/30 border border-white/5 hover:border-indigo-500/20 transition-all duration-300 group flex flex-col justify-between h-[230px]"
+                          className={`rounded-3xl bg-zinc-900/40 border transition-all duration-300 overflow-hidden flex flex-col justify-between ${
+                            isExpanded ? 'border-indigo-500/50 shadow-xl shadow-indigo-500/10' : 'border-white/5 hover:border-indigo-500/30'
+                          }`}
                         >
-                          <div>
-                            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center mb-6 bg-gradient-to-br ${seg.bg}`}>
-                              <SegIcon className="w-5 h-5" />
+                          <div className="p-6">
+                            <div className="flex items-center justify-between mb-4">
+                              <div className={`w-10 h-10 rounded-2xl flex items-center justify-center bg-gradient-to-br ${seg.bg}`}>
+                                <SegIcon className="w-5 h-5" />
+                              </div>
+                              <span className="text-[9px] font-black uppercase tracking-widest text-indigo-400 px-2.5 py-1 bg-indigo-500/10 rounded-md border border-indigo-500/20">
+                                {seg.category}
+                              </span>
                             </div>
+
                             <h4 className="text-lg font-black text-white uppercase tracking-wide group-hover:text-indigo-400 transition-colors mb-2">
                               {seg.name}
                             </h4>
-                            <p className="text-xs text-zinc-500 font-medium leading-relaxed">
+                            <p className="text-xs text-zinc-400 font-medium leading-relaxed">
                               {seg.tagline}
                             </p>
                           </div>
-                          <span className="inline-block mt-4 text-[9px] font-black uppercase tracking-widest text-zinc-400">
-                            {seg.category}
-                          </span>
+
+                          {/* EXPANDABLE TOGGLE FOOTER */}
+                          <button
+                            type="button"
+                            onClick={() => toggleExpandSegment(seg.name)}
+                            className="w-full px-6 py-3 bg-white/[0.02] hover:bg-white/[0.06] border-t border-white/5 flex items-center justify-between text-[10px] font-mono font-bold text-indigo-400 transition-colors cursor-pointer"
+                          >
+                            <span className="flex items-center gap-1.5 uppercase tracking-wider">
+                              <ChevronDown className={`w-4 h-4 transition-transform duration-300 ${isExpanded ? 'rotate-180 text-indigo-400' : ''}`} />
+                              {isExpanded ? 'Hide Banner & Brief' : 'Expand Banner & Description'}
+                            </span>
+                            <span className="text-zinc-500 text-[9px] uppercase tracking-wider">
+                              {isExpanded ? 'Close' : 'Expand'}
+                            </span>
+                          </button>
+
+                          {/* EXPANDED CONTENT DRAWER */}
+                          <AnimatePresence>
+                            {isExpanded && (
+                              <motion.div
+                                initial={{ opacity: 0, height: 0 }}
+                                animate={{ opacity: 1, height: 'auto' }}
+                                exit={{ opacity: 0, height: 0 }}
+                                transition={{ duration: 0.25 }}
+                                className="overflow-hidden border-t border-indigo-500/20 bg-black/80"
+                              >
+                                <div className="p-6 space-y-4">
+                                  {/* Segment Banner Image */}
+                                  <div className="relative rounded-2xl overflow-hidden aspect-video bg-zinc-900 border border-white/10 group shadow-2xl">
+                                    <img 
+                                      src={bannerUrl} 
+                                      alt={seg.name}
+                                      className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" 
+                                    />
+                                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent p-4 flex flex-col justify-end">
+                                      <span className="text-[9px] font-mono font-black uppercase tracking-widest text-indigo-400 bg-black/70 px-2.5 py-1 rounded w-fit border border-indigo-500/30">
+                                        Segment Banner
+                                      </span>
+                                    </div>
+                                  </div>
+
+                                  {/* Detailed Description */}
+                                  <div className="space-y-1.5">
+                                    <h5 className="text-[10px] font-mono font-black uppercase tracking-widest text-zinc-400">Brief Description</h5>
+                                    <p className="text-xs text-zinc-300 leading-relaxed font-medium">
+                                      {descText}
+                                    </p>
+                                  </div>
+
+                                  {/* Direct Segment Registration CTA */}
+                                  <button
+                                    type="button"
+                                    onClick={() => router.push('/events/register?type=inter')}
+                                    className="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-black text-xs uppercase tracking-widest rounded-xl transition-all shadow-lg shadow-indigo-600/20 flex items-center justify-center gap-2 cursor-pointer mt-2"
+                                  >
+                                    Register for this Segment <ArrowRight className="w-3.5 h-3.5" />
+                                  </button>
+                                </div>
+                              </motion.div>
+                            )}
+                          </AnimatePresence>
                         </div>
                       );
                     })}
