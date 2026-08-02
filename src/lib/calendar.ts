@@ -95,15 +95,26 @@ export const isFestivalDatesMarked = (userEmail?: string): boolean => {
 };
 
 /**
- * Generate Google Calendar Link for all 3 festival days
+ * Generate Google Calendar Link for all festival days
  */
-export const getGoogleCalendarAllDaysUrl = () => {
+export const getGoogleCalendarAllDaysUrl = (festivalCalData?: any) => {
   const baseUrl = "https://calendar.google.com/calendar/render";
+  const title = festivalCalData?.title || "10th Josephite National Math Festival (24, 25 & 26 Sept 2026)";
+  const location = festivalCalData?.location || "St. Joseph Higher Secondary School, 97 Asad Avenue, Mohammadpur, Dhaka-1207";
+  
+  const eventsToUse = (Array.isArray(festivalCalData?.events) && festivalCalData.events.length > 0)
+    ? festivalCalData.events
+    : FESTIVAL_CALENDAR_EVENTS;
+
+  const details = eventsToUse
+    .map((e: any) => `${e.day} (${e.dateStr || ''}): ${e.title} - ${e.description}`)
+    .join("\n\n");
+
   const params = new URLSearchParams({
     action: "TEMPLATE",
-    text: "10th Josephite National Math Festival (24, 25 & 26 Sept 2026)",
-    details: "Your registration is confirmed! Join us on 24, 25 and 26 September 2026 for the 10th Josephite National Math Festival. Venue: St. Joseph Higher Secondary School, Dhaka.",
-    location: "St. Joseph Higher Secondary School, 97 Asad Avenue, Mohammadpur, Dhaka-1207",
+    text: title,
+    details: details,
+    location: location,
     dates: "20260924T020000Z/20260926T120000Z",
   });
   return `${baseUrl}?${params.toString()}`;
@@ -112,23 +123,27 @@ export const getGoogleCalendarAllDaysUrl = () => {
 /**
  * Generate Individual Google Calendar Link
  */
-export const getGoogleCalendarSingleUrl = (event: typeof FESTIVAL_CALENDAR_EVENTS[0]) => {
+export const getGoogleCalendarSingleUrl = (event: typeof FESTIVAL_CALENDAR_EVENTS[0] | any) => {
   const baseUrl = "https://calendar.google.com/calendar/render";
+  const startCal = event.startCal || (event.isoDate ? `${event.isoDate.replace(/-/g, '')}T020000Z` : "20260924T020000Z");
+  const endCal = event.endCal || (event.isoDate ? `${event.isoDate.replace(/-/g, '')}T120000Z` : "20260924T120000Z");
+
   const params = new URLSearchParams({
     action: "TEMPLATE",
     text: event.title,
     details: event.description,
-    location: event.location,
-    dates: `${event.startCal}/${event.endCal}`,
+    location: event.location || "St. Joseph Higher Secondary School, 97 Asad Avenue, Mohammadpur, Dhaka-1207",
+    dates: `${startCal}/${endCal}`,
   });
   return `${baseUrl}?${params.toString()}`;
 };
 
 /**
- * Download iCal (.ics) file for 24, 25, and 26 September 2026
+ * Download iCal (.ics) file for festival days
  */
-export const downloadIcsCalendar = () => {
+export const downloadIcsCalendar = (customEvents?: any[]) => {
   if (typeof window === 'undefined') return;
+  const eventsToUse = (customEvents && customEvents.length > 0) ? customEvents : FESTIVAL_CALENDAR_EVENTS;
 
   let icsLines = [
     "BEGIN:VCALENDAR",
@@ -139,20 +154,23 @@ export const downloadIcsCalendar = () => {
     "X-WR-CALNAME:10th Josephite National Math Festival",
   ];
 
-  FESTIVAL_CALENDAR_EVENTS.forEach((ev) => {
+  eventsToUse.forEach((ev: any) => {
+    const startCal = ev.startCal || (ev.isoDate ? `${ev.isoDate.replace(/-/g, '')}T020000Z` : "20260924T020000Z");
+    const endCal = ev.endCal || (ev.isoDate ? `${ev.isoDate.replace(/-/g, '')}T120000Z` : "20260924T120000Z");
+
     icsLines.push(
       "BEGIN:VEVENT",
       `SUMMARY:${ev.title}`,
       `DESCRIPTION:${ev.description}`,
-      `LOCATION:${ev.location}`,
-      `DTSTART:${ev.startCal}`,
-      `DTEND:${ev.endCal}`,
-      `UID:jmc-festival-2026-${ev.isoDate}@josephitre.club`,
+      `LOCATION:${ev.location || "St. Joseph Higher Secondary School, 97 Asad Avenue, Mohammadpur, Dhaka-1207"}`,
+      `DTSTART:${startCal}`,
+      `DTEND:${endCal}`,
+      `UID:jmc-festival-2026-${ev.isoDate || Math.random().toString(36).substr(2, 6)}@josephite.club`,
       "STATUS:CONFIRMED",
       "BEGIN:VALARM",
       "TRIGGER:-PT24H",
       "ACTION:DISPLAY",
-      "DESCRIPTION:Reminder: 10th Josephite National Math Festival tomorrow!",
+      "DESCRIPTION:Reminder: Festival Event Tomorrow!",
       "END:VALARM",
       "END:VEVENT"
     );
@@ -165,7 +183,7 @@ export const downloadIcsCalendar = () => {
   const url = window.URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
-  link.setAttribute("download", "JMC_Math_Festival_2026_September_24_25_26.ics");
+  link.setAttribute("download", "JMC_Math_Festival_2026_Calendar.ics");
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);

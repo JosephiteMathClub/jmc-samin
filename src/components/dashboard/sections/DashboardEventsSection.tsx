@@ -357,86 +357,138 @@ const DashboardEventsSectionComponent: React.FC<DashboardEventsSectionProps> = (
       {activeTab === 'calendar' && (
         <DashboardSection 
           icon={Clock} 
-          title="Festival Calendar Schedule (24, 25 & 26 September Dates)" 
-          description="Configure auto-calendar schedule dates, titles, venue location, and day-by-day event descriptions."
+          title="Profile & Site Festival Calendar Schedule" 
+          description="Edit the festival title, location, and day-by-day titles & descriptions displayed in the Festival Calendar on the Profile page and site."
         >
-          <div className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <DashboardFormField 
-                label="Festival Title" 
-                value={festivalCalendarData?.title || "10th Josephite National Math Festival"} 
-                onChange={(val) => updateFestivalCalendar && updateFestivalCalendar({ ...festivalCalendarData, title: val })} 
-              />
-              <DashboardFormField 
-                label="Primary Venue Location" 
-                value={festivalCalendarData?.location || "St. Joseph Higher Secondary School, 97 Asad Avenue, Mohammadpur, Dhaka-1207"} 
-                onChange={(val) => updateFestivalCalendar && updateFestivalCalendar({ ...festivalCalendarData, location: val })} 
-              />
-            </div>
+          {(() => {
+            const defaultEvents = [
+              { day: "Day 1", dateStr: "24 Sept 2026", isoDate: "2026-09-24", title: "10th Josephite National Math Festival - Day 1 (Solo Segments)", description: "Solo Math Olympiad, Speed Math, Rubik's Cube, Sudoku & IQ Test. Venue: St. Joseph Higher Secondary School campus.", location: "St. Joseph Higher Secondary School, 97 Asad Avenue, Mohammadpur, Dhaka-1207" },
+              { day: "Day 2", dateStr: "25 Sept 2026", isoDate: "2026-09-25", title: "10th Josephite National Math Festival - Day 2 (Team Mania & Workshops)", description: "Team Math Mania, Game of Games, Math Quiz, Escape Room & Interactive Math Workshops.", location: "St. Joseph Higher Secondary School, 97 Asad Avenue, Mohammadpur, Dhaka-1207" },
+              { day: "Day 3", dateStr: "26 Sept 2026", isoDate: "2026-09-26", title: "10th Josephite National Math Festival - Grand Finale & Awards", description: "Grand Finale, Exhibition, Closing Ceremony & Prize Distribution. St. Joseph Campus.", location: "St. Joseph Higher Secondary School, 97 Asad Avenue, Mohammadpur, Dhaka-1207" }
+            ];
 
-            <div className="space-y-4">
-              <h4 className="text-xs font-black uppercase tracking-wider text-indigo-400">Festival Days Schedule</h4>
-              
-              {(festivalCalendarData?.events || [
-                { day: "Day 1", dateStr: "24 Sept 2026", isoDate: "2026-09-24", title: "10th Josephite National Math Festival - Day 1 (Solo Segments)", description: "Solo Math Olympiad, Speed Math, Rubik's Cube, Sudoku & IQ Test. Venue: St. Joseph Higher Secondary School campus.", location: "St. Joseph Higher Secondary School, 97 Asad Avenue, Mohammadpur, Dhaka-1207" },
-                { day: "Day 2", dateStr: "25 Sept 2026", isoDate: "2026-09-25", title: "10th Josephite National Math Festival - Day 2 (Team Mania & Workshops)", description: "Team Math Mania, Game of Games, Math Quiz, Escape Room & Interactive Math Workshops.", location: "St. Joseph Higher Secondary School, 97 Asad Avenue, Mohammadpur, Dhaka-1207" },
-                { day: "Day 3", dateStr: "26 Sept 2026", isoDate: "2026-09-26", title: "10th Josephite National Math Festival - Grand Finale & Awards", description: "Grand Finale, Exhibition, Closing Ceremony & Prize Distribution. St. Joseph Campus.", location: "St. Joseph Higher Secondary School, 97 Asad Avenue, Mohammadpur, Dhaka-1207" }
-              ]).map((ev: any, i: number) => (
-                <div key={i} className="p-5 rounded-2xl bg-zinc-950/80 border border-white/10 space-y-4">
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <DashboardFormField 
-                      label="Day Label" 
-                      value={ev.day} 
-                      onChange={(val) => {
-                        const updated = [...(festivalCalendarData?.events || [])];
-                        updated[i] = { ...updated[i], day: val };
-                        updateFestivalCalendar && updateFestivalCalendar({ ...festivalCalendarData, events: updated });
-                      }} 
-                    />
-                    <DashboardFormField 
-                      label="Date String (e.g. 24 Sept 2026)" 
-                      value={ev.dateStr} 
-                      onChange={(val) => {
-                        const updated = [...(festivalCalendarData?.events || [])];
-                        updated[i] = { ...updated[i], dateStr: val };
-                        updateFestivalCalendar && updateFestivalCalendar({ ...festivalCalendarData, events: updated });
-                      }} 
-                    />
-                    <DashboardFormField 
-                      label="ISO Date (e.g. 2026-09-24)" 
-                      value={ev.isoDate} 
-                      onChange={(val) => {
-                        const updated = [...(festivalCalendarData?.events || [])];
-                        updated[i] = { ...updated[i], isoDate: val };
-                        updateFestivalCalendar && updateFestivalCalendar({ ...festivalCalendarData, events: updated });
-                      }} 
-                    />
-                  </div>
+            const currentEvents = (Array.isArray(festivalCalendarData?.events) && festivalCalendarData.events.length > 0)
+              ? festivalCalendarData.events
+              : defaultEvents;
 
+            const handleUpdateEvent = (idx: number, field: string, value: any) => {
+              const updated = currentEvents.map((ev: any, i: number) => 
+                i === idx ? { ...ev, [field]: value } : ev
+              );
+              if (updateFestivalCalendar) {
+                updateFestivalCalendar({ ...festivalCalendarData, events: updated });
+              }
+            };
+
+            const handleAddDay = () => {
+              const nextDayNum = currentEvents.length + 1;
+              const newDay = {
+                day: `Day ${nextDayNum}`,
+                dateStr: `${23 + nextDayNum} Sept 2026`,
+                isoDate: `2026-09-${23 + nextDayNum}`,
+                title: `10th Josephite National Math Festival - Day ${nextDayNum}`,
+                description: `Festival activities and competitions for Day ${nextDayNum}.`,
+                location: festivalCalendarData?.location || "St. Joseph Higher Secondary School, 97 Asad Avenue, Mohammadpur, Dhaka-1207"
+              };
+              if (updateFestivalCalendar) {
+                updateFestivalCalendar({
+                  ...festivalCalendarData,
+                  events: [...currentEvents, newDay]
+                });
+              }
+            };
+
+            const handleDeleteDay = (idx: number) => {
+              const updated = currentEvents.filter((_: any, i: number) => i !== idx);
+              if (updateFestivalCalendar) {
+                updateFestivalCalendar({
+                  ...festivalCalendarData,
+                  events: updated
+                });
+              }
+            };
+
+            return (
+              <div className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <DashboardFormField 
-                    label="Day Event Title" 
-                    value={ev.title} 
-                    onChange={(val) => {
-                      const updated = [...(festivalCalendarData?.events || [])];
-                      updated[i] = { ...updated[i], title: val };
-                      updateFestivalCalendar && updateFestivalCalendar({ ...festivalCalendarData, events: updated });
-                    }} 
+                    label="Festival Calendar Title (Profile Page Header)" 
+                    value={festivalCalendarData?.title || "10th Josephite National Math Festival"} 
+                    onChange={(val) => updateFestivalCalendar && updateFestivalCalendar({ ...festivalCalendarData, title: val })} 
                   />
-
                   <DashboardFormField 
-                    label="Day Event Description" 
-                    type="textarea"
-                    value={ev.description} 
-                    onChange={(val) => {
-                      const updated = [...(festivalCalendarData?.events || [])];
-                      updated[i] = { ...updated[i], description: val };
-                      updateFestivalCalendar && updateFestivalCalendar({ ...festivalCalendarData, events: updated });
-                    }} 
+                    label="Primary Venue Location" 
+                    value={festivalCalendarData?.location || "St. Joseph Higher Secondary School, 97 Asad Avenue, Mohammadpur, Dhaka-1207"} 
+                    onChange={(val) => updateFestivalCalendar && updateFestivalCalendar({ ...festivalCalendarData, location: val })} 
                   />
                 </div>
-              ))}
-            </div>
-          </div>
+
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-xs font-black uppercase tracking-wider text-indigo-400">Festival Days & Descriptions ({currentEvents.length})</h4>
+                    <button
+                      type="button"
+                      onClick={handleAddDay}
+                      className="px-3 py-1.5 bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <Plus className="w-3.5 h-3.5" /> Add Festival Day
+                    </button>
+                  </div>
+                  
+                  {currentEvents.map((ev: any, i: number) => (
+                    <div key={i} className="p-5 rounded-2xl bg-zinc-950/80 border border-white/10 space-y-4 relative group">
+                      <div className="flex items-center justify-between pb-2 border-b border-white/5">
+                        <span className="text-xs font-black text-indigo-400 uppercase tracking-wider font-mono">
+                          {ev.day || `Day ${i + 1}`}
+                        </span>
+                        {currentEvents.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteDay(i)}
+                            className="p-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-lg text-xs transition-all cursor-pointer flex items-center gap-1 font-semibold"
+                            title="Remove Day"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" /> Delete Day
+                          </button>
+                        )}
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <DashboardFormField 
+                          label="Day Label (e.g. Day 1)" 
+                          value={ev.day} 
+                          onChange={(val) => handleUpdateEvent(i, 'day', val)} 
+                        />
+                        <DashboardFormField 
+                          label="Date Badge String (e.g. 24 Sept 2026)" 
+                          value={ev.dateStr} 
+                          onChange={(val) => handleUpdateEvent(i, 'dateStr', val)} 
+                        />
+                        <DashboardFormField 
+                          label="ISO Date String (e.g. 2026-09-24)" 
+                          value={ev.isoDate} 
+                          onChange={(val) => handleUpdateEvent(i, 'isoDate', val)} 
+                        />
+                      </div>
+
+                      <DashboardFormField 
+                        label="Day Title (Heading displayed on Profile Card)" 
+                        value={ev.title} 
+                        onChange={(val) => handleUpdateEvent(i, 'title', val)} 
+                      />
+
+                      <DashboardFormField 
+                        label="Day Description (Body text displayed on Profile Card)" 
+                        type="textarea"
+                        value={ev.description} 
+                        onChange={(val) => handleUpdateEvent(i, 'description', val)} 
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })()}
         </DashboardSection>
       )}
 

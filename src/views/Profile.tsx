@@ -2338,7 +2338,7 @@ const Profile = () => {
                                 </div>
                                 <div>
                                   <h3 className="text-xl font-bold text-white uppercase tracking-wider flex items-center gap-2">
-                                    10th National Math Festival Calendar
+                                    {content?.festivalCalendar?.title || "10th National Math Festival Calendar"}
                                   </h3>
                                   <p className="text-xs text-emerald-400 font-bold uppercase tracking-widest mt-0.5">
                                     ✓ September 24, 25 & 26 Marked in Your Account Calendar
@@ -2348,7 +2348,7 @@ const Profile = () => {
                               
                               <div className="flex flex-wrap items-center gap-2">
                                 <a
-                                  href={getGoogleCalendarAllDaysUrl()}
+                                  href={getGoogleCalendarAllDaysUrl(content?.festivalCalendar)}
                                   target="_blank"
                                   rel="noopener noreferrer"
                                   className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition-all shadow-lg shadow-indigo-500/20"
@@ -2357,7 +2357,7 @@ const Profile = () => {
                                 </a>
                                 <button
                                   type="button"
-                                  onClick={() => downloadIcsCalendar()}
+                                  onClick={() => downloadIcsCalendar(content?.festivalCalendar?.events)}
                                   className="px-4 py-2.5 bg-white/10 hover:bg-white/15 text-white rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition-all cursor-pointer border border-white/10"
                                 >
                                   <Download className="w-4 h-4" /> iCal (.ics)
@@ -2366,7 +2366,10 @@ const Profile = () => {
                             </div>
 
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                              {FESTIVAL_CALENDAR_EVENTS.map((ev, idx) => (
+                              {((Array.isArray(content?.festivalCalendar?.events) && content.festivalCalendar.events.length > 0)
+                                ? content.festivalCalendar.events
+                                : FESTIVAL_CALENDAR_EVENTS
+                              ).map((ev: any, idx: number) => (
                                 <div key={idx} className="p-5 rounded-2xl bg-black/60 border border-white/5 space-y-2 relative overflow-hidden group hover:border-indigo-500/30 transition-all">
                                   <div className="flex items-center justify-between">
                                     <span className="text-[10px] font-black uppercase tracking-widest text-indigo-400">{ev.day}</span>
