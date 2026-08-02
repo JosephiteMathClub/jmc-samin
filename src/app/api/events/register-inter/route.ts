@@ -25,6 +25,20 @@ function getSupabaseAdmin() {
 }
 
 // Helper to get Table name based on Class Level input
+const FREE_INTER_SEGMENTS = new Set([
+  "Math Olympiad (Find-based)",
+  "Math Olympiad (Proof-based)",
+  "Math Memes",
+  "Math Article",
+  "Math Vision"
+]);
+
+function isFreeInterSegment(name: string): boolean {
+  if (!name) return false;
+  const norm = name.trim().toLowerCase();
+  return Array.from(FREE_INTER_SEGMENTS).some(s => s.toLowerCase() === norm);
+}
+
 const getTargetTable = (cls: string): string => {
   const norm = cls.trim().toLowerCase();
   const numMatch = norm.match(/\d+/);
@@ -81,6 +95,9 @@ export async function POST(req: Request) {
     const cleanInstitute = institute.trim();
     const cleanCaCode = caCode ? caCode.trim() : '';
     const targetTable = getTargetTable(className);
+
+    const isFreeRegistration = amount === 0 || (Array.isArray(selectedEvents) && selectedEvents.length > 0 && selectedEvents.every((e: string) => isFreeInterSegment(e)));
+    const isVerifiedNow = isFreeRegistration || Boolean(isProxyRegistration);
 
     // Initialize admin client safely
     const supabaseAdmin = getSupabaseAdmin();
@@ -276,7 +293,7 @@ export async function POST(req: Request) {
           payment_method: isProxyRegistration ? 'Manual (Admin)' : 'bkash',
           trxnid: trxnid,
           bkash_number: bkashNumber,
-          verified: isProxyRegistration ? 'yes' : 'no',
+          verified: isVerifiedNow ? 'yes' : 'no',
           member_id: resolvedMemberId
         });
 
@@ -286,7 +303,6 @@ export async function POST(req: Request) {
     }
 
     // Insert registration payload into events table
-    // For inter-events, verification is always manually verified by admin/super admin, so default is 'no'.
     const registrationPayload = {
       user_id: finalUserId,
       full_name: fullName,
@@ -298,7 +314,7 @@ export async function POST(req: Request) {
       trxnid: trxnid,
       amount: amount,
       selected_events: selectedEvents.join(', '),
-      verified: isProxyRegistration ? 'yes' : 'no'
+      verified: isVerifiedNow ? 'yes' : 'no'
     };
 
     const { error: regInsertError } = await supabaseAdmin
@@ -332,7 +348,7 @@ export async function POST(req: Request) {
             trxnid: `${trxnid}${tmSuffix}`,
             amount: 0,
             selected_events: selectedEvents.join(', '),
-            verified: isProxyRegistration ? 'yes' : 'no'
+            verified: isVerifiedNow ? 'yes' : 'no'
           };
 
           const { error: tmErr } = await supabaseAdmin

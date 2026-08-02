@@ -1185,10 +1185,16 @@ const AdminDashboard = () => {
         {activeTab === 'events' && (
           <DashboardEventsSection 
             data={localContent?.events}
+            registrationData={localContent?.registration}
+            interSegmentsData={localContent?.interSegments}
+            festivalCalendarData={localContent?.festivalCalendar}
             updateField={(field, val) => updateField('events', field, val)}
             updateListItem={(field, index, val) => updateListItem('events', field, index, val)}
             addListItem={(field, newItem) => addListItem('events', field, newItem)}
             removeListItem={(field, index) => removeListItem('events', field, index)}
+            updateRegistrationField={(field, val) => updateField('registration', field, val)}
+            updateInterSegments={(newSegments) => setLocalContent((prev: any) => ({ ...prev, interSegments: newSegments }))}
+            updateFestivalCalendar={(newCal) => setLocalContent((prev: any) => ({ ...prev, festivalCalendar: newCal }))}
             uploading={uploading}
             handleFileUpload={handleFileUpload}
             shouldReduceGfx={shouldReduceGfx}

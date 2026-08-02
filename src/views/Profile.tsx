@@ -32,6 +32,13 @@ import {
 } from 'lucide-react';
 import { toPng } from 'html-to-image';
 import dynamic from 'next/dynamic';
+import { 
+  getGoogleCalendarAllDaysUrl, 
+  downloadIcsCalendar, 
+  FESTIVAL_CALENDAR_EVENTS, 
+  markFestivalDatesInUserAccount, 
+  isFestivalDatesMarked 
+} from '../lib/calendar';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 
@@ -553,6 +560,9 @@ const Profile = () => {
         }
       }
       setRegisteredEventsList(allReg);
+      if (allReg.length > 0) {
+        markFestivalDatesInUserAccount(user.email);
+      }
       console.log(`[Profile] Total registered events: ${allReg.length}, hasAnyVerifiedEvent: ${hasAnyVerifiedEvent}`);
 
       const currentMemberId = resolvedMemberId !== undefined ? resolvedMemberId : memberId;
@@ -2316,6 +2326,56 @@ const Profile = () => {
                                 </div>
                                 <p className="text-[10px] text-zinc-500 mt-2 font-medium">Nostalgic console amber-on-black for low eye strain.</p>
                               </button>
+                            </div>
+                          </div>
+
+                          {/* Festival Calendar Schedule Notification */}
+                          <div className="md:col-span-2 p-8 rounded-3xl bg-gradient-to-br from-indigo-950/40 via-purple-950/20 to-black border border-indigo-500/30 space-y-6">
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/10 pb-4">
+                              <div className="flex items-center gap-4">
+                                <div className="p-3 bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 rounded-2xl">
+                                  <Calendar className="w-6 h-6" />
+                                </div>
+                                <div>
+                                  <h3 className="text-xl font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                                    10th National Math Festival Calendar
+                                  </h3>
+                                  <p className="text-xs text-emerald-400 font-bold uppercase tracking-widest mt-0.5">
+                                    ✓ September 24, 25 & 26 Marked in Your Account Calendar
+                                  </p>
+                                </div>
+                              </div>
+                              
+                              <div className="flex flex-wrap items-center gap-2">
+                                <a
+                                  href={getGoogleCalendarAllDaysUrl()}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition-all shadow-lg shadow-indigo-500/20"
+                                >
+                                  <Calendar className="w-4 h-4" /> Sync Google Calendar
+                                </a>
+                                <button
+                                  type="button"
+                                  onClick={() => downloadIcsCalendar()}
+                                  className="px-4 py-2.5 bg-white/10 hover:bg-white/15 text-white rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition-all cursor-pointer border border-white/10"
+                                >
+                                  <Download className="w-4 h-4" /> iCal (.ics)
+                                </button>
+                              </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                              {FESTIVAL_CALENDAR_EVENTS.map((ev, idx) => (
+                                <div key={idx} className="p-5 rounded-2xl bg-black/60 border border-white/5 space-y-2 relative overflow-hidden group hover:border-indigo-500/30 transition-all">
+                                  <div className="flex items-center justify-between">
+                                    <span className="text-[10px] font-black uppercase tracking-widest text-indigo-400">{ev.day}</span>
+                                    <span className="px-2 py-0.5 bg-indigo-500/10 text-indigo-300 rounded text-[9px] font-mono font-bold">{ev.dateStr}</span>
+                                  </div>
+                                  <h4 className="text-sm font-bold text-white leading-tight">{ev.title}</h4>
+                                  <p className="text-[11px] text-zinc-400 leading-relaxed font-sans">{ev.description}</p>
+                                </div>
+                              ))}
                             </div>
                           </div>
 

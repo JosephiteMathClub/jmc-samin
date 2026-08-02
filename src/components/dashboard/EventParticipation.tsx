@@ -910,59 +910,24 @@ export const EventParticipation = ({
     }
     setIsDeletingTx(true);
     try {
-      // 1. Fetch the record first to inspect its Transaction ID (trxnid)
-      const { data: record, error: fetchError } = await supabase
+      // Delete strictly this single transaction record
+      const { error } = await supabase
         .from(deleteTxTable)
-        .select("trxnid")
-        .eq("id", deleteTxId)
-        .maybeSingle();
+        .delete()
+        .eq("id", deleteTxId);
 
-      if (fetchError) throw fetchError;
-
-      if (record && record.trxnid) {
-        const rootTrxnid = record.trxnid.replace(/-T\d+$/, "");
-        const isPlaceholder = !rootTrxnid || 
-                              rootTrxnid.trim().length < 4 || 
-                              ['n/a', 'na', 'none', 'pending', 'null', 'nil', 'test', '0', 'bkash', 'b-kash', 'payment', 'unpaid', 'placeholder'].includes(rootTrxnid.trim().toLowerCase());
-
-        if (isPlaceholder) {
-          // Delete just this single transaction
-          const { error } = await supabase
-            .from(deleteTxTable)
-            .delete()
-            .eq("id", deleteTxId);
-
-          if (error) throw error;
-        } else {
-          // 2. Delete all records matching rootTrxnid, rootTrxnid-T2, rootTrxnid-T3 to clear all teammates
-          const { error } = await supabase
-            .from(deleteTxTable)
-            .delete()
-            .or(
-              `trxnid.eq.${rootTrxnid},trxnid.eq.${rootTrxnid}-T2,trxnid.eq.${rootTrxnid}-T3`,
-            );
-
-          if (error) throw error;
-        }
-      } else {
-        // Fallback: Delete just this single transaction
-        const { error } = await supabase
-          .from(deleteTxTable)
-          .delete()
-          .eq("id", deleteTxId);
-
-        if (error) throw error;
-      }
+      if (error) throw error;
 
       showToast(
-        "Transaction and linked teammate registrations cleaned up successfully",
+        "Transaction registration deleted successfully",
         "success",
       );
       await logAction(
         "DELETE_EVENT_TRANSACTION",
         `Table: ${deleteTxTable}`,
-        `Permanently deleted registration/transaction group for ${deleteTxId}.`,
+        `Permanently deleted registration/transaction record ${deleteTxId}.`,
       );
+      setPendingList((prev) => prev.filter((p) => p.id !== deleteTxId));
       setDeleteTxId(null);
       fetchPendingRegistrations();
     } catch (err: any) {
@@ -1078,27 +1043,8 @@ export const EventParticipation = ({
           data.message || `Transaction verified successfully`,
           "success",
         );
-        // Instant optimistic update to clean up teammate rows as well
-        const matchedRec = pendingList.find((p) => p.id === recordId);
-        if (matchedRec) {
-          const matchedRoot = matchedRec.trxnid.replace(/-T\d+$/, "");
-          const isPlaceholder = !matchedRoot || 
-                                matchedRoot.trim().length < 4 || 
-                                ['n/a', 'na', 'none', 'pending', 'null', 'nil', 'test', '0', 'bkash', 'b-kash', 'payment', 'unpaid', 'placeholder'].includes(matchedRoot.trim().toLowerCase());
-
-          if (isPlaceholder) {
-            setPendingList((prev) => prev.filter((p) => p.id !== recordId));
-          } else {
-            setPendingList((prev) =>
-              prev.filter((p) => {
-                const root = p.trxnid.replace(/-T\d+$/, "");
-                return root !== matchedRoot && p.id !== recordId;
-              })
-            );
-          }
-        } else {
-          setPendingList((prev) => prev.filter((p) => p.id !== recordId));
-        }
+        // Optimistic update: filter out only this single processed record
+        setPendingList((prev) => prev.filter((p) => p.id !== recordId));
 
         // Log action
         await logAction(

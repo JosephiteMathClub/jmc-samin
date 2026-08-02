@@ -56,36 +56,8 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: fetchError?.message || 'Record not found' }, { status: 404 });
     }
 
-    // Find all linked teammate records under the same transaction ID space
-    const rootTrxnid = (record.trxnid || '').replace(/-T\d+$/, '');
-    const isPlaceholder = !rootTrxnid || 
-                          rootTrxnid.trim().length < 4 || 
-                          ['n/a', 'na', 'none', 'pending', 'null', 'nil', 'test', '0', 'bkash', 'b-kash', 'payment', 'unpaid', 'placeholder'].includes(rootTrxnid.trim().toLowerCase());
-
-    const tables = ['primary_events', 'junior_events', 'secondary_events', 'higher_secondary_events'];
-    let allLinkedRecords: any[] = [];
-    
-    if (!isPlaceholder) {
-      for (const tb of tables) {
-        const { data, error: linkedFetchError } = await supabaseAdmin
-          .from(tb)
-          .select('*')
-          .or(`trxnid.eq.${rootTrxnid},trxnid.ilike.${rootTrxnid}-T%`);
-        
-        if (linkedFetchError) {
-          console.error(`Error fetching linked records for table ${tb}:`, linkedFetchError);
-        }
-        if (data && data.length > 0) {
-          allLinkedRecords = [...allLinkedRecords, ...data.map(d => ({ ...d, tableName: tb }))];
-        }
-      }
-    }
-
-    // Safeguard: Ensure the main record is always included in the list
-    const isMainIncluded = allLinkedRecords.some(r => r.id === recordId && r.tableName === tableName);
-    if (!isMainIncluded) {
-      allLinkedRecords.push({ ...record, tableName });
-    }
+    // Target strictly the single requested transaction record
+    const allLinkedRecords = [{ ...record, tableName }];
 
     if (action === 'reject') {
       // Reject all linked records
@@ -135,7 +107,7 @@ export async function POST(req: Request) {
               <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; color: #333; padding: 20px; border: 1px solid #f1f5f9; border-radius: 8px;">
                 <h1 style="color: #ef4444; font-size: 24px;">Registration Correction Needed</h1>
                 <p>Hello <strong>${linkedRec.full_name}</strong>,</p>
-                <p>We couldn't verify your group/team bKash payment transaction with TrxID <strong>${rootTrxnid}</strong> for your selected Events (<strong>${linkedRec.selected_events}</strong>).</p>
+                <p>We couldn't verify your group/team bKash payment transaction with TrxID <strong>${linkedRec.trxnid || 'N/A'}</strong> for your selected Events (<strong>${linkedRec.selected_events}</strong>).</p>
                 <p>Please coordinate with your team captain to verify the bKash Sender wallet phone number and Transaction ID (TrxID) and submit a correction.</p>
                 <p>If you have any questions, please reply to this email or submit a help ticket on the platform.</p>
                 <br/>
@@ -153,7 +125,7 @@ export async function POST(req: Request) {
                   recipient_section: String(linkedRec.section || ''),
                   recipient_roll: String(linkedRec.roll || ''),
                   subject: 'Event Registration Verification Update - Josephite Math Club',
-                  body_text: `We couldn't verify your group/team bKash payment transaction with TrxID ${rootTrxnid} for your selected Events (${linkedRec.selected_events}).`,
+                  body_text: `We couldn't verify your group/team bKash payment transaction with TrxID ${linkedRec.trxnid || 'N/A'} for your selected Events (${linkedRec.selected_events}).`,
                   verified_by: verifiedBy || 'Admin',
                   status: 'sent'
                 }]);
@@ -172,7 +144,7 @@ export async function POST(req: Request) {
                   recipient_section: String(linkedRec.section || ''),
                   recipient_roll: String(linkedRec.roll || ''),
                   subject: 'Event Registration Verification Update - Josephite Math Club',
-                  body_text: `We couldn't verify your group/team bKash payment transaction with TrxID ${rootTrxnid} for your selected Events (${linkedRec.selected_events}).`,
+                  body_text: `We couldn't verify your group/team bKash payment transaction with TrxID ${linkedRec.trxnid || 'N/A'} for your selected Events (${linkedRec.selected_events}).`,
                   verified_by: verifiedBy || 'Admin',
                   status: 'failed',
                   error_message: String(emailErr?.message || emailErr)
@@ -184,7 +156,7 @@ export async function POST(req: Request) {
         }
       }
 
-      return NextResponse.json({ success: true, message: 'Team and leader registrations rejected successfully.' });
+      return NextResponse.json({ success: true, message: 'Registration rejected successfully.' });
     }
 
     if (action === 'approve') {
@@ -466,7 +438,7 @@ export async function POST(req: Request) {
         }
       }
 
-      return NextResponse.json({ success: true, message: 'All team and leader registrations approved and cataloged successfully.' });
+      return NextResponse.json({ success: true, message: 'Registration approved successfully.' });
     }
 
     return NextResponse.json({ error: 'Invalid action parameter specified' }, { status: 400 });

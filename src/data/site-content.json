@@ -1,17 +1,4 @@
 {
-  "site": {
-    "logoUrl": "/images/logo.png",
-    "clubName": "Josephite Math Club",
-    "established": "EST. 2015",
-    "announcements": [
-      "Welcome to Josephite Math Club!",
-      "Josephite Math Mania is on it's way.",
-      "Keep an eye on our facebook and instagram"
-    ],
-    "maintenanceMode": true,
-    "showAnnouncements": true,
-    "maintenanceMessage": "The site is currently under maintenance"
-  },
   "home": {
     "gallery": [
       "/images/gallery/gallery1.jpg",
@@ -95,6 +82,19 @@
     "testimonialsTitle": "People About JMC",
     "testimonialsTagline": "Voices of JMC"
   },
+  "site": {
+    "logoUrl": "/images/logo.png",
+    "clubName": "Josephite Math Club",
+    "established": "EST. 2015",
+    "maintenanceMode": false,
+    "showAnnouncements": true,
+    "announcements": [
+      "Welcome to Josephite Math Club!",
+      "National Math Olympiad Registration is now open!",
+      "Join us in our upcoming weekly math discussions."
+    ],
+    "maintenanceMessage": "The site is currently under maintenance"
+  },
   "about": {
     "stats": [
       {
@@ -176,574 +176,169 @@
   },
   "panel": {
     "executive": {
-      "former": {
-        "president": [
-          {
-            "id": "root-panel-executive-former-president-0-iwgb9rs33",
-            "name": "",
-            "role": "President",
-            "imageUrl": ""
+      "former": [
+        {
+          "id": "panel-25",
+          "year": "Panel 25 (2024-2025)",
+          "president": [
+            {
+              "id": "root-panel-executive-recent-president-0-zpdlhoo5x",
+              "name": "Ziyad Mohammad",
+              "role": "President",
+              "imageUrl": ""
+            }
+          ],
+          "deputyPresidents": [
+            {
+              "id": "root-panel-executive-recent-deputyPresidents-0-un29kwc62",
+              "name": "Rafiu Mohammad Mosharrof",
+              "role": "Deputy President",
+              "imageUrl": ""
+            },
+            {
+              "id": "root-panel-executive-recent-deputyPresidents-1-fjwypazce",
+              "name": "Shawon Rahman",
+              "role": "Deputy President",
+              "imageUrl": ""
+            }
+          ],
+          "generalSecretary": [
+            {
+              "id": "root-panel-executive-recent-generalSecretary-0-5vb375vtw",
+              "name": "Tahsin Ahnaf Mahir",
+              "role": "General Secretary",
+              "imageUrl": ""
+            }
+          ],
+          "vicePresidents": [
+            {
+              "id": "root-panel-executive-recent-vicePresidents-0-hxfi36fjk",
+              "name": "Al Sahad",
+              "role": "Vice President",
+              "imageUrl": ""
+            },
+            {
+              "id": "root-panel-executive-recent-vicePresidents-1-55u5xmfl5",
+              "name": "Arafat Karim Rahat",
+              "role": "Vice President",
+              "imageUrl": ""
+            },
+            {
+              "id": "root-panel-executive-recent-vicePresidents-2-cm97stvkj",
+              "name": "Muhammed Ayman",
+              "role": "Vice President",
+              "imageUrl": ""
+            },
+            {
+              "id": "root-panel-executive-recent-vicePresidents-3-rpbkr95ce",
+              "name": "Nayer Sharar",
+              "role": "Vice President",
+              "imageUrl": ""
+            },
+            {
+              "id": "root-panel-executive-recent-vicePresidents-4-dondx25aa",
+              "name": "Nilay Dutta",
+              "role": "Vice President",
+              "imageUrl": ""
+            },
+            {
+              "id": "root-panel-executive-recent-vicePresidents-5-dwbvauedg",
+              "name": "Priangshu Deb",
+              "role": "Vice President",
+              "imageUrl": ""
+            },
+            {
+              "id": "root-panel-executive-recent-vicePresidents-6-a0qh5fofw",
+              "name": "Sanan Sikder",
+              "role": "Vice President",
+              "imageUrl": ""
+            },
+            {
+              "id": "root-panel-executive-recent-vicePresidents-7-2stmm9hgd",
+              "name": "Tawhid-Bin-Omar",
+              "role": "Vice President",
+              "imageUrl": ""
+            },
+            {
+              "id": "root-panel-executive-recent-vicePresidents-8-aszv850mu",
+              "name": "Tayebur Naseef",
+              "role": "Vice President",
+              "imageUrl": ""
+            },
+            {
+              "id": "root-panel-executive-recent-vicePresidents-9-nfmfxyida",
+              "name": "Ziad Bin Azad",
+              "role": "Vice President",
+              "imageUrl": ""
+            }
+          ],
+          "departments": [
+            {
+              "id": "root-panel-executive-recent-departments-0-jkt7iocag",
+              "dept": "Internal Affairs",
+              "name": "N/A",
+              "imageUrl": ""
+            },
+            {
+              "id": "root-panel-executive-recent-departments-1-79gllwxx8",
+              "dept": "External Affairs",
+              "name": "N/A",
+              "imageUrl": ""
+            },
+            {
+              "id": "root-panel-executive-recent-departments-2-6aftb3s3w",
+              "dept": "Photography",
+              "name": "N/A",
+              "imageUrl": ""
+            },
+            {
+              "id": "root-panel-executive-recent-departments-3-jxm3gyo54",
+              "dept": "Events",
+              "name": "N/A",
+              "imageUrl": ""
+            },
+            {
+              "id": "root-panel-executive-recent-departments-4-2vdvgnt4p",
+              "dept": "Writings",
+              "name": "N/A",
+              "imageUrl": ""
+            },
+            {
+              "id": "root-panel-executive-recent-departments-5-olh6dbuc4",
+              "dept": "Equity",
+              "name": "N/A",
+              "imageUrl": ""
+            },
+            {
+              "id": "root-panel-executive-recent-departments-6-d2unmyto6",
+              "dept": "Decoration",
+              "name": "N/A",
+              "imageUrl": ""
+            }
+          ],
+          "secretaries": {
+            "jointSecretary": [],
+            "organizingSecretary": [],
+            "asstGeneralSecretary": [],
+            "correspondingSecretary": []
           }
-        ],
-        "departments": [
-          {
-            "id": "root-panel-executive-former-departments-0-416nn8vgq",
-            "dept": "Internal Affairs",
-            "name": "",
-            "imageUrl": ""
-          },
-          {
-            "id": "root-panel-executive-former-departments-1-enab0o2hg",
-            "dept": "External Affairs",
-            "name": "",
-            "imageUrl": ""
-          },
-          {
-            "id": "root-panel-executive-former-departments-2-86lzwi2an",
-            "dept": "Photography",
-            "name": "",
-            "imageUrl": ""
-          },
-          {
-            "id": "root-panel-executive-former-departments-3-julbbasc8",
-            "dept": "Events",
-            "name": "",
-            "imageUrl": ""
-          },
-          {
-            "id": "root-panel-executive-former-departments-4-97wpcp1su",
-            "dept": "Writings",
-            "name": "",
-            "imageUrl": ""
-          },
-          {
-            "id": "root-panel-executive-former-departments-5-aa6v80rc6",
-            "dept": "Equity",
-            "name": "",
-            "imageUrl": ""
-          },
-          {
-            "id": "root-panel-executive-former-departments-6-q9jpo8bdt",
-            "dept": "Decoration",
-            "name": "",
-            "imageUrl": ""
-          }
-        ],
-        "secretaries": {
-          "jointSecretary": [
-            {
-              "id": "root-panel-executive-former-secretaries-jointSecretary-0-4zbqn4ohq",
-              "name": ""
-            },
-            {
-              "id": "root-panel-executive-former-secretaries-jointSecretary-1-db1qabwd4",
-              "name": ""
-            },
-            {
-              "id": "root-panel-executive-former-secretaries-jointSecretary-2-ptwxfvb8a",
-              "name": ""
-            },
-            {
-              "id": "root-panel-executive-former-secretaries-jointSecretary-3-t2kl18zu2",
-              "name": ""
-            },
-            {
-              "id": "root-panel-executive-former-secretaries-jointSecretary-4-0bdj4hjrf",
-              "name": ""
-            },
-            {
-              "id": "root-panel-executive-former-secretaries-jointSecretary-5-lmg4qv7re",
-              "name": ""
-            },
-            {
-              "id": "root-panel-executive-former-secretaries-jointSecretary-6-kr8oo4q18",
-              "name": ""
-            },
-            {
-              "id": "root-panel-executive-former-secretaries-jointSecretary-7-rq0j6sj6k",
-              "name": ""
-            },
-            {
-              "id": "root-panel-executive-former-secretaries-jointSecretary-8-oud83o30o",
-              "name": ""
-            },
-            {
-              "id": "root-panel-executive-former-secretaries-jointSecretary-9-kyd8utzgt",
-              "name": ""
-            }
-          ],
-          "organizingSecretary": [
-            {
-              "id": "root-panel-executive-former-secretaries-organizingSecretary-0-5y132e1f8",
-              "name": ""
-            },
-            {
-              "id": "root-panel-executive-former-secretaries-organizingSecretary-1-hci307ri4",
-              "name": ""
-            },
-            {
-              "id": "root-panel-executive-former-secretaries-organizingSecretary-2-x6u9hadsy",
-              "name": ""
-            },
-            {
-              "id": "root-panel-executive-former-secretaries-organizingSecretary-3-dtljcf39s",
-              "name": ""
-            },
-            {
-              "id": "root-panel-executive-former-secretaries-organizingSecretary-4-52wxayrao",
-              "name": ""
-            },
-            {
-              "id": "root-panel-executive-former-secretaries-organizingSecretary-5-af6zfw5r5",
-              "name": ""
-            }
-          ],
-          "asstGeneralSecretary": [
-            {
-              "id": "root-panel-executive-former-secretaries-asstGeneralSecretary-0-95990v1ej",
-              "name": ""
-            },
-            {
-              "id": "root-panel-executive-former-secretaries-asstGeneralSecretary-1-16ogkqn20",
-              "name": ""
-            },
-            {
-              "id": "root-panel-executive-former-secretaries-asstGeneralSecretary-2-068ldj38z",
-              "name": ""
-            },
-            {
-              "id": "root-panel-executive-former-secretaries-asstGeneralSecretary-3-pk85gv3cq",
-              "name": ""
-            },
-            {
-              "id": "root-panel-executive-former-secretaries-asstGeneralSecretary-4-obhvk1v3u",
-              "name": ""
-            },
-            {
-              "id": "root-panel-executive-former-secretaries-asstGeneralSecretary-5-26y3m7szp",
-              "name": ""
-            },
-            {
-              "id": "root-panel-executive-former-secretaries-asstGeneralSecretary-6-5v5cjt980",
-              "name": ""
-            },
-            {
-              "id": "root-panel-executive-former-secretaries-asstGeneralSecretary-7-gpq9mmlts",
-              "name": ""
-            },
-            {
-              "id": "root-panel-executive-former-secretaries-asstGeneralSecretary-8-oot5dx3mq",
-              "name": ""
-            },
-            {
-              "id": "root-panel-executive-former-secretaries-asstGeneralSecretary-9-ykqjpawot",
-              "name": ""
-            },
-            {
-              "id": "root-panel-executive-former-secretaries-asstGeneralSecretary-10-9irhg3syw",
-              "name": ""
-            }
-          ],
-          "correspondingSecretary": [
-            {
-              "id": "root-panel-executive-former-secretaries-correspondingSecretary-0-md1wk21rb",
-              "name": ""
-            },
-            {
-              "id": "root-panel-executive-former-secretaries-correspondingSecretary-1-0ji29v66b",
-              "name": ""
-            },
-            {
-              "id": "root-panel-executive-former-secretaries-correspondingSecretary-2-mu74a1b64",
-              "name": ""
-            },
-            {
-              "id": "root-panel-executive-former-secretaries-correspondingSecretary-3-5zsepepyn",
-              "name": ""
-            },
-            {
-              "id": "root-panel-executive-former-secretaries-correspondingSecretary-4-c1uenwirk",
-              "name": ""
-            },
-            {
-              "id": "root-panel-executive-former-secretaries-correspondingSecretary-5-6hwp699w0",
-              "name": ""
-            },
-            {
-              "id": "root-panel-executive-former-secretaries-correspondingSecretary-6-cvr9ig0t9",
-              "name": ""
-            }
-          ]
         },
-        "vicePresidents": [
-          {
-            "id": "root-panel-executive-former-vicePresidents-0-165k65srs",
-            "name": "",
-            "role": "Vice President",
-            "imageUrl": ""
-          },
-          {
-            "id": "root-panel-executive-former-vicePresidents-1-yytjrl0aa",
-            "name": "",
-            "role": "Vice President",
-            "imageUrl": ""
-          },
-          {
-            "id": "root-panel-executive-former-vicePresidents-2-sj69w86zx",
-            "name": "",
-            "role": "Vice President",
-            "imageUrl": ""
-          },
-          {
-            "id": "root-panel-executive-former-vicePresidents-3-g6r7ojt67",
-            "name": "",
-            "role": "Vice President",
-            "imageUrl": ""
-          },
-          {
-            "id": "root-panel-executive-former-vicePresidents-4-l5oaecons",
-            "name": "",
-            "role": "Vice President",
-            "imageUrl": ""
-          },
-          {
-            "id": "root-panel-executive-former-vicePresidents-5-otys7b1n5",
-            "name": "",
-            "role": "Vice President",
-            "imageUrl": ""
-          },
-          {
-            "id": "root-panel-executive-former-vicePresidents-6-ax86obdlf",
-            "name": "",
-            "role": "Vice President",
-            "imageUrl": ""
-          },
-          {
-            "id": "root-panel-executive-former-vicePresidents-7-ylmq6lpna",
-            "name": "",
-            "role": "Vice President",
-            "imageUrl": ""
-          },
-          {
-            "id": "root-panel-executive-former-vicePresidents-8-6n8dt5i7m",
-            "name": "",
-            "role": "Vice President",
-            "imageUrl": ""
-          },
-          {
-            "id": "root-panel-executive-former-vicePresidents-9-67m0uneg8",
-            "name": "",
-            "role": "Vice President",
-            "imageUrl": ""
+        {
+          "id": "panel-24",
+          "year": "Panel 24 (2023-2024)",
+          "president": [],
+          "deputyPresidents": [],
+          "generalSecretary": [],
+          "vicePresidents": [],
+          "departments": [],
+          "secretaries": {
+            "jointSecretary": [],
+            "organizingSecretary": [],
+            "asstGeneralSecretary": [],
+            "correspondingSecretary": []
           }
-        ],
-        "deputyPresidents": [
-          {
-            "id": "root-panel-executive-former-deputyPresidents-0-jva2wvk8m",
-            "name": "",
-            "role": "Deputy President",
-            "imageUrl": ""
-          },
-          {
-            "id": "root-panel-executive-former-deputyPresidents-1-pcvrc2ol3",
-            "name": "",
-            "role": "Deputy President",
-            "imageUrl": ""
-          }
-        ],
-        "generalSecretary": [
-          {
-            "id": "root-panel-executive-former-generalSecretary-0-hxr2ywm28",
-            "name": "",
-            "role": "General Secretary",
-            "imageUrl": ""
-          }
-        ]
-      },
-      "recent": {
-        "president": [
-          {
-            "id": "root-panel-executive-recent-president-0-zpdlhoo5x",
-            "name": "Ziyad Mohammad",
-            "role": "President",
-            "imageUrl": ""
-          }
-        ],
-        "departments": [
-          {
-            "id": "root-panel-executive-recent-departments-0-jkt7iocag",
-            "dept": "Internal Affairs",
-            "name": "N/A",
-            "imageUrl": ""
-          },
-          {
-            "id": "root-panel-executive-recent-departments-1-79gllwxx8",
-            "dept": "External Affairs",
-            "name": "N/A",
-            "imageUrl": ""
-          },
-          {
-            "id": "root-panel-executive-recent-departments-2-6aftb3s3w",
-            "dept": "Photography",
-            "name": "N/A",
-            "imageUrl": ""
-          },
-          {
-            "id": "root-panel-executive-recent-departments-3-jxm3gyo54",
-            "dept": "Events",
-            "name": "N/A",
-            "imageUrl": ""
-          },
-          {
-            "id": "root-panel-executive-recent-departments-4-2vdvgnt4p",
-            "dept": "Writings",
-            "name": "N/A",
-            "imageUrl": ""
-          },
-          {
-            "id": "root-panel-executive-recent-departments-5-olh6dbuc4",
-            "dept": "Equity",
-            "name": "N/A",
-            "imageUrl": ""
-          },
-          {
-            "id": "root-panel-executive-recent-departments-6-d2unmyto6",
-            "dept": "Decoration",
-            "name": "N/A",
-            "imageUrl": ""
-          }
-        ],
-        "secretaries": {
-          "jointSecretary": [
-            {
-              "id": "root-panel-executive-recent-secretaries-jointSecretary-0-pjd7xwcxl",
-              "name": "N/A"
-            },
-            {
-              "id": "root-panel-executive-recent-secretaries-jointSecretary-1-ay8113sj3",
-              "name": "N/A"
-            },
-            {
-              "id": "root-panel-executive-recent-secretaries-jointSecretary-2-fhfkj5z25",
-              "name": "N/A"
-            },
-            {
-              "id": "root-panel-executive-recent-secretaries-jointSecretary-3-k7mhxaipq",
-              "name": "N/A"
-            },
-            {
-              "id": "root-panel-executive-recent-secretaries-jointSecretary-4-epbfmiyg6",
-              "name": "N/A"
-            },
-            {
-              "id": "root-panel-executive-recent-secretaries-jointSecretary-5-0k1m2u41f",
-              "name": "N/A"
-            },
-            {
-              "id": "root-panel-executive-recent-secretaries-jointSecretary-6-7p4ajo1w0",
-              "name": "N/A"
-            },
-            {
-              "id": "root-panel-executive-recent-secretaries-jointSecretary-7-57zdzquit",
-              "name": "N/A"
-            },
-            {
-              "id": "root-panel-executive-recent-secretaries-jointSecretary-8-n7itg746v",
-              "name": "N/A"
-            },
-            {
-              "id": "root-panel-executive-recent-secretaries-jointSecretary-9-x8dbni5p7",
-              "name": "N/A"
-            }
-          ],
-          "organizingSecretary": [
-            {
-              "id": "root-panel-executive-recent-secretaries-organizingSecretary-0-fb59u0skk",
-              "name": "N/A"
-            },
-            {
-              "id": "root-panel-executive-recent-secretaries-organizingSecretary-1-qc6fzfzpp",
-              "name": "N/A"
-            },
-            {
-              "id": "root-panel-executive-recent-secretaries-organizingSecretary-2-x1fkobbll",
-              "name": "N/A"
-            },
-            {
-              "id": "root-panel-executive-recent-secretaries-organizingSecretary-3-vy35gduwc",
-              "name": "N/A"
-            },
-            {
-              "id": "root-panel-executive-recent-secretaries-organizingSecretary-4-xgvcrsxun",
-              "name": "N/A"
-            },
-            {
-              "id": "root-panel-executive-recent-secretaries-organizingSecretary-5-bnegiu1x1",
-              "name": "N/A"
-            }
-          ],
-          "asstGeneralSecretary": [
-            {
-              "id": "root-panel-executive-recent-secretaries-asstGeneralSecretary-0-og93d3bw4",
-              "name": "N/A"
-            },
-            {
-              "id": "root-panel-executive-recent-secretaries-asstGeneralSecretary-1-qlby7xf64",
-              "name": "N/A"
-            },
-            {
-              "id": "root-panel-executive-recent-secretaries-asstGeneralSecretary-2-hor0n3jmm",
-              "name": "N/A"
-            },
-            {
-              "id": "root-panel-executive-recent-secretaries-asstGeneralSecretary-3-gft405kzm",
-              "name": "N/A"
-            },
-            {
-              "id": "root-panel-executive-recent-secretaries-asstGeneralSecretary-4-rztcb9m97",
-              "name": "N/A"
-            },
-            {
-              "id": "root-panel-executive-recent-secretaries-asstGeneralSecretary-5-az18txwc7",
-              "name": "N/A"
-            },
-            {
-              "id": "root-panel-executive-recent-secretaries-asstGeneralSecretary-6-xiz0chf4s",
-              "name": "N/A"
-            },
-            {
-              "id": "root-panel-executive-recent-secretaries-asstGeneralSecretary-7-qzqz9avkm",
-              "name": "N/A"
-            },
-            {
-              "id": "root-panel-executive-recent-secretaries-asstGeneralSecretary-8-tgt9iqfm4",
-              "name": "N/A"
-            },
-            {
-              "id": "root-panel-executive-recent-secretaries-asstGeneralSecretary-9-s04exm6tx",
-              "name": "N/A"
-            },
-            {
-              "id": "root-panel-executive-recent-secretaries-asstGeneralSecretary-10-2qd2zgpd7",
-              "name": "N/A"
-            }
-          ],
-          "correspondingSecretary": [
-            {
-              "id": "root-panel-executive-recent-secretaries-correspondingSecretary-0-og4sqawvx",
-              "name": "N/A"
-            },
-            {
-              "id": "root-panel-executive-recent-secretaries-correspondingSecretary-1-qcn5iflm8",
-              "name": "N/A"
-            },
-            {
-              "id": "root-panel-executive-recent-secretaries-correspondingSecretary-2-y39pppa1c",
-              "name": "N/A"
-            },
-            {
-              "id": "root-panel-executive-recent-secretaries-correspondingSecretary-3-et5xkfctf",
-              "name": "N/A"
-            },
-            {
-              "id": "root-panel-executive-recent-secretaries-correspondingSecretary-4-kvgl1k8b7",
-              "name": "N/A"
-            },
-            {
-              "id": "root-panel-executive-recent-secretaries-correspondingSecretary-5-fxlxdc1g3",
-              "name": "N/A"
-            },
-            {
-              "id": "root-panel-executive-recent-secretaries-correspondingSecretary-6-uy3vyuif7",
-              "name": "N/A"
-            }
-          ]
-        },
-        "vicePresidents": [
-          {
-            "id": "root-panel-executive-recent-vicePresidents-0-hxfi36fjk",
-            "name": "Al Sahad",
-            "role": "Vice President",
-            "imageUrl": ""
-          },
-          {
-            "id": "root-panel-executive-recent-vicePresidents-1-55u5xmfl5",
-            "name": "Arafat Karim Rahat",
-            "role": "Vice President",
-            "imageUrl": ""
-          },
-          {
-            "id": "root-panel-executive-recent-vicePresidents-2-cm97stvkj",
-            "name": "Muhammed Ayman",
-            "role": "Vice President",
-            "imageUrl": ""
-          },
-          {
-            "id": "root-panel-executive-recent-vicePresidents-3-rpbkr95ce",
-            "name": "Nayer Sharar",
-            "role": "Vice President",
-            "imageUrl": ""
-          },
-          {
-            "id": "root-panel-executive-recent-vicePresidents-4-dondx25aa",
-            "name": "Nilay Dutta",
-            "role": "Vice President",
-            "imageUrl": ""
-          },
-          {
-            "id": "root-panel-executive-recent-vicePresidents-5-dwbvauedg",
-            "name": "Priangshu Deb",
-            "role": "Vice President",
-            "imageUrl": ""
-          },
-          {
-            "id": "root-panel-executive-recent-vicePresidents-6-a0qh5fofw",
-            "name": "Sanan Sikder",
-            "role": "Vice President",
-            "imageUrl": ""
-          },
-          {
-            "id": "root-panel-executive-recent-vicePresidents-7-2stmm9hgd",
-            "name": "Tawhid-Bin-Omar",
-            "role": "Vice President",
-            "imageUrl": ""
-          },
-          {
-            "id": "root-panel-executive-recent-vicePresidents-8-aszv850mu",
-            "name": "Tayebur Naseef",
-            "role": "Vice President",
-            "imageUrl": ""
-          },
-          {
-            "id": "root-panel-executive-recent-vicePresidents-9-nfmfxyida",
-            "name": "Ziad Bin Azad",
-            "role": "Vice President",
-            "imageUrl": ""
-          }
-        ],
-        "deputyPresidents": [
-          {
-            "id": "root-panel-executive-recent-deputyPresidents-0-un29kwc62",
-            "name": "Rafiu Mohammad Mosharrof",
-            "role": "Deputy President",
-            "imageUrl": ""
-          },
-          {
-            "id": "root-panel-executive-recent-deputyPresidents-1-fjwypazce",
-            "name": "Shawon Rahman",
-            "role": "Deputy President",
-            "imageUrl": ""
-          }
-        ],
-        "generalSecretary": [
-          {
-            "id": "root-panel-executive-recent-generalSecretary-0-5vb375vtw",
-            "name": "Tahsin Ahnaf Mahir",
-            "role": "General Secretary",
-            "imageUrl": ""
-          }
-        ]
-      },
+        }
+      ],
       "current": {
         "president": [
           {
@@ -1156,7 +751,191 @@
     "executiveSubtitle": "The Core Leadership",
     "departmentsSubtitle": "Department Heads"
   },
-  "gallery_page": {
+  "events": {
+    "title": "BEYOND NUMBERS",
+    "events": [
+      {
+        "id": "event-solo-1",
+        "date": "TBA",
+        "time": "TBA",
+        "title": "Math Olympiad",
+        "category": "Competition",
+        "location": "St. Joseph Higher Secondary School",
+        "description": "The Math Olympiad is a competitive platform designed to inspire young minds and\ncelebrate the beauty of mathematics. Participants will showcase their problem-solving skills across four categories:\n* Primary (Class 3–5)\n* Junior (Class 6–8)\n* Secondary (Class 9–10)\n* Higher Secondary (Class 11–12 and HSC 2025–HSC 2027)\n\nThe contest duration is 1 Hour and will consist of 8–12 challenging find based problems, carefully selected to assess creativity, logical reasoning, and mathematical depth. The questions will cover core areas of mathematics, including:\n* Number Theory\n* Algebra\n* Geometry\n* Combinatorics\nThe level of difficulty will be equivalent to the BdMO Regional Round, ensuring fairness and rigor for each category. This event aims to encourage analytical thinking and foster a deeper appreciation of problem-solving among students at different academic Stages.",
+        "isTeamEvent": false,
+        "registrationLink": "#",
+        "imageUrl": ""
+      },
+      {
+        "id": "event-solo-2",
+        "date": "TBA",
+        "time": "TBA",
+        "title": "IQ Test",
+        "category": "Competition",
+        "location": "St. Joseph Higher Secondary School",
+        "description": "IQ Test is a challenging and engaging event open to participants across all four categories:\n* Primary (Class 3–5)\n* Junior (Class 6–8)\n* Secondary (Class 9–10)\n* Higher Secondary (Class 11–12 and HSC 2025–HSC 2027)\nObjective:\nParticipants will attempt 20 brainteasers designed to test logical reasoning, analyt-\nical thinking, and problem-solving ability. Each question requires careful thought and a high level of IQ to arrive at the correct solution.\nEvent Structure:\n* The event will last for 30 minutes or more, depending on the difficulty .\n* All participants must work individually and rely solely on their own reasoning and Scoring and Winners\n* Correct answers will be awarded points according to difficulty.\n* The top three participants from each category will be rewarded.\n* Any attempt to tamper with another participant’s work or use unauthorized aids may result in disqualification.\nThis event emphasizes cognitive skills, quick thinking, and analytical reasoning, providing a fun yet challenging platform for participants to showcase their intelligence.",
+        "isTeamEvent": false,
+        "registrationLink": "#",
+        "imageUrl": ""
+      },
+      {
+        "id": "event-solo-3",
+        "date": "TBA",
+        "time": "TBA",
+        "title": "Probability Pressure",
+        "category": "Competition",
+        "location": "St. Joseph Higher Secondary School",
+        "description": "Probability Pressure is a focused problem-solving event for participants in the Secondary (Class 9–10) and Higher Secondary (Class 11–12 and HSC 2025–HSC\n2027) categories.\nEvent Structure :\n* Participants will be given a set of 7–8 probability-based questions.\n* The problems may involve applications of geometry, number theory, and related\nmathematical fields.\n* The event will last for 45 minutes, during which participants must attempt to solve\nall questions.\nScoring and Winners :\n* Participants who provide a flawless solution will be awarded full marks.\n* Partial marks may be awarded for rough work or incomplete solutions that demon-\nstrate clear reasoning.\n* The top three participants from each category will be rewarded.\n* Any attempt to tamper with another participant’s work or use unauthorized aids may result in disqualification.\nThis event emphasizes logical reasoning, probabilistic thinking, and accuracy,\nencouraging participants to carefully analyze and solve problems within the given time.",
+        "isTeamEvent": false,
+        "registrationLink": "#",
+        "imageUrl": "/images/event_banner/PR-PR.jpg"
+      },
+      {
+        "id": "event-solo-5",
+        "date": "TBA",
+        "time": "TBA",
+        "title": "Human Calculator",
+        "category": "Competition",
+        "location": "St. Joseph Higher Secondary School",
+        "description": "The Human Calculator challenge is a thrilling test of mental arithmetic and numerical\nagility designed for students across all categories. Participants will compete in a written round where they must solve a series of complex calculations using only their minds, with\nObjective:\nParticipants must accurately solve a set of mathematical problems under a strict time\nlimit. The questions will test speed and precision in various areas of mental calculation, including but not limited to addition, subtraction, multiplication, division, percentages, squares, and roots. The individual who correctly solves the most problems within the\nallotted time will be crowned the ”Human Calculator.”\nRules :\n* The event is open to participants from Primary (Class 3–5), Junior (Class 6–8),\nSecondary (Class 9–10), and Higher Secondary (Class 11–12) categories.\n* Each participant will receive a question paper and an answer sheet. Scratch paper\nwill be provided for working out calculations.\n* The use of calculators, electronic devices, or any pre-written formulas is strictly\nprohibited. All calculations must be performed by the participant.\n* All working must be shown on the provided scratch paper. The question paper\nmust not be used for rough work.\n* All final answers must be clearly written on the provided answer sheet.\n* The event will be a 60-minute written round.\n* Winners will be determined based on the highest number of correct answers. In\ncase of a tie, the participant who finished in the shortest time will be awarded the\nhigher position.\n* Top performers from each category will receive awards and recognition.\n* Any attempt to use unauthorized aids or communicate with another participant\nwill result in immediate disqualification.\nThis event challenges concentration, memory, and rapid problem-solving skills, celebrating the incredible power of the human mind as the ultimate computational toolsection",
+        "isTeamEvent": false,
+        "registrationLink": "#",
+        "imageUrl": "/images/event_banner/Human_Calc-segment.jpg"
+      },
+      {
+        "id": "event-solo-6",
+        "date": "TBA",
+        "time": "TBA",
+        "title": "Calculus Bee",
+        "category": "Competition",
+        "location": "St. Joseph Higher Secondary School",
+        "description": "This competition will focus exclusively on calculus problems. Participants will be challenged with questions from both Differentiation and Integration, covering key concepts and techniques from each area. From finding derivatives of functions to solving integrals, you'll need to apply your calculus knowledge to solve these problems accurately. This will test both problem-solving speed and precision of each participant.\n\nCATEGORIES: Secondary and Higher Secondary \nDURATION: 45 MIN\nFORMAT: SOLO\n\nRULES:\n1. No External Aids\nAll calculations must be done by hand; calculators, phones, or any other aids are strictly prohibited.\n\n2. Zero Tolerance for Unfair Means\nAny form of cheating or collusion will result in immediate disqualification.\n\n3. Merit Depends on Process\nMerit is awarded for a clear, step-by-step solution—even if the final answer is incorrect, a sound method earns partial credit.\n\n4. Winner Selection\na. Contestants will have to solve the problems which will be given from both differentiation and integration.\nb. There will be three winners from each category. Winners will be awarded.",
+        "isTeamEvent": false,
+        "registrationLink": "#",
+        "imageUrl": ""
+      },
+      {
+        "id": "event-solo-7",
+        "date": "TBA",
+        "time": "TBA",
+        "title": "Geometry Dash",
+        "category": "Competition",
+        "location": "St. Joseph Higher Secondary School",
+        "description": "Geometry Dash is a thrilling problem-solving contest crafted exclusively for the Sec-\nondary (Class 9–10) and Higher Secondary (Class 11–12 and HSC 2025–HSC\n2027) categories. This event is dedicated to exploring the elegance, depth, and challenge\nof geometry.\nEvent Structure\n* The contest will feature 5–7 “find-based/proof-based” geometry problems,\ndesigned to test conceptual understanding, logical reasoning, and creative applica-\ntion.\n* Each problem requires participants to derive, prove, or find specific values, relations,\nor constructions through mathematical reasoning.\n* The total duration of the event will be 45 minutes.\nEvaluation\n* A flawless solution will be awarded full marks.\n* Partial credit will be given for substantial progress, rough work, or correct approaches even if the final solution is not reached.\n* Any kind of unfair means will lead to immediate disqualification.\nWinners:\n* The top three participants from each category (Secondary and Higher Secondary) will be declared winners.\nThis event emphasizes the beauty and power of geometry, encouraging participants to appreciate both precision and creativity in mathematical problem-solving.",
+        "isTeamEvent": false,
+        "registrationLink": "#",
+        "imageUrl": "/images/event_banner/Geo-Dash.jpg"
+      },
+      {
+        "id": "event-solo-8",
+        "date": "TBA",
+        "time": "TBA",
+        "title": "Rubik's Cube",
+        "category": "Competition",
+        "location": "St. Joseph Higher Secondary School",
+        "description": "The Rubik’s Cube Showdown is an exciting test of speed, focus, and problem-solving skills, where participants will battle it out to prove their cubing mastery. The event will be divided into two rounds, combining both individual performance and head-to-head competition.\n\nCategories :\n\n* Primary (Class 3–5)\n* Junior (Class 6–8)\n* Secondary (Class 9–10)\n* Higher Secondary (Class 11–12 and HSC 2025–HSC 2027)\n\nEvent Structure:\n\nRound 1 – Preliminary (Speed Round):\n\nAll registered participants will attempt to solve the Rubik’s Cube.\n\nEach participant will be given multiple solves (depending on time constraints), and their best time will be recorded.\n\nBased on performance, the top 6 participants with the fastest solving times will advance to the final round.\n\nRound 2 – Final (1v1 Knockout Matches):\n\nThe four finalists will compete in 1v1 head-to-head matches.\n\nPairings will be made based on seeding from Round 1 (fastest vs. slowest, etc.).\n\nIn each match, both participants will solve the same scrambled cube simultaneously.\n\nThe winner will be the participant who completes the solve first.\n\nMatches continue until a final champion is determined.\n\nWinners:\n\nChampion – Winner of the final duel.\n\nFirst Runner-Up – The finalist defeated in the championship match.\n\nSecond Runner-Up – Determined from the duel between the semi-final losers",
+        "isTeamEvent": false,
+        "registrationLink": "#",
+        "imageUrl": ""
+      },
+      {
+        "id": "event-solo-9",
+        "date": "TBA",
+        "time": "TBA",
+        "title": "Sudoku",
+        "category": "Competition",
+        "location": "St. Joseph Higher Secondary School",
+        "description": "The Sudoku Challenge is an engaging puzzle competition designed to test participants’\nlogical reasoning, pattern recognition, and problem-solving speed. Participants will solve\nSudoku grids of varying difficulty within a limited time, aiming to fill each grid correctly\naccording to the classic rules of Sudoku.\nCategories :\nThe competition is open for the following four categories:\n* Primary (Class 3–5)\n* Junior (Class 6–8)\n* Secondary (Class 9–10)\n* Higher Secondary (Class 11–12 and HSC 2025–HSC 2027) Rules of Sudoku\n* Each Sudoku puzzle consists of a 9×9 grid, divided into nine 3×3 subgrids (also called\nboxes or regions).\n* The goal is to fill the empty cells with numbers from 1 to 9.\n* Each row, each column, and each 3.3 subgrid must contain all numbers from 1 to\n9 exactly once.\n* Participants cannot repeat any number in a row, column, or subgrid.\n* The time taken to complete the puzzle will be considered in determining the\nwinners.\n* Time duration of this event will be 30 minutes.\n* The three fastest participants in each category who complete the puzzle correctly\nwill be declared the winners. Three winners from each category .\n* Any incorrect entries or attempts to alter another participant’s puzzle may\nresult in disqualification.\nThis event encourages focus, logical reasoning, and careful planning, offering a fun and competitive way to strengthen numerical and analytical skills.",
+        "isTeamEvent": false,
+        "registrationLink": "#",
+        "imageUrl": "/images/event_banner/Sudoku.jpg"
+      },
+      {
+        "id": "event-solo-10",
+        "date": "TBA",
+        "time": "TBA",
+        "title": "Cryptomania",
+        "category": "Competition",
+        "location": "St. Joseph Higher Secondary School",
+        "description": "Cryptomania is an exciting solo event open to participants across all four categories:\n* Primary (Class 3–5)\n* Junior (Class 6–8)\n* Secondary (Class 9–10)\n* Higher Secondary (Class 11–12 and HSC 2025–HSC 2027)\nObjective :\nParticipants will solve cipher-decipher challenges or thrilling problem-based cases\nusing logical reasoning and analytical skills. A cipher is a method of transforming\ninformation to keep it secret, while deciphering is the process of decoding it to reveal the\noriginal message. Participants must extract clues and reason carefully to solve the tasks.\nRules\n* Each participant must solve the problems using sheer problem-solving skills; ex-\nternal aids are not allowed.\n* Participants will be provided all necessary information within the problem state\n* there will be three winners from each category.\n* Any attempt to tamper with another participant’s work or use unauthorized aids may result in disqualification.\nThis event encourages critical thinking, creativity, and logical deduction, offering participants a fun and challenging opportunity to crack codes and solve mysteries.",
+        "isTeamEvent": false,
+        "registrationLink": "#",
+        "imageUrl": ""
+      },
+      {
+        "id": "event-solo-11",
+        "date": "TBA",
+        "time": "TBA",
+        "title": "Singularity",
+        "category": "Competition",
+        "location": "St. Joseph Higher Secondary School",
+        "description": "Participate in the exciting Singularity competition.",
+        "isTeamEvent": false,
+        "registrationLink": "#",
+        "imageUrl": "/images/event_banner/Singularity-segment.jpg"
+      },
+      {
+        "id": "event-team-12",
+        "date": "TBA",
+        "time": "TBA",
+        "title": "Escape Room",
+        "category": "Competition",
+        "location": "St. Joseph Higher Secondary School",
+        "teamSize": 3,
+        "description": "A thrilling team event (Escape Room) where logic and teamwork matter.",
+        "isTeamEvent": true,
+        "registrationLink": "#",
+        "imageUrl": "/images/event_banner/Escape-Room.jpg"
+      },
+      {
+        "id": "event-team-15",
+        "date": "TBA",
+        "time": "TBA",
+        "title": "Tic-Tac-Toe",
+        "category": "Competition",
+        "location": "St. Joseph Higher Secondary School",
+        "teamSize": 3,
+        "description": "A tactical grid match where math formulas and patterns meet board-game maneuvers. Exclusive to Primary and Junior categories.",
+        "isTeamEvent": true,
+        "registrationLink": "#",
+        "imageUrl": "/images/event_banner/tic-tac-toe.jpg"
+      }
+    ],
+    "subtitle": "UPCOMING EVENTS",
+    "categories": [
+      {
+        "id": "all",
+        "icon": "Calendar",
+        "name": "All"
+      },
+      {
+        "id": "competition",
+        "icon": "Trophy",
+        "name": "Competitions"
+      },
+      {
+        "id": "workshop",
+        "icon": "BookOpen",
+        "name": "Workshops"
+      },
+      {
+        "id": "seminar",
+        "icon": "Users",
+        "name": "Seminars"
+      }
+    ],
+    "description": "Join us for a series of challenging competitions, insightful workshops, and engaging seminars designed to push your mathematical boundaries."
+  },
+  "contact": {
+    "email": "N/A",
+    "phone": "N/A",
+    "socials": {
+      "facebook": "https://www.facebook.com/2015JMC/",
+      "instagram": "https://www.instagram.com/jmc_.official/"
+    },
+    "location": "St. Joseph Higher Secondary School"
+  },
+  "gallery": {
     "images": [
       "/images/gallery/gallery1.jpg",
       "/images/gallery/gallery2.jpg",
@@ -1208,1654 +987,7 @@
     ],
     "description": "Stay updated with the latest announcements, results, and important information from the Josephite Math Club."
   },
-  "events": {
-    "title": "BEYOND NUMBERS",
-    "events": [
-      {
-        "id": "event-solo-1",
-        "date": "TBA",
-        "time": "TBA",
-        "title": "Math Olympiad",
-        "category": "Competition",
-        "imageUrl": "",
-        "location": "St. Joseph Higher Secondary School",
-        "description": "The Math Olympiad is a competitive platform designed to inspire young minds and\ncelebrate the beauty of mathematics. Participants will showcase their problem-solving skills across four categories:\n* Primary (Class 3–5)\n* Junior (Class 6–8)\n* Secondary (Class 9–10)\n* Higher Secondary (Class 11–12 and HSC 2025–HSC 2027)\n\nThe contest duration is 1 Hour and will consist of 8–12 challenging find based problems, carefully selected to assess creativity, logical reasoning, and mathematical depth. The questions will cover core areas of mathematics, including:\n* Number Theory\n* Algebra\n* Geometry\n* Combinatorics\nThe level of difficulty will be equivalent to the BdMO Regional Round, ensuring fairness and rigor for each category. This event aims to encourage analytical thinking and foster a deeper appreciation of problem-solving among students at different academic Stages.",
-        "isTeamEvent": false,
-        "registrationLink": "#"
-      },
-      {
-        "id": "event-solo-2",
-        "date": "TBA",
-        "time": "TBA",
-        "title": "IQ Test",
-        "category": "Competition",
-        "imageUrl": "",
-        "location": "St. Joseph Higher Secondary School",
-        "description": "IQ Test is a challenging and engaging event open to participants across all four categories:\n* Primary (Class 3–5)\n* Junior (Class 6–8)\n* Secondary (Class 9–10)\n* Higher Secondary (Class 11–12 and HSC 2025–HSC 2027)\nObjective:\nParticipants will attempt 20 brainteasers designed to test logical reasoning, analyt-\nical thinking, and problem-solving ability. Each question requires careful thought and a high level of IQ to arrive at the correct solution.\nEvent Structure:\n* The event will last for 30 minutes or more, depending on the difficulty .\n* All participants must work individually and rely solely on their own reasoning and Scoring and Winners\n* Correct answers will be awarded points according to difficulty.\n* The top three participants from each category will be rewarded.\n* Any attempt to tamper with another participant’s work or use unauthorized aids may result in disqualification.\nThis event emphasizes cognitive skills, quick thinking, and analytical reasoning, providing a fun yet challenging platform for participants to showcase their intelligence.",
-        "isTeamEvent": false,
-        "registrationLink": "#"
-      },
-      {
-        "id": "event-solo-3",
-        "date": "TBA",
-        "time": "TBA",
-        "title": "Probability Pressure",
-        "category": "Competition",
-        "imageUrl": "/images/event_banner/PR-PR.jpg",
-        "location": "St. Joseph Higher Secondary School",
-        "description": "Probability Pressure is a focused problem-solving event for participants in the Secondary (Class 9–10) and Higher Secondary (Class 11–12 and HSC 2025–HSC\n2027) categories.\nEvent Structure :\n* Participants will be given a set of 7–8 probability-based questions.\n* The problems may involve applications of geometry, number theory, and related\nmathematical fields.\n* The event will last for 45 minutes, during which participants must attempt to solve\nall questions.\nScoring and Winners :\n* Participants who provide a flawless solution will be awarded full marks.\n* Partial marks may be awarded for rough work or incomplete solutions that demon-\nstrate clear reasoning.\n* The top three participants from each category will be rewarded.\n* Any attempt to tamper with another participant’s work or use unauthorized aids may result in disqualification.\nThis event emphasizes logical reasoning, probabilistic thinking, and accuracy,\nencouraging participants to carefully analyze and solve problems within the given time.",
-        "isTeamEvent": false,
-        "registrationLink": "#"
-      },
-      {
-        "id": "event-solo-5",
-        "date": "TBA",
-        "time": "TBA",
-        "title": "Human Calculator",
-        "category": "Competition",
-        "imageUrl": "/images/event_banner/Human_Calc-segment.jpg",
-        "location": "St. Joseph Higher Secondary School",
-        "description": "The Human Calculator challenge is a thrilling test of mental arithmetic and numerical\nagility designed for students across all categories. Participants will compete in a written round where they must solve a series of complex calculations using only their minds, with\nObjective:\nParticipants must accurately solve a set of mathematical problems under a strict time\nlimit. The questions will test speed and precision in various areas of mental calculation, including but not limited to addition, subtraction, multiplication, division, percentages, squares, and roots. The individual who correctly solves the most problems within the\nallotted time will be crowned the ”Human Calculator.”\nRules :\n* The event is open to participants from Primary (Class 3–5), Junior (Class 6–8),\nSecondary (Class 9–10), and Higher Secondary (Class 11–12) categories.\n* Each participant will receive a question paper and an answer sheet. Scratch paper\nwill be provided for working out calculations.\n* The use of calculators, electronic devices, or any pre-written formulas is strictly\nprohibited. All calculations must be performed by the participant.\n* All working must be shown on the provided scratch paper. The question paper\nmust not be used for rough work.\n* All final answers must be clearly written on the provided answer sheet.\n* The event will be a 60-minute written round.\n* Winners will be determined based on the highest number of correct answers. In\ncase of a tie, the participant who finished in the shortest time will be awarded the\nhigher position.\n* Top performers from each category will receive awards and recognition.\n* Any attempt to use unauthorized aids or communicate with another participant\nwill result in immediate disqualification.\nThis event challenges concentration, memory, and rapid problem-solving skills, celebrating the incredible power of the human mind as the ultimate computational toolsection",
-        "isTeamEvent": false,
-        "registrationLink": "#"
-      },
-      {
-        "id": "event-solo-6",
-        "date": "TBA",
-        "time": "TBA",
-        "title": "Calculus Bee",
-        "category": "Competition",
-        "imageUrl": "",
-        "location": "St. Joseph Higher Secondary School",
-        "description": "This competition will focus exclusively on calculus problems. Participants will be challenged with questions from both Differentiation and Integration, covering key concepts and techniques from each area. From finding derivatives of functions to solving integrals, you'll need to apply your calculus knowledge to solve these problems accurately. This will test both problem-solving speed and precision of each participant.\n\nCATEGORIES: Secondary and Higher Secondary \nDURATION: 45 MIN\nFORMAT: SOLO\n\nRULES:\n1. No External Aids\nAll calculations must be done by hand; calculators, phones, or any other aids are strictly prohibited.\n\n2. Zero Tolerance for Unfair Means\nAny form of cheating or collusion will result in immediate disqualification.\n\n3. Merit Depends on Process\nMerit is awarded for a clear, step-by-step solution—even if the final answer is incorrect, a sound method earns partial credit.\n\n4. Winner Selection\na. Contestants will have to solve the problems which will be given from both differentiation and integration.\nb. There will be three winners from each category. Winners will be awarded.",
-        "isTeamEvent": false,
-        "registrationLink": "#"
-      },
-      {
-        "id": "event-solo-7",
-        "date": "TBA",
-        "time": "TBA",
-        "title": "Geometry Dash",
-        "category": "Competition",
-        "imageUrl": "/images/event_banner/Geo-Dash.jpg",
-        "location": "St. Joseph Higher Secondary School",
-        "description": "Geometry Dash is a thrilling problem-solving contest crafted exclusively for the Sec-\nondary (Class 9–10) and Higher Secondary (Class 11–12 and HSC 2025–HSC\n2027) categories. This event is dedicated to exploring the elegance, depth, and challenge\nof geometry.\nEvent Structure\n* The contest will feature 5–7 “find-based/proof-based” geometry problems,\ndesigned to test conceptual understanding, logical reasoning, and creative applica-\ntion.\n* Each problem requires participants to derive, prove, or find specific values, relations,\nor constructions through mathematical reasoning.\n* The total duration of the event will be 45 minutes.\nEvaluation\n* A flawless solution will be awarded full marks.\n* Partial credit will be given for substantial progress, rough work, or correct approaches even if the final solution is not reached.\n* Any kind of unfair means will lead to immediate disqualification.\nWinners:\n* The top three participants from each category (Secondary and Higher Secondary) will be declared winners.\nThis event emphasizes the beauty and power of geometry, encouraging participants to appreciate both precision and creativity in mathematical problem-solving.",
-        "isTeamEvent": false,
-        "registrationLink": "#"
-      },
-      {
-        "id": "event-solo-8",
-        "date": "TBA",
-        "time": "TBA",
-        "title": "Rubik's Cube",
-        "category": "Competition",
-        "imageUrl": "",
-        "location": "St. Joseph Higher Secondary School",
-        "description": "The Rubik’s Cube Showdown is an exciting test of speed, focus, and problem-solving skills, where participants will battle it out to prove their cubing mastery. The event will be divided into two rounds, combining both individual performance and head-to-head competition.\n\nCategories :\n\n* Primary (Class 3–5)\n* Junior (Class 6–8)\n* Secondary (Class 9–10)\n* Higher Secondary (Class 11–12 and HSC 2025–HSC 2027)\n\nEvent Structure:\n\nRound 1 – Preliminary (Speed Round):\n\nAll registered participants will attempt to solve the Rubik’s Cube.\n\nEach participant will be given multiple solves (depending on time constraints), and their best time will be recorded.\n\nBased on performance, the top 6 participants with the fastest solving times will advance to the final round.\n\nRound 2 – Final (1v1 Knockout Matches):\n\nThe four finalists will compete in 1v1 head-to-head matches.\n\nPairings will be made based on seeding from Round 1 (fastest vs. slowest, etc.).\n\nIn each match, both participants will solve the same scrambled cube simultaneously.\n\nThe winner will be the participant who completes the solve first.\n\nMatches continue until a final champion is determined.\n\nWinners:\n\nChampion – Winner of the final duel.\n\nFirst Runner-Up – The finalist defeated in the championship match.\n\nSecond Runner-Up – Determined from the duel between the semi-final losers",
-        "isTeamEvent": false,
-        "registrationLink": "#"
-      },
-      {
-        "id": "event-solo-9",
-        "date": "TBA",
-        "time": "TBA",
-        "title": "Sudoku",
-        "category": "Competition",
-        "imageUrl": "/images/event_banner/Sudoku.jpg",
-        "location": "St. Joseph Higher Secondary School",
-        "description": "The Sudoku Challenge is an engaging puzzle competition designed to test participants’\nlogical reasoning, pattern recognition, and problem-solving speed. Participants will solve\nSudoku grids of varying difficulty within a limited time, aiming to fill each grid correctly\naccording to the classic rules of Sudoku.\nCategories :\nThe competition is open for the following four categories:\n* Primary (Class 3–5)\n* Junior (Class 6–8)\n* Secondary (Class 9–10)\n* Higher Secondary (Class 11–12 and HSC 2025–HSC 2027) Rules of Sudoku\n* Each Sudoku puzzle consists of a 9×9 grid, divided into nine 3×3 subgrids (also called\nboxes or regions).\n* The goal is to fill the empty cells with numbers from 1 to 9.\n* Each row, each column, and each 3.3 subgrid must contain all numbers from 1 to\n9 exactly once.\n* Participants cannot repeat any number in a row, column, or subgrid.\n* The time taken to complete the puzzle will be considered in determining the\nwinners.\n* Time duration of this event will be 30 minutes.\n* The three fastest participants in each category who complete the puzzle correctly\nwill be declared the winners. Three winners from each category .\n* Any incorrect entries or attempts to alter another participant’s puzzle may\nresult in disqualification.\nThis event encourages focus, logical reasoning, and careful planning, offering a fun and competitive way to strengthen numerical and analytical skills.",
-        "isTeamEvent": false,
-        "registrationLink": "#"
-      },
-      {
-        "id": "event-solo-10",
-        "date": "TBA",
-        "time": "TBA",
-        "title": "Cryptomania",
-        "category": "Competition",
-        "imageUrl": "",
-        "location": "St. Joseph Higher Secondary School",
-        "description": "Cryptomania is an exciting solo event open to participants across all four categories:\n* Primary (Class 3–5)\n* Junior (Class 6–8)\n* Secondary (Class 9–10)\n* Higher Secondary (Class 11–12 and HSC 2025–HSC 2027)\nObjective :\nParticipants will solve cipher-decipher challenges or thrilling problem-based cases\nusing logical reasoning and analytical skills. A cipher is a method of transforming\ninformation to keep it secret, while deciphering is the process of decoding it to reveal the\noriginal message. Participants must extract clues and reason carefully to solve the tasks.\nRules\n* Each participant must solve the problems using sheer problem-solving skills; ex-\nternal aids are not allowed.\n* Participants will be provided all necessary information within the problem state\n* there will be three winners from each category.\n* Any attempt to tamper with another participant’s work or use unauthorized aids may result in disqualification.\nThis event encourages critical thinking, creativity, and logical deduction, offering participants a fun and challenging opportunity to crack codes and solve mysteries.",
-        "isTeamEvent": false,
-        "registrationLink": "#"
-      },
-      {
-        "id": "event-solo-11",
-        "date": "TBA",
-        "time": "TBA",
-        "title": "Singularity",
-        "category": "Competition",
-        "imageUrl": "/images/event_banner/Singularity-segment.jpg",
-        "location": "St. Joseph Higher Secondary School",
-        "description": "Participate in the exciting Singularity competition.",
-        "isTeamEvent": false,
-        "registrationLink": "#"
-      },
-      {
-        "id": "event-team-12",
-        "date": "TBA",
-        "time": "TBA",
-        "title": "Escape Room",
-        "category": "Competition",
-        "imageUrl": "/images/event_banner/Escape-Room.jpg",
-        "location": "St. Joseph Higher Secondary School",
-        "teamSize": 3,
-        "description": "A thrilling team event (Escape Room) where logic and teamwork matter.",
-        "isTeamEvent": true,
-        "registrationLink": "#"
-      },
-      {
-        "id": "event-team-15",
-        "date": "TBA",
-        "time": "TBA",
-        "title": "Tic-Tac-Toe",
-        "category": "Competition",
-        "imageUrl": "/images/event_banner/tic-tac-toe.jpg",
-        "location": "St. Joseph Higher Secondary School",
-        "teamSize": 3,
-        "description": "A tactical grid match where math formulas and patterns meet board-game maneuvers. Exclusive to Primary and Junior categories.",
-        "isTeamEvent": true,
-        "registrationLink": "#"
-      }
-    ],
-    "subtitle": "UPCOMING EVENTS",
-    "categories": [
-      {
-        "id": "all",
-        "icon": "Calendar",
-        "name": "All"
-      },
-      {
-        "id": "competition",
-        "icon": "Trophy",
-        "name": "Competitions"
-      },
-      {
-        "id": "workshop",
-        "icon": "BookOpen",
-        "name": "Workshops"
-      },
-      {
-        "id": "seminar",
-        "icon": "Users",
-        "name": "Seminars"
-      }
-    ],
-    "description": "Join us for a series of challenging competitions, insightful workshops, and engaging seminars designed to push your mathematical boundaries."
-  },
-  "members_list": {
-    "title": "OUR MEMBERS",
-    "members": [],
-    "subtitle": "COMMUNITY",
-    "description": "The heartbeat of Josephite Math Club - our diverse and passionate community of mathematicians."
-  },
-  "registration": {
-    "fee": "N/A",
-    "bkashNumber": "N/A",
-    "declaration": "I am willing to join the Josephite Math Club, I promise to perform my duties with honesty, respect the club values, and work for its development",
-    "instructions": [],
-    "cashInstructions": "Please pay your registration fee to the club treasurer.",
-    "registrationOpen": false,
-    "registrationClosedMessage": "Registration for the current intra-events is currently closed. Please stay tuned for future updates."
-  },
-  "handouts": {
-    "title": "Session Handouts",
-    "sessions": [
-      {
-        "id": "default-session-1",
-        "date": "July 19, 2026",
-        "name": "Day One",
-        "fileUrl": "",
-        "description": "Introduction to basic problem-solving, arithmetic principles, and club orientation details."
-      }
-    ],
-    "description": "Access official handouts, session notes, and resources compiled by the club moderators."
-  },
-  "resources": [
-    {
-      "id": "discover-math-play",
-      "url": "/discover-math-play",
-      "tags": [
-        "Geometry",
-        "Solids",
-        "Triangles",
-        "Modeling",
-        "Physics"
-      ],
-      "type": "Interactive App",
-      "title": "Discover Math Play",
-      "source": "Josephite Math Club Interactive Suite",
-      "teaches": [
-        "Observation and measurement",
-        "Geometry of solids and surface areas",
-        "Similar triangles & Thales shadow triangulation",
-        "Algebraic manipulation & scale isolation",
-        "Mathematical modelling and harmonic motion"
-      ],
-      "category": "Interactive Apps & Tools",
-      "featured": true,
-      "description": "An interactive mathematical playground designed for active exploration of physical geometry, 3D solids, similar triangles, and real-world engineering concepts."
-    },
-    {
-      "id": "know-math-symbols",
-      "url": "/know-math-symbols",
-      "tags": [
-        "Logic",
-        "Quantifiers",
-        "Proofs",
-        "Notation",
-        "Set Theory"
-      ],
-      "type": "Interactive App",
-      "title": "Know Math Symbols",
-      "source": "Josephite Math Club Interactive Suite",
-      "teaches": [
-        "Interpret the meanings of ∀ (\"for all\") and ∃ (\"there exists\")",
-        "Distinguish between universal and existential statements",
-        "Use counterexamples to disprove universal statements",
-        "Verify existential statements by constructing valid witnesses"
-      ],
-      "category": "Interactive Apps & Tools",
-      "featured": true,
-      "description": "Master first-order predicate logic, mathematical quantifiers, and formal statement verification through interactive practice modules."
-    },
-    {
-      "id": "comb-co1-what-is-combinatorics",
-      "url": "",
-      "tags": [
-        "Combinatorics",
-        "Intro",
-        "MAT_456"
-      ],
-      "type": "Video",
-      "title": "CO1 What is Combinatorics?",
-      "source": "Course Info: MAT_456_SKY_FALL_2024",
-      "teaches": [
-        "Foundations of discrete mathematics",
-        "Counting vs enumeration",
-        "Overview of combinatorial structures"
-      ],
-      "category": "Combinatorics",
-      "description": "Fundamental introduction to combinatorial reasoning, discrete structures, and counting principles."
-    },
-    {
-      "id": "comb-co2-counting-problem-solution",
-      "url": "",
-      "tags": [
-        "Combinatorics",
-        "Counting",
-        "MAT_456"
-      ],
-      "type": "Video",
-      "title": "CO2 What does a solution to a counting problem look like?",
-      "source": "Course Info: MAT_456_SKY_FALL_2024",
-      "teaches": [
-        "Constructive counting methods",
-        "Evaluating closed-form solutions",
-        "Existence proofs in combinatorics"
-      ],
-      "category": "Combinatorics",
-      "description": "Analysis of counting outcomes, constructive solutions, closed formulas, and recurrence relations."
-    },
-    {
-      "id": "comb-8-queens-puzzle",
-      "url": "",
-      "tags": [
-        "Combinatorics",
-        "N-Queens",
-        "Chess Puzzles"
-      ],
-      "type": "Interactive Puzzle",
-      "title": "8 Queens Puzzle & The N-Queens Problem",
-      "source": "Course Info: MAT_456_SKY_FALL_2024",
-      "teaches": [
-        "Constraint satisfaction problems",
-        "Backtracking search",
-        "Permutations on chessboard diagonals"
-      ],
-      "category": "Combinatorics",
-      "description": "Classic chessboard placement puzzle of placing 8 non-attacking queens on an 8x8 grid."
-    },
-    {
-      "id": "comb-solving-n-queens-algorithm",
-      "url": "",
-      "tags": [
-        "Combinatorics",
-        "Algorithms",
-        "N-Queens"
-      ],
-      "type": "Video",
-      "title": "Solving the N-Queens Problem - The Easiest Algorithm",
-      "source": "Course Info: MAT_456_SKY_FALL_2024",
-      "teaches": [
-        "Algorithmic problem solving",
-        "Diagonal constraint elimination",
-        "Recursive backtracking"
-      ],
-      "category": "Combinatorics",
-      "description": "Algorithmic breakdown and systematic search optimization for the N-Queens problem."
-    },
-    {
-      "id": "comb-8-queens-wikipedia",
-      "url": "",
-      "tags": [
-        "Combinatorics",
-        "N-Queens",
-        "Wikipedia"
-      ],
-      "type": "Guide / Article",
-      "title": "Eight queens puzzle - Wikipedia",
-      "source": "Course Info: MAT_456_SKY_FALL_2024",
-      "teaches": [
-        "Fundamental group of symmetries",
-        "Counting distinct vs total solutions",
-        "History of Gauss and Ahrens"
-      ],
-      "category": "Combinatorics",
-      "description": "Comprehensive historical and mathematical article on the 8 Queens puzzle and its generalizations."
-    },
-    {
-      "id": "comb-queens-puzzle-graph-theory",
-      "url": "",
-      "tags": [
-        "Combinatorics",
-        "Graph Theory",
-        "Wolfram"
-      ],
-      "type": "Guide / Article",
-      "title": "Solving the Queens Puzzle with Graph Theory - Wolfram Community",
-      "source": "Course Info: MAT_456_SKY_FALL_2024",
-      "teaches": [
-        "Graph vertices and edges in chess",
-        "Independent sets in graphs",
-        "Wolfram Mathematica code modeling"
-      ],
-      "category": "Combinatorics",
-      "description": "Graph-theoretic formulation of queen independence numbers and vertex colorings in queen graphs."
-    },
-    {
-      "id": "comb-what-is-combinatorics-explore",
-      "url": "",
-      "tags": [
-        "Combinatorics",
-        "Magic Squares"
-      ],
-      "type": "Guide / Article",
-      "title": "What Is Combinatorics? & Magic Square Fundamentals",
-      "source": "Course Info: MAT_456_SKY_FALL_2024",
-      "teaches": [
-        "Magic constant formula M = n(n^2 + 1)/2",
-        "Row, column, and diagonal symmetry",
-        "Order n classification"
-      ],
-      "category": "Combinatorics",
-      "description": "Exploration of magic constants, normal magic squares of order n, and historical square patterns."
-    },
-    {
-      "id": "comb-magic-square-and-cube",
-      "url": "",
-      "tags": [
-        "Combinatorics",
-        "Magic Cubes"
-      ],
-      "type": "Guide / Article",
-      "title": "Magic Square and Magic Cube Exploration",
-      "source": "Course Info: MAT_456_SKY_FALL_2024",
-      "teaches": [
-        "3D matrix arrays",
-        "Space diagonals and pillar sums",
-        "Higher dimensional combinatorics"
-      ],
-      "category": "Combinatorics",
-      "description": "Extending 2D magic squares into 3D magic hypercubes with constant spatial diagonal sums."
-    },
-    {
-      "id": "comb-perfect-magic-square",
-      "url": "",
-      "tags": [
-        "Combinatorics",
-        "Magic Squares"
-      ],
-      "type": "Guide / Article",
-      "title": "Perfect Magic Square",
-      "source": "Course Info: MAT_456_SKY_FALL_2024",
-      "teaches": [
-        "Pandiagonal magic squares",
-        "Symmetry group operations",
-        "Modular arithmetic constraints"
-      ],
-      "category": "Combinatorics",
-      "description": "Symmetrical magic squares where sub-quadrants and broken diagonals also sum to the magic constant."
-    },
-    {
-      "id": "comb-why-only-one-3x3-magic-square",
-      "url": "",
-      "tags": [
-        "Combinatorics",
-        "Magic Squares",
-        "Proof"
-      ],
-      "type": "Video",
-      "title": "Why is there only one 3x3 magic square?",
-      "source": "Course Info: MAT_456_SKY_FALL_2024",
-      "teaches": [
-        "Center cell must be 5 proof",
-        "Corner cell parity rules",
-        "Dihedral group D4 symmetries"
-      ],
-      "category": "Combinatorics",
-      "description": "Uniqueness proof demonstrating that the 3x3 magic square is unique up to 8 rotations and reflections."
-    },
-    {
-      "id": "comb-unlocking-secrets-magic-squares",
-      "url": "",
-      "tags": [
-        "Combinatorics",
-        "Magic Squares",
-        "Puzzles"
-      ],
-      "type": "Video",
-      "title": "Unlocking the secrets of Magic Square puzzles",
-      "source": "Course Info: MAT_456_SKY_FALL_2024",
-      "teaches": [
-        "De La Loubère algorithm",
-        "Odd vs even order magic squares",
-        "Pattern recognition"
-      ],
-      "category": "Combinatorics",
-      "description": "Deconstructing magic square algorithms, Siamese step methods, and parity matrix constructions."
-    },
-    {
-      "id": "comb-make-9x9-magic-square",
-      "url": "",
-      "tags": [
-        "Combinatorics",
-        "Algorithms",
-        "Magic Squares"
-      ],
-      "type": "Video",
-      "title": "Make A 9x9 Magic Square! Learn The Ancient Chinese Algorithm",
-      "source": "Course Info: MAT_456_SKY_FALL_2024",
-      "teaches": [
-        "Odd order step algorithms",
-        "Luoshu diagram history",
-        "Grid coordinate wrapping"
-      ],
-      "category": "Combinatorics",
-      "description": "Step-by-step construction of higher odd-order magic squares using ancient Luoshu grid algorithms."
-    },
-    {
-      "id": "comb-magic-squares-prof-brumgnach",
-      "url": "",
-      "tags": [
-        "Combinatorics",
-        "Linear Algebra",
-        "Lecture"
-      ],
-      "type": "Video",
-      "title": "Magic Squares with professor Edward Brumgnach",
-      "source": "Course Info: MAT_456_SKY_FALL_2024",
-      "teaches": [
-        "Matrix vector spaces",
-        "Kernel and Nullity of magic square systems",
-        "Linear transformations"
-      ],
-      "category": "Combinatorics",
-      "description": "Academic lecture on linear algebra transformations and vector subspaces of magic square matrices."
-    },
-    {
-      "id": "comb-magic-squares-unlocked-puzzles",
-      "url": "",
-      "tags": [
-        "Combinatorics",
-        "Magic Squares",
-        "Patterns"
-      ],
-      "type": "Guide / Article",
-      "title": "MAGIC SQUARES UNLOCKED: From Puzzles to Patterns",
-      "source": "Course Info: MAT_456_SKY_FALL_2024",
-      "teaches": [
-        "Pattern discovery in grid numbers",
-        "Symmetry transformations",
-        "Mathematical aesthetics"
-      ],
-      "category": "Combinatorics",
-      "description": "Deep dive into structural patterns, magic constants, and recreational math applications."
-    },
-    {
-      "id": "comb-3-ways-to-solve-magic-square",
-      "url": "",
-      "tags": [
-        "Combinatorics",
-        "Magic Squares",
-        "Guide"
-      ],
-      "type": "Guide / Article",
-      "title": "3 Ways to Solve Magic Square Math Puzzles",
-      "source": "Course Info: MAT_456_SKY_FALL_2024",
-      "teaches": [
-        "Cross-out method for 4x4 squares",
-        "LUX method for singly-even squares",
-        "Quick mental math checks"
-      ],
-      "category": "Combinatorics",
-      "description": "Practical walkthroughs for solving odd, doubly-even (4x4), and singly-even (6x6) magic squares."
-    },
-    {
-      "id": "comb-magic-myth-math",
-      "url": "",
-      "tags": [
-        "Combinatorics",
-        "History of Math",
-        "Magic Squares"
-      ],
-      "type": "Video",
-      "title": "The magic, myth and math of magic squares",
-      "source": "Course Info: MAT_456_SKY_FALL_2024",
-      "teaches": [
-        "Albrecht Dürer 1514 magic square",
-        "Cultural history across civilizations",
-        "Mathematical symbolism"
-      ],
-      "category": "Combinatorics",
-      "description": "Historical exploration of magic squares in art (Dürer's Melencolia I), culture, and mathematics."
-    },
-    {
-      "id": "comb-korean-kings-magic-square",
-      "url": "",
-      "tags": [
-        "Combinatorics",
-        "Algorithms",
-        "Magic Squares"
-      ],
-      "type": "Video",
-      "title": "The Korean king's magic square: a brilliant algorithm in a k-drama",
-      "source": "Course Info: MAT_456_SKY_FALL_2024",
-      "teaches": [
-        "Orthogonal Latin squares",
-        "Choe Seok-jeong's Hexagonal magic square",
-        "Asian mathematical heritage"
-      ],
-      "category": "Combinatorics",
-      "description": "Historical breakdown of King Sejong's and Choe Seok-jeong's magic square algorithms."
-    },
-    {
-      "id": "comb-fascination-magic-squares-royal-inst",
-      "url": "",
-      "tags": [
-        "Combinatorics",
-        "Royal Institution",
-        "Lecture"
-      ],
-      "type": "Video",
-      "title": "The fascination of magic squares - Royal Institution (Michael Daniels & Sakal Roy)",
-      "source": "Course Info: MAT_456_SKY_FALL_2024",
-      "teaches": [
-        "Recreational mathematics",
-        "Combinatorial designs",
-        "Engaging math presentation"
-      ],
-      "category": "Combinatorics",
-      "description": "Royal Institution lecture on the beauty, algebraic properties, and recreational power of magic squares."
-    },
-    {
-      "id": "comb-magic-squares-strategy-guide",
-      "url": "",
-      "tags": [
-        "Combinatorics",
-        "MathCommunities",
-        "Guide"
-      ],
-      "type": "Guide / Article",
-      "title": "Magic Squares: A Detailed Strategy Guide – MathCommunities.org",
-      "source": "Course Info: MAT_456_SKY_FALL_2024",
-      "teaches": [
-        "Pedagogical strategies",
-        "Grid algebraic proofs",
-        "Classroom extensions"
-      ],
-      "category": "Combinatorics",
-      "description": "Detailed strategy guide for educators and students to construct and analyze magic squares."
-    },
-    {
-      "id": "comb-ramanujan-magic-square",
-      "url": "",
-      "tags": [
-        "Combinatorics",
-        "Ramanujan",
-        "Magic Squares"
-      ],
-      "type": "Video",
-      "title": "Ramanujan Magic Square, Ramanujan Magical Square (MATH WONDERS)",
-      "source": "Course Info: MAT_456_SKY_FALL_2024",
-      "teaches": [
-        "Date-encoded magic squares",
-        "Ramanujan's combinatorial genius",
-        "Custom birthday square formulas"
-      ],
-      "category": "Combinatorics",
-      "description": "Srinivasa Ramanujan's birthday magic square where the top row encodes his birthdate (22-12-1887)."
-    },
-    {
-      "id": "comb-ramanujan-birthday-linear-algebra",
-      "url": "",
-      "tags": [
-        "Combinatorics",
-        "Ramanujan",
-        "Linear Algebra"
-      ],
-      "type": "Video",
-      "title": "Fun with Ramanujan’s Birthday Magic Square and Linear Algebra",
-      "source": "Course Info: MAT_456_SKY_FALL_2024",
-      "teaches": [
-        "4x4 linear systems",
-        "Parameterizing birthday entries",
-        "Matrix rank and independence"
-      ],
-      "category": "Combinatorics",
-      "description": "Linear algebraic system of equations behind constructing custom birthday magic squares for any date."
-    },
-    {
-      "id": "comb-co11-counting-basics",
-      "url": "",
-      "tags": [
-        "Combinatorics",
-        "Counting Basics",
-        "MAT_456"
-      ],
-      "type": "Video",
-      "title": "CO11 Counting Basics: Multiplication Principle & Probability",
-      "source": "Course Info: MAT_456_SKY_FALL_2024",
-      "teaches": [
-        "Rule of Product and Rule of Sum",
-        "Tree diagrams for decision choices",
-        "Discrete probability foundations"
-      ],
-      "category": "Combinatorics",
-      "description": "Fundamental counting principles: Product Rule, Sum Rule, and basic probability sample spaces."
-    },
-    {
-      "id": "comb-co12-balls-boxes",
-      "url": "",
-      "tags": [
-        "Combinatorics",
-        "Twelvefold Way",
-        "MAT_456"
-      ],
-      "type": "Video",
-      "title": "CO12 Balls & Boxes Counting Problems",
-      "source": "Course Info: MAT_456_SKY_FALL_2024",
-      "teaches": [
-        "Distinguishable vs indistinguishable elements",
-        "Stirling numbers of the second kind",
-        "Partition functions"
-      ],
-      "category": "Combinatorics",
-      "description": "Comprehensive analysis of the Twelvefold Way: placing distinguishable/indistinguishable balls into boxes."
-    },
-    {
-      "id": "comb-co14-counting-permutations",
-      "url": "",
-      "tags": [
-        "Combinatorics",
-        "Permutations",
-        "MAT_456"
-      ],
-      "type": "Video",
-      "title": "CO14 Counting Permutations of a Set",
-      "source": "Course Info: MAT_456_SKY_FALL_2024",
-      "teaches": [
-        "nPr formula derivation",
-        "Factorial notation and properties",
-        "Ordered selection without replacement"
-      ],
-      "category": "Combinatorics",
-      "description": "Ordered arrangements, nPr formulas, factorial growth, and symmetry permutations."
-    },
-    {
-      "id": "comb-co15-circular-permutations",
-      "url": "",
-      "tags": [
-        "Combinatorics",
-        "Circular Permutations",
-        "MAT_456"
-      ],
-      "type": "Video",
-      "title": "CO15 Circular Permutations, # of k-cycles in S_n",
-      "source": "Course Info: MAT_456_SKY_FALL_2024",
-      "teaches": [
-        "Division by rotation symmetries (n-1)!",
-        "k-cycles in symmetric groups",
-        "Necklace and bracelet counting"
-      ],
-      "category": "Combinatorics",
-      "description": "Arrangements around a circle, necklace counting, and cycle structure in symmetric group S_n."
-    },
-    {
-      "id": "comb-co16-counting-combinations",
-      "url": "",
-      "tags": [
-        "Combinatorics",
-        "Combinations",
-        "MAT_456"
-      ],
-      "type": "Video",
-      "title": "CO16 Counting subsets aka Combinations via binomial coefficients",
-      "source": "Course Info: MAT_456_SKY_FALL_2024",
-      "teaches": [
-        "nCr formula derivation",
-        "Symmetry (n k) = (n n-k)",
-        "Subsets of an n-element set"
-      ],
-      "category": "Combinatorics",
-      "description": "Unordered selection, binomial coefficients (n k), subset counting, and Pascal identity."
-    },
-    {
-      "id": "comb-co17-multisets-multinomial",
-      "url": "",
-      "tags": [
-        "Combinatorics",
-        "Multisets",
-        "MAT_456"
-      ],
-      "type": "Video",
-      "title": "CO17 Permutations of Multisets & Multinomial Coefficients",
-      "source": "Course Info: MAT_456_SKY_FALL_2024",
-      "teaches": [
-        "Multiset permutations",
-        "Anagram counting formulas",
-        "Multinomial notation"
-      ],
-      "category": "Combinatorics",
-      "description": "Arranging elements with repetitions, word anagrams, and multinomial coefficients n!/(n1! n2! ... nk!)."
-    },
-    {
-      "id": "comb-co18-multichoose-stars-bars",
-      "url": "",
-      "tags": [
-        "Combinatorics",
-        "Stars and Bars",
-        "MAT_456"
-      ],
-      "type": "Video",
-      "title": "CO18 Counting Combinations with Repetition & Multichoose numbers",
-      "source": "Course Info: MAT_456_SKY_FALL_2024",
-      "teaches": [
-        "Stars and Bars visual proof",
-        "Non-negative integer solutions to x1+...+xn=k",
-        "Multichoose coefficients"
-      ],
-      "category": "Combinatorics",
-      "description": "Unordered selection with replacement, Stars and Bars technique, and multichoose formula ((n k))."
-    },
-    {
-      "id": "comb-gf1-what-is-function",
-      "url": "",
-      "tags": [
-        "Combinatorics",
-        "Functions",
-        "MAT_456"
-      ],
-      "type": "Video",
-      "title": "GF1 What is a function? What do 1-1 and onto mean?",
-      "source": "Course Info: MAT_456_SKY_FALL_2024",
-      "teaches": [
-        "Injection, surjection, and bijection definitions",
-        "Domain and codomain mappings",
-        "Counting functions between sets"
-      ],
-      "category": "Combinatorics",
-      "description": "Injective (one-to-one), surjective (onto), and bijective functions as foundations for combinatorial proofs."
-    },
-    {
-      "id": "comb-what-is-pigeonhole-principle",
-      "url": "",
-      "tags": [
-        "Combinatorics",
-        "Pigeonhole Principle"
-      ],
-      "type": "Video",
-      "title": "What Is the Pigeonhole Principle?",
-      "source": "Course Info: MAT_456_SKY_FALL_2024",
-      "teaches": [
-        "Statement of Dirichlet's Box Principle",
-        "Identifying items (pigeons) and containers (holes)",
-        "Existence proofs"
-      ],
-      "category": "Combinatorics",
-      "description": "Intuitive video overview of Dirichlet's Box Principle and its ubiquitous problem-solving applications."
-    },
-    {
-      "id": "comb-co4-pigeonhole-principle",
-      "url": "",
-      "tags": [
-        "Combinatorics",
-        "Pigeonhole Principle",
-        "MAT_456"
-      ],
-      "type": "Video",
-      "title": "CO4 The Pigeonhole Principle",
-      "source": "Course Info: MAT_456_SKY_FALL_2024",
-      "teaches": [
-        "Generalized Pigeonhole theorem",
-        "Ceiling function bounds",
-        "Geometric & subset pigeonhole applications"
-      ],
-      "category": "Combinatorics",
-      "description": "Formal formulation of the generalized Pigeonhole Principle ⌈n/k⌉ and foundational applications."
-    },
-    {
-      "id": "comb-co5-erdos-szekeres-theorem",
-      "url": "",
-      "tags": [
-        "Combinatorics",
-        "Erdos-Szekeres",
-        "MAT_456"
-      ],
-      "type": "Video",
-      "title": "CO5 The Erdos-Szekeres Theorem",
-      "source": "Course Info: MAT_456_SKY_FALL_2024",
-      "teaches": [
-        "Monotonic subsequences",
-        "Pigeonhole proof using coordinate pairs",
-        "Extremal sequence length"
-      ],
-      "category": "Combinatorics",
-      "description": "Proof that any sequence of ab + 1 distinct real numbers contains a monotonic subsequence of length a+1 or b+1."
-    },
-    {
-      "id": "comb-simple-principle-impossible-math",
-      "url": "",
-      "tags": [
-        "Combinatorics",
-        "Problem Solving",
-        "Olympiad"
-      ],
-      "type": "Video",
-      "title": "Simple Principle Solves Seemingly IMPOSSIBLE Math Problems",
-      "source": "Course Info: MAT_456_SKY_FALL_2024",
-      "teaches": [
-        "Creative pigeonhole partitioning",
-        "Number theory modulo applications",
-        "Geometric point packing"
-      ],
-      "category": "Combinatorics",
-      "description": "Applying the Pigeonhole Principle to solve high-school and Olympiad competition challenges effortlessly."
-    },
-    {
-      "id": "comb-erdos-ramsey-numbers-commentary",
-      "url": "",
-      "tags": [
-        "Combinatorics",
-        "Ramsey Theory",
-        "Erdos"
-      ],
-      "type": "Video",
-      "title": "Paul Erdős commented on Ramsey numbers R(3,3), R(4,4), R(5,5) and R(6,6)",
-      "source": "Course Info: MAT_456_SKY_FALL_2024",
-      "teaches": [
-        "Definition of Ramsey numbers R(r,s)",
-        "Known values R(3,3)=6, R(4,4)=18",
-        "Computational complexity of Ramsey numbers"
-      ],
-      "category": "Combinatorics",
-      "description": "Paul Erdős's legendary commentary on alien computational threats and the impossibility of finding R(6,6)."
-    },
-    {
-      "id": "comb-cg1-graphs-basic-vocabulary",
-      "url": "",
-      "tags": [
-        "Combinatorics",
-        "Graph Theory",
-        "MAT_456"
-      ],
-      "type": "Video",
-      "title": "CG1 Graphs: Basic Vocabulary",
-      "source": "Course Info: MAT_456_SKY_FALL_2024",
-      "teaches": [
-        "Graph definition G=(V,E)",
-        "Handshaking Lemma ∑deg(v) = 2|E|",
-        "Bipartite and complete graph structures"
-      ],
-      "category": "Combinatorics",
-      "description": "Essential graph theory terminology: Vertices, Edges, Degrees, Handshaking Lemma, Complete Graphs K_n."
-    },
-    {
-      "id": "comb-co6-what-is-ramsey-theory",
-      "url": "",
-      "tags": [
-        "Combinatorics",
-        "Ramsey Theory",
-        "MAT_456"
-      ],
-      "type": "Video",
-      "title": "CO6 What is Ramsey Theory?",
-      "source": "Course Info: MAT_456_SKY_FALL_2024",
-      "teaches": [
-        "2-colorings of complete graph edges",
-        "Party problem: 6 people contain 3 mutual friends or 3 strangers",
-        "Monochromatic cliques"
-      ],
-      "category": "Combinatorics",
-      "description": "Introduction to Ramsey theory: \"Complete disorder is impossible\" in monochromatic edge colorings."
-    },
-    {
-      "id": "comb-co7-proof-ramseys-theorem-2-colors",
-      "url": "",
-      "tags": [
-        "Combinatorics",
-        "Ramsey Proof",
-        "MAT_456"
-      ],
-      "type": "Video",
-      "title": "CO7 Proof of Ramsey's Theorem for 2 colors",
-      "source": "Course Info: MAT_456_SKY_FALL_2024",
-      "teaches": [
-        "Inductive proof of Ramsey's theorem",
-        "Pascal-like recurrence bound for Ramsey numbers",
-        "Finiteness of Ramsey numbers"
-      ],
-      "category": "Combinatorics",
-      "description": "Inductive proof that Ramsey number R(r,s) exists and satisfies R(r,s) ≤ R(r-1,s) + R(r,s-1)."
-    },
-    {
-      "id": "comb-co8-small-ramsey-numbers",
-      "url": "",
-      "tags": [
-        "Combinatorics",
-        "Ramsey Numbers",
-        "MAT_456"
-      ],
-      "type": "Video",
-      "title": "CO8 Small Ramsey Numbers: r(3, 4)=9, r(3, 5)= 14, r(4,4) =18",
-      "source": "Course Info: MAT_456_SKY_FALL_2024",
-      "teaches": [
-        "Constructing edge-coloring counterexample graphs",
-        "Proving upper bounds via degree arguments",
-        "Exact Ramsey values"
-      ],
-      "category": "Combinatorics",
-      "description": "Explicit construction and upper/lower bound proofs for small Ramsey numbers R(3,4), R(3,5), and R(4,4)."
-    },
-    {
-      "id": "comb-co21-upper-lower-bounds-ramsey",
-      "url": "",
-      "tags": [
-        "Combinatorics",
-        "Ramsey Bounds",
-        "MAT_456"
-      ],
-      "type": "Video",
-      "title": "CO21 Upper and Lower Bounds for Ramsey Numbers",
-      "source": "Course Info: MAT_456_SKY_FALL_2024",
-      "teaches": [
-        "Probabilistic Method introduced by Erdős",
-        "Exponential bounds 2^(k/2) < R(k,k) ≤ 4^k",
-        "Asymptotic notation in combinatorics"
-      ],
-      "category": "Combinatorics",
-      "description": "Asymptotic bounds for R(k,k) using Stirling's approximation and Erdős's probabilistic lower bound method."
-    },
-    {
-      "id": "comb-why-complete-chaos-impossible-ramsey",
-      "url": "",
-      "tags": [
-        "Combinatorics",
-        "Ramsey Theory"
-      ],
-      "type": "Video",
-      "title": "Why complete chaos is impossible || Ramsey Theory",
-      "source": "Course Info: MAT_456_SKY_FALL_2024",
-      "teaches": [
-        "Visual graph colorings",
-        "Inevitability of structure in large sets",
-        "Ramsey theory in communication networks"
-      ],
-      "category": "Combinatorics",
-      "description": "Conceptual, highly visual video explaining how large mathematical systems forcedly exhibit structured order."
-    },
-    {
-      "id": "comb-4-5-finite-cardinality-libretexts",
-      "url": "",
-      "tags": [
-        "Combinatorics",
-        "LibreTexts",
-        "Cardinality"
-      ],
-      "type": "Guide / Article",
-      "title": "4.5: Finite Cardinality - Engineering LibreTexts",
-      "source": "Course Info: MAT_456_SKY_FALL_2024",
-      "teaches": [
-        "Set cardinalities |A|",
-        "Bijection principle for set equality",
-        "Finite vs infinite sets"
-      ],
-      "category": "Combinatorics",
-      "description": "Engineering textbook chapter on finite set cardinalities, bijections, and countability."
-    },
-    {
-      "id": "comb-14-8-pigeonhole-libretexts",
-      "url": "",
-      "tags": [
-        "Combinatorics",
-        "LibreTexts",
-        "Pigeonhole"
-      ],
-      "type": "Guide / Article",
-      "title": "14.8: The Pigeonhole Principle - Engineering LibreTexts",
-      "source": "Course Info: MAT_456_SKY_FALL_2024",
-      "teaches": [
-        "Hash table collisions",
-        "Data compression limits",
-        "Formal statement & proof techniques"
-      ],
-      "category": "Combinatorics",
-      "description": "Engineering textbook chapter detailing formal pigeonhole principle proofs and hashing collisions."
-    },
-    {
-      "id": "comb-pigeonhole-brilliant-wiki",
-      "url": "",
-      "tags": [
-        "Combinatorics",
-        "Brilliant",
-        "Pigeonhole"
-      ],
-      "type": "Guide / Article",
-      "title": "Pigeonhole Principle | Brilliant Math & Science Wiki",
-      "source": "Course Info: MAT_456_SKY_FALL_2024",
-      "teaches": [
-        "Divisibility pigeonhole proofs",
-        "Subsets with given sums",
-        "Geometric pigeonhole applications"
-      ],
-      "category": "Combinatorics",
-      "description": "Brilliant.org wiki article covering beginner to advanced competition problems solved via Pigeonhole Principle."
-    },
-    {
-      "id": "comb-16-fun-applications-pigeonhole",
-      "url": "",
-      "tags": [
-        "Combinatorics",
-        "Applications",
-        "Pigeonhole"
-      ],
-      "type": "Guide / Article",
-      "title": "16 fun applications of the pigeonhole principle",
-      "source": "Course Info: MAT_456_SKY_FALL_2024",
-      "teaches": [
-        "Real-world mathematical modeling",
-        "Everyday pigeonhole examples",
-        "Fun math paradoxes"
-      ],
-      "category": "Combinatorics",
-      "description": "Collection of 16 engaging real-world puzzles (hair count, handshakes, socks in drawers) solved with Pigeonhole."
-    },
-    {
-      "id": "comb-fitch-cheney-card-trick",
-      "url": "",
-      "tags": [
-        "Combinatorics",
-        "Card Tricks",
-        "Game Theory"
-      ],
-      "type": "Video",
-      "title": "Learn A Remarkable Mathematical Card Trick – Game Theory Tuesdays",
-      "source": "Course Info: MAT_456_SKY_FALL_2024",
-      "teaches": [
-        "Card suit pigeonhole selection",
-        "Cycle permutations for encoding numbers 1-6",
-        "Information transmission protocols"
-      ],
-      "category": "Combinatorics",
-      "description": "Explanation of Fitch Cheney's 5-card trick using the Pigeonhole Principle and modulo arithmetic permutations."
-    },
-    {
-      "id": "comb-co19-binomial-identities-combinatorial-proofs",
-      "url": "",
-      "tags": [
-        "Combinatorics",
-        "Binomial Proofs",
-        "MAT_456"
-      ],
-      "type": "Video",
-      "title": "CO19 Combinatorial Proofs of Binomial Identities",
-      "source": "Course Info: MAT_456_SKY_FALL_2024",
-      "teaches": [
-        "Double counting method",
-        "Committee forming stories for equations",
-        "Algebraic-free identity proofs"
-      ],
-      "category": "Combinatorics",
-      "description": "Proving algebraic identities (e.g. ∑(n k) = 2^n, Pascal's identity) without algebra by double counting."
-    },
-    {
-      "id": "comb-co20-unimodality-binomial-coefficients",
-      "url": "",
-      "tags": [
-        "Combinatorics",
-        "Unimodality",
-        "MAT_456"
-      ],
-      "type": "Video",
-      "title": "CO20 Unimodality of Binomial Coefficients",
-      "source": "Course Info: MAT_456_SKY_FALL_2024",
-      "teaches": [
-        "Unimodal sequences definition",
-        "Ratio test (n k+1)/(n k)",
-        "Symmetry and peak at ⌊n/2⌋"
-      ],
-      "category": "Combinatorics",
-      "description": "Proof that the sequence (n 0), (n 1), ..., (n n) increases monotonically to the middle coefficient and then decreases."
-    },
-    {
-      "id": "comb-co22-binomial-theorem",
-      "url": "",
-      "tags": [
-        "Combinatorics",
-        "Binomial Theorem",
-        "MAT_456"
-      ],
-      "type": "Video",
-      "title": "CO22 The Binomial Theorem",
-      "source": "Course Info: MAT_456_SKY_FALL_2024",
-      "teaches": [
-        "Binomial expansion formula",
-        "Substituting x=1, y=1 and x=1, y=-1",
-        "Polynomial coefficient extraction"
-      ],
-      "category": "Combinatorics",
-      "description": "Formal statement and algebraic/combinatorial proofs of (x+y)^n = ∑ (n k) x^k y^(n-k)."
-    },
-    {
-      "id": "comb-what-lies-above-pascals-triangle",
-      "url": "",
-      "tags": [
-        "Combinatorics",
-        "Pascal Triangle"
-      ],
-      "type": "Video",
-      "title": "What Lies Above Pascal's Triangle?",
-      "source": "Course Info: MAT_456_SKY_FALL_2024",
-      "teaches": [
-        "Generalized binomial coefficients (r k)",
-        "Negative index expansions",
-        "Mathematical extrapolation"
-      ],
-      "category": "Combinatorics",
-      "description": "Extending Pascal's triangle into negative rows and fractional indices using Newton's binomial theorem."
-    },
-    {
-      "id": "comb-expand-x1-irrational-power",
-      "url": "",
-      "tags": [
-        "Combinatorics",
-        "Binomial Series"
-      ],
-      "type": "Video",
-      "title": "How to Expand x+1 Raised to an Irrational Power",
-      "source": "Course Info: MAT_456_SKY_FALL_2024",
-      "teaches": [
-        "Newton's generalized binomial series",
-        "Convergence radius |x| < 1",
-        "Taylor series connection"
-      ],
-      "category": "Combinatorics",
-      "description": "Infinite series binomial expansion for (1+x)^α where α is an irrational or real number."
-    },
-    {
-      "id": "comb-co23-multinomial-coefficients-theorem",
-      "url": "",
-      "tags": [
-        "Combinatorics",
-        "Multinomial",
-        "MAT_456"
-      ],
-      "type": "Video",
-      "title": "CO23 Multinomial Coefficients & the Multinomial Theorem",
-      "source": "Course Info: MAT_456_SKY_FALL_2024",
-      "teaches": [
-        "Multinomial expansion formula",
-        "Partitioning n into m non-negative integers",
-        "Combinatorial interpretation"
-      ],
-      "category": "Combinatorics",
-      "description": "Expanding (x1 + x2 + ... + xm)^n and calculating general term coefficients (n / k1,k2,...,km)."
-    },
-    {
-      "id": "comb-counting-paths-grid-permutations",
-      "url": "",
-      "tags": [
-        "Combinatorics",
-        "Grid Paths"
-      ],
-      "type": "Video",
-      "title": "Counting Paths On A Grid (Permutations)",
-      "source": "Course Info: MAT_456_SKY_FALL_2024",
-      "teaches": [
-        "Lattice paths in 2D grids",
-        "Mapping Rights (R) and Ups (U) to word permutations",
-        "Monotone path counting"
-      ],
-      "category": "Combinatorics",
-      "description": "Manhattan lattice path counting from origin (0,0) to (m,n) using combinations (m+n choose m)."
-    },
-    {
-      "id": "comb-number-of-paths-algorithm",
-      "url": "",
-      "tags": [
-        "Combinatorics",
-        "Grid Paths",
-        "Algorithms"
-      ],
-      "type": "Video",
-      "title": "How to do the Number of Paths Algorithm",
-      "source": "Course Info: MAT_456_SKY_FALL_2024",
-      "teaches": [
-        "Pascal addition recurrence on grid vertices",
-        "Handling blocked or missing grid vertices",
-        "Dynamic programming path counting"
-      ],
-      "category": "Combinatorics",
-      "description": "Dynamic programming / Pascal triangle addition algorithm to compute paths on grid layouts with blocked paths."
-    },
-    {
-      "id": "comb-what-you-dont-know-pascals-triangle",
-      "url": "",
-      "tags": [
-        "Combinatorics",
-        "Pascal Triangle"
-      ],
-      "type": "Video",
-      "title": "What You Don't Know About Pascal's Triangle",
-      "source": "Course Info: MAT_456_SKY_FALL_2024",
-      "teaches": [
-        "Shallow diagonal Fibonacci sums",
-        "Sierpinski triangle via mod 2 parity",
-        "Hockey stick identity"
-      ],
-      "category": "Combinatorics",
-      "description": "Hidden secrets in Pascal's triangle: Fibonacci numbers along diagonals, prime divisibility patterns, and Sierpinski triangle."
-    },
-    {
-      "id": "comb-14-10-combinatorial-proofs-libretexts",
-      "url": "",
-      "tags": [
-        "Combinatorics",
-        "LibreTexts",
-        "Combinatorial Proofs"
-      ],
-      "type": "Guide / Article",
-      "title": "14.10: Combinatorial Proofs - Engineering LibreTexts",
-      "source": "Course Info: MAT_456_SKY_FALL_2024",
-      "teaches": [
-        "Double counting structure",
-        "Bijective proof framework",
-        "Avoiding algebraic manipulation"
-      ],
-      "category": "Combinatorics",
-      "description": "LibreTexts guide on writing precise combinatorial double counting proofs for discrete math courses."
-    },
-    {
-      "id": "comb-pascals-triangle-binomial-theorem-wiki",
-      "url": "",
-      "tags": [
-        "Combinatorics",
-        "Pascal Triangle",
-        "Binomial Theorem"
-      ],
-      "type": "Guide / Article",
-      "title": "Pascal's Triangle & Binomial Theorem Guides",
-      "source": "Course Info: MAT_456_SKY_FALL_2024",
-      "teaches": [
-        "Symmetry of binomial coefficients",
-        "Sum of row n equals 2^n",
-        "Applications in probability"
-      ],
-      "category": "Combinatorics",
-      "description": "Detailed reference guides explaining Pascal's triangle properties, row sums, and algebraic identities."
-    },
-    {
-      "id": "comb-how-many-paths-a-to-b-math-doctors",
-      "url": "",
-      "tags": [
-        "Combinatorics",
-        "Grid Paths",
-        "Math Doctors"
-      ],
-      "type": "Guide / Article",
-      "title": "How Many Paths from A to B? – The Math Doctors",
-      "source": "Course Info: MAT_456_SKY_FALL_2024",
-      "teaches": [
-        "Waypoints multiplication (A→C)×(C→B)",
-        "Inclusion-Exclusion for avoided vertices",
-        "Sub-grid calculations"
-      ],
-      "category": "Combinatorics",
-      "description": "Comprehensive problem-solving guide for grid path problems with restrictions, mandatory waypoints, and obstacles."
-    },
-    {
-      "id": "comb-navigate-grid-betterexplained",
-      "url": "",
-      "tags": [
-        "Combinatorics",
-        "Grid Paths",
-        "BetterExplained"
-      ],
-      "type": "Guide / Article",
-      "title": "Navigate a Grid Using Combinations And Permutations – BetterExplained",
-      "source": "Course Info: MAT_456_SKY_FALL_2024",
-      "teaches": [
-        "Intuitive mental models for combinations",
-        "Paths as movement sequences",
-        "Connecting algebra to geometry"
-      ],
-      "category": "Combinatorics",
-      "description": "Intuitive article explaining grid navigation combinatorics without memorizing dry formulas."
-    },
-    {
-      "id": "comb-visual-inclusion-exclusion",
-      "url": "",
-      "tags": [
-        "Combinatorics",
-        "Inclusion-Exclusion",
-        "Visualization"
-      ],
-      "type": "Video",
-      "title": "Visual Inclusion/Exclusion",
-      "source": "Course Info: MAT_456_SKY_FALL_2024",
-      "teaches": [
-        "Overcounting correction intuition",
-        "Venn diagrams for 2, 3, and 4 sets",
-        "Alternating sum signs (+ - + -)"
-      ],
-      "category": "Combinatorics",
-      "description": "Intuitive visual explanation of set intersections, overcounting corrections, and Venn diagrams."
-    },
-    {
-      "id": "comb-co32-inclusion-exclusion-principle",
-      "url": "",
-      "tags": [
-        "Combinatorics",
-        "PIE",
-        "MAT_456"
-      ],
-      "type": "Video",
-      "title": "CO32 The Inclusion-Exclusion Principle",
-      "source": "Course Info: MAT_456_SKY_FALL_2024",
-      "teaches": [
-        "General PIE formula for n sets",
-        "Element inclusion counting proof",
-        "Complementary counting |A| - |⋃ A_i|"
-      ],
-      "category": "Combinatorics",
-      "description": "Formal statement and inductive proof of PIE for n finite sets: |⋃ A_i| = ∑|A_i| - ∑|A_i ∩ A_j| + ..."
-    },
-    {
-      "id": "comb-co34-multiset-combinations-pie",
-      "url": "",
-      "tags": [
-        "Combinatorics",
-        "Multisets",
-        "PIE",
-        "MAT_456"
-      ],
-      "type": "Video",
-      "title": "CO34 Combinations of Multisets via Inclusion-Exclusion",
-      "source": "Course Info: MAT_456_SKY_FALL_2024",
-      "teaches": [
-        "Handling capacity constraints x_i ≤ c_i",
-        "Combining Stars and Bars with PIE",
-        "Forbidden property subsets"
-      ],
-      "category": "Combinatorics",
-      "description": "Solving Stars and Bars multiset combination problems with upper bound capacity restrictions using PIE."
-    },
-    {
-      "id": "comb-co35-hat-check-problem-derangements",
-      "url": "",
-      "tags": [
-        "Combinatorics",
-        "Derangements",
-        "MAT_456"
-      ],
-      "type": "Video",
-      "title": "CO35 The Hat-Check Problem and Counting Derangements",
-      "source": "Course Info: MAT_456_SKY_FALL_2024",
-      "teaches": [
-        "Hat-Check problem formulation",
-        "Derangement formula !n = n! ∑ (-1)^k / k!",
-        "Asymptotic convergence to 1/e"
-      ],
-      "category": "Combinatorics",
-      "description": "Permutations with no fixed points (derangements D_n), subfactorial !n formula, and limit lim D_n/n! = 1/e."
-    },
-    {
-      "id": "comb-co36-non-attacking-rooks-forbidden-positions",
-      "url": "",
-      "tags": [
-        "Combinatorics",
-        "Rook Polynomials",
-        "MAT_456"
-      ],
-      "type": "Video",
-      "title": "CO36 Non-attacking Rooks on Boards with Forbidden Positions",
-      "source": "Course Info: MAT_456_SKY_FALL_2024",
-      "teaches": [
-        "Rook polynomials R(x, B)",
-        "Board decomposition theorems",
-        "Matching permutations to forbidden positions"
-      ],
-      "category": "Combinatorics",
-      "description": "Placing non-attacking rooks on arbitrary boards with forbidden squares using rook polynomials and PIE."
-    },
-    {
-      "id": "comb-3-5-3-pie-example-euler-totient",
-      "url": "",
-      "tags": [
-        "Combinatorics",
-        "Euler Totient",
-        "PIE"
-      ],
-      "type": "Video",
-      "title": "3.5.3 Inclusion-Exclusion Example: Euler Totient Function",
-      "source": "Course Info: MAT_456_SKY_FALL_2024",
-      "teaches": [
-        "Euler's totient function φ(n)",
-        "Prime factorization set intersections",
-        "Number theoretic inclusion-exclusion"
-      ],
-      "category": "Combinatorics",
-      "description": "Deriving Euler's totient formula φ(n) = n ∏ (1 - 1/p) using Inclusion-Exclusion on prime factors of n."
-    },
-    {
-      "id": "comb-principle-inclusion-exclusion-brilliant",
-      "url": "",
-      "tags": [
-        "Combinatorics",
-        "Brilliant",
-        "PIE"
-      ],
-      "type": "Guide / Article",
-      "title": "Principle of Inclusion and Exclusion (PIE) | Brilliant Math & Science Wiki",
-      "source": "Course Info: MAT_456_SKY_FALL_2024",
-      "teaches": [
-        "Number of surjective functions S(n,k)",
-        "Inclusion-exclusion practice problems",
-        "Complement counting techniques"
-      ],
-      "category": "Combinatorics",
-      "description": "Comprehensive Brilliant.org article with interactive practice problems on PIE, derangements, and surjection counting."
-    },
-    {
-      "id": "comb-14-9-inclusion-exclusion-libretexts",
-      "url": "",
-      "tags": [
-        "Combinatorics",
-        "LibreTexts",
-        "PIE"
-      ],
-      "type": "Guide / Article",
-      "title": "14.9: Inclusion-Exclusion - Engineering LibreTexts",
-      "source": "Course Info: MAT_456_SKY_FALL_2024",
-      "teaches": [
-        "Characteristic indicator functions",
-        "Proof of PIE using indicator variable algebra",
-        "Computer science counting applications"
-      ],
-      "category": "Combinatorics",
-      "description": "Textbook chapter covering formal statement, proof by characteristic functions, and applications of PIE."
-    }
-  ],
-  "contact": {
-    "email": "N/A",
-    "phone": "N/A",
-    "socials": {
-      "facebook": "https://www.facebook.com/2015JMC/",
-      "instagram": "https://www.instagram.com/jmc_.official/"
-    },
-    "location": "St. Joseph Higher Secondary School"
-  },
-  "gallery": {
-    "images": [
-      "/images/gallery/gallery1.jpg",
-      "/images/gallery/gallery2.jpg",
-      "/images/gallery/gallery3.jpg",
-      "/images/gallery/gallery4.jpg",
-      "/images/gallery/gallery5.jpg",
-      "/images/gallery/gallery6.jpg"
-    ]
-  },
   "articles": [
-    {
-      "id": "article-1785164775893",
-      "date": "27 Jul 2026",
-      "slug": "new-math-article",
-      "title": "Worm Hole",
-      "author": "Tawhid Bin Omar",
-      "pdfUrl": "https://ikciatrploqznijspyuk.supabase.co/storage/v1/object/public/images/1785164982187-tiirrx6sx.pdf",
-      "content": "",
-      "excerpt": "Among the most astonishing hypothetical shortcuts in astrophysics, Wormholes challenge our very understanding of cosmic distance. What first appears as an impassable barrier of millions of light-years across the dark void becomes an immediate gateway when spacetime is folded upon itself.",
-      "category": "Mathematics",
-      "imageUrl": "",
-      "published": true
-    },
-    {
-      "id": "article-1785164642677",
-      "date": "27 Jul 2026",
-      "slug": "new-math-article",
-      "title": "Functional Equations",
-      "author": "Tawhid Bin Omar",
-      "pdfUrl": "https://ikciatrploqznijspyuk.supabase.co/storage/v1/object/public/images/1785164728533-ik4xhybcv.pdf",
-      "content": "",
-      "excerpt": "Among the most profoundly foundational enigmas in algebra, **Functional Equations** invert our traditional understanding of variables to question the very nature of mathematical mappings. What first appears as a chaotic puzzle of unconstrained conditions and elusive expressions becomes beautifully orderly when subjected to the laws of symmetry, injectivity, and substitution. Instead of searching for a hidden number, we hunt for an entire steadfast mathematical identity.",
-      "category": "Mathematics",
-      "imageUrl": "",
-      "published": true
-    },
-    {
-      "id": "article-1785164551708",
-      "date": "27 Jul 2026",
-      "slug": "new-math-article",
-      "title": "Permutations, Combinations and the Art of Counting",
-      "author": "Tawhid Bin Omar",
-      "pdfUrl": "https://ikciatrploqznijspyuk.supabase.co/storage/v1/object/public/images/1785164631439-pwyizwfil.pdf",
-      "content": "",
-      "excerpt": "Among the most astonishing hypothetical shortcuts in astrophysics, Wormholes challenge our very understanding of cosmic distance. What first appears as an impassable barrier of millions of light-years across the dark void becomes an immediate gateway when spacetime is folded upon itself.",
-      "category": "Mathematics",
-      "imageUrl": "",
-      "published": true
-    },
-    {
-      "id": "article-1785164425494",
-      "date": "27 Jul 2026",
-      "slug": "new-math-article",
-      "title": "Tensors.....",
-      "author": "Tawhid Bin Omar",
-      "pdfUrl": "https://ikciatrploqznijspyuk.supabase.co/storage/v1/object/public/images/1785164544162-q1fk2aen0.pdf",
-      "content": "",
-      "excerpt": "Among the most expressive languages in modern mathematics and physics, Tensors reveal the profound geometric truths that remain completely unchanged by our choice of perspective. What first appears as a terrifying maze of multi-dimensional arrays, upper and lower indices, and complex coordinate shifts becomes beautifully simple when viewed as a singular, invariant entity slicing through space and time.",
-      "category": "Mathematics",
-      "imageUrl": "",
-      "published": true
-    },
-    {
-      "id": "article-1785164316948",
-      "date": "27 Jul 2026",
-      "slug": "new-math-article",
-      "title": "Legendre Polynomials and Generating Funstions",
-      "author": "Tawhid Bin Omar",
-      "pdfUrl": "https://ikciatrploqznijspyuk.supabase.co/storage/v1/object/public/images/1785164418753-w9307ilvb.pdf",
-      "content": "",
-      "excerpt": "Among the most elegant constructs in mathematical physics, Legendre Polynomials and Generating Functions reveal the underlying symmetry of physical space. What first appears as a chaotic web of complex differential equations and intractable geometric potentials collapses into beautifully ordered orthogonal components when viewed through the lens of a single, masterful generating function. From the gravitational pull of planets to the quantum mechanics of the atom, these steadfast functions transform the geometry of the universe into an orchestra of perfect harmony.",
-      "category": "Mathematics",
-      "imageUrl": "",
-      "published": true
-    },
-    {
-      "id": "article-1785164200667",
-      "date": "27 Jul 2026",
-      "slug": "new-math-article",
-      "title": "Analytic Continuation and the Limits of Generalization",
-      "author": "Tawhid Bin Omar",
-      "pdfUrl": "https://ikciatrploqznijspyuk.supabase.co/storage/v1/object/public/images/1785164309039-4xufv6a3r.pdf",
-      "content": "",
-      "excerpt": "Among the most revolutionary intellectual achievements in human history, General Relativity unveils the elegant tapestry binding space, time, and gravity. What first appears as a chaotic and mysterious cosmic force acting across empty voids is beautifully unmasked as the simple, dynamic geometry of the universe itself.",
-      "category": "Mathematics",
-      "imageUrl": "",
-      "published": true
-    },
-    {
-      "id": "article-1785164122541",
-      "date": "27 Jul 2026",
-      "slug": "new-math-article",
-      "title": "General Relativity and Space Time",
-      "author": "Tawhid Bin Omar",
-      "pdfUrl": "https://ikciatrploqznijspyuk.supabase.co/storage/v1/object/public/images/1785164191695-d3c1d8cwy.pdf",
-      "content": "",
-      "excerpt": "Among the most revolutionary intellectual achievements in human history, General Relativity unveils the elegant tapestry binding space, time, and gravity. What first appears as a chaotic and mysterious cosmic force acting across empty voids is beautifully unmasked as the simple, dynamic geometry of the universe itself. the article...",
-      "category": "Mathematics",
-      "imageUrl": "",
-      "published": true
-    },
-    {
-      "id": "article-1785164050858",
-      "date": "27 Jul 2026",
-      "slug": "new-math-article",
-      "title": "Jacobian Matrix",
-      "author": "Tawhid Bin Omar",
-      "pdfUrl": "https://ikciatrploqznijspyuk.supabase.co/storage/v1/object/public/images/1785164115722-mmu2teew5.pdf",
-      "content": "",
-      "excerpt": "Among the most transformative concepts in multivariable calculus, the Jacobian Matrix reveals the hidden linearity within local chaos. What first appears as a complex, non-linear web of warping coordinates and shifting multidimensional spaces becomes beautifully simple when zoomed in closely along these steadfast local derivatives. It serves as the ultimate mathematical magnifying glass, capturing the precise degree of stretching, rotating, and scaling that occurs when we distort one coordinate system into another.",
-      "category": "Mathematics",
-      "imageUrl": "",
-      "published": true
-    },
-    {
-      "id": "article-1785163942610",
-      "date": "27 Jul 2026",
-      "slug": "new-math-article",
-      "title": "Graph Theory",
-      "author": "Tawhid Bin Omar",
-      "pdfUrl": "https://ikciatrploqznijspyuk.supabase.co/storage/v1/object/public/images/1785164038109-z0f8sagj3.pdf",
-      "content": "",
-      "excerpt": "Among the most profoundly interconnected fields of mathematics, Graph Theory maps the invisible architecture of relationships. What first appears as a chaotic web of tangled networks, sprawling data points, and isolated entities becomes beautifully simple when stripped down to its core elements: vertices and edges. It reveals that whether we are tracing the neural pathways of the brain, the vast infrastructure of the internet, or the delicate social bonds of humanity, the underlying geometry of connection obeys a steadfast, universal order.",
-      "category": "Mathematics",
-      "imageUrl": "",
-      "published": true
-    },
-    {
-      "id": "article-1785163841720",
-      "date": "27 Jul 2026",
-      "slug": "new-math-article",
-      "title": "Wrap Drive and Faster than Light Travel",
-      "author": "Tawhid Bin Omar",
-      "pdfUrl": "https://ikciatrploqznijspyuk.supabase.co/storage/v1/object/public/images/1785163852040-82sfn8m04.pdf",
-      "content": "",
-      "excerpt": "Among the most breathtaking frontiers of theoretical physics is the Warp Drive, anchored by the mathematics of the Alcubierre metric. What first appears as a violation of nature’s absolute speed limit becomes a masterful dance with gravity when viewed through the lens of general relativity. Rather than moving through space faster than light, a warp drive dynamically compresses the fabric of spacetime ahead of a vessel while expanding it behind, allowing humanity to outrun photons by manipulating the geometry of the universe itself.",
-      "category": "Mathematics",
-      "imageUrl": "",
-      "published": true
-    },
     {
       "id": "article-1779776879938",
       "date": "26 May 2026",
@@ -2961,6 +1093,31 @@
       "published": true
     }
   ],
-  "lastUpdated": "2026-08-01T15:07:20.322Z",
-  "_instruction": "Update 'lastUpdated' whenever you manually edit this file to ensure changes take precedence over the admin panel."
+  "lastUpdated": "2026-06-25T12:00:00.000Z",
+  "_instruction": "Update 'lastUpdated' whenever you manually edit this file to ensure changes take precedence over the admin panel.",
+  "gallery_page": {
+    "images": [
+      "/images/gallery/gallery1.jpg",
+      "/images/gallery/gallery2.jpg",
+      "/images/gallery/gallery3.jpg",
+      "/images/gallery/gallery4.jpg",
+      "/images/gallery/gallery5.jpg",
+      "/images/gallery/gallery6.jpg"
+    ]
+  },
+  "members_list": {
+    "title": "OUR MEMBERS",
+    "members": [],
+    "subtitle": "COMMUNITY",
+    "description": "The heartbeat of Josephite Math Club - our diverse and passionate community of mathematicians."
+  },
+  "registration": {
+    "fee": "N/A",
+    "bkashNumber": "N/A",
+    "declaration": "I am willing to join the Josephite Math Club, I promise to perform my duties with honesty, respect the club values, and work for its development",
+    "instructions": [],
+    "cashInstructions": "Please pay your registration fee to the club treasurer.",
+    "registrationOpen": false,
+    "registrationClosedMessage": "Registration for the current intra-events is currently closed. Please stay tuned for future updates."
+  }
 }

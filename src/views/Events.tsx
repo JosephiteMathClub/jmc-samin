@@ -64,6 +64,20 @@ const DEFAULT_EVENT_DESCRIPTIONS: Record<string, string> = {
   "Wall Magazine Display": "Design an informative, visually captivating physical wall poster/magazine showcasing mathematical discoveries, history, or modern research."
 };
 
+const FREE_INTER_SEGMENTS = new Set([
+  "Math Olympiad (Find-based)",
+  "Math Olympiad (Proof-based)",
+  "Math Memes",
+  "Math Article",
+  "Math Vision"
+]);
+
+function isFreeInterSegment(name: string): boolean {
+  if (!name) return false;
+  const norm = name.trim().toLowerCase();
+  return Array.from(FREE_INTER_SEGMENTS).some(s => s.toLowerCase() === norm);
+}
+
 const QRCode = dynamic(() => import('../components/QRCode'), { ssr: false });
 
 import { usePerformance } from '../hooks/usePerformance';
@@ -1031,9 +1045,16 @@ const Events = () => {
                               <div className={`w-10 h-10 rounded-2xl flex items-center justify-center bg-gradient-to-br ${seg.bg}`}>
                                 <SegIcon className="w-5 h-5" />
                               </div>
-                              <span className="text-[9px] font-black uppercase tracking-widest text-indigo-400 px-2.5 py-1 bg-indigo-500/10 rounded-md border border-indigo-500/20">
-                                {seg.category}
-                              </span>
+                              <div className="flex items-center gap-2">
+                                <span className="text-[9px] font-black uppercase tracking-widest text-indigo-400 px-2.5 py-1 bg-indigo-500/10 rounded-md border border-indigo-500/20">
+                                  {seg.category}
+                                </span>
+                                {isFreeInterSegment(seg.name) && (
+                                  <span className="text-[9px] font-mono font-black uppercase tracking-widest text-emerald-400 px-2.5 py-1 bg-emerald-500/10 rounded-md border border-emerald-500/20">
+                                    FREE ENTRY
+                                  </span>
+                                )}
+                              </div>
                             </div>
 
                             <h4 className="text-lg font-black text-white uppercase tracking-wide group-hover:text-indigo-400 transition-colors mb-2">

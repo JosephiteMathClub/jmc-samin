@@ -25,6 +25,12 @@ import {
   RefreshCw,
   UserPlus
 } from 'lucide-react';
+import { 
+  markFestivalDatesInUserAccount, 
+  getGoogleCalendarAllDaysUrl, 
+  downloadIcsCalendar, 
+  FESTIVAL_CALENDAR_EVENTS 
+} from '../lib/calendar';
 import { useAuth } from '../context/AuthContext';
 import { useContent } from '../context/ContentContext';
 import { useToast } from '../context/ToastContext';
@@ -1205,6 +1211,7 @@ const EventRegister = () => {
         setInterAccountEmail(guestEmail.trim());
         setInterAccountPassword(phone.trim());
         setWasGuestRegistered(true);
+        markFestivalDatesInUserAccount(guestEmail.trim());
         setIsSuccess(true);
         setSubmitting(false);
         return;
@@ -1493,6 +1500,7 @@ const EventRegister = () => {
         console.warn("Could not fire automatic warning/registration email:", emailErr);
       }
 
+      markFestivalDatesInUserAccount(user?.email || guestEmail);
       setIsSuccess(true);
       showToast("Event registration request submitted successfully!", "success");
     } catch (err: any) {
@@ -1681,6 +1689,49 @@ const EventRegister = () => {
                 </span>
               )}
             </p>
+
+            {/* Festival Calendar Scheduled Notification */}
+            <div className="p-6 bg-gradient-to-br from-indigo-950/40 via-purple-950/20 to-black border border-indigo-500/30 rounded-2xl text-left space-y-4 w-full mb-8">
+              <div className="flex items-center justify-between border-b border-white/10 pb-3">
+                <div className="flex items-center gap-2">
+                  <Calendar className="w-5 h-5 text-indigo-400" />
+                  <div>
+                    <h4 className="text-xs font-black uppercase tracking-wider text-white">Event Festival Calendar Scheduled</h4>
+                    <p className="text-[10px] text-emerald-400 font-bold uppercase tracking-widest mt-0.5">✓ Marked September 24, 25 & 26 in Your Account</p>
+                  </div>
+                </div>
+                <span className="px-2.5 py-1 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[9px] font-black uppercase tracking-wider rounded-full">
+                  Auto-Notified
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-center">
+                {FESTIVAL_CALENDAR_EVENTS.map((ev, idx) => (
+                  <div key={idx} className="p-3 bg-black/50 border border-white/5 rounded-xl space-y-1">
+                    <span className="text-[9px] font-black uppercase text-indigo-400 block">{ev.day} • {ev.dateStr}</span>
+                    <p className="text-[10px] font-bold text-white line-clamp-1">{ev.title.split('-')[1]?.trim() || ev.title}</p>
+                  </div>
+                ))}
+              </div>
+
+              <div className="flex flex-col sm:flex-row gap-2 pt-2">
+                <a
+                  href={getGoogleCalendarAllDaysUrl()}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex-1 py-2.5 px-4 bg-indigo-600/80 hover:bg-indigo-600 text-white rounded-xl text-[10px] font-bold uppercase tracking-wider flex items-center justify-center gap-2 transition-all"
+                >
+                  <Calendar className="w-3.5 h-3.5" /> Add to Google Calendar
+                </a>
+                <button
+                  type="button"
+                  onClick={() => downloadIcsCalendar()}
+                  className="flex-1 py-2.5 px-4 bg-white/10 hover:bg-white/15 text-white rounded-xl text-[10px] font-bold uppercase tracking-wider flex items-center justify-center gap-2 transition-all cursor-pointer border border-white/10"
+                >
+                  <Calendar className="w-3.5 h-3.5" /> Download iCal (.ics) File
+                </button>
+              </div>
+            </div>
 
             {isProxyRegistration ? (
               <div className="p-6 bg-white/[0.02] border border-white/5 rounded-2xl w-full mb-8">

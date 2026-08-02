@@ -2,12 +2,19 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
+  markFestivalDatesInUserAccount, 
+  getGoogleCalendarAllDaysUrl, 
+  downloadIcsCalendar, 
+  FESTIVAL_CALENDAR_EVENTS 
+} from '../lib/calendar';
+import { 
   ArrowLeft, 
   ArrowRight, 
   Check, 
   Loader2, 
   Sparkles, 
   User, 
+  Users,
   BookOpen, 
   Layers, 
   Hash, 
@@ -53,7 +60,9 @@ import {
   ChevronDown,
   ChevronUp,
   Upload,
-  Plus
+  Plus,
+  AlertTriangle,
+  X
 } from 'lucide-react';
 
 const DEFAULT_SEGMENT_BANNERS: Record<string, string> = {
@@ -108,9 +117,42 @@ const DEFAULT_SEGMENT_DESCRIPTIONS: Record<string, string> = {
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../context/AuthContext';
+import { useContent } from '../context/ContentContext';
+
+const ICON_LOOKUP: Record<string, any> = {
+  Trophy, Brain, Zap, Sparkles, Compass, Timer, Eye, Lock, HelpCircle, Grid, Layers, Award, Activity, Home, Share2, Smile, BookOpen, ImageIcon, Edit, Construction, Layout, Calendar, Users
+};
+
+function getSegmentIconComponent(iconName?: string) {
+  if (!iconName) return Trophy;
+  return ICON_LOOKUP[iconName] || Trophy;
+}
+
+function getSegmentColorStyle(cat: string) {
+  const norm = (cat || '').toLowerCase();
+  if (norm.includes('team')) return "from-violet-500/10 to-fuchsia-500/10 text-violet-400 border-violet-500/20";
+  if (norm.includes('creative')) return "from-pink-500/10 to-purple-500/10 text-pink-400 border-pink-500/20";
+  if (norm.includes('writing')) return "from-zinc-500/10 to-slate-500/10 text-zinc-400 border-zinc-500/20";
+  if (norm.includes('exhibition')) return "from-emerald-500/10 to-green-500/10 text-emerald-400 border-emerald-500/20";
+  return "from-amber-500/10 to-yellow-500/10 text-amber-400 border-amber-500/20";
+}
 
 // Hardcoded segments catalog as pristine baseline
-const INTER_SEGMENTS = [
+export const FREE_INTER_SEGMENTS = new Set([
+  "Math Olympiad (Find-based)",
+  "Math Olympiad (Proof-based)",
+  "Math Memes",
+  "Math Article",
+  "Math Vision"
+]);
+
+export function isFreeInterSegment(name: string): boolean {
+  if (!name) return false;
+  const norm = name.trim().toLowerCase();
+  return Array.from(FREE_INTER_SEGMENTS).some(s => s.toLowerCase() === norm);
+}
+
+const DEFAULT_INTER_SEGMENTS = [
   { id: "Math Olympiad (Find-based)", name: "Math Olympiad (Find-based)", tagline: "Solve numeric mysteries and discover deep hidden structural patterns.", category: "Solo track", icon: Trophy, color: "from-amber-500/10 to-yellow-500/10 text-amber-400 border-amber-500/20" },
   { id: "Math Olympiad (Proof-based)", name: "Math Olympiad (Proof-based)", tagline: "Draft elegant formal proofs and logically sound explanations.", category: "Solo track", icon: FileText, color: "from-blue-500/10 to-cyan-500/10 text-blue-400 border-blue-500/20" },
   { id: "IQ Test", name: "IQ Test", tagline: "Race against the clock in analytical speed reasoning.", category: "Solo track", icon: Brain, color: "from-pink-500/10 to-rose-500/10 text-pink-400 border-pink-500/20" },
@@ -135,9 +177,38 @@ const INTER_SEGMENTS = [
   { id: "Wall Magazine Display", name: "Wall Magazine Display", tagline: "Design physical wall posters mapping historical math breakthroughs.", category: "Exhibition track", icon: Layout, color: "from-emerald-500/10 to-green-500/10 text-emerald-400 border-emerald-500/20" }
 ];
 
+export function isTeamSegment(id: string, segmentList?: any[]): boolean {
+  const list = segmentList || DEFAULT_INTER_SEGMENTS;
+  const seg = list.find((s: any) => (s.id || s.name) === id);
+  if (seg && typeof seg.isTeamEvent === 'boolean') {
+    return seg.isTeamEvent;
+  }
+  return id === "Escape Room" || id === "Truss" || (seg && seg.category && seg.category.toLowerCase().includes("team")) || false;
+}
+
 export default function InterEventRegister() {
   const router = useRouter();
   const { user, profile, loading: authLoading, isAdmin, isSuperAdmin } = useAuth();
+  const { content } = useContent();
+
+  const INTER_SEGMENTS = React.useMemo(() => {
+    if (Array.isArray(content?.interSegments) && content.interSegments.length > 0) {
+      return content.interSegments.map((s: any) => ({
+        id: s.id || s.name,
+        name: s.name,
+        tagline: s.tagline || "",
+        category: s.category || (s.isTeamEvent ? "Team track" : "Solo track"),
+        icon: typeof s.icon === 'string' ? getSegmentIconComponent(s.icon) : (s.icon || Trophy),
+        isTeamEvent: !!s.isTeamEvent,
+        teamSize: s.teamSize || (s.isTeamEvent ? 3 : 1),
+        isFree: !!s.isFree,
+        bannerUrl: s.bannerUrl || DEFAULT_SEGMENT_BANNERS[s.name] || "",
+        description: s.description || DEFAULT_SEGMENT_DESCRIPTIONS[s.name] || "",
+        color: getSegmentColorStyle(s.category || s.name)
+      }));
+    }
+    return DEFAULT_INTER_SEGMENTS;
+  }, [content?.interSegments]);
   
   // Gatekeeper status & configurations
   const [checkingStatuses, setCheckingStatuses] = useState(true);
@@ -162,7 +233,7 @@ export default function InterEventRegister() {
     if (expandedSegments.length === INTER_SEGMENTS.length) {
       setExpandedSegments([]);
     } else {
-      setExpandedSegments(INTER_SEGMENTS.map(s => s.id));
+      setExpandedSegments(INTER_SEGMENTS.map((s: any) => s.id));
     }
   };
 
@@ -229,7 +300,7 @@ export default function InterEventRegister() {
   const [teamMember3Gender, setTeamMember3Gender] = useState('');
 
   const hasTeamSegment = selectedSegments.some(id => {
-    const seg = INTER_SEGMENTS.find(s => s.id === id);
+    const seg = INTER_SEGMENTS.find((s: any) => s.id === id);
     return id === "Escape Room" || id === "Truss" || (seg && seg.category.toLowerCase() === "team track");
   });
 
@@ -280,6 +351,46 @@ export default function InterEventRegister() {
   const [isSuccess, setIsSuccess] = useState(false);
   const [successInfo, setSuccessInfo] = useState<any>(null);
   const [errorMessage, setErrorMessage] = useState("");
+
+  // Immediate Registration Check States
+  const [checkingRegistration, setCheckingRegistration] = useState(false);
+  const [alreadyRegisteredEvents, setAlreadyRegisteredEvents] = useState<string[]>([]);
+  const [registeredStudentName, setRegisteredStudentName] = useState<string>('');
+  const [showUnselectedWarningModal, setShowUnselectedWarningModal] = useState(false);
+  const [pendingSubmissionConfirmed, setPendingSubmissionConfirmed] = useState(false);
+
+  const checkRegistrationStatus = async (emailVal?: string, phoneVal?: string) => {
+    const e = (emailVal !== undefined ? emailVal : email).trim();
+    const p = (phoneVal !== undefined ? phoneVal : phone).trim();
+
+    if (!e && (!p || p.length < 11)) {
+      return;
+    }
+
+    setCheckingRegistration(true);
+    try {
+      const res = await fetch('/api/events/check-inter-registration', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: e, phone: p })
+      });
+      const data = await res.json();
+      if (res.ok && data.registeredEvents) {
+        const regs: string[] = data.registeredEvents || [];
+        setAlreadyRegisteredEvents(regs);
+        if (data.matchedName) {
+          setRegisteredStudentName(data.matchedName);
+          if (!fullName.trim()) setFullName(data.matchedName);
+        }
+        // Exclude already registered events from current selection
+        setSelectedSegments(prev => prev.filter(id => !regs.includes(id)));
+      }
+    } catch (err) {
+      console.error("Error checking inter event registration status:", err);
+    } finally {
+      setCheckingRegistration(false);
+    }
+  };
 
   // Helper to parse video URLs (Direct MP4, YouTube, Vimeo, Google Drive)
   const getVideoMediaInfo = (rawUrl: string, mutedState: boolean = true) => {
@@ -611,6 +722,9 @@ export default function InterEventRegister() {
             setEmail(userEmail);
           }
         }
+
+        // Trigger real-time check for existing registrations
+        checkRegistrationStatus(userEmail.endsWith('@josephitre.club') ? '' : userEmail, activeData?.phone || '');
       } catch (err) {
         console.error("Error fetching logged-in member info in InterEventRegister:", err);
       }
@@ -864,13 +978,19 @@ export default function InterEventRegister() {
   };
 
   // Cost calculation
-  const totalRawPrice = selectedSegments.length > 0 ? 100 : 0;
+  const paidSelectedSegments = selectedSegments.filter(id => !isFreeInterSegment(id));
+  const totalRawPrice = paidSelectedSegments.length * pricePerSegment;
   const hasCaDiscount = false;
   const discountAmount = 0;
   const finalPrice = totalRawPrice;
+  const isOnlyFreeSegments = selectedSegments.length > 0 && paidSelectedSegments.length === 0;
 
   // Toggle selection
   const handleToggleSegment = (id: string) => {
+    if (alreadyRegisteredEvents.includes(id)) {
+      setErrorMessage(`You have already registered for ${id} in a previous submission.`);
+      return;
+    }
     const eligibility = isSegmentEligible(id, className);
     if (!eligibility.eligible) {
       setErrorMessage(eligibility.reason || "This segment is not eligible for your selected class level.");
@@ -884,21 +1004,26 @@ export default function InterEventRegister() {
     }
   };
 
-  // Select all / Deselect all events
+  // Select all / Deselect all events (Solo events only)
   const handleSelectAllSegments = () => {
-    const eligibleIds = INTER_SEGMENTS
-      .filter(seg => isSegmentEligible(seg.id, className).eligible)
-      .map(seg => seg.id);
+    const eligibleSoloIds = INTER_SEGMENTS
+      .filter((seg: any) => !isTeamSegment(seg.id) && isSegmentEligible(seg.id, className).eligible && !alreadyRegisteredEvents.includes(seg.id))
+      .map((seg: any) => seg.id);
 
-    if (selectedSegments.length === eligibleIds.length && eligibleIds.every(id => selectedSegments.includes(id))) {
-      setSelectedSegments([]);
+    const allSoloSelected = eligibleSoloIds.length > 0 && eligibleSoloIds.every((id: string) => selectedSegments.includes(id));
+
+    if (allSoloSelected) {
+      // Deselect solo events, keeping manually selected team events
+      setSelectedSegments(selectedSegments.filter((id: string) => isTeamSegment(id)));
     } else {
-      setSelectedSegments(eligibleIds);
+      // Select all eligible solo events excluding already registered ones
+      const teamSelected = selectedSegments.filter((id: string) => isTeamSegment(id));
+      setSelectedSegments([...teamSelected, ...eligibleSoloIds]);
     }
   };
 
   // Navigations
-  const handleNextStep1 = () => {
+  const handleNextStep1 = async () => {
     if (isProxyRegistration && !proxyVerified) {
       setErrorMessage("Please enter and verify student credentials first using the Search button.");
       return;
@@ -927,7 +1052,50 @@ export default function InterEventRegister() {
     }
 
     setErrorMessage("");
+
+    // Perform immediate registration status check
+    await checkRegistrationStatus(email, phone);
+
+    // Verify if already fully registered
+    const eligibleForClass = INTER_SEGMENTS
+      .filter((seg: any) => isSegmentEligible(seg.id, className).eligible)
+      .map((seg: any) => seg.id);
+
+    const isFullyReg = eligibleForClass.length > 0 && eligibleForClass.every((id: string) => alreadyRegisteredEvents.includes(id));
+    
+    if (isFullyReg) {
+      setErrorMessage("Notice: You are already registered for all available events for your class level.");
+      return;
+    }
+
     setStep(2);
+  };
+
+  const handleAttemptRegister = () => {
+    if (isProxyRegistration && !proxyVerified) {
+      setErrorMessage("Please search and verify student credentials before submitting.");
+      return;
+    }
+
+    if (!isProxyRegistration && finalPrice > 0 && (!senderBkash.trim() || !trxnId.trim())) {
+      setErrorMessage("Please provide your bKash sender number and the transaction ID.");
+      return;
+    }
+
+    const eligibleForClass = INTER_SEGMENTS
+      .filter((seg: any) => isSegmentEligible(seg.id, className).eligible)
+      .map((seg: any) => seg.id);
+
+    const unselected = eligibleForClass.filter(
+      (id: string) => !selectedSegments.includes(id) && !alreadyRegisteredEvents.includes(id)
+    );
+
+    if (unselected.length > 0 && !pendingSubmissionConfirmed) {
+      setShowUnselectedWarningModal(true);
+      return;
+    }
+
+    handleRegister();
   };
 
   const handleNextStep2 = () => {
@@ -943,7 +1111,7 @@ export default function InterEventRegister() {
         return;
       }
 
-      const is3MemberEvent = selectedSegments.some(id => id === "Escape Room" || id === "Truss");
+      const is3MemberEvent = selectedSegments.some((id: string) => id === "Escape Room" || id === "Truss");
       if (is3MemberEvent) {
         const tm3Inst = teamMember3Institute.trim() || institute.trim();
         if (!teamMember3Name.trim() || !teamMember3Class || !tm3Inst || !teamMember3Gender) {
@@ -963,7 +1131,7 @@ export default function InterEventRegister() {
       return;
     }
 
-    if (!isProxyRegistration && (!senderBkash.trim() || !trxnId.trim())) {
+    if (!isProxyRegistration && finalPrice > 0 && (!senderBkash.trim() || !trxnId.trim())) {
       setErrorMessage("Please provide your bKash sender number and the transaction ID.");
       return;
     }
@@ -1033,6 +1201,14 @@ export default function InterEventRegister() {
         }
       }
 
+      const finalBkash = isProxyRegistration 
+        ? 'Proxy (Admin)' 
+        : (finalPrice === 0 ? (senderBkash.trim() || 'N/A - FREE ENTRY') : senderBkash.trim());
+
+      const finalTrxn = isProxyRegistration 
+        ? 'PROXY-' + Math.random().toString(36).substring(2, 9).toUpperCase() 
+        : (finalPrice === 0 ? (trxnId.trim().toUpperCase() || ('FREE-INTER-' + Math.floor(100000 + Math.random() * 900000).toString())) : trxnId.trim().toUpperCase());
+
       const response = await fetch('/api/events/register-inter', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1044,8 +1220,8 @@ export default function InterEventRegister() {
           className,
           institute: institute.trim(),
           caCode: caCode || null,
-          bkashNumber: isProxyRegistration ? 'Proxy (Admin)' : senderBkash.trim(),
-          trxnid: isProxyRegistration ? 'PROXY-' + Math.random().toString(36).substring(2, 9).toUpperCase() : trxnId.trim().toUpperCase(),
+          bkashNumber: finalBkash,
+          trxnid: finalTrxn,
           amount: finalPrice,
           selectedEvents: selectedSegments,
           isProxyRegistration: isProxyRegistration,
@@ -1062,6 +1238,9 @@ export default function InterEventRegister() {
 
       // Update email state with finalEmail so success panel reflects virtual email correctly
       setEmail(finalEmail);
+
+      // Automatically mark festival dates (24, 25, 26 September 2026) in user account calendar
+      markFestivalDatesInUserAccount(finalEmail);
 
       setSuccessInfo(resData);
       setIsSuccess(true);
@@ -1392,11 +1571,15 @@ export default function InterEventRegister() {
             </button>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {INTER_SEGMENTS.map((seg) => {
+          {/* Catalog Grid grouped into Sub-sections */}
+          {(() => {
+            const soloSegments = INTER_SEGMENTS.filter((seg: any) => !isTeamSegment(seg.id));
+            const teamSegments = INTER_SEGMENTS.filter((seg: any) => isTeamSegment(seg.id));
+
+            const renderCatalogCard = (seg: typeof INTER_SEGMENTS[0]) => {
               const IconComp = seg.icon;
               const isExpanded = expandedSegments.includes(seg.id);
-              const isTeamEvent = seg.id === "Escape Room" || seg.id === "Truss" || seg.category.toLowerCase() === "team track";
+              const isTeamEvent = isTeamSegment(seg.id);
               const bannerUrl = segmentBanners[seg.id] || DEFAULT_SEGMENT_BANNERS[seg.id] || "https://images.unsplash.com/photo-1509228468518-180dd4864904?auto=format&fit=crop&w=1200&q=80";
               const descriptionText = segmentDescriptions[seg.id] || DEFAULT_SEGMENT_DESCRIPTIONS[seg.id] || "Challenge your mind and represent your institution across problem solving, speed calculation, and creative tracks.";
 
@@ -1419,6 +1602,11 @@ export default function InterEventRegister() {
                         <span className="text-[9px] font-mono font-bold uppercase tracking-widest text-pink-400 px-2.5 py-1 bg-pink-500/10 rounded-md border border-pink-500/20">
                           {seg.category}
                         </span>
+                        {isFreeInterSegment(seg.id) && (
+                          <span className="text-[9px] font-mono font-black uppercase tracking-widest text-emerald-400 px-2 py-0.5 bg-emerald-500/10 rounded border border-emerald-500/20">
+                            FREE ENTRY
+                          </span>
+                        )}
                       </div>
 
                       <div className="flex items-center gap-2">
@@ -1504,8 +1692,38 @@ export default function InterEventRegister() {
                   </AnimatePresence>
                 </div>
               );
-            })}
-          </div>
+            };
+
+            return (
+              <div className="space-y-10">
+                {/* Catalog Sub-Section 1: Solo Events */}
+                <div className="space-y-4">
+                  <div className="flex items-center gap-3 border-b border-pink-500/20 pb-3">
+                    <span className="px-3.5 py-1.5 rounded-full bg-pink-500/10 border border-pink-500/30 text-pink-400 text-xs font-black uppercase tracking-wider flex items-center gap-2 font-mono">
+                      <User className="w-4 h-4 text-pink-400" /> Solo Events Catalog ({soloSegments.length})
+                    </span>
+                    <span className="text-xs text-zinc-400 font-medium hidden sm:inline">Individual championship tracks</span>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {soloSegments.map(renderCatalogCard)}
+                  </div>
+                </div>
+
+                {/* Catalog Sub-Section 2: Team Events */}
+                <div className="space-y-4 pt-2">
+                  <div className="flex items-center gap-3 border-b border-amber-500/20 pb-3">
+                    <span className="px-3.5 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs font-black uppercase tracking-wider flex items-center gap-2 font-mono">
+                      <Users className="w-4 h-4 text-amber-400" /> Team Events Catalog ({teamSegments.length})
+                    </span>
+                    <span className="text-xs text-zinc-400 font-medium hidden sm:inline">Collaborative group challenges</span>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {teamSegments.map(renderCatalogCard)}
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
         </div>
       </div>
     );
@@ -1642,6 +1860,49 @@ export default function InterEventRegister() {
                   </div>
                 </div>
               )}
+
+              {/* Festival Calendar Dates Automatically Scheduled */}
+              <div className="p-6 bg-gradient-to-br from-indigo-950/40 via-purple-950/20 to-black border border-indigo-500/30 rounded-2xl text-left space-y-4">
+                <div className="flex items-center justify-between border-b border-white/10 pb-3">
+                  <div className="flex items-center gap-2">
+                    <Calendar className="w-5 h-5 text-indigo-400" />
+                    <div>
+                      <h4 className="text-xs font-black uppercase tracking-wider text-white">Event Festival Calendar Scheduled</h4>
+                      <p className="text-[10px] text-emerald-400 font-bold uppercase tracking-widest mt-0.5">✓ Marked September 24, 25 & 26 in Your Account</p>
+                    </div>
+                  </div>
+                  <span className="px-2.5 py-1 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[9px] font-black uppercase tracking-wider rounded-full">
+                    Auto-Notified
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-center">
+                  {FESTIVAL_CALENDAR_EVENTS.map((ev, idx) => (
+                    <div key={idx} className="p-3 bg-black/50 border border-white/5 rounded-xl space-y-1">
+                      <span className="text-[9px] font-black uppercase text-indigo-400 block">{ev.day} • {ev.dateStr}</span>
+                      <p className="text-[10px] font-bold text-white line-clamp-1">{ev.title.split('-')[1]?.trim() || ev.title}</p>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="flex flex-col sm:flex-row gap-2 pt-2">
+                  <a
+                    href={getGoogleCalendarAllDaysUrl()}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex-1 py-2.5 px-4 bg-indigo-600/80 hover:bg-indigo-600 text-white rounded-xl text-[10px] font-bold uppercase tracking-wider flex items-center justify-center gap-2 transition-all"
+                  >
+                    <Calendar className="w-3.5 h-3.5" /> Add to Google Calendar
+                  </a>
+                  <button
+                    type="button"
+                    onClick={() => downloadIcsCalendar()}
+                    className="flex-1 py-2.5 px-4 bg-white/10 hover:bg-white/15 text-white rounded-xl text-[10px] font-bold uppercase tracking-wider flex items-center justify-center gap-2 transition-all cursor-pointer border border-white/10"
+                  >
+                    <Calendar className="w-3.5 h-3.5" /> Download iCal (.ics) File
+                  </button>
+                </div>
+              </div>
 
               <div className="space-y-4 pt-4 border-t border-white/5">
                 <p className="text-[10px] text-zinc-500 font-mono uppercase tracking-widest">
@@ -1963,7 +2224,7 @@ export default function InterEventRegister() {
                           const newCls = e.target.value;
                           setClassName(newCls);
                           if (newCls) {
-                            setSelectedSegments(prev => prev.filter(id => isSegmentEligible(id, newCls).eligible));
+                            setSelectedSegments(prev => prev.filter((id: string) => isSegmentEligible(id, newCls).eligible));
                           }
                         }}
                         disabled={isProxyRegistration && (!proxyVerified || !proxyClassEditable)}
@@ -2007,7 +2268,10 @@ export default function InterEventRegister() {
                           type="email"
                           value={email}
                           onChange={(e) => setEmail(e.target.value)}
-                          onBlur={() => checkEmailSilently(email)}
+                          onBlur={() => {
+                            checkEmailSilently(email);
+                            checkRegistrationStatus(email, phone);
+                          }}
                           disabled={isProxyRegistration && (proxyMethod === 'email' || !proxyVerified || !proxyEmailEditable)}
                           placeholder="E.G. SAMIN@EMAIL.COM"
                           className="w-full bg-black/40 border border-white/10 rounded-xl pl-12 pr-4 py-4 text-xs font-bold text-white focus:outline-none focus:border-pink-500/50 focus:ring-4 focus:ring-pink-500/5 transition-all disabled:opacity-50"
@@ -2046,12 +2310,28 @@ export default function InterEventRegister() {
                         type="text"
                         value={phone}
                         onChange={(e) => setPhone(e.target.value)}
+                        onBlur={() => checkRegistrationStatus(email, phone)}
                         disabled={isProxyRegistration && (proxyMethod === 'phone' || !proxyVerified || !proxyPhoneEditable)}
                         placeholder="E.G. 017XXXXXXXX"
                         className="w-full bg-black/40 border border-white/10 rounded-xl pl-12 pr-4 py-4 text-xs font-bold text-white focus:outline-none focus:border-pink-500/50 focus:ring-4 focus:ring-pink-500/5 transition-all disabled:opacity-50"
                       />
                     </div>
                   </div>
+
+                  {/* Existing Registration Banner */}
+                  {alreadyRegisteredEvents.length > 0 && (
+                    <div className="col-span-1 md:col-span-2 p-5 rounded-2xl bg-indigo-500/10 border border-indigo-500/30 flex items-start gap-3.5 text-xs">
+                      <Sparkles className="w-5 h-5 text-indigo-400 shrink-0 mt-0.5" />
+                      <div className="space-y-1">
+                        <span className="font-bold uppercase tracking-wider text-[10px] text-indigo-300 block font-mono">
+                          Existing Registration Found ({alreadyRegisteredEvents.length} Event{alreadyRegisteredEvents.length > 1 ? 's' : ''})
+                        </span>
+                        <p className="text-zinc-300 text-[11px] leading-relaxed">
+                          Our records show that <strong className="text-indigo-200">{registeredStudentName || fullName || 'this participant'}</strong> is already registered for: <strong className="text-amber-400">{alreadyRegisteredEvents.join(', ')}</strong>. You can continue to select and register for any unregistered events below!
+                        </p>
+                      </div>
+                    </div>
+                  )}
 
                   {/* Selective CA Code Dropdown */}
                   <div className="space-y-3">
@@ -2137,6 +2417,9 @@ export default function InterEventRegister() {
                 <div className="flex flex-col sm:flex-row justify-between items-center gap-3 mb-6 bg-zinc-900/40 border border-white/5 rounded-2xl p-4 md:px-6">
                   <div className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 font-mono">
                     Selected Segments: <span className="text-pink-400 font-black">{selectedSegments.length}</span> of {INTER_SEGMENTS.length}
+                    <span className="text-zinc-500 ml-2">
+                      ({selectedSegments.filter((id: string) => !isTeamSegment(id)).length} Solo, {selectedSegments.filter((id: string) => isTeamSegment(id)).length} Team)
+                    </span>
                   </div>
                   <div className="flex items-center gap-3">
                     <button
@@ -2151,30 +2434,41 @@ export default function InterEventRegister() {
                       type="button"
                       onClick={handleSelectAllSegments}
                       className="px-4 py-2 bg-pink-500/10 border border-pink-500/20 hover:bg-pink-500/20 text-[10px] font-black uppercase tracking-wider text-pink-300 rounded-full transition-all cursor-pointer flex items-center gap-1.5 font-mono select-none"
+                      title="Selects all eligible Solo Events (Team events must be selected individually)"
                     >
-                      {selectedSegments.length === INTER_SEGMENTS.length ? (
-                        <>
-                          <Check className="w-3.5 h-3.5 text-pink-400" />
-                          Deselect All
-                        </>
-                      ) : (
-                        <>
-                          <CheckCircle2 className="w-3.5 h-3.5" />
-                          Select All
-                        </>
-                      )}
+                      {(() => {
+                        const eligibleSoloIds = INTER_SEGMENTS
+                          .filter((seg: any) => !isTeamSegment(seg.id) && isSegmentEligible(seg.id, className).eligible)
+                          .map((seg: any) => seg.id);
+                        const allSoloSelected = eligibleSoloIds.length > 0 && eligibleSoloIds.every((id: string) => selectedSegments.includes(id));
+                        return allSoloSelected ? (
+                          <>
+                            <Check className="w-3.5 h-3.5 text-pink-400" />
+                            Deselect Solo Events
+                          </>
+                        ) : (
+                          <>
+                            <CheckCircle2 className="w-3.5 h-3.5" />
+                            Select All Solo Events
+                          </>
+                        );
+                      })()}
                     </button>
                   </div>
                 </div>
 
-                {/* Segment selection grids */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {INTER_SEGMENTS.map((seg) => {
+                {/* Segment selection grids grouped by Sub-Sections */}
+                {(() => {
+                  const soloSegments = INTER_SEGMENTS.filter((seg: any) => !isTeamSegment(seg.id));
+                  const teamSegments = INTER_SEGMENTS.filter((seg: any) => isTeamSegment(seg.id));
+
+                  const renderSegmentCard = (seg: typeof INTER_SEGMENTS[0]) => {
                     const isSelected = selectedSegments.includes(seg.id);
+                    const isAlreadyRegistered = alreadyRegisteredEvents.includes(seg.id);
                     const isExpanded = expandedSegments.includes(seg.id);
                     const SegIcon = seg.icon;
                     const eligibility = isSegmentEligible(seg.id, className);
-                    const isTeamEvent = seg.id === "Escape Room" || seg.id === "Truss" || seg.category.toLowerCase() === "team track";
+                    const isTeamEvent = isTeamSegment(seg.id);
                     const bannerUrl = segmentBanners[seg.id] || DEFAULT_SEGMENT_BANNERS[seg.id] || "https://images.unsplash.com/photo-1509228468518-180dd4864904?auto=format&fit=crop&w=1200&q=80";
                     const descriptionText = segmentDescriptions[seg.id] || DEFAULT_SEGMENT_DESCRIPTIONS[seg.id] || "Challenge your mind and represent your institution across problem solving, speed calculation, and creative tracks.";
 
@@ -2182,11 +2476,13 @@ export default function InterEventRegister() {
                       <div
                         key={seg.id}
                         className={`rounded-2xl border transition-all flex flex-col justify-between overflow-hidden select-none ${
-                          !eligibility.eligible
-                            ? 'bg-zinc-950/40 border-white/5 opacity-60'
-                            : isSelected 
-                              ? 'bg-gradient-to-b from-indigo-950/50 via-[#0a0525]/40 to-[#020108]/90 border-pink-500/70 shadow-xl shadow-pink-500/10' 
-                              : 'bg-zinc-900/30 border-white/10 hover:border-white/20'
+                          isAlreadyRegistered
+                            ? 'bg-emerald-950/20 border-emerald-500/40 opacity-85'
+                            : !eligibility.eligible
+                              ? 'bg-zinc-950/40 border-white/5 opacity-60'
+                              : isSelected 
+                                ? 'bg-gradient-to-b from-indigo-950/50 via-[#0a0525]/40 to-[#020108]/90 border-pink-500/70 shadow-xl shadow-pink-500/10' 
+                                : 'bg-zinc-900/30 border-white/10 hover:border-white/20'
                         }`}
                       >
                         {/* Primary Card View */}
@@ -2199,6 +2495,11 @@ export default function InterEventRegister() {
                               <span className="text-[9px] font-mono font-bold uppercase tracking-widest text-pink-400 px-2.5 py-0.5 bg-pink-500/10 rounded-md border border-pink-500/20">
                                 {seg.category}
                               </span>
+                              {isFreeInterSegment(seg.id) && (
+                                <span className="text-[9px] font-mono font-black uppercase tracking-widest text-emerald-400 px-2 py-0.5 bg-emerald-500/10 rounded border border-emerald-500/20">
+                                  FREE ENTRY
+                                </span>
+                              )}
                             </div>
 
                             <div className="flex items-center gap-2">
@@ -2207,22 +2508,28 @@ export default function InterEventRegister() {
                                   👥 TEAM
                                 </span>
                               )}
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  if (eligibility.eligible) handleToggleSegment(seg.id);
-                                }}
-                                disabled={!eligibility.eligible}
-                                className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer flex items-center gap-1 ${
-                                  !eligibility.eligible
-                                    ? 'bg-zinc-800 text-zinc-500 cursor-not-allowed'
-                                    : isSelected 
-                                      ? 'bg-pink-500 text-white shadow-md shadow-pink-500/30' 
-                                      : 'bg-white/5 hover:bg-white/10 text-zinc-300 border border-white/10'
-                                }`}
-                              >
-                                {isSelected ? <><Check className="w-3 h-3 text-white" /> Selected</> : 'Select'}
-                              </button>
+                              {isAlreadyRegistered ? (
+                                <span className="px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center gap-1 font-mono">
+                                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" /> Registered ✓
+                                </span>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    if (eligibility.eligible) handleToggleSegment(seg.id);
+                                  }}
+                                  disabled={!eligibility.eligible}
+                                  className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer flex items-center gap-1 ${
+                                    !eligibility.eligible
+                                      ? 'bg-zinc-800 text-zinc-500 cursor-not-allowed'
+                                      : isSelected 
+                                        ? 'bg-pink-500 text-white shadow-md shadow-pink-500/30' 
+                                        : 'bg-white/5 hover:bg-white/10 text-zinc-300 border border-white/10'
+                                  }`}
+                                >
+                                  {isSelected ? <><Check className="w-3 h-3 text-white" /> Selected</> : 'Select'}
+                                </button>
+                              )}
                             </div>
                           </div>
 
@@ -2231,7 +2538,13 @@ export default function InterEventRegister() {
                             <p className="text-xs text-zinc-400 mt-1 leading-relaxed">{seg.tagline}</p>
                           </div>
 
-                          {!eligibility.eligible && (
+                          {isAlreadyRegistered && (
+                            <div className="mt-2 p-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-[9px] font-mono text-emerald-400 leading-tight flex items-center gap-1">
+                              <CheckCircle2 className="w-3 h-3 text-emerald-400 shrink-0" /> Registered in previous submission
+                            </div>
+                          )}
+
+                          {!isAlreadyRegistered && !eligibility.eligible && (
                             <div className="mt-2 p-2 rounded-lg bg-rose-500/10 border border-rose-500/20 text-[9px] font-mono text-rose-400 leading-tight">
                               ⚠️ {eligibility.reason}
                             </div>
@@ -2253,84 +2566,75 @@ export default function InterEventRegister() {
                           </span>
                         </button>
 
-                        {/* Expanded Drawer Details */}
-                        <AnimatePresence>
-                          {isExpanded && (
-                            <motion.div
-                              initial={{ opacity: 0, height: 0 }}
-                              animate={{ opacity: 1, height: 'auto' }}
-                              exit={{ opacity: 0, height: 0 }}
-                              transition={{ duration: 0.25 }}
-                              className="overflow-hidden border-t border-pink-500/20 bg-black/80"
-                            >
-                              <div className="p-5 space-y-4">
-                                {/* Banner Image Display */}
-                                <div className="relative rounded-xl overflow-hidden aspect-video bg-zinc-900 border border-white/10 group shadow-xl">
-                                  <img 
-                                    src={bannerUrl} 
-                                    alt={seg.name}
-                                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" 
-                                  />
-                                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent p-3 flex flex-col justify-end">
-                                    <span className="text-[9px] font-mono font-black uppercase tracking-widest text-pink-400 bg-black/70 px-2 py-0.5 rounded w-fit border border-pink-500/30">
-                                      Segment Banner
-                                    </span>
-                                  </div>
-                                </div>
-
-                                {/* Brief Description */}
-                                <div className="space-y-1.5">
-                                  <h5 className="text-[10px] font-black uppercase tracking-widest text-zinc-400 font-mono">BRIEF DESCRIPTION & RULES</h5>
-                                  <p className="text-xs text-zinc-300 leading-relaxed font-medium">
-                                    {descriptionText}
-                                  </p>
-                                </div>
-
-                                {/* Quick Spec Grid */}
-                                <div className="grid grid-cols-2 gap-2 pt-2 border-t border-white/5 text-[10px] font-mono">
-                                  <div className="bg-white/5 p-2 rounded-lg border border-white/5">
-                                    <span className="text-zinc-500 block uppercase font-bold text-[8px]">Type</span>
-                                    <span className="text-white font-bold">{isTeamEvent ? 'Team (2-3 Members)' : 'Solo Individual'}</span>
-                                  </div>
-                                  <div className="bg-white/5 p-2 rounded-lg border border-white/5">
-                                    <span className="text-zinc-500 block uppercase font-bold text-[8px]">Eligibility</span>
-                                    <span className="text-pink-400 font-bold">{seg.id === "Escape Room" ? "Class 9 - 12" : seg.id === "Truss" ? "Class 3 - 8" : "Class 3 - 12"}</span>
-                                  </div>
-                                </div>
-
-                                {/* Select Button inside Expanded View */}
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    if (eligibility.eligible) handleToggleSegment(seg.id);
-                                  }}
-                                  disabled={!eligibility.eligible}
-                                  className={`w-full py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all cursor-pointer flex items-center justify-center gap-2 ${
-                                    !eligibility.eligible
-                                      ? 'bg-zinc-800 text-zinc-500 cursor-not-allowed'
-                                      : isSelected 
-                                        ? 'bg-gradient-to-r from-pink-600 to-purple-600 text-white shadow-lg shadow-pink-500/20' 
-                                        : 'bg-white/10 hover:bg-white/20 text-white border border-white/10'
-                                  }`}
-                                >
-                                  {isSelected ? (
-                                    <>
-                                      <Check className="w-4 h-4 text-white" /> Segment Selected for Registration
-                                    </>
-                                  ) : (
-                                    <>
-                                      <Plus className="w-4 h-4 text-pink-400" /> Select Segment (BDT 100 Flat Fee)
-                                    </>
-                                  )}
-                                </button>
+                        {/* Expanded Banner & Description Drawer */}
+                        {isExpanded && (
+                          <div className="border-t border-white/10 bg-black/60 p-5 space-y-4 animate-in fade-in duration-300">
+                            <div className="relative w-full h-36 rounded-xl overflow-hidden border border-white/10 shadow-lg">
+                              <img
+                                src={bannerUrl}
+                                alt={seg.name}
+                                className="w-full h-full object-cover transform hover:scale-105 transition-transform duration-500"
+                              />
+                              <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent" />
+                              <div className="absolute bottom-2 left-3 right-3 text-left">
+                                <span className="text-[9px] font-mono font-bold text-pink-400 uppercase tracking-widest drop-shadow-md">
+                                  {seg.name} Official Banner
+                                </span>
                               </div>
-                            </motion.div>
-                          )}
-                        </AnimatePresence>
+                            </div>
+
+                            <div className="space-y-1 text-left">
+                              <h5 className="text-[10px] font-black uppercase tracking-wider text-zinc-400 font-mono">Segment Overview & Brief:</h5>
+                              <p className="text-xs text-zinc-300 leading-relaxed font-sans">
+                                {descriptionText}
+                              </p>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     );
-                  })}
-                </div>
+                  };
+
+                  return (
+                    <div className="space-y-10">
+                      {/* SUB-SECTION 1: SOLO EVENTS */}
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-between border-b border-pink-500/20 pb-3">
+                          <div className="flex items-center gap-3">
+                            <span className="px-3.5 py-1.5 rounded-full bg-pink-500/10 border border-pink-500/30 text-pink-400 text-xs font-black uppercase tracking-wider flex items-center gap-2 font-mono">
+                              <User className="w-4 h-4 text-pink-400" /> Solo Events Sub-Section ({soloSegments.length})
+                            </span>
+                            <span className="text-xs text-zinc-400 font-medium hidden sm:inline">Individual participation tracks</span>
+                          </div>
+                          <span className="text-[10px] font-mono text-pink-400/80 bg-pink-500/5 px-2.5 py-1 rounded-lg border border-pink-500/20">
+                            Selected by "Select All Solo"
+                          </span>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                          {soloSegments.map(renderSegmentCard)}
+                        </div>
+                      </div>
+
+                      {/* SUB-SECTION 2: TEAM EVENTS */}
+                      <div className="space-y-4 pt-2">
+                        <div className="flex items-center justify-between border-b border-amber-500/20 pb-3">
+                          <div className="flex items-center gap-3">
+                            <span className="px-3.5 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs font-black uppercase tracking-wider flex items-center gap-2 font-mono">
+                              <Users className="w-4 h-4 text-amber-400" /> Team Events Sub-Section ({teamSegments.length})
+                            </span>
+                            <span className="text-xs text-zinc-400 font-medium hidden sm:inline">Collaborative group challenges (2-3 teammates)</span>
+                          </div>
+                          <span className="text-[10px] font-mono text-amber-400/80 bg-amber-500/5 px-2.5 py-1 rounded-lg border border-amber-500/20">
+                            ⚠️ Excluded from "Select All"
+                          </span>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                          {teamSegments.map(renderSegmentCard)}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
 
                 {/* TEAM MEMBERS SECTION IF A TEAM EVENT IS SELECTED */}
                 {hasTeamSegment && (
@@ -2420,7 +2724,7 @@ export default function InterEventRegister() {
                     <div className="p-5 bg-black/40 border border-white/5 rounded-2xl space-y-4">
                       <h4 className="text-xs font-black uppercase tracking-wider text-zinc-300 flex items-center gap-2 font-mono">
                         <span className="w-5 h-5 rounded-full bg-pink-500/20 text-pink-400 flex items-center justify-center text-[10px] font-mono">3</span>
-                        Team Member 3 {selectedSegments.some(id => id === "Escape Room" || id === "Truss") ? '(Required)' : '(Optional)'}
+                        Team Member 3 {selectedSegments.some((id: string) => id === "Escape Room" || id === "Truss") ? '(Required)' : '(Optional)'}
                       </h4>
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -2525,7 +2829,17 @@ export default function InterEventRegister() {
               )}
 
               {/* Instructions and highlight phone or Proxy alert */}
-              {isProxyRegistration ? (
+              {finalPrice === 0 && !isProxyRegistration ? (
+                <div className="p-8 rounded-[2rem] bg-emerald-500/10 border border-emerald-500/20 space-y-4 text-center">
+                  <CheckCircle2 className="w-10 h-10 text-emerald-400 mx-auto" />
+                  <div className="space-y-1">
+                    <h4 className="text-sm font-black uppercase tracking-wider text-emerald-400">🎉 FREE ENTRY BENEFIT APPLIED</h4>
+                    <p className="text-xs text-zinc-300 max-w-md mx-auto leading-relaxed font-medium">
+                      All of your selected event segments are <strong className="text-emerald-400 uppercase">100% FREE OF CHARGE</strong>! No bKash payment or manual transaction verification is required. Your ticket will be <strong className="text-emerald-400 font-bold">automatically verified & approved</strong> instantly upon submission!
+                    </p>
+                  </div>
+                </div>
+              ) : isProxyRegistration ? (
                 <div className="p-8 rounded-[2rem] bg-gradient-to-br from-indigo-950/20 via-zinc-950 to-black border border-indigo-500/30 space-y-4 text-center">
                   <Sparkles className="w-10 h-10 text-indigo-400 animate-pulse mx-auto" />
                   <div className="space-y-1">
@@ -2588,13 +2902,15 @@ export default function InterEventRegister() {
                   )}
                   <div className="flex justify-between text-sm font-black pt-2">
                     <span className="text-pink-400">Net Payable Amount:</span>
-                    <span className="text-white">{finalPrice} BDT</span>
+                    <span className={finalPrice === 0 ? "text-emerald-400 font-black" : "text-white"}>
+                      {finalPrice === 0 ? "0 BDT (FREE ENTRY)" : `${finalPrice} BDT`}
+                    </span>
                   </div>
                 </div>
               </div>
 
               {/* Input details */}
-              {!isProxyRegistration && (
+              {!isProxyRegistration && finalPrice > 0 && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
                   {/* Sender bKash Phone */}
                   <div className="space-y-3">
@@ -2641,7 +2957,7 @@ export default function InterEventRegister() {
                 </button>
 
                 <button
-                  onClick={handleRegister}
+                  onClick={handleAttemptRegister}
                   disabled={isSubmitting}
                   className="w-full sm:w-auto py-4 px-10 bg-gradient-to-r from-pink-500 to-indigo-600 text-white font-black text-xs uppercase tracking-widest rounded-xl hover:opacity-90 disabled:opacity-55 transition-all flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-pink-500/20 hover:scale-[1.02]"
                 >
@@ -2657,6 +2973,109 @@ export default function InterEventRegister() {
                 </button>
               </div>
             </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* UNSELECTED EVENTS CONFIRMATION WARNING MODAL */}
+        <AnimatePresence>
+          {showUnselectedWarningModal && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-in fade-in duration-200">
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: 10 }}
+                className="w-full max-w-lg bg-zinc-950 border-2 border-amber-500/40 rounded-3xl p-6 md:p-8 shadow-2xl relative overflow-hidden space-y-6"
+              >
+                <div className="absolute top-0 right-0 w-[150px] h-[150px] bg-amber-500/10 rounded-full blur-[50px] pointer-events-none" />
+
+                <div className="flex items-start justify-between gap-4">
+                  <div className="w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 shrink-0">
+                    <AlertTriangle className="w-6 h-6" />
+                  </div>
+                  <button
+                    onClick={() => setShowUnselectedWarningModal(false)}
+                    className="p-2 text-zinc-500 hover:text-white rounded-xl hover:bg-white/10 transition-all cursor-pointer"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+
+                <div className="space-y-2">
+                  <span className="px-3 py-1 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-400 text-[10px] font-black uppercase tracking-widest font-mono">
+                    Confirmation Notice
+                  </span>
+                  <h3 className="text-xl font-black uppercase tracking-wider text-white font-mono">
+                    Are you sure you want to proceed?
+                  </h3>
+                  <p className="text-xs text-zinc-300 leading-relaxed font-medium">
+                    You have selected <span className="text-pink-400 font-bold">{selectedSegments.length}</span> event(s) out of <span className="text-white font-bold">{INTER_SEGMENTS.filter((seg: any) => isSegmentEligible(seg.id, className).eligible).length}</span> available events for <span className="text-amber-400 font-bold">Class {className}</span>.
+                  </p>
+                </div>
+
+                {/* Unselected Events list */}
+                {(() => {
+                  const eligibleForClass = INTER_SEGMENTS
+                    .filter((seg: any) => isSegmentEligible(seg.id, className).eligible)
+                    .map((seg: any) => seg.id);
+                  const unselected = eligibleForClass.filter(
+                    (id: string) => !selectedSegments.includes(id) && !alreadyRegisteredEvents.includes(id)
+                  );
+
+                  return unselected.length > 0 ? (
+                    <div className="bg-black/60 border border-white/10 rounded-2xl p-4 space-y-2 font-mono">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 block border-b border-white/10 pb-1.5">
+                        Events you have not selected ({unselected.length}):
+                      </span>
+                      <div className="flex flex-wrap gap-1.5 pt-1">
+                        {unselected.map((segId: string) => (
+                          <span key={segId} className="px-2.5 py-1 bg-white/5 border border-white/10 rounded-lg text-[10px] font-semibold text-zinc-300">
+                            {segId}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  ) : null;
+                })()}
+
+                {/* Re-registration Warning Box */}
+                <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-start gap-3 text-xs">
+                  <Coins className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
+                  <div className="space-y-1">
+                    <p className="font-black uppercase tracking-wider text-[10px] text-amber-400 font-mono">
+                      100 Tk Re-registration Fee Notice
+                    </p>
+                    <p className="text-zinc-300 text-[11px] leading-relaxed">
+                      If you decide to participate in any of the remaining events later, you will have to register once again using <strong>100 Tk</strong> for paid segments.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Action buttons */}
+                <div className="flex flex-col sm:flex-row gap-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowUnselectedWarningModal(false);
+                      setPendingSubmissionConfirmed(true);
+                      handleRegister();
+                    }}
+                    className="flex-1 py-3.5 px-5 bg-gradient-to-r from-pink-500 to-indigo-600 text-white font-black text-xs uppercase tracking-widest rounded-xl hover:opacity-90 transition-all cursor-pointer shadow-lg shadow-pink-500/20 text-center"
+                  >
+                    Yes, Proceed with Selected
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowUnselectedWarningModal(false);
+                      setStep(2);
+                    }}
+                    className="flex-1 py-3.5 px-5 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 font-black text-xs uppercase tracking-widest rounded-xl transition-all cursor-pointer border border-white/10 text-center"
+                  >
+                    Go Back & Select More
+                  </button>
+                </div>
+              </motion.div>
+            </div>
           )}
         </AnimatePresence>
       </div>
