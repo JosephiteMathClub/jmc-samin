@@ -1013,7 +1013,13 @@ export default function InterEventRegister() {
 
   // Cost calculation
   const paidSelectedSegments = selectedSegments.filter(id => !isFreeInterSegment(id));
-  const totalRawPrice = paidSelectedSegments.length * pricePerSegment;
+  const paidSoloSegments = paidSelectedSegments.filter(id => !checkIsTeamSegment(id));
+  const paidTeamSegments = paidSelectedSegments.filter(id => checkIsTeamSegment(id));
+
+  const soloFee = paidSoloSegments.length > 0 ? 100 : 0;
+  const teamFee = paidTeamSegments.length * 200;
+  const totalRawPrice = soloFee + teamFee;
+
   const hasCaDiscount = false;
   const discountAmount = 0;
   const finalPrice = totalRawPrice;
@@ -2421,7 +2427,7 @@ export default function InterEventRegister() {
                       <Trophy className="w-8 h-8 text-pink-500" /> Event Segments
                     </h2>
                     <p className="text-xs text-zinc-500 mt-1 max-w-xl font-medium leading-relaxed">
-                      Select any number of our 22 national mathematical event segments. The total registration fee is BDT <span className="text-pink-400 font-bold">100</span> regardless of how many segments you choose.
+                      Select any number of our national mathematical event segments. Participating in any or all <span className="text-pink-400 font-bold">Solo events costs a flat BDT 100</span>, and <span className="text-pink-400 font-bold">Team events cost BDT 200</span> each.
                     </p>
                   </div>
 
@@ -2922,10 +2928,20 @@ export default function InterEventRegister() {
                 <div className="space-y-2 text-xs uppercase tracking-wider font-semibold font-mono">
                   <div className="flex justify-between">
                     <span className="text-zinc-500">Selected Segment Size:</span>
-                    <span className="text-white font-bold">{selectedSegments.length} Segments</span>
+                    <span className="text-white font-bold">{selectedSegments.length} Segments ({paidSoloSegments.length} Solo, {paidTeamSegments.length} Team)</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-zinc-500">Raw Registration Cost:</span>
+                    <span className="text-zinc-500">Solo Events Fee:</span>
+                    <span className="text-white font-bold">{paidSoloSegments.length > 0 ? "100 BDT (Flat for all solo events)" : "0 BDT"}</span>
+                  </div>
+                  {paidTeamSegments.length > 0 && (
+                    <div className="flex justify-between">
+                      <span className="text-zinc-500">Team Event(s) Fee:</span>
+                      <span className="text-white font-bold">{paidTeamSegments.length * 200} BDT ({paidTeamSegments.length} x 200 BDT)</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between border-t border-white/5 pt-2">
+                    <span className="text-zinc-500">Total Registration Fee:</span>
                     <span className="text-white font-bold">{totalRawPrice} BDT</span>
                   </div>
                   {hasCaDiscount && (
@@ -3076,10 +3092,10 @@ export default function InterEventRegister() {
                   <Coins className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
                   <div className="space-y-1">
                     <p className="font-black uppercase tracking-wider text-[10px] text-amber-400 font-mono">
-                      100 Tk Re-registration Fee Notice
+                      Re-registration Fee Notice
                     </p>
                     <p className="text-zinc-300 text-[11px] leading-relaxed">
-                      If you decide to participate in any of the remaining events later, you will have to register once again using <strong>100 Tk</strong> for paid segments.
+                      If you decide to participate in any of the remaining events later in a separate submission, standard registration fees (100 BDT flat for solo events, 200 BDT for team events) will apply.
                     </p>
                   </div>
                 </div>
