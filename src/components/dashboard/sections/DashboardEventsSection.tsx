@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Calendar, Trash2, Plus, DollarSign, Layers, Clock, Sparkles, ChevronDown, Image as ImageIcon } from 'lucide-react';
 import { useAuth } from '../../../context/AuthContext';
+import { DEFAULT_CONTENT } from '../../../data/default-content';
 import { DashboardSection } from '../DashboardSection';
 import { DashboardFormField } from '../DashboardFormField';
 import { DashboardFileUpload } from '../DashboardFileUpload';
@@ -12,6 +13,7 @@ interface DashboardEventsSectionProps {
   registrationData?: any;
   interSegmentsData?: any[];
   festivalCalendarData?: any;
+  initialTab?: 'events' | 'registration' | 'segments' | 'calendar';
   updateField: (field: string, value: any) => void;
   updateListItem: (field: string, index: number, value: any) => void;
   addListItem: (field: string, newItem: any) => void;
@@ -55,6 +57,7 @@ const DashboardEventsSectionComponent: React.FC<DashboardEventsSectionProps> = (
   registrationData,
   interSegmentsData = [],
   festivalCalendarData,
+  initialTab = 'segments',
   updateField,
   updateListItem,
   addListItem,
@@ -67,18 +70,31 @@ const DashboardEventsSectionComponent: React.FC<DashboardEventsSectionProps> = (
   shouldReduceGfx
 }) => {
   const { isSuperAdmin } = useAuth();
-  const [activeTab, setActiveTab] = useState<'events' | 'registration' | 'segments' | 'calendar'>('segments');
+  const [activeTab, setActiveTab] = useState<'events' | 'registration' | 'segments' | 'calendar'>(initialTab);
+
+  React.useEffect(() => {
+    if (initialTab) {
+      setActiveTab(initialTab);
+    }
+  }, [initialTab]);
   const [searchTerm, setSearchTerm] = useState('');
 
   // Local state for segments list if updateInterSegments is provided
-  const segments = Array.isArray(interSegmentsData) && interSegmentsData.length > 0 
+  const segments = (Array.isArray(interSegmentsData) && interSegmentsData.length > 0)
     ? interSegmentsData 
-    : [];
+    : (DEFAULT_CONTENT.interSegments || []);
 
   const handleSegmentChange = (index: number, key: string, val: any) => {
     if (!updateInterSegments) return;
     const updated = [...segments];
-    updated[index] = { ...updated[index], [key]: val };
+    const prev = updated[index] || {};
+    const updatedItem = { ...prev, [key]: val };
+    if (key === 'name') {
+      if (!prev.id || prev.id === prev.name) {
+        updatedItem.id = val;
+      }
+    }
+    updated[index] = updatedItem;
     updateInterSegments(updated);
   };
 

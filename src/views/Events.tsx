@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Calendar, MapPin, Clock, ArrowRight, Filter, Search, Trophy, Users, BookOpen, Sparkles, Zap, Shield, HelpCircle, ExternalLink, Globe, Loader2, ChevronDown, ChevronUp, CheckCircle2 } from 'lucide-react';
 import { useContent } from '../context/ContentContext';
+import { DEFAULT_CONTENT } from '../data/default-content';
 import ScrollReveal from '../components/ScrollReveal';
 import Image from 'next/image';
 import { Skeleton } from '../components/Skeleton';
@@ -144,9 +145,10 @@ const Events = () => {
   const [preRegSubmitted, setPreRegSubmitted] = useState(false);
   const [preRegLoading, setPreRegLoading] = useState(false);
 
-  // Inter segment banner & description state
+  // Inter segment banner, description & dynamic segment list state
   const [segmentBanners, setSegmentBanners] = useState<Record<string, string>>({});
   const [segmentDescriptions, setSegmentDescriptions] = useState<Record<string, string>>({});
+  const [configInterSegments, setConfigInterSegments] = useState<any[] | null>(null);
   const [expandedSegments, setExpandedSegments] = useState<string[]>([]);
 
   const toggleExpandSegment = (name: string) => {
@@ -181,6 +183,9 @@ const Events = () => {
                 if (val.segmentDescriptions && typeof val.segmentDescriptions === 'object') {
                   setSegmentDescriptions(val.segmentDescriptions);
                 }
+                if (Array.isArray(val.interSegments) && val.interSegments.length > 0) {
+                  setConfigInterSegments(val.interSegments);
+                }
               }
             }
           }
@@ -213,6 +218,72 @@ const Events = () => {
       window.history.pushState({}, '', url);
     }
   };
+
+  const ICON_LOOKUP_MAP: Record<string, any> = {
+    Trophy, FileText, Brain, Zap, Sparkles, Compass, Timer, Eye, Lock, HelpCircle, Grid, Layers, Award, Activity, Home, Share2, Smile, BookOpen, Edit, Construction, Layout
+  };
+
+  const getSegmentIcon = (iconName?: string) => {
+    if (!iconName) return Trophy;
+    return ICON_LOOKUP_MAP[iconName] || Trophy;
+  };
+
+  const getSegmentStyleBg = (cat: string, idx: number = 0) => {
+    const norm = (cat || '').toLowerCase();
+    if (norm.includes('team')) return "from-violet-500/10 to-fuchsia-500/10 text-violet-400 border-violet-500/20";
+    if (norm.includes('creative')) return "from-pink-500/10 to-purple-500/10 text-pink-400 border-pink-500/20";
+    if (norm.includes('writing')) return "from-zinc-500/10 to-slate-500/10 text-zinc-400 border-zinc-500/20";
+    if (norm.includes('exhibition')) return "from-emerald-500/10 to-green-500/10 text-emerald-400 border-emerald-500/20";
+    const styles = [
+      "from-amber-500/10 to-yellow-500/10 text-amber-400 border-amber-500/20",
+      "from-blue-500/10 to-cyan-500/10 text-blue-400 border-blue-500/20",
+      "from-pink-500/10 to-rose-500/10 text-pink-400 border-pink-500/20",
+      "from-green-500/10 to-emerald-500/10 text-green-400 border-emerald-500/20",
+      "from-purple-500/10 to-violet-500/10 text-purple-400 border-purple-500/20",
+      "from-indigo-500/10 to-blue-500/10 text-indigo-400 border-indigo-500/20",
+      "from-red-500/10 to-orange-500/10 text-red-400 border-red-500/20",
+      "from-teal-500/10 to-emerald-500/10 text-teal-400 border-teal-500/20"
+    ];
+    return styles[idx % styles.length];
+  };
+
+  const displaySegments = React.useMemo(() => {
+    const rawList = (Array.isArray(configInterSegments) && configInterSegments.length > 0)
+      ? configInterSegments
+      : (Array.isArray(content?.interSegments) && content.interSegments.length > 0)
+      ? content.interSegments
+      : (DEFAULT_CONTENT.interSegments || []);
+
+    return rawList.map((seg: any, idx: number) => {
+      const segId = seg.id || seg.name || "";
+      const norm = segId.toLowerCase();
+      let isTeam = !!seg.isTeamEvent;
+      if (norm.includes("murder mystery") || norm.includes("wall magazine")) {
+        isTeam = false;
+      } else if (norm.includes("escape room") || norm.includes("truss")) {
+        isTeam = true;
+      }
+
+      let category = seg.category || (isTeam ? "Team track" : "Solo track");
+      if (!isTeam && category.toLowerCase() === "team track") {
+        category = norm.includes("wall magazine") ? "Exhibition track" : "Solo track";
+      }
+
+      return {
+        id: segId,
+        name: seg.name || segId,
+        tagline: seg.tagline || "",
+        category,
+        icon: typeof seg.icon === 'string' ? getSegmentIcon(seg.icon) : (seg.icon || Trophy),
+        isTeamEvent: isTeam,
+        teamSize: isTeam ? (seg.teamSize || 3) : 1,
+        isFree: typeof seg.isFree === 'boolean' ? seg.isFree : isFreeInterSegment(seg.name || segId),
+        bannerUrl: seg.bannerUrl || segmentBanners[seg.name] || DEFAULT_EVENT_BANNERS[seg.name] || "",
+        description: seg.description || segmentDescriptions[seg.name] || DEFAULT_EVENT_DESCRIPTIONS[seg.name] || "",
+        bg: getSegmentStyleBg(category || seg.name, idx)
+      };
+    });
+  }, [configInterSegments, content?.interSegments, segmentBanners, segmentDescriptions]);
 
   const handlePreRegSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -977,19 +1048,13 @@ const Events = () => {
                 <div>
                   <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
                     <h3 className="text-xl font-black text-white uppercase tracking-wider flex items-center gap-3">
-                      <Trophy className="w-5 h-5 text-indigo-400" /> 22 Championship Segments
+                      <Trophy className="w-5 h-5 text-indigo-400" /> {displaySegments.length} Championship Segments
                     </h3>
 
                     <button
                       type="button"
                       onClick={() => {
-                        const allNames = [
-                          "Math Olympiad (Find-based)", "Math Olympiad (Proof-based)", "IQ Test", "Human Calculator",
-                          "Genesis", "Geometry Dash", "Probability Pressure", "Murder Mystery", "Crack the Code",
-                          "Complex Calamity", "Sudoku", "Rubik’s Cube Showdown", "5 min Professor", "Calculus Bee",
-                          "Escape Room", "Combi Verse", "Math Memes", "Math Article", "Math Vision", "Math Drawing",
-                          "Truss", "Wall Magazine Display"
-                        ];
+                        const allNames = displaySegments.map((s: any) => s.name);
                         if (expandedSegments.length === allNames.length) {
                           setExpandedSegments([]);
                         } else {
@@ -998,40 +1063,17 @@ const Events = () => {
                       }}
                       className="px-4 py-2 bg-indigo-500/10 border border-indigo-500/20 hover:bg-indigo-500/20 text-indigo-300 text-xs font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer flex items-center gap-2"
                     >
-                      <ChevronDown className={`w-4 h-4 transition-transform duration-300 ${expandedSegments.length === 22 ? 'rotate-180 text-indigo-400' : ''}`} />
-                      {expandedSegments.length === 22 ? 'Collapse All Cards' : 'Expand All Segment Banners'}
+                      <ChevronDown className={`w-4 h-4 transition-transform duration-300 ${expandedSegments.length === displaySegments.length ? 'rotate-180 text-indigo-400' : ''}`} />
+                      {expandedSegments.length === displaySegments.length ? 'Collapse All Cards' : 'Expand All Segment Banners'}
                     </button>
                   </div>
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                    {[
-                      { name: "Math Olympiad (Find-based)", tagline: "Solve numeric mysteries and discover deep hidden structural patterns.", category: "Solo track", icon: Trophy, bg: "from-amber-500/10 to-yellow-500/10 text-amber-400 border-amber-500/20" },
-                      { name: "Math Olympiad (Proof-based)", tagline: "Draft elegant formal proofs and logically sound explanations.", category: "Solo track", icon: FileText, bg: "from-blue-500/10 to-cyan-500/10 text-blue-400 border-blue-500/20" },
-                      { name: "IQ Test", tagline: "Race against the clock in analytical speed reasoning.", category: "Solo track", icon: Brain, bg: "from-pink-500/10 to-rose-500/10 text-pink-400 border-pink-500/20" },
-                      { name: "Human Calculator", tagline: "Unleash super-speed mental arithmetic and calculation loops.", category: "Solo track", icon: Zap, bg: "from-green-500/10 to-emerald-500/10 text-green-400 border-green-500/20" },
-                      { name: "Genesis", tagline: "Interactive math design and scientific origin-based discovery.", category: "Solo track", icon: Sparkles, bg: "from-purple-500/10 to-violet-500/10 text-purple-400 border-purple-500/20" },
-                      { name: "Geometry Dash", tagline: "Navigate space calculations, angle proofs, and vector mazes.", category: "Solo track", icon: Compass, bg: "from-indigo-500/10 to-blue-500/10 text-indigo-400 border-indigo-500/20" },
-                      { name: "Probability Pressure", tagline: "Calculate rapid-fire odds and stochastic outcomes under stress.", category: "Solo track", icon: Timer, bg: "from-red-500/10 to-orange-500/10 text-red-400 border-red-500/20" },
-                      { name: "Murder Mystery", tagline: "Deduce clues and crack mathematical murder mystery cases.", category: "Team / Solo track", icon: Eye, bg: "from-pink-500/10 to-purple-500/10 text-pink-400 border-pink-500/20" },
-                      { name: "Crack the Code", tagline: "Deconstruct cryptographic ciphers and decode encrypted strings.", category: "Solo track", icon: Lock, bg: "from-teal-500/10 to-emerald-500/10 text-teal-400 border-teal-500/20" },
-                      { name: "Complex Calamity", tagline: "Grapple with complex numbers, imaginary axes, and fractals.", category: "Solo track", icon: HelpCircle, bg: "from-amber-500/10 to-red-500/10 text-amber-400 border-amber-500/20" },
-                      { name: "Sudoku", tagline: "Solve grid placement challenges with extreme speed precision.", category: "Solo track", icon: Grid, bg: "from-blue-500/10 to-indigo-500/10 text-blue-400 border-blue-500/20" },
-                      { name: "Rubik’s Cube Showdown", tagline: "Manipulate cubic modules and solve cubes in record times.", category: "Solo track", icon: Layers, bg: "from-emerald-500/10 to-teal-500/10 text-emerald-400 border-emerald-500/20" },
-                      { name: "5 min Professor", tagline: "Deliver a lightning lecture explaining abstract concepts simply.", category: "Solo track", icon: Award, bg: "from-yellow-500/10 to-orange-500/10 text-yellow-400 border-yellow-500/20" },
-                      { name: "Calculus Bee", tagline: "Solve derivatives and integral equations in real-time playoffs.", category: "Solo track", icon: Activity, bg: "from-red-500/10 to-rose-500/10 text-red-400 border-red-500/20" },
-                      { name: "Escape Room", tagline: "Decrypt physical room locks and spatial logic systems. (Team Event • Class 9-12)", category: "Team track", icon: Home, bg: "from-violet-500/10 to-fuchsia-500/10 text-violet-400 border-violet-500/20" },
-                      { name: "Combi Verse", tagline: "Navigate combinatorics, permutations, graph theory networks.", category: "Solo track", icon: Share2, bg: "from-cyan-500/10 to-blue-500/10 text-cyan-400 border-cyan-500/20" },
-                      { name: "Math Memes", tagline: "Design humorous and intellectually witty math memes.", category: "Creative track", icon: Smile, bg: "from-yellow-500/10 to-green-500/10 text-yellow-400 border-yellow-500/20" },
-                      { name: "Math Article", tagline: "Draft a well-researched article on advanced mathematical theories.", category: "Writing track", icon: BookOpen, bg: "from-zinc-500/10 to-slate-500/10 text-zinc-400 border-zinc-500/20" },
-                      { name: "Math Vision", tagline: "Design digital graphic art illustrating geometric formulas.", category: "Creative track", icon: Eye, bg: "from-pink-500/10 to-purple-500/10 text-pink-400 border-pink-500/20" },
-                      { name: "Math Drawing", tagline: "Create pristine hand-drawn sketches of golden ratios and fractals.", category: "Creative track", icon: Edit, bg: "from-purple-500/10 to-indigo-500/10 text-purple-400 border-purple-500/20" },
-                      { name: "Truss", tagline: "Build high-load structurally sound physical bridge trusses. (Team Event • Class 3-8)", category: "Team track", icon: Construction, bg: "from-amber-500/10 to-orange-500/10 text-amber-400 border-amber-500/20" },
-                      { name: "Wall Magazine Display", tagline: "Design physical wall posters mapping historical math breakthroughs.", category: "Exhibition track", icon: Layout, bg: "from-emerald-500/10 to-green-500/10 text-emerald-400 border-emerald-500/20" }
-                    ].map((seg, idx) => {
+                    {displaySegments.map((seg: any, idx: number) => {
                       const SegIcon = seg.icon;
                       const isExpanded = expandedSegments.includes(seg.name);
-                      const bannerUrl = segmentBanners[seg.name] || DEFAULT_EVENT_BANNERS[seg.name];
-                      const descText = segmentDescriptions[seg.name] || DEFAULT_EVENT_DESCRIPTIONS[seg.name];
+                      const bannerUrl = seg.bannerUrl || segmentBanners[seg.name] || DEFAULT_EVENT_BANNERS[seg.name];
+                      const descText = seg.description || segmentDescriptions[seg.name] || DEFAULT_EVENT_DESCRIPTIONS[seg.name];
 
                       return (
                         <div 

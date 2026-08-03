@@ -24,7 +24,8 @@ import {
   PieChart,
   Ticket,
   Tag,
-  SlidersHorizontal
+  SlidersHorizontal,
+  Clock
 } from 'lucide-react';
 import { useContent } from '../context/ContentContext';
 import { useAuth } from '../context/AuthContext';
@@ -1105,6 +1106,7 @@ const AdminDashboard = () => {
 
   const tabs = [
     { id: 'events', label: 'Events', icon: Calendar },
+    { id: 'festival_calendar', label: 'Festival Calendar', icon: Clock },
     { id: 'notices', label: 'Notices', icon: Bell },
     { id: 'handouts', label: 'Session Handouts', icon: FileText },
     { id: 'resources_mgmt', label: 'Resources Library', icon: BookOpen },
@@ -1188,6 +1190,26 @@ const AdminDashboard = () => {
             registrationData={localContent?.registration}
             interSegmentsData={localContent?.interSegments}
             festivalCalendarData={localContent?.festivalCalendar}
+            updateField={(field, val) => updateField('events', field, val)}
+            updateListItem={(field, index, val) => updateListItem('events', field, index, val)}
+            addListItem={(field, newItem) => addListItem('events', field, newItem)}
+            removeListItem={(field, index) => removeListItem('events', field, index)}
+            updateRegistrationField={(field, val) => updateField('registration', field, val)}
+            updateInterSegments={(newSegments) => setLocalContent((prev: any) => ({ ...prev, interSegments: newSegments }))}
+            updateFestivalCalendar={(newCal) => setLocalContent((prev: any) => ({ ...prev, festivalCalendar: newCal }))}
+            uploading={uploading}
+            handleFileUpload={handleFileUpload}
+            shouldReduceGfx={shouldReduceGfx}
+          />
+        )}
+
+        {activeTab === 'festival_calendar' && (
+          <DashboardEventsSection 
+            data={localContent?.events}
+            registrationData={localContent?.registration}
+            interSegmentsData={localContent?.interSegments}
+            festivalCalendarData={localContent?.festivalCalendar}
+            initialTab="calendar"
             updateField={(field, val) => updateField('events', field, val)}
             updateListItem={(field, index, val) => updateListItem('events', field, index, val)}
             addListItem={(field, newItem) => addListItem('events', field, newItem)}

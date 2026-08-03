@@ -160,7 +160,7 @@ const DEFAULT_INTER_SEGMENTS = [
   { id: "Genesis", name: "Genesis", tagline: "Interactive math design and scientific origin-based discovery.", category: "Solo track", icon: Sparkles, color: "from-purple-500/10 to-violet-500/10 text-purple-400 border-purple-500/20" },
   { id: "Geometry Dash", name: "Geometry Dash", tagline: "Navigate space calculations, angle proofs, and vector mazes.", category: "Solo track", icon: Compass, color: "from-indigo-500/10 to-blue-500/10 text-indigo-400 border-indigo-500/20" },
   { id: "Probability Pressure", name: "Probability Pressure", tagline: "Calculate rapid-fire odds and stochastic outcomes under stress.", category: "Solo track", icon: Timer, color: "from-red-500/10 to-orange-500/10 text-red-400 border-red-500/20" },
-  { id: "Murder Mystery", name: "Murder Mystery", tagline: "Deduce clues and crack mathematical murder mystery cases.", category: "Team / Solo track", icon: Eye, color: "from-pink-500/10 to-purple-500/10 text-pink-400 border-pink-500/20" },
+  { id: "Murder Mystery", name: "Murder Mystery", tagline: "Deduce clues and crack mathematical murder mystery cases.", category: "Solo track", icon: Eye, color: "from-pink-500/10 to-purple-500/10 text-pink-400 border-pink-500/20", isTeamEvent: false, teamSize: 1 },
   { id: "Crack the Code", name: "Crack the Code", tagline: "Deconstruct cryptographic ciphers and decode encrypted strings.", category: "Solo track", icon: Lock, color: "from-teal-500/10 to-emerald-500/10 text-teal-400 border-teal-500/20" },
   { id: "Complex Calamity", name: "Complex Calamity", tagline: "Grapple with complex numbers, imaginary axes, and fractals.", category: "Solo track", icon: HelpCircle, color: "from-amber-500/10 to-red-500/10 text-amber-400 border-amber-500/20" },
   { id: "Sudoku", name: "Sudoku", tagline: "Solve grid placement challenges with extreme speed precision.", category: "Solo track", icon: Grid, color: "from-blue-500/10 to-indigo-500/10 text-blue-400 border-blue-500/20" },
@@ -178,12 +178,20 @@ const DEFAULT_INTER_SEGMENTS = [
 ];
 
 export function isTeamSegment(id: string, segmentList?: any[]): boolean {
-  const list = segmentList || DEFAULT_INTER_SEGMENTS;
+  if (!id) return false;
+  const norm = id.trim().toLowerCase();
+  if (norm.includes("murder mystery") || norm.includes("wall magazine")) {
+    return false;
+  }
+  if (norm.includes("escape room") || norm.includes("truss")) {
+    return true;
+  }
+  const list = (segmentList && Array.isArray(segmentList) && segmentList.length > 0) ? segmentList : DEFAULT_INTER_SEGMENTS;
   const seg = list.find((s: any) => (s.id || s.name) === id);
   if (seg && typeof seg.isTeamEvent === 'boolean') {
     return seg.isTeamEvent;
   }
-  return id === "Escape Room" || id === "Truss" || (seg && seg.category && seg.category.toLowerCase().includes("team")) || false;
+  return false;
 }
 
 export default function InterEventRegister() {
@@ -191,24 +199,51 @@ export default function InterEventRegister() {
   const { user, profile, loading: authLoading, isAdmin, isSuperAdmin } = useAuth();
   const { content } = useContent();
 
+  const [dbInterSegments, setDbInterSegments] = useState<any[] | null>(null);
+  const [segmentBanners, setSegmentBanners] = useState<Record<string, string>>({});
+  const [segmentDescriptions, setSegmentDescriptions] = useState<Record<string, string>>({});
+
   const INTER_SEGMENTS = React.useMemo(() => {
-    if (Array.isArray(content?.interSegments) && content.interSegments.length > 0) {
-      return content.interSegments.map((s: any) => ({
-        id: s.id || s.name,
-        name: s.name,
+    const rawList = (Array.isArray(dbInterSegments) && dbInterSegments.length > 0)
+      ? dbInterSegments
+      : (Array.isArray(content?.interSegments) && content.interSegments.length > 0)
+      ? content.interSegments
+      : DEFAULT_INTER_SEGMENTS;
+
+    return rawList.map((s: any) => {
+      const segId = s.id || s.name || "";
+      const norm = segId.toLowerCase();
+      let isTeam = !!s.isTeamEvent;
+      if (norm.includes("murder mystery") || norm.includes("wall magazine")) {
+        isTeam = false;
+      } else if (norm.includes("escape room") || norm.includes("truss")) {
+        isTeam = true;
+      }
+
+      let category = s.category || (isTeam ? "Team track" : "Solo track");
+      if (!isTeam && category.toLowerCase() === "team track") {
+        category = norm.includes("wall magazine") ? "Exhibition track" : "Solo track";
+      }
+
+      return {
+        id: segId,
+        name: s.name || segId,
         tagline: s.tagline || "",
-        category: s.category || (s.isTeamEvent ? "Team track" : "Solo track"),
+        category,
         icon: typeof s.icon === 'string' ? getSegmentIconComponent(s.icon) : (s.icon || Trophy),
-        isTeamEvent: !!s.isTeamEvent,
-        teamSize: s.teamSize || (s.isTeamEvent ? 3 : 1),
-        isFree: !!s.isFree,
-        bannerUrl: s.bannerUrl || DEFAULT_SEGMENT_BANNERS[s.name] || "",
-        description: s.description || DEFAULT_SEGMENT_DESCRIPTIONS[s.name] || "",
-        color: getSegmentColorStyle(s.category || s.name)
-      }));
-    }
-    return DEFAULT_INTER_SEGMENTS;
-  }, [content?.interSegments]);
+        isTeamEvent: isTeam,
+        teamSize: isTeam ? (s.teamSize || 3) : 1,
+        isFree: typeof s.isFree === 'boolean' ? s.isFree : isFreeInterSegment(s.name || segId),
+        bannerUrl: s.bannerUrl || segmentBanners[s.name] || DEFAULT_SEGMENT_BANNERS[s.name] || DEFAULT_SEGMENT_BANNERS[segId] || "",
+        description: s.description || segmentDescriptions[s.name] || DEFAULT_SEGMENT_DESCRIPTIONS[s.name] || DEFAULT_SEGMENT_DESCRIPTIONS[segId] || "",
+        color: getSegmentColorStyle(category || s.name || segId)
+      };
+    });
+  }, [dbInterSegments, content?.interSegments, segmentBanners, segmentDescriptions]);
+
+  const checkIsTeamSegment = React.useCallback((id: string) => {
+    return isTeamSegment(id, INTER_SEGMENTS);
+  }, [INTER_SEGMENTS]);
   
   // Gatekeeper status & configurations
   const [checkingStatuses, setCheckingStatuses] = useState(true);
@@ -219,8 +254,6 @@ export default function InterEventRegister() {
   const [paymentDesc, setPaymentDesc] = useState("Please pay BDT 100 registration fee to our bKash personal/merchant account. Highlighted Phone: 01789456123.");
   const [pricePerSegment, setPricePerSegment] = useState(100);
   const [caCodesList, setCaCodesList] = useState<string[]>([]);
-  const [segmentBanners, setSegmentBanners] = useState<Record<string, string>>({});
-  const [segmentDescriptions, setSegmentDescriptions] = useState<Record<string, string>>({});
   const [expandedSegments, setExpandedSegments] = useState<string[]>([]);
 
   const toggleExpandSegment = (id: string) => {
@@ -299,10 +332,7 @@ export default function InterEventRegister() {
   const [teamMember3Institute, setTeamMember3Institute] = useState('');
   const [teamMember3Gender, setTeamMember3Gender] = useState('');
 
-  const hasTeamSegment = selectedSegments.some(id => {
-    const seg = INTER_SEGMENTS.find((s: any) => s.id === id);
-    return id === "Escape Room" || id === "Truss" || (seg && seg.category.toLowerCase() === "team track");
-  });
+  const hasTeamSegment = selectedSegments.some(id => checkIsTeamSegment(id));
 
   // Automatically reset teammate fields if team segments are deselected
   useEffect(() => {
@@ -503,6 +533,10 @@ export default function InterEventRegister() {
 
           if (configVal.segmentDescriptions && typeof configVal.segmentDescriptions === 'object') {
             setSegmentDescriptions(configVal.segmentDescriptions);
+          }
+
+          if (Array.isArray(configVal.interSegments) && configVal.interSegments.length > 0) {
+            setDbInterSegments(configVal.interSegments);
           }
 
           const launched = Boolean(configVal.isEventPageLaunched);
@@ -1007,17 +1041,17 @@ export default function InterEventRegister() {
   // Select all / Deselect all events (Solo events only)
   const handleSelectAllSegments = () => {
     const eligibleSoloIds = INTER_SEGMENTS
-      .filter((seg: any) => !isTeamSegment(seg.id) && isSegmentEligible(seg.id, className).eligible && !alreadyRegisteredEvents.includes(seg.id))
+      .filter((seg: any) => !checkIsTeamSegment(seg.id) && isSegmentEligible(seg.id, className).eligible && !alreadyRegisteredEvents.includes(seg.id))
       .map((seg: any) => seg.id);
 
     const allSoloSelected = eligibleSoloIds.length > 0 && eligibleSoloIds.every((id: string) => selectedSegments.includes(id));
 
     if (allSoloSelected) {
       // Deselect solo events, keeping manually selected team events
-      setSelectedSegments(selectedSegments.filter((id: string) => isTeamSegment(id)));
+      setSelectedSegments(selectedSegments.filter((id: string) => checkIsTeamSegment(id)));
     } else {
       // Select all eligible solo events excluding already registered ones
-      const teamSelected = selectedSegments.filter((id: string) => isTeamSegment(id));
+      const teamSelected = selectedSegments.filter((id: string) => checkIsTeamSegment(id));
       setSelectedSegments([...teamSelected, ...eligibleSoloIds]);
     }
   };
@@ -1573,13 +1607,13 @@ export default function InterEventRegister() {
 
           {/* Catalog Grid grouped into Sub-sections */}
           {(() => {
-            const soloSegments = INTER_SEGMENTS.filter((seg: any) => !isTeamSegment(seg.id));
-            const teamSegments = INTER_SEGMENTS.filter((seg: any) => isTeamSegment(seg.id));
+            const soloSegments = INTER_SEGMENTS.filter((seg: any) => !checkIsTeamSegment(seg.id));
+            const teamSegments = INTER_SEGMENTS.filter((seg: any) => checkIsTeamSegment(seg.id));
 
             const renderCatalogCard = (seg: typeof INTER_SEGMENTS[0]) => {
               const IconComp = seg.icon;
               const isExpanded = expandedSegments.includes(seg.id);
-              const isTeamEvent = isTeamSegment(seg.id);
+              const isTeamEvent = checkIsTeamSegment(seg.id);
               const bannerUrl = segmentBanners[seg.id] || DEFAULT_SEGMENT_BANNERS[seg.id] || "https://images.unsplash.com/photo-1509228468518-180dd4864904?auto=format&fit=crop&w=1200&q=80";
               const descriptionText = segmentDescriptions[seg.id] || DEFAULT_SEGMENT_DESCRIPTIONS[seg.id] || "Challenge your mind and represent your institution across problem solving, speed calculation, and creative tracks.";
 
@@ -2418,7 +2452,7 @@ export default function InterEventRegister() {
                   <div className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 font-mono">
                     Selected Segments: <span className="text-pink-400 font-black">{selectedSegments.length}</span> of {INTER_SEGMENTS.length}
                     <span className="text-zinc-500 ml-2">
-                      ({selectedSegments.filter((id: string) => !isTeamSegment(id)).length} Solo, {selectedSegments.filter((id: string) => isTeamSegment(id)).length} Team)
+                      ({selectedSegments.filter((id: string) => !checkIsTeamSegment(id)).length} Solo, {selectedSegments.filter((id: string) => checkIsTeamSegment(id)).length} Team)
                     </span>
                   </div>
                   <div className="flex items-center gap-3">
@@ -2438,7 +2472,7 @@ export default function InterEventRegister() {
                     >
                       {(() => {
                         const eligibleSoloIds = INTER_SEGMENTS
-                          .filter((seg: any) => !isTeamSegment(seg.id) && isSegmentEligible(seg.id, className).eligible)
+                          .filter((seg: any) => !checkIsTeamSegment(seg.id) && isSegmentEligible(seg.id, className).eligible)
                           .map((seg: any) => seg.id);
                         const allSoloSelected = eligibleSoloIds.length > 0 && eligibleSoloIds.every((id: string) => selectedSegments.includes(id));
                         return allSoloSelected ? (
@@ -2459,8 +2493,8 @@ export default function InterEventRegister() {
 
                 {/* Segment selection grids grouped by Sub-Sections */}
                 {(() => {
-                  const soloSegments = INTER_SEGMENTS.filter((seg: any) => !isTeamSegment(seg.id));
-                  const teamSegments = INTER_SEGMENTS.filter((seg: any) => isTeamSegment(seg.id));
+                  const soloSegments = INTER_SEGMENTS.filter((seg: any) => !checkIsTeamSegment(seg.id));
+                  const teamSegments = INTER_SEGMENTS.filter((seg: any) => checkIsTeamSegment(seg.id));
 
                   const renderSegmentCard = (seg: typeof INTER_SEGMENTS[0]) => {
                     const isSelected = selectedSegments.includes(seg.id);
@@ -2468,7 +2502,7 @@ export default function InterEventRegister() {
                     const isExpanded = expandedSegments.includes(seg.id);
                     const SegIcon = seg.icon;
                     const eligibility = isSegmentEligible(seg.id, className);
-                    const isTeamEvent = isTeamSegment(seg.id);
+                    const isTeamEvent = checkIsTeamSegment(seg.id);
                     const bannerUrl = segmentBanners[seg.id] || DEFAULT_SEGMENT_BANNERS[seg.id] || "https://images.unsplash.com/photo-1509228468518-180dd4864904?auto=format&fit=crop&w=1200&q=80";
                     const descriptionText = segmentDescriptions[seg.id] || DEFAULT_SEGMENT_DESCRIPTIONS[seg.id] || "Challenge your mind and represent your institution across problem solving, speed calculation, and creative tracks.";
 

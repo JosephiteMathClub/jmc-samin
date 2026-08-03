@@ -34,10 +34,19 @@ import {
   Globe,
   ImageIcon,
   Upload,
-  Check
+  Check,
+  ChevronUp,
+  ChevronDown,
+  ArrowUp,
+  ArrowDown,
+  Edit,
+  Eye,
+  FileText
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useToast } from '../../context/ToastContext';
+import { useContent } from '../../context/ContentContext';
+import { DEFAULT_CONTENT } from '../../data/default-content';
 import { DashboardSection } from './DashboardSection';
 import { DashboardButton } from './DashboardButton';
 import { DashboardFormField } from './DashboardFormField';
@@ -1013,6 +1022,7 @@ export function EventRegistrationConfigEditor({ showToast }: { showToast: (msg: 
 }
 
 export function InterEventRegistrationConfigEditor({ showToast }: { showToast: (msg: string, type: 'success' | 'error' | 'info') => void }) {
+  const { content, saveAllContent } = useContent();
   const [loading, setLoading] = useState<boolean>(true);
   const [saving, setSaving] = useState<boolean>(false);
   
@@ -1028,38 +1038,10 @@ export function InterEventRegistrationConfigEditor({ showToast }: { showToast: (
   const [teaserVideoUrl, setTeaserVideoUrl] = useState<string>('https://vjs.zencdn.net/v/oceans.mp4');
   const [uploadingVideo, setUploadingVideo] = useState<boolean>(false);
 
-  // Segment Banners & Brief Descriptions Customizer States
-  const [segmentBanners, setSegmentBanners] = useState<Record<string, string>>({});
-  const [segmentDescriptions, setSegmentDescriptions] = useState<Record<string, string>>({});
-  const [selectedSegmentForEdit, setSelectedSegmentForEdit] = useState<string>("Math Olympiad (Find-based)");
-  const [editingBannerUrl, setEditingBannerUrl] = useState<string>("");
-  const [editingDescription, setEditingDescription] = useState<string>("");
-  const [uploadingSegmentBanner, setUploadingSegmentBanner] = useState<boolean>(false);
-
-  const ALL_INTER_SEGMENT_NAMES = [
-    "Math Olympiad (Find-based)",
-    "Math Olympiad (Proof-based)",
-    "IQ Test",
-    "Human Calculator",
-    "Genesis",
-    "Geometry Dash",
-    "Probability Pressure",
-    "Murder Mystery",
-    "Crack the Code",
-    "Complex Calamity",
-    "Sudoku",
-    "Rubik’s Cube Showdown",
-    "5 min Professor",
-    "Calculus Bee",
-    "Escape Room",
-    "Combi Verse",
-    "Math Memes",
-    "Math Article",
-    "Math Vision",
-    "Math Drawing",
-    "Truss",
-    "Wall Magazine Display"
-  ];
+  // Editable Event Segments state (Name, Tagline, Category, Description, Banner, Team Event, Free Entry)
+  const [interSegments, setInterSegments] = useState<any[]>([]);
+  const [uploadingSegmentIdx, setUploadingSegmentIdx] = useState<number | null>(null);
+  const [expandedSegmentIdx, setExpandedSegmentIdx] = useState<number | null>(null);
 
   const DEFAULT_INTER_CONFIG = {
     bkashNumber: "01789456123",
@@ -1068,9 +1050,7 @@ export function InterEventRegistrationConfigEditor({ showToast }: { showToast: (
     caCodes: [],
     isEventPageLaunched: false,
     teaserVideoEnabled: true,
-    teaserVideoUrl: "https://vjs.zencdn.net/v/oceans.mp4",
-    segmentBanners: {},
-    segmentDescriptions: {}
+    teaserVideoUrl: "https://vjs.zencdn.net/v/oceans.mp4"
   };
 
   useEffect(() => {
@@ -1083,6 +1063,8 @@ export function InterEventRegistrationConfigEditor({ showToast }: { showToast: (
           .maybeSingle();
 
         if (error) throw error;
+
+        let loadedSegments: any[] | null = null;
 
         if (data && data.value) {
           let val = data.value;
@@ -1101,29 +1083,40 @@ export function InterEventRegistrationConfigEditor({ showToast }: { showToast: (
             setIsEventPageLaunched(Boolean(val.isEventPageLaunched));
             setTeaserVideoEnabled(val.teaserVideoEnabled !== false);
             setTeaserVideoUrl(val.teaserVideoUrl || DEFAULT_INTER_CONFIG.teaserVideoUrl);
-            if (val.segmentBanners && typeof val.segmentBanners === 'object') {
-              setSegmentBanners(val.segmentBanners);
-            }
-            if (val.segmentDescriptions && typeof val.segmentDescriptions === 'object') {
-              setSegmentDescriptions(val.segmentDescriptions);
+            if (Array.isArray(val.interSegments) && val.interSegments.length > 0) {
+              loadedSegments = val.interSegments;
             }
           }
-        } else {
-          // Seed
-          await supabase
-            .from('system_settings')
-            .upsert({ key: 'inter_registration_config', value: DEFAULT_INTER_CONFIG });
-
-          setBkashNumber(DEFAULT_INTER_CONFIG.bkashNumber);
-          setPaymentDescription(DEFAULT_INTER_CONFIG.paymentDescription);
-          setPricePerSegment(DEFAULT_INTER_CONFIG.pricePerSegment);
-          setCaCodes(DEFAULT_INTER_CONFIG.caCodes);
-          setIsEventPageLaunched(DEFAULT_INTER_CONFIG.isEventPageLaunched);
-          setTeaserVideoEnabled(DEFAULT_INTER_CONFIG.teaserVideoEnabled);
-          setTeaserVideoUrl(DEFAULT_INTER_CONFIG.teaserVideoUrl);
-          setSegmentBanners({});
-          setSegmentDescriptions({});
         }
+
+        if (!loadedSegments) {
+          if (Array.isArray(content?.interSegments) && content.interSegments.length > 0) {
+            loadedSegments = content.interSegments;
+          } else {
+            loadedSegments = DEFAULT_CONTENT.interSegments || [];
+          }
+        }
+
+        const sanitizeSegs = (segs: any[]) => {
+          if (!Array.isArray(segs)) return [];
+          return segs.map((s) => {
+            const name = s.name || s.id || '';
+            const norm = name.toLowerCase();
+            if (norm.includes('murder mystery') || norm.includes('wall magazine')) {
+              let category = s.category || (norm.includes('wall magazine') ? 'Exhibition track' : 'Solo track');
+              if (category.toLowerCase() === 'team track') {
+                category = norm.includes('wall magazine') ? 'Exhibition track' : 'Solo track';
+              }
+              return { ...s, isTeamEvent: false, teamSize: 1, category };
+            }
+            if (norm.includes('escape room') || norm.includes('truss')) {
+              return { ...s, isTeamEvent: true, teamSize: s.teamSize || 3, category: s.category || 'Team track' };
+            }
+            return s;
+          });
+        };
+
+        setInterSegments(sanitizeSegs(loadedSegments || DEFAULT_CONTENT.interSegments || []));
       } catch (err) {
         console.warn("Failed to load inter config", err);
         setBkashNumber(DEFAULT_INTER_CONFIG.bkashNumber);
@@ -1133,26 +1126,84 @@ export function InterEventRegistrationConfigEditor({ showToast }: { showToast: (
         setIsEventPageLaunched(DEFAULT_INTER_CONFIG.isEventPageLaunched);
         setTeaserVideoEnabled(DEFAULT_INTER_CONFIG.teaserVideoEnabled);
         setTeaserVideoUrl(DEFAULT_INTER_CONFIG.teaserVideoUrl);
+        
+        const sanitizeSegs = (segs: any[]) => {
+          if (!Array.isArray(segs)) return [];
+          return segs.map((s) => {
+            const name = s.name || s.id || '';
+            const norm = name.toLowerCase();
+            if (norm.includes('murder mystery') || norm.includes('wall magazine')) {
+              let category = s.category || (norm.includes('wall magazine') ? 'Exhibition track' : 'Solo track');
+              if (category.toLowerCase() === 'team track') {
+                category = norm.includes('wall magazine') ? 'Exhibition track' : 'Solo track';
+              }
+              return { ...s, isTeamEvent: false, teamSize: 1, category };
+            }
+            if (norm.includes('escape room') || norm.includes('truss')) {
+              return { ...s, isTeamEvent: true, teamSize: s.teamSize || 3, category: s.category || 'Team track' };
+            }
+            return s;
+          });
+        };
+        setInterSegments(sanitizeSegs(content?.interSegments || DEFAULT_CONTENT.interSegments || []));
       } finally {
         setLoading(false);
       }
     }
     loadInterConfig();
-  }, []);
+  }, [content?.interSegments]);
 
-  // Synchronize active segment being edited in Super Admin editor
-  useEffect(() => {
-    setEditingBannerUrl(segmentBanners[selectedSegmentForEdit] || '');
-    setEditingDescription(segmentDescriptions[selectedSegmentForEdit] || '');
-  }, [selectedSegmentForEdit, segmentBanners, segmentDescriptions]);
-
-  const handleApplySegmentEdit = () => {
-    setSegmentBanners(prev => ({ ...prev, [selectedSegmentForEdit]: editingBannerUrl }));
-    setSegmentDescriptions(prev => ({ ...prev, [selectedSegmentForEdit]: editingDescription }));
-    showToast(`Updated parameters for "${selectedSegmentForEdit}". Click 'Save System Settings' to publish!`, "success");
+  const handleUpdateSegment = (idx: number, field: string, value: any) => {
+    setInterSegments(prev => {
+      const copy = [...prev];
+      copy[idx] = { ...copy[idx], [field]: value };
+      if (field === 'name' && !copy[idx].id) {
+        copy[idx].id = value;
+      }
+      return copy;
+    });
   };
 
-  const handleSegmentBannerFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleAddSegment = () => {
+    const newSeg = {
+      id: `Segment-${Date.now()}`,
+      name: "New Event Segment",
+      tagline: "Brief tagline describing the segment...",
+      category: "Solo track",
+      icon: "Trophy",
+      isTeamEvent: false,
+      teamSize: 1,
+      isFree: false,
+      bannerUrl: "",
+      description: "Detailed rules and description for the new event segment..."
+    };
+    setInterSegments(prev => [...prev, newSeg]);
+    setExpandedSegmentIdx(interSegments.length);
+    showToast("Added new event segment! Customize its details below and click Save System Settings.", "success");
+  };
+
+  const handleDeleteSegment = (idx: number) => {
+    const segName = interSegments[idx]?.name || "this segment";
+    if (window.confirm(`Are you sure you want to delete segment "${segName}"? This will remove it from the Inter Registration form and Inter Event page.`)) {
+      setInterSegments(prev => prev.filter((_, i) => i !== idx));
+      if (expandedSegmentIdx === idx) setExpandedSegmentIdx(null);
+      showToast(`Deleted segment "${segName}". Click Save System Settings to publish!`, "info");
+    }
+  };
+
+  const handleMoveSegment = (idx: number, dir: 'up' | 'down') => {
+    if ((dir === 'up' && idx === 0) || (dir === 'down' && idx === interSegments.length - 1)) return;
+    const targetIdx = dir === 'up' ? idx - 1 : idx + 1;
+    setInterSegments(prev => {
+      const copy = [...prev];
+      const temp = copy[idx];
+      copy[idx] = copy[targetIdx];
+      copy[targetIdx] = temp;
+      return copy;
+    });
+  };
+
+  const handleSegmentBannerUpload = async (e: React.ChangeEvent<HTMLInputElement>, idx: number) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -1161,7 +1212,7 @@ export function InterEventRegistrationConfigEditor({ showToast }: { showToast: (
       return;
     }
 
-    setUploadingSegmentBanner(true);
+    setUploadingSegmentIdx(idx);
     try {
       const formData = new FormData();
       formData.append('file', file);
@@ -1175,18 +1226,33 @@ export function InterEventRegistrationConfigEditor({ showToast }: { showToast: (
         const data = await res.json();
         const url = data.url || data.publicUrl || data.fileUrl;
         if (url) {
-          setEditingBannerUrl(url);
-          setSegmentBanners(prev => ({ ...prev, [selectedSegmentForEdit]: url }));
-          showToast(`Banner image uploaded & set for "${selectedSegmentForEdit}"!`, "success");
+          handleUpdateSegment(idx, 'bannerUrl', url);
+          showToast(`Banner image uploaded for segment "${interSegments[idx]?.name || ''}"!`, "success");
         }
       } else {
-        showToast("Upload failed, please try an external image URL or check network", "error");
+        // Fallback Supabase Storage
+        const sanitizeName = file.name.replace(/[^a-zA-Z0-9.-]/g, '-');
+        const filename = `segment-banner-${Date.now()}-${sanitizeName}`;
+        const { error: uploadErr } = await supabase.storage
+          .from('images')
+          .upload(filename, file, { upsert: true });
+
+        if (uploadErr) throw uploadErr;
+
+        const { data: publicUrlData } = supabase.storage
+          .from('images')
+          .getPublicUrl(filename);
+
+        if (publicUrlData?.publicUrl) {
+          handleUpdateSegment(idx, 'bannerUrl', publicUrlData.publicUrl);
+          showToast("Banner image uploaded to storage bucket!", "success");
+        }
       }
     } catch (err) {
       console.error(err);
       showToast("Error uploading segment banner image", "error");
     } finally {
-      setUploadingSegmentBanner(false);
+      setUploadingSegmentIdx(null);
     }
   };
 
@@ -1201,8 +1267,7 @@ export function InterEventRegistrationConfigEditor({ showToast }: { showToast: (
       isEventPageLaunched: targetLaunch,
       teaserVideoEnabled,
       teaserVideoUrl,
-      segmentBanners,
-      segmentDescriptions
+      interSegments
     };
     try {
       const { error } = await supabase
@@ -1214,7 +1279,15 @@ export function InterEventRegistrationConfigEditor({ showToast }: { showToast: (
         });
 
       if (error) throw error;
-      showToast("Inter-school registration parameters updated successfully!", "success");
+
+      if (saveAllContent) {
+        await saveAllContent({
+          ...(content || {}),
+          interSegments
+        });
+      }
+
+      showToast("Inter-school registration parameters & event segments saved successfully!", "success");
     } catch (err: any) {
       console.error(err);
       showToast("Failed to save inter configuration: " + (err.message || "Check Supabase settings"), "error");
@@ -1551,111 +1624,246 @@ export function InterEventRegistrationConfigEditor({ showToast }: { showToast: (
         )}
       </div>
 
-      {/* Segment Banners & Brief Descriptions Customizer */}
+      {/* Event Segments Management (Full CRUD: Edit Name, Description, Tagline, Category, Banner, Team vs Solo, Free Entry, Delete, Add, Reorder) */}
       <div className="space-y-6 pb-6 border-b border-white/5 bg-zinc-950/60 border border-white/10 rounded-2xl p-6">
-        <div>
-          <h4 className="text-sm font-extrabold text-white uppercase tracking-wider flex items-center gap-2">
-            <ImageIcon className="w-4 h-4 text-pink-400" /> Event Segment Banners & Brief Descriptions Customizer
-          </h4>
-          <p className="text-[10px] text-zinc-400 mt-1 uppercase tracking-wider font-semibold font-mono">
-            Upload custom banner images and write custom brief descriptions for any of the 22 championship segments. Changes appear inside expandable segment cards on the registration portal.
-          </p>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Segment Selector & Edit Controls */}
-          <div className="lg:col-span-2 space-y-4">
-            <div className="space-y-2">
-              <label className="text-[10px] font-black uppercase tracking-wider text-pink-400 font-mono">Select Championship Segment to Customize</label>
-              <select
-                value={selectedSegmentForEdit}
-                onChange={(e) => setSelectedSegmentForEdit(e.target.value)}
-                className="w-full bg-black/60 border border-white/10 rounded-xl px-4 py-3 text-xs font-bold text-white focus:outline-none focus:border-pink-500 transition-all cursor-pointer"
-              >
-                {ALL_INTER_SEGMENT_NAMES.map(name => (
-                  <option key={name} value={name} className="bg-zinc-950 text-white font-sans">
-                    {name} {segmentBanners[name] ? '🖼️ (Custom Banner Set)' : ''}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-[10px] font-black uppercase tracking-wider text-zinc-400 font-mono">Segment Banner Image URL</label>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={editingBannerUrl}
-                  onChange={(e) => setEditingBannerUrl(e.target.value)}
-                  placeholder="https://.../segment-banner.jpg"
-                  className="flex-1 bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-xs font-mono text-white focus:outline-none focus:border-pink-500/50 transition-all"
-                />
-                <label className="px-4 py-3 bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-300 border border-indigo-500/30 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 cursor-pointer shrink-0">
-                  {uploadingSegmentBanner ? (
-                    <Loader2 className="w-4 h-4 animate-spin text-indigo-400" />
-                  ) : (
-                    <Upload className="w-4 h-4 text-indigo-400" />
-                  )}
-                  <span>Upload Image</span>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={handleSegmentBannerFileUpload}
-                    disabled={uploadingSegmentBanner}
-                  />
-                </label>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-[10px] font-black uppercase tracking-wider text-zinc-400 font-mono">Brief Segment Description / Rules / Guidelines</label>
-              <textarea
-                value={editingDescription}
-                onChange={(e) => setEditingDescription(e.target.value)}
-                rows={4}
-                placeholder={`Detailed rules and brief description for ${selectedSegmentForEdit}...`}
-                className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-xs font-medium text-white focus:outline-none focus:border-pink-500/50 transition-all [resize:none]"
-              />
-            </div>
-
-            <button
-              type="button"
-              onClick={handleApplySegmentEdit}
-              className="px-6 py-2.5 bg-pink-500/20 hover:bg-pink-500/30 border border-pink-500/40 text-pink-300 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer flex items-center gap-2"
-            >
-              <Check className="w-4 h-4" /> Apply Changes to Segment
-            </button>
-          </div>
-
-          {/* Banner Preview Card */}
-          <div className="space-y-2 bg-black/40 p-4 rounded-2xl border border-white/5 flex flex-col justify-between">
-            <div>
-              <span className="text-[10px] font-black uppercase tracking-wider text-zinc-400 font-mono block mb-2">Banner & Card Preview</span>
-              <div className="relative rounded-xl overflow-hidden aspect-video bg-zinc-900 border border-white/10 group">
-                {editingBannerUrl ? (
-                  <img
-                    src={editingBannerUrl}
-                    alt={selectedSegmentForEdit}
-                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                  />
-                ) : (
-                  <div className="w-full h-full flex flex-col items-center justify-center p-4 text-center text-zinc-600 font-mono text-[11px] space-y-1">
-                    <ImageIcon className="w-6 h-6 opacity-40 mb-1" />
-                    <span>No custom banner uploaded</span>
-                    <span className="text-[9px] text-zinc-500">Default math banner will be displayed</span>
-                  </div>
-                )}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent p-3 flex flex-col justify-end">
-                  <span className="text-xs font-black text-white uppercase tracking-tight line-clamp-1">{selectedSegmentForEdit}</span>
-                </div>
-              </div>
-            </div>
-
-            <p className="text-[10px] text-zinc-400 line-clamp-3 italic pt-2 border-t border-white/5">
-              "{editingDescription || 'Default brief description will be shown on expandable card.'}"
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h4 className="text-sm font-extrabold text-white uppercase tracking-wider flex items-center gap-2">
+              <Trophy className="w-4 h-4 text-pink-400" /> Inter Event Segments Manager
+            </h4>
+            <p className="text-[10px] text-zinc-400 mt-1 uppercase tracking-wider font-semibold font-mono">
+              Edit segment names, descriptions, taglines, categories, banners, and team parameters. Delete or add segments dynamically across Inter Registration & Event page.
             </p>
           </div>
+          <button
+            type="button"
+            onClick={handleAddSegment}
+            className="px-4 py-2.5 bg-pink-600 hover:bg-pink-500 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 shadow-lg shadow-pink-600/20 shrink-0 cursor-pointer"
+          >
+            <Plus className="w-4 h-4" /> Add New Event Segment
+          </button>
+        </div>
+
+        <div className="space-y-4">
+          {interSegments.length === 0 ? (
+            <div className="p-8 text-center border border-dashed border-white/10 rounded-2xl bg-black/40 text-zinc-400 text-xs font-mono uppercase tracking-wider">
+              No event segments configured. Click &apos;+ Add New Event Segment&apos; above to create one.
+            </div>
+          ) : (
+            interSegments.map((seg, idx) => {
+              const isExpanded = expandedSegmentIdx === idx;
+              return (
+                <div
+                  key={seg.id || `seg-${idx}`}
+                  className="bg-black/40 border border-white/10 rounded-2xl overflow-hidden transition-all hover:border-white/20"
+                >
+                  {/* Card Header Row */}
+                  <div className="p-4 flex items-center justify-between gap-3 bg-zinc-900/60 border-b border-white/5">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <span className="text-[10px] font-mono font-black text-pink-400 bg-pink-500/10 px-2 py-1 rounded-md border border-pink-500/20 shrink-0">
+                        #{idx + 1}
+                      </span>
+                      <span className="text-xs font-extrabold text-white truncate">
+                        {seg.name || "Untitled Segment"}
+                      </span>
+                      <span className="hidden sm:inline-block text-[9px] font-mono text-zinc-400 bg-zinc-800 px-2 py-0.5 rounded-full border border-white/5 uppercase">
+                        {seg.category || "Solo track"}
+                      </span>
+                      {seg.isTeamEvent ? (
+                        <span className="text-[9px] font-mono text-purple-400 bg-purple-500/10 px-2 py-0.5 rounded-full border border-purple-500/20">
+                          Team (Size: {seg.teamSize || 3})
+                        </span>
+                      ) : (
+                        <span className="text-[9px] font-mono text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/20">
+                          Solo
+                        </span>
+                      )}
+                      {seg.isFree && (
+                        <span className="text-[9px] font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
+                          FREE
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-2 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => handleMoveSegment(idx, 'up')}
+                        disabled={idx === 0}
+                        title="Move Up"
+                        className="p-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 disabled:opacity-30 rounded-lg transition-colors cursor-pointer"
+                      >
+                        <ArrowUp className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleMoveSegment(idx, 'down')}
+                        disabled={idx === interSegments.length - 1}
+                        title="Move Down"
+                        className="p-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 disabled:opacity-30 rounded-lg transition-colors cursor-pointer"
+                      >
+                        <ArrowDown className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setExpandedSegmentIdx(isExpanded ? null : idx)}
+                        className="p-1.5 bg-pink-500/10 hover:bg-pink-500/20 text-pink-300 border border-pink-500/30 rounded-lg text-xs font-bold transition-all flex items-center gap-1 cursor-pointer"
+                      >
+                        <Edit className="w-3.5 h-3.5" />
+                        <span>{isExpanded ? "Collapse" : "Edit Details"}</span>
+                        {isExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteSegment(idx)}
+                        title="Delete Segment"
+                        className="p-1.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20 rounded-lg transition-colors cursor-pointer"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Card Expanded Editing Form */}
+                  {isExpanded && (
+                    <div className="p-5 space-y-4 bg-zinc-950/80 animate-fadeIn">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-1.5">
+                          <label className="text-[10px] font-black uppercase tracking-wider text-pink-400 font-mono">
+                            Segment Name (Form & Cards)
+                          </label>
+                          <input
+                            type="text"
+                            value={seg.name || ''}
+                            onChange={(e) => handleUpdateSegment(idx, 'name', e.target.value)}
+                            className="w-full bg-black/60 border border-white/10 rounded-xl px-3.5 py-2.5 text-xs font-bold text-white focus:outline-none focus:border-pink-500 transition-all"
+                            placeholder="E.G. Math Olympiad (Find-based)"
+                          />
+                        </div>
+
+                        <div className="space-y-1.5">
+                          <label className="text-[10px] font-black uppercase tracking-wider text-zinc-400 font-mono">
+                            Category / Track
+                          </label>
+                          <input
+                            type="text"
+                            value={seg.category || ''}
+                            onChange={(e) => handleUpdateSegment(idx, 'category', e.target.value)}
+                            className="w-full bg-black/60 border border-white/10 rounded-xl px-3.5 py-2.5 text-xs font-bold text-white focus:outline-none focus:border-pink-500 transition-all"
+                            placeholder="E.G. Solo track, Creative track, Team track"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] font-black uppercase tracking-wider text-zinc-400 font-mono">
+                          Tagline / Subtitle
+                        </label>
+                        <input
+                          type="text"
+                          value={seg.tagline || ''}
+                          onChange={(e) => handleUpdateSegment(idx, 'tagline', e.target.value)}
+                          className="w-full bg-black/60 border border-white/10 rounded-xl px-3.5 py-2.5 text-xs font-medium text-white focus:outline-none focus:border-pink-500 transition-all"
+                          placeholder="Brief catchy tagline..."
+                        />
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] font-black uppercase tracking-wider text-zinc-400 font-mono">
+                          Segment Description & Rules (Expandable Card Body)
+                        </label>
+                        <textarea
+                          value={seg.description || ''}
+                          onChange={(e) => handleUpdateSegment(idx, 'description', e.target.value)}
+                          rows={3}
+                          className="w-full bg-black/60 border border-white/10 rounded-xl px-3.5 py-2.5 text-xs font-medium text-white focus:outline-none focus:border-pink-500 transition-all [resize:none]"
+                          placeholder="Detailed rules, guidelines, eligibility..."
+                        />
+                      </div>
+
+                      {/* Options: Team Event, Team Size, Free Entry */}
+                      <div className="flex flex-wrap items-center gap-6 pt-2 pb-2 border-y border-white/5">
+                        <label className="flex items-center gap-2 cursor-pointer select-none">
+                          <input
+                            type="checkbox"
+                            checked={!!seg.isTeamEvent}
+                            onChange={(e) => handleUpdateSegment(idx, 'isTeamEvent', e.target.checked)}
+                            className="w-4 h-4 rounded border-white/20 text-pink-500 focus:ring-pink-500 bg-black/60"
+                          />
+                          <span className="text-xs font-bold text-white">Is Team Event?</span>
+                        </label>
+
+                        {seg.isTeamEvent && (
+                          <div className="flex items-center gap-2">
+                            <label className="text-[10px] font-bold text-zinc-400 uppercase font-mono">Team Size:</label>
+                            <input
+                              type="number"
+                              min={1}
+                              max={10}
+                              value={seg.teamSize || 3}
+                              onChange={(e) => handleUpdateSegment(idx, 'teamSize', Number(e.target.value))}
+                              className="w-20 bg-black/60 border border-white/10 rounded-lg px-2.5 py-1 text-xs font-bold text-white focus:outline-none focus:border-pink-500"
+                            />
+                          </div>
+                        )}
+
+                        <label className="flex items-center gap-2 cursor-pointer select-none">
+                          <input
+                            type="checkbox"
+                            checked={!!seg.isFree}
+                            onChange={(e) => handleUpdateSegment(idx, 'isFree', e.target.checked)}
+                            className="w-4 h-4 rounded border-white/20 text-emerald-500 focus:ring-emerald-500 bg-black/60"
+                          />
+                          <span className="text-xs font-bold text-emerald-400">Free Entry Segment (BDT 0)</span>
+                        </label>
+                      </div>
+
+                      {/* Banner Image URL and File Upload */}
+                      <div className="space-y-2 pt-1">
+                        <label className="text-[10px] font-black uppercase tracking-wider text-zinc-400 font-mono">
+                          Segment Banner Image URL
+                        </label>
+                        <div className="flex flex-col sm:flex-row gap-2">
+                          <input
+                            type="text"
+                            value={seg.bannerUrl || ''}
+                            onChange={(e) => handleUpdateSegment(idx, 'bannerUrl', e.target.value)}
+                            className="flex-1 bg-black/60 border border-white/10 rounded-xl px-3.5 py-2.5 text-xs font-mono text-white focus:outline-none focus:border-pink-500 transition-all"
+                            placeholder="https://.../banner-image.jpg"
+                          />
+                          <label className="px-4 py-2.5 bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-300 border border-indigo-500/30 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer shrink-0">
+                            {uploadingSegmentIdx === idx ? (
+                              <Loader2 className="w-4 h-4 animate-spin text-indigo-400" />
+                            ) : (
+                              <Upload className="w-4 h-4 text-indigo-400" />
+                            )}
+                            <span>Upload Image</span>
+                            <input
+                              type="file"
+                              accept="image/*"
+                              className="hidden"
+                              onChange={(e) => handleSegmentBannerUpload(e, idx)}
+                              disabled={uploadingSegmentIdx === idx}
+                            />
+                          </label>
+                        </div>
+
+                        {seg.bannerUrl && (
+                          <div className="relative rounded-xl overflow-hidden h-24 bg-zinc-900 border border-white/10 max-w-sm mt-2">
+                            <img
+                              src={seg.bannerUrl}
+                              alt={seg.name}
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })
+          )}
         </div>
       </div>
 
