@@ -71,119 +71,29 @@ export async function POST(req: Request) {
 
     const cleanNewName = newFullName.trim();
 
-    // Must be a single word (no spaces)
-    if (/\s/.test(cleanNewName)) {
-      return NextResponse.json({ 
-        error: 'Please type in your name without spaces or just type in your surname. Your given name must be a single word.' 
-      }, { status: 400 });
-    }
-
-    const newSlug = slugifyName(cleanNewName);
-    const newVirtualEmail = `${newSlug}@josephitre.club`;
-
     const supabaseAdmin = getSupabaseAdmin();
 
-    // 3. Ensure uniqueness: check if another user has this name
-    // Check profiles by exact name ilike
-    const { data: profileCheck, error: pErr } = await supabaseAdmin
-      .from('profiles')
-      .select('id, full_name')
-      .ilike('full_name', cleanNewName);
+    // Preserve real email if user registered with a real email
+    const isVirtualEmail = !user.email || user.email.endsWith('@josephitre.club');
+    let newAuthEmail = user.email;
 
-    if (pErr) {
-      console.error('Error querying profiles for uniqueness check:', pErr);
+    if (isVirtualEmail) {
+      const newSlug = slugifyName(cleanNewName);
+      newAuthEmail = `${newSlug}@josephitre.club`;
     }
 
-    // Exclude current user from uniqueness checks
-    const otherProfile = profileCheck?.find(p => p.id !== user.id);
-    if (otherProfile) {
-      return NextResponse.json({ 
-        error: 'This given name is already set by another user. Please choose a different one.' 
-      }, { status: 400 });
-    }
-
-    // Fetch all profiles to do a robust slug-based uniqueness check to prevent name conflicts (e.g. samin vs Samin)
-    const { data: allProfiles, error: allPErr } = await supabaseAdmin
-      .from('profiles')
-      .select('id, full_name');
-
-    if (!allPErr && allProfiles) {
-      const conflictingSlugUser = allProfiles.find(p => p.id !== user.id && slugifyName(p.full_name) === newSlug);
-      if (conflictingSlugUser) {
-        return NextResponse.json({ 
-          error: 'This given name is already set by another user. Please choose a different one.' 
-        }, { status: 400 });
-      }
-    }
-
-    // Check member
-    const { data: memberCheck, error: mErr } = await supabaseAdmin
-      .from('member')
-      .select('id, full_name')
-      .ilike('full_name', cleanNewName);
-
-    if (mErr) {
-      console.error('Error querying member for uniqueness check:', mErr);
-    }
-
-    const otherMember = memberCheck?.find(m => m.id !== user.id);
-    if (otherMember) {
-      return NextResponse.json({ 
-        error: 'This given name is already set by another user. Please choose a different one.' 
-      }, { status: 400 });
-    }
-
-    // Check ec_member
-    const { data: ecCheck, error: eErr } = await supabaseAdmin
-      .from('ec_member')
-      .select('id, full_name')
-      .ilike('full_name', cleanNewName);
-
-    if (eErr) {
-      console.error('Error querying ec_member for uniqueness check:', eErr);
-    }
-
-    const otherEc = ecCheck?.find(ec => ec.id !== user.id);
-    if (otherEc) {
-      return NextResponse.json({ 
-        error: 'This given name is already set by another user. Please choose a different one.' 
-      }, { status: 400 });
-    }
-
-    // Also check if any profile/member is registered with the email containing this slug
-    const { data: emailProfileCheck } = await supabaseAdmin
-      .from('profiles')
-      .select('id, email')
-      .eq('email', newVirtualEmail);
-
-    const otherEmailProfile = emailProfileCheck?.find(p => p.id !== user.id);
-    if (otherEmailProfile) {
-      return NextResponse.json({
-        error: 'This given name is already set by another user. Please choose a different one.'
-      }, { status: 400 });
-    }
-
-    const { data: emailMemberCheck } = await supabaseAdmin
-      .from('member')
-      .select('id, email')
-      .eq('email', newVirtualEmail);
-
-    const otherEmailMember = emailMemberCheck?.find(m => m.id !== user.id);
-    if (otherEmailMember) {
-      return NextResponse.json({
-        error: 'This given name is already set by another user. Please choose a different one.'
-      }, { status: 400 });
-    }
-
-    // 4. Update the user:
-    // Update Auth Email in auth.users via admin API
-    const { error: authUpdateError } = await supabaseAdmin.auth.admin.updateUserById(user.id, {
-      email: newVirtualEmail,
+    // Update user auth metadata
+    const updatePayload: any = {
       user_metadata: {
         ...user.user_metadata,
         full_name: cleanNewName
       }
-    });
+    };
+    if (isVirtualEmail && newAuthEmail) {
+      updatePayload.email = newAuthEmail;
+    }
+
+    const { error: authUpdateError } = await supabaseAdmin.auth.admin.updateUserById(user.id, updatePayload);
 
     if (authUpdateError) {
       console.error('Error updating auth email:', authUpdateError);
@@ -206,13 +116,17 @@ export async function POST(req: Request) {
     }
 
     // Update public.member
+    const memberPayload: any = {
+      full_name: cleanNewName,
+      updated_at: new Date().toISOString()
+    };
+    if (isVirtualEmail && newAuthEmail) {
+      memberPayload.email = newAuthEmail;
+    }
+
     const { error: memberUpdateError } = await supabaseAdmin
       .from('member')
-      .update({
-        full_name: cleanNewName,
-        email: newVirtualEmail,
-        updated_at: new Date().toISOString()
-      })
+      .update(memberPayload)
       .eq('id', user.id);
 
     if (memberUpdateError) {
@@ -220,20 +134,24 @@ export async function POST(req: Request) {
     }
 
     // Update public.ec_member
+    const ecPayload: any = {
+      full_name: cleanNewName,
+      updated_at: new Date().toISOString()
+    };
+    if (isVirtualEmail && newAuthEmail) {
+      ecPayload.email = newAuthEmail;
+    }
+
     const { error: ecUpdateError } = await supabaseAdmin
       .from('ec_member')
-      .update({
-        full_name: cleanNewName,
-        email: newVirtualEmail,
-        updated_at: new Date().toISOString()
-      })
+      .update(ecPayload)
       .eq('id', user.id);
 
     if (ecUpdateError) {
       console.error('Error updating ec_member table:', ecUpdateError);
     }
 
-    return NextResponse.json({ success: true, newEmail: newVirtualEmail });
+    return NextResponse.json({ success: true, newEmail: newAuthEmail });
 
   } catch (err: any) {
     console.error('API Error in update-name Route:', err);

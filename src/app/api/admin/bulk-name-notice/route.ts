@@ -86,7 +86,7 @@ export async function GET() {
   try {
     const adminDetails = await getCallerSuperAdminDetails();
     if (!adminDetails.isSuper) {
-      return NextResponse.json({ error: 'Unauthorized. Only Super Admins can query multi-word names.' }, { status: 403 });
+      return NextResponse.json({ error: 'Unauthorized. Only Super Admins can query user broadcast list.' }, { status: 403 });
     }
 
     const supabaseAdmin = getSupabaseAdmin();
@@ -98,11 +98,25 @@ export async function GET() {
       return NextResponse.json({ error: pErr.message }, { status: 500 });
     }
 
-    // Filter profiles that have a multi-word name (at least one space)
-    const targetProfiles = (profiles || []).filter(p => {
-      if (!p.full_name || !p.email) return false;
-      const trimmed = p.full_name.trim();
-      return trimmed.split(/\s+/).length > 1;
+    // Also get phone numbers from member and ec_member tables for status reporting
+    const { data: members } = await supabaseAdmin.from('member').select('email, phone');
+    const { data: ecMembers } = await supabaseAdmin.from('ec_member').select('email, phone');
+
+    const phoneMap = new Map<string, string>();
+    (members || []).forEach(m => {
+      if (m.email && m.phone) phoneMap.set(m.email.toLowerCase(), m.phone);
+    });
+    (ecMembers || []).forEach(m => {
+      if (m.email && m.phone) phoneMap.set(m.email.toLowerCase(), m.phone);
+    });
+
+    const targetProfiles = (profiles || []).map(p => {
+      const emailLower = (p.email || '').toLowerCase();
+      const phone = phoneMap.get(emailLower) || (p.email && !p.email.includes('@') ? p.email : '');
+      return {
+        ...p,
+        phone: phone || 'Missing Phone'
+      };
     });
 
     return NextResponse.json({ profiles: targetProfiles });
@@ -118,7 +132,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Unauthorized. Only Super Admins can send this bulk notification.' }, { status: 403 });
     }
 
-    const { subject, htmlTemplate } = await req.json();
+    const { subject, htmlTemplate, targetType, targetEmail } = await req.json();
 
     if (!subject || !htmlTemplate) {
       return NextResponse.json({ error: 'Missing subject or HTML template.' }, { status: 400 });
@@ -127,7 +141,7 @@ export async function POST(req: Request) {
     // Determine absolute dynamic redirect URL based on request headers/origin
     const urlObj = new URL(req.url);
     const origin = urlObj.origin || 'https://jmc-sjs.org';
-    const redirectUrl = `${origin}/profile/change-name`;
+    const redirectUrl = `${origin}/profile`;
 
     const supabaseAdmin = getSupabaseAdmin();
     const { data: profiles, error: pErr } = await supabaseAdmin
@@ -138,14 +152,23 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: pErr.message }, { status: 500 });
     }
 
-    const targetProfiles = (profiles || []).filter(p => {
-      if (!p.full_name || !p.email) return false;
-      const trimmed = p.full_name.trim();
-      return trimmed.split(/\s+/).length > 1;
-    });
+    let targetProfiles = (profiles || []).filter(p => p.email && p.email.includes('@'));
+
+    // Handle individual targeting mode
+    if (targetType === 'individual' && targetEmail) {
+      const cleanTarget = targetEmail.trim().toLowerCase();
+      const matched = targetProfiles.filter(p => p.email.toLowerCase() === cleanTarget || p.id === targetEmail);
+      if (matched.length > 0) {
+        targetProfiles = matched;
+      } else if (cleanTarget.includes('@')) {
+        targetProfiles = [{ id: 'manual', email: cleanTarget, full_name: 'User' }];
+      } else {
+        return NextResponse.json({ error: `No registered user found matching target email: ${targetEmail}` }, { status: 400 });
+      }
+    }
 
     if (targetProfiles.length === 0) {
-      return NextResponse.json({ success: true, sentCount: 0, message: 'No registered profiles with multi-word full names found.' });
+      return NextResponse.json({ success: true, sentCount: 0, message: 'No registered user profiles found matching target criteria.' });
     }
 
     let sentCount = 0;
@@ -154,20 +177,16 @@ export async function POST(req: Request) {
 
     const emailPromises = targetProfiles.map(async (p) => {
       const email = p.email || '';
-      const originalName = p.full_name || '';
-      // Extract the first word as a guess for the given name example
-      const guessedGivenName = originalName.trim().split(/\s+/)[0] || '';
+      const originalName = p.full_name || 'User';
 
       // Replace placeholders including dynamic redirect URL
       const customizedHtml = htmlTemplate
         .replace(/{NAME}/g, originalName)
-        .replace(/{GIVEN_NAME}/g, guessedGivenName)
         .replace(/{EMAIL}/g, email)
         .replace(/{REDIRECT_URL}/g, redirectUrl);
 
       const customizedSubject = subject
         .replace(/{NAME}/g, originalName)
-        .replace(/{GIVEN_NAME}/g, guessedGivenName)
         .replace(/{EMAIL}/g, email)
         .replace(/{REDIRECT_URL}/g, redirectUrl);
 
@@ -186,10 +205,10 @@ export async function POST(req: Request) {
           recipient_section: 'N/A',
           recipient_roll: 'N/A',
           subject: customizedSubject,
-          body_text: `BULK NAME ACTION NOTICE: ${customizedSubject}. (Example: ${originalName}, given name ${guessedGivenName})`,
+          body_text: `PHONE BROADCAST NOTICE: ${customizedSubject}. (Recipient: ${originalName} - ${email})`,
           verified_by: adminDetails.email || 'Super Admin',
           status: result.success ? 'sent' : 'failed',
-          error_message: result.success ? null : (result.error?.message || 'Failed name correction notification')
+          error_message: result.success ? null : (result.error?.message || 'Failed phone broadcast notification')
         };
 
         await supabaseAdmin
@@ -216,13 +235,13 @@ export async function POST(req: Request) {
               recipient_section: 'N/A',
               recipient_roll: 'N/A',
               subject: customizedSubject,
-              body_text: `BULK NAME ACTION NOTICE EXCEPTION: ${customizedSubject}`,
+              body_text: `PHONE BROADCAST EXCEPTION: ${customizedSubject}`,
               verified_by: adminDetails.email || 'Super Admin',
               status: 'failed',
-              error_message: e.message || 'Execution error during name notice email'
+              error_message: e.message || 'Execution error during phone broadcast email'
             }]);
         } catch (innerErr) {
-          console.error('Failed to log name correction email exception:', innerErr);
+          console.error('Failed to log phone broadcast email exception:', innerErr);
         }
       }
     });

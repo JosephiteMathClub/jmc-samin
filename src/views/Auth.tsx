@@ -121,6 +121,17 @@ const Auth = () => {
 
       let finalEmail = email.trim();
       if (mode === 'login') {
+        const isPhoneInput = !finalEmail.includes('@') && /^[0-9+\s\-()]+$/.test(finalEmail);
+        const isEmailInput = finalEmail.includes('@');
+
+        if (!isPhoneInput && !isEmailInput) {
+          const nameLoginErr = 'Logging in using name is no longer supported. Please log in using your Phone Number or Email Address.';
+          setError(nameLoginErr);
+          showToast(nameLoginErr, 'error');
+          setLoading(false);
+          return;
+        }
+
         let resolved = false;
         try {
           const res = await fetch('/api/auth/resolve-email', {
@@ -133,22 +144,23 @@ const Auth = () => {
             finalEmail = resData.email;
             resolved = true;
           } else {
-            console.warn("API resolution failed. Reason:", resData?.error || "Unknown error", ". Falling back to client-side database query.");
+            if (resData?.error) {
+              setError(resData.error);
+              showToast(resData.error, 'error');
+              setLoading(false);
+              return;
+            }
+            console.warn("API resolution failed. Falling back to client-side database query.");
           }
         } catch (err: any) {
           console.error("Error calling resolve-email API. Falling back to client-side resolution:", err);
         }
 
         if (!resolved) {
-          // Robust client-side resolution fallback
-          const isPhoneInput = !finalEmail.includes('@') && /^[0-9+\s\-()]+$/.test(finalEmail);
-          const isEmailInput = finalEmail.includes('@');
-
+          // Client-side fallback for phone/email
           if (isPhoneInput) {
             try {
               let matchedName = '';
-              
-              // 1. Check profiles table for matching email/phone column
               const { data: pData } = await supabase
                 .from('profiles')
                 .select('full_name')
@@ -158,7 +170,6 @@ const Auth = () => {
                 matchedName = pData.full_name;
               }
 
-              // 2. Check member table for phone
               if (!matchedName) {
                 const { data: memberData } = await supabase
                   .from('member')
@@ -170,7 +181,6 @@ const Auth = () => {
                 }
               }
 
-              // 3. Check ec_member table for phone
               if (!matchedName) {
                 const { data: ecData } = await supabase
                   .from('ec_member')
@@ -191,82 +201,7 @@ const Auth = () => {
               console.error('Error resolving phone on client fallback:', phoneErr);
               finalEmail = `${finalEmail}@josephitre.club`;
             }
-          } else if (!isEmailInput) {
-            // It's a Name! Let's check if we can find an exact or fuzzy match in profiles/member/ec_member
-            try {
-              let matchedName = '';
-              let resolvedEmail = '';
-
-              // Try member contains match first to get direct virtual email
-              const { data: mLike } = await supabase
-                .from('member')
-                .select('full_name, email')
-                .ilike('full_name', `%${finalEmail}%`);
-              if (mLike && mLike.length > 0) {
-                const exactMatch = mLike.find(m => m.full_name?.trim().toLowerCase() === finalEmail.toLowerCase());
-                const targetMember = exactMatch || mLike[0];
-                if (targetMember.email) {
-                  resolvedEmail = targetMember.email;
-                  matchedName = targetMember.full_name;
-                }
-              }
-
-              if (!resolvedEmail) {
-                const { data: ecLike } = await supabase
-                  .from('ec_member')
-                  .select('full_name, email')
-                  .ilike('full_name', `%${finalEmail}%`);
-                if (ecLike && ecLike.length > 0) {
-                  const exactMatch = ecLike.find(m => m.full_name?.trim().toLowerCase() === finalEmail.toLowerCase());
-                  const targetMember = exactMatch || ecLike[0];
-                  if (targetMember.email) {
-                    resolvedEmail = targetMember.email;
-                    matchedName = targetMember.full_name;
-                  }
-                }
-              }
-
-              if (resolvedEmail) {
-                finalEmail = resolvedEmail;
-              } else {
-                // Try profiles exact match
-                const { data: pExact } = await supabase
-                  .from('profiles')
-                  .select('full_name')
-                  .ilike('full_name', finalEmail)
-                  .maybeSingle();
-                if (pExact?.full_name) {
-                  matchedName = pExact.full_name;
-                }
-                
-                // Try profiles contains match
-                if (!matchedName) {
-                  const { data: pLike } = await supabase
-                    .from('profiles')
-                    .select('full_name')
-                    .ilike('full_name', `%${finalEmail}%`);
-                  if (pLike && pLike.length > 0) {
-                    const exactSlugMatch = pLike.find(p => slugifyName(p.full_name) === slugifyName(finalEmail));
-                    if (exactSlugMatch) {
-                      matchedName = exactSlugMatch.full_name;
-                    } else {
-                      matchedName = pLike[0].full_name;
-                    }
-                  }
-                }
-
-                if (matchedName) {
-                  finalEmail = `${slugifyName(matchedName)}@josephitre.club`;
-                } else {
-                  finalEmail = `${slugifyName(finalEmail)}@josephitre.club`;
-                }
-              }
-            } catch (nameErr) {
-              console.error('Error resolving name on client fallback:', nameErr);
-              finalEmail = `${slugifyName(finalEmail)}@josephitre.club`;
-            }
-          } else {
-            // It's an email address
+          } else if (isEmailInput) {
             if (!finalEmail.endsWith('@josephitre.club')) {
               try {
                 let matchedFullName = '';
@@ -279,7 +214,7 @@ const Auth = () => {
 
                 if (!pErr && profiles && profiles.length > 0) {
                   if (profiles.length > 1) {
-                    setError(`Multiple accounts are registered with this email (${profiles.map(p => p.full_name).join(', ')}). Please sign in using your Given Name instead of your email address.`);
+                    setError(`Multiple accounts are registered with this email (${profiles.map(p => p.full_name).join(', ')}). Please sign in using your Phone Number or primary email.`);
                     setLoading(false);
                     return;
                   } else {
@@ -500,7 +435,7 @@ const Auth = () => {
               {(mode === 'login' || signupMethod === 'email_phone') && (
                 <div className="space-y-4">
                   <label className="text-[10px] font-bold uppercase tracking-[0.3em] text-zinc-600 ml-4">
-                    {mode === 'login' ? 'Email, Phone, or Given Name' : 'Email Address'}
+                    {mode === 'login' ? 'Email Address or Phone Number' : 'Email Address'}
                   </label>
                   <div className="relative group">
                     <Mail className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-600 group-focus-within:text-amber-500 transition-colors" />
@@ -509,7 +444,7 @@ const Auth = () => {
                       required
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      placeholder={mode === 'login' ? "your given name, email, or phone number" : "name@example.com"}
+                      placeholder={mode === 'login' ? "017XXXXXXXX or name@example.com" : "name@example.com"}
                       autoCapitalize="none"
                       autoComplete="off"
                       autoCorrect="off"

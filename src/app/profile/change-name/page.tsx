@@ -91,13 +91,7 @@ export default function ChangeNamePage() {
     const trimmedName = givenName.trim();
 
     if (!trimmedName) {
-      setError("Please enter a valid given name.");
-      return;
-    }
-
-    // Validation: Check if it contains spaces (i.e. is multi-word)
-    if (trimmedName.split(/\s+/).length > 1) {
-      setError("Given Name must be a single-word name only (no spaces allowed).");
+      setError("Please enter a valid name.");
       return;
     }
 
@@ -112,12 +106,12 @@ export default function ChangeNamePage() {
 
       const resData = await res.json();
       if (!res.ok) {
-        throw new Error(resData.error || 'Failed to update your given name.');
+        throw new Error(resData.error || 'Failed to update your name.');
       }
 
       await refreshProfile();
       setSuccess(true);
-      showToast("Name updated to given name successfully!", "success");
+      showToast("Name updated successfully!", "success");
       
       // Delay redirect slightly so user sees the success state
       setTimeout(() => {
@@ -125,7 +119,7 @@ export default function ChangeNamePage() {
       }, 2000);
 
     } catch (err: any) {
-      console.error("Name correction error:", err);
+      console.error("Name update error:", err);
       setError(err.message || "Failed to update name. Please try again.");
     } finally {
       setLoading(false);
@@ -161,94 +155,14 @@ export default function ChangeNamePage() {
             {/* Header branding */}
             <div className="text-center md:text-left">
               <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-500/10 border border-rose-500/20 text-rose-400 text-[10px] font-bold uppercase tracking-wider mb-3">
-                <Sparkles className="w-3 h-3 animate-pulse" /> Official database cleanup
+                <Sparkles className="w-3 h-3 animate-pulse" /> Profile Settings
               </span>
               <h1 className="text-2xl md:text-3xl font-bold text-white tracking-tight leading-none">
-                Given Name Correction
+                Update Account Name
               </h1>
               <p className="text-xs text-zinc-400 mt-2 font-medium leading-relaxed">
-                We are standardizing JMC's olympiad registration rosters. Please update your registered profile name to your <strong>given name</strong> (single word) only.
+                Update your registered display name for your Josephite Math Club profile.
               </p>
-            </div>
-
-            {/* Clear Visual Guidelines with Requested Example Image Mockup */}
-            <div className="bg-amber-500/5 border border-amber-500/15 p-5 rounded-2xl space-y-4">
-              <h4 className="text-xs font-extrabold text-amber-400 uppercase tracking-wider flex items-center gap-1.5">
-                <HelpCircle className="w-4 h-4" /> Name Standards Rulebook
-              </h4>
-              <p className="text-[11px] leading-relaxed text-zinc-400 font-medium">
-                Your registered name must be your single-word given name. Multi-word full names must be simplified.
-              </p>
-              
-              {/* High-Fidelity Visual Ticket Mockup (Representing the Example Image) */}
-              <div className="space-y-3">
-                <div className="flex items-center justify-between text-[9px] font-bold text-zinc-500 uppercase tracking-wider font-mono">
-                  <span>Visual Ticket Representation</span>
-                  <span className="text-rose-500 text-[8px] px-1.5 py-0.5 rounded bg-rose-500/10 border border-rose-500/20 font-black">
-                    EXAMPLE IMAGE
-                  </span>
-                </div>
-
-                <div className="relative overflow-hidden bg-neutral-950 border border-white/5 rounded-xl p-4 space-y-4 shadow-xl">
-                  {/* Watermark example text */}
-                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none opacity-[0.03]">
-                    <span className="text-white text-4xl font-mono font-black uppercase rotate-12">
-                      EXAMPLE
-                    </span>
-                  </div>
-
-                  {/* Header info */}
-                  <div className="flex justify-between items-start border-b border-white/5 pb-2">
-                    <div>
-                      <h5 className="text-[9px] font-mono font-extrabold text-zinc-400 tracking-wider">
-                        JOSEPHITE MATH CLUB
-                      </h5>
-                      <p className="text-[7.5px] text-zinc-600 font-mono">
-                        ROSTER SYNC & REGISTRATION
-                      </p>
-                    </div>
-                    <span className="text-[8px] font-mono font-bold uppercase tracking-widest px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20">
-                      EXAMPLE
-                    </span>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {/* Incorrect Ticket Example */}
-                    <div className="bg-red-950/10 border border-red-500/20 p-3 rounded-lg relative overflow-hidden">
-                      <div className="absolute top-1.5 right-1.5 px-1 py-0.2 rounded bg-red-500/15 text-red-400 text-[7px] font-mono font-black uppercase">
-                        INCORRECT
-                      </div>
-                      <p className="text-[8px] font-mono text-zinc-500 uppercase tracking-widest mb-1">Ticket Roster Name</p>
-                      <p className="text-xs font-sans font-extrabold text-rose-400 line-through">
-                        Samin Tausif
-                      </p>
-                      <div className="mt-2 text-[7.5px] text-rose-500/80 font-mono">
-                        ● Multi-word name blocked
-                      </div>
-                    </div>
-
-                    {/* Correct Ticket Example */}
-                    <div className="bg-emerald-950/10 border border-emerald-500/20 p-3 rounded-lg relative overflow-hidden">
-                      <div className="absolute top-1.5 right-1.5 px-1 py-0.2 rounded bg-emerald-500/15 text-emerald-400 text-[7px] font-mono font-black uppercase">
-                        CORRECT (EXAMPLE)
-                      </div>
-                      <p className="text-[8px] font-mono text-zinc-500 uppercase tracking-widest mb-1">Ticket Roster Name</p>
-                      <p className="text-xs font-sans font-extrabold text-emerald-400">
-                        Samin
-                      </p>
-                      <div className="mt-2 text-[7.5px] text-emerald-500/80 font-mono">
-                        ✓ Single-word given name
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Footer ticket bar */}
-                  <div className="flex items-center justify-between border-t border-white/5 pt-2 text-[8px] font-mono text-zinc-600">
-                    <span>REPRESENTATIONAL TICKET EXAMPLE</span>
-                    <span>ID: JMC-EXAMPLE-99</span>
-                  </div>
-                </div>
-              </div>
             </div>
 
             {/* User Profile Info card */}
@@ -261,7 +175,7 @@ export default function ChangeNamePage() {
             <form onSubmit={handleNameCorrection} className="space-y-4">
               <div className="space-y-2">
                 <label className="text-[10px] font-bold uppercase text-zinc-400 tracking-wider">
-                  Corrected Given Name
+                  New Display Name
                 </label>
                 <div className="relative">
                   <span className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-600">
@@ -271,14 +185,11 @@ export default function ChangeNamePage() {
                     type="text"
                     required
                     value={givenName}
-                    onChange={(e) => setGivenName(e.target.value.replace(/\s+/g, ''))} // Strips spaces automatically
-                    placeholder="e.g. Samin"
+                    onChange={(e) => setGivenName(e.target.value)}
+                    placeholder="e.g. Samin Tausif"
                     className="w-full pl-12 pr-4 py-3.5 bg-neutral-900 border border-white/10 rounded-xl text-sm text-white placeholder-zinc-700 outline-none focus:border-rose-500/50 transition-all font-bold tracking-wide"
                   />
                 </div>
-                <p className="text-[9.5px] text-zinc-500 font-medium leading-normal">
-                  * Note: Spaces and special symbols are blocked to enforce a single-word given name.
-                </p>
               </div>
 
               {/* Status alerts */}

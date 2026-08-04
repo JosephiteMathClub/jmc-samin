@@ -15,6 +15,8 @@ import {
   DatabaseZap,
   Activity,
   AlertCircle,
+  PhoneCall,
+  Phone,
   Plus,
   ShieldAlert,
   Mail,
@@ -1929,35 +1931,37 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ isSuperAdmin =
   const [announcementTargetType, setAnnouncementTargetType] = useState<'all' | 'individual'>('all');
   const [announcementIndividualEmail, setAnnouncementIndividualEmail] = useState('');
 
-  // Bulk Name Notice state
-  const [bulkNameSubject, setBulkNameSubject] = useState('[ACTION REQUIRED] Please update your registered profile name to Given Name only');
+  // Bulk Phone Broadcast Notice state
+  const [bulkNameSubject, setBulkNameSubject] = useState('[ACTION REQUIRED] Please update/verify your Phone Number for login');
   const [bulkNameTemplate, setBulkNameTemplate] = useState(`<div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 25px; background-color: #0b0b0f; color: #ffffff; border-radius: 24px; border: 1px solid rgba(255, 255, 255, 0.08); box-shadow: 0 20px 40px rgba(0,0,0,0.5);">
   <div style="text-align: center; margin-bottom: 25px;">
-    <div style="display: inline-block; padding: 12px; background-color: rgba(245, 158, 11, 0.1); border-radius: 16px; color: #f59e0b; font-size: 24px;">⚠️</div>
+    <div style="display: inline-block; padding: 12px; background-color: rgba(245, 158, 11, 0.1); border-radius: 16px; color: #f59e0b; font-size: 24px;">📱</div>
   </div>
-  <h2 style="color: #f59e0b; text-transform: uppercase; letter-spacing: 0.1em; border-bottom: 1px solid rgba(255, 255, 255, 0.08); padding-bottom: 15px; margin-top: 0; font-size: 20px; font-weight: 800; text-align: center;">Action Required: Update Your Profile Name</h2>
+  <h2 style="color: #f59e0b; text-transform: uppercase; letter-spacing: 0.1em; border-bottom: 1px solid rgba(255, 255, 255, 0.08); padding-bottom: 15px; margin-top: 0; font-size: 20px; font-weight: 800; text-align: center;">Official Notice: Login Method Update</h2>
   <p style="font-size: 14px; line-height: 1.6; color: #ccc;">Dear <strong>{NAME}</strong>,</p>
-  <p style="font-size: 14px; line-height: 1.6; color: #ccc;">We noticed you have registered using a multi-word name (e.g., full name <strong>{NAME}</strong>). To comply with our event standards and database indexing, we require you to update your profile name to your <strong>Given Name</strong> only.</p>
+  <p style="font-size: 14px; line-height: 1.6; color: #ccc;">We have upgraded the Josephite Math Club portal authentication. <strong>Logging in using full names or given names is now disabled.</strong> Sign-in is now exclusively available using <strong>Phone Number or Email Address</strong>.</p>
   
   <div style="background-color: rgba(245, 158, 11, 0.05); border: 1px solid rgba(245, 158, 11, 0.2); border-radius: 16px; padding: 18px; margin: 25px 0;">
-    <p style="font-size: 14px; margin: 0 0 10px 0; color: #f59e0b; font-weight: bold; text-transform: uppercase; letter-spacing: 0.05em;">💡 Example of Name Correction:</p>
+    <p style="font-size: 14px; margin: 0 0 10px 0; color: #f59e0b; font-weight: bold; text-transform: uppercase; letter-spacing: 0.05em;">🔑 Supported Sign-In Methods:</p>
     <ul style="font-size: 13px; color: #bbb; padding-left: 20px; margin: 0; line-height: 1.6;">
-      <li><strong>Current (Multi-word):</strong> Samin Tausif</li>
-      <li><strong>Correct (Given name only):</strong> Samin</li>
+      <li><strong>Phone Number + Password</strong> (e.g. 017XXXXXXXX)</li>
+      <li><strong>Email Address + Password</strong></li>
     </ul>
-    <p style="font-size: 13px; margin: 12px 0 0 0; color: #aaa; font-style: italic;">Based on your current name, we suggest changing it to: <strong style="color: #f59e0b;">{GIVEN_NAME}</strong></p>
   </div>
 
-  <p style="font-size: 14px; line-height: 1.6; color: #ccc;">Please click the button below to log in and instantly correct your name to your given name.</p>
+  <p style="font-size: 14px; line-height: 1.6; color: #ccc;">Please ensure your active contact phone number is updated in your profile so you can seamlessly access your dashboard anytime.</p>
   
   <div style="text-align: center; margin: 30px 0;">
-    <a href="{REDIRECT_URL}" style="background-color: #f59e0b; color: #000000; font-weight: 900; text-decoration: none; padding: 14px 32px; border-radius: 12px; display: inline-block; font-size: 12px; text-transform: uppercase; letter-spacing: 0.1em; box-shadow: 0 8px 20px rgba(245, 158, 11, 0.25); transition: all 0.2s ease;">Correct My Name Now</a>
+    <a href="{REDIRECT_URL}" style="background-color: #f59e0b; color: #000000; font-weight: 900; text-decoration: none; padding: 14px 32px; border-radius: 12px; display: inline-block; font-size: 12px; text-transform: uppercase; letter-spacing: 0.1em; box-shadow: 0 8px 20px rgba(245, 158, 11, 0.25); transition: all 0.2s ease;">Verify Phone Number Now</a>
   </div>
 
   <p style="font-size: 12px; color: #666; text-align: center; margin-top: 45px; border-top: 1px solid rgba(255, 255, 255, 0.08); padding-top: 20px;">Josephite Math Club &copy; 2026. All rights reserved.</p>
 </div>`);
   const [sendingBulkNameNotice, setSendingBulkNameNotice] = useState(false);
   const [confirmBulkName, setConfirmBulkName] = useState(false);
+  const [bulkNameTargetType, setBulkNameTargetType] = useState<'all' | 'individual'>('all');
+  const [bulkNameIndividualEmail, setBulkNameIndividualEmail] = useState('');
+  const [sendingIndividualEmail, setSendingIndividualEmail] = useState<string | null>(null);
   const [multiWordProfiles, setMultiWordProfiles] = useState<any[]>([]);
   const [loadingMultiWordProfiles, setLoadingMultiWordProfiles] = useState(false);
   const [bulkNameSearchTerm, setBulkNameSearchTerm] = useState('');
@@ -2117,19 +2121,32 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ isSuperAdmin =
     }
   }, [showToast]);
 
-  const sendBulkNameNotice = async () => {
+  const sendBulkNameNotice = async (overrideEmail?: string) => {
     if (!bulkNameSubject.trim() || !bulkNameTemplate.trim()) {
       showToast('Subject and HTML Template are required.', 'error');
       return;
     }
 
-    if (!confirmBulkName) {
-      showToast('Please check the authorization box to proceed.', 'error');
+    const isIndividual = Boolean(overrideEmail || bulkNameTargetType === 'individual');
+    const targetEmail = overrideEmail || bulkNameIndividualEmail;
+
+    if (isIndividual && !targetEmail.trim()) {
+      showToast('Please enter or select a recipient email address.', 'error');
       return;
     }
 
-    setSendingBulkNameNotice(true);
-    showToast('Initiating name correction broadcast...', 'info');
+    if (!isIndividual && !confirmBulkName) {
+      showToast('Please check the authorization box to proceed with bulk broadcast.', 'error');
+      return;
+    }
+
+    if (overrideEmail) {
+      setSendingIndividualEmail(overrideEmail);
+    } else {
+      setSendingBulkNameNotice(true);
+    }
+
+    showToast(isIndividual ? `Sending notice email to ${targetEmail}...` : 'Initiating phone broadcast notice...', 'info');
 
     try {
       const res = await fetch('/api/admin/bulk-name-notice', {
@@ -2140,23 +2157,29 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ isSuperAdmin =
         body: JSON.stringify({
           subject: bulkNameSubject,
           htmlTemplate: bulkNameTemplate,
+          targetType: isIndividual ? 'individual' : 'all',
+          targetEmail: isIndividual ? targetEmail.trim() : undefined,
         }),
       });
 
       const data = await res.json();
 
       if (res.ok) {
-        showToast(`Successfully completed! Total Targeted: ${data.totalTargeted || 0}, Sent: ${data.sentCount || 0}, Failed: ${data.failedCount || 0}`, 'success');
-        setConfirmBulkName(false);
-        // Refresh profiles list
+        if (isIndividual) {
+          showToast(`Successfully sent notice email to ${targetEmail}!`, 'success');
+        } else {
+          showToast(`Successfully completed! Total Targeted: ${data.totalTargeted || 0}, Sent: ${data.sentCount || 0}, Failed: ${data.failedCount || 0}`, 'success');
+          setConfirmBulkName(false);
+        }
         fetchMultiWordProfiles();
       } else {
-        throw new Error(data.error || 'Failed to send bulk name notice emails');
+        throw new Error(data.error || 'Failed to send notice email');
       }
     } catch (err: any) {
       showToast(err.message, 'error');
     } finally {
       setSendingBulkNameNotice(false);
+      setSendingIndividualEmail(null);
     }
   };
 
@@ -3177,7 +3200,7 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ isSuperAdmin =
           { id: 'support', label: 'Support Issues', icon: ShieldAlert },
           { id: 'email', label: 'Email Status', icon: Mail },
           { id: 'manual_announce', label: 'Email Announcements Manually', icon: Mail },
-          { id: 'bulk_name_notice', label: 'Bulk Name Notice', icon: AlertCircle },
+          { id: 'bulk_name_notice', label: 'Phone Broadcast Notice', icon: PhoneCall },
           { id: 'food', label: 'Food Management', icon: Utensils },
           { id: 'cards', label: 'Member ID Cards', icon: QrCode },
           { id: 'transactions', label: 'Verified Transactions', icon: CheckCircle2 },
@@ -3648,27 +3671,27 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ isSuperAdmin =
             exit={{ opacity: 0, y: -10 }}
           >
             <DashboardSection 
-              title="Bulk Name Correction Center" 
-              description="Notify users who registered with multi-word full names to update their profile to Given Name only."
-              icon={AlertCircle}
+              title="Phone Number Broadcast Center" 
+              description="Broadcast notification emails to all registered users informing them to add/verify their active phone number for seamless sign-in."
+              icon={PhoneCall}
             >
               <div className="space-y-8 max-w-6xl">
                 {/* Information Header card */}
                 <div className="p-6 rounded-3xl border border-amber-500/10 bg-amber-500/[0.02] flex flex-col md:flex-row md:items-center justify-between gap-6">
                   <div className="flex items-start gap-4 flex-1 min-w-0">
                     <div className="p-3 rounded-2xl bg-amber-500/10 text-amber-400">
-                      <AlertCircle className="w-6 h-6 animate-pulse" />
+                      <PhoneCall className="w-6 h-6 animate-pulse" />
                     </div>
                     <div>
-                      <h4 className="text-sm font-bold text-white uppercase tracking-wider">Aesthetic & Compliant Name Policies</h4>
+                      <h4 className="text-sm font-bold text-white uppercase tracking-wider">Phone-Based & Email Authentication Broadcast</h4>
                       <p className="text-xs text-zinc-400 mt-1 leading-relaxed max-w-2xl">
-                        To maintain a clean database and elegant ticket displays, users should have single-word Given Names (e.g., changing <span className="text-amber-400 font-semibold">"Samin Tausif"</span> to <span className="text-green-400 font-semibold">"Samin"</span>). This utility broadcasts notice emails to profiles matching this filter, complete with a live example and secure update links.
+                        Name-based sign-in has been disabled. Users can now sign in using their registered <span className="text-amber-400 font-semibold">Phone Number</span> or <span className="text-amber-400 font-semibold">Email Address</span>. Use this utility to broadcast an official notice instructing users to keep their active phone number saved in their profile.
                       </p>
                     </div>
                   </div>
                   <div className="flex flex-col items-center bg-zinc-900 border border-white/5 rounded-2xl px-6 py-4 justify-center md:self-stretch min-w-[140px] md:flex-shrink-0">
                     <span className="text-2xl font-black text-amber-500">{multiWordProfiles.length}</span>
-                    <span className="text-[10px] uppercase font-bold text-zinc-500 tracking-wider mt-1 text-center">Profiles Flagged</span>
+                    <span className="text-[10px] uppercase font-bold text-zinc-500 tracking-wider mt-1 text-center">Total Recipients</span>
                   </div>
                 </div>
 
@@ -3676,15 +3699,57 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ isSuperAdmin =
                   {/* Left panel: Form editor */}
                   <div className="lg:col-span-7 space-y-6">
                     <div className="p-6 rounded-3xl bg-zinc-950 border border-white/5 space-y-4">
-                      <h3 className="text-xs font-black uppercase tracking-widest text-zinc-400 border-b border-white/5 pb-3">Craft Notice Broadcast</h3>
+                      <h3 className="text-xs font-black uppercase tracking-widest text-zinc-400 border-b border-white/5 pb-3">Craft Phone Broadcast Notice</h3>
+
+                      {/* Target selection toggle */}
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-bold uppercase text-zinc-400 tracking-wider block">
+                          Broadcast Target Audience
+                        </label>
+                        <div className="flex rounded-xl bg-white/5 p-1 border border-white/5">
+                          <button
+                            type="button"
+                            onClick={() => setBulkNameTargetType('all')}
+                            className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${
+                              bulkNameTargetType === 'all'
+                                ? 'bg-amber-500 text-black shadow-lg shadow-amber-500/20'
+                                : 'text-zinc-400 hover:text-white'
+                            }`}
+                          >
+                            All Registered Users ({multiWordProfiles.length})
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setBulkNameTargetType('individual')}
+                            className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${
+                              bulkNameTargetType === 'individual'
+                                ? 'bg-amber-500 text-black shadow-lg shadow-amber-500/20'
+                                : 'text-zinc-400 hover:text-white'
+                            }`}
+                          >
+                            Individual User
+                          </button>
+                        </div>
+                      </div>
+
+                      {bulkNameTargetType === 'individual' && (
+                        <DashboardFormField
+                          label="Recipient Email Address"
+                          type="email"
+                          value={bulkNameIndividualEmail}
+                          onChange={setBulkNameIndividualEmail}
+                          placeholder="e.g. user@example.com"
+                          description="Enter the exact email address of the user you want to receive this notice."
+                        />
+                      )}
 
                       <DashboardFormField 
                         label="Email Subject Line" 
                         type="text"
                         value={bulkNameSubject} 
                         onChange={setBulkNameSubject} 
-                        placeholder="e.g. Action Required: Please update your registered profile name"
-                        description="Subject line for the notification. Placeholders available: {NAME}, {GIVEN_NAME}, {EMAIL}."
+                        placeholder="e.g. Action Required: Please verify your Phone Number"
+                        description="Subject line for the notification. Placeholders available: {NAME}, {EMAIL}."
                       />
 
                       <DashboardFormField 
@@ -3693,36 +3758,44 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ isSuperAdmin =
                         value={bulkNameTemplate} 
                         onChange={setBulkNameTemplate} 
                         placeholder="HTML email body..."
-                        description="Placeholders: {NAME} (Current Name), {GIVEN_NAME} (Guessed Name, e.g. Samin), {EMAIL}, {REDIRECT_URL} (Redirect link to change profile name)."
+                        description="Placeholders: {NAME} (Recipient Name), {EMAIL}, {REDIRECT_URL} (Redirect link to profile)."
                       />
 
-                      {/* Safety verification check */}
-                      <div className="p-6 rounded-2xl bg-white/[0.02] border border-white/5 flex items-start gap-3 select-none">
-                        <input
-                          type="checkbox"
-                          id="confirm-bulk-name-checkbox"
-                          checked={confirmBulkName}
-                          onChange={(e) => setConfirmBulkName(e.target.checked)}
-                          className="mt-1 h-4 w-4 rounded border-zinc-700 bg-zinc-850 text-amber-500 focus:ring-amber-500/20 focus:ring-offset-0 cursor-pointer"
-                        />
-                        <label htmlFor="confirm-bulk-name-checkbox" className="text-xs text-zinc-400 leading-relaxed cursor-pointer selection:bg-transparent">
-                          <strong className="text-white block font-semibold mb-0.5">
-                            I authorize this bulk email broadcast
-                          </strong>
-                          I verify that this email will be delivered only to the {multiWordProfiles.length} identified profiles with multi-word names. It specifies the "Given Name only" rule with the exact example "Samin Tausif, given name Samin".
-                        </label>
-                      </div>
+                      {/* Safety verification check (only for bulk mode) */}
+                      {bulkNameTargetType === 'all' && (
+                        <div className="p-6 rounded-2xl bg-white/[0.02] border border-white/5 flex items-start gap-3 select-none">
+                          <input
+                            type="checkbox"
+                            id="confirm-bulk-name-checkbox"
+                            checked={confirmBulkName}
+                            onChange={(e) => setConfirmBulkName(e.target.checked)}
+                            className="mt-1 h-4 w-4 rounded border-zinc-700 bg-zinc-850 text-amber-500 focus:ring-amber-500/20 focus:ring-offset-0 cursor-pointer"
+                          />
+                          <label htmlFor="confirm-bulk-name-checkbox" className="text-xs text-zinc-400 leading-relaxed cursor-pointer selection:bg-transparent">
+                            <strong className="text-white block font-semibold mb-0.5">
+                              I authorize this phone number broadcast
+                            </strong>
+                            I verify that this email notice will be delivered to {multiWordProfiles.length} registered users to prompt phone number profile updates for login.
+                          </label>
+                        </div>
+                      )}
 
                       <div className="flex items-center gap-4 pt-2">
                         <DashboardButton 
-                          label={sendingBulkNameNotice ? "Broadcasting..." : `Send Bulk Notice to ${multiWordProfiles.length} Users`} 
-                          onClick={sendBulkNameNotice}
+                          label={
+                            sendingBulkNameNotice 
+                              ? "Sending..." 
+                              : bulkNameTargetType === 'individual'
+                              ? "Send Notice to Individual User"
+                              : `Send Bulk Notice to ${multiWordProfiles.length} Users`
+                          } 
+                          onClick={() => sendBulkNameNotice()}
                           disabled={
                             sendingBulkNameNotice || 
-                            !confirmBulkName || 
                             !bulkNameSubject.trim() || 
                             !bulkNameTemplate.trim() ||
-                            multiWordProfiles.length === 0
+                            (bulkNameTargetType === 'all' && (!confirmBulkName || multiWordProfiles.length === 0)) ||
+                            (bulkNameTargetType === 'individual' && !bulkNameIndividualEmail.trim())
                           }
                           icon={sendingBulkNameNotice ? Loader2 : Mail}
                           variant="primary"
@@ -3731,11 +3804,11 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ isSuperAdmin =
                     </div>
                   </div>
 
-                  {/* Right panel: Flagged users & interactive search */}
+                  {/* Right panel: Registered users & interactive search */}
                   <div className="lg:col-span-5 space-y-6">
                     <div className="p-6 rounded-3xl bg-zinc-950 border border-white/5 space-y-4 flex flex-col h-[650px]">
                       <div className="flex items-center justify-between border-b border-white/5 pb-3">
-                        <h3 className="text-xs font-black uppercase tracking-widest text-zinc-400">Flagged Profiles</h3>
+                        <h3 className="text-xs font-black uppercase tracking-widest text-zinc-400">Registered Profiles</h3>
                         <span className="px-2.5 py-0.5 rounded-full bg-amber-500/10 text-amber-400 text-[10px] font-bold">
                           {multiWordProfiles.filter(p => {
                             const term = bulkNameSearchTerm.trim().toLowerCase();
@@ -3750,7 +3823,7 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ isSuperAdmin =
                         <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
                         <input
                           type="text"
-                          placeholder="Search flagged profiles..."
+                          placeholder="Search profiles by name or email..."
                           value={bulkNameSearchTerm}
                           onChange={(e) => setBulkNameSearchTerm(e.target.value)}
                           className="w-full pl-11 pr-4 py-3 bg-white/5 border border-white/5 rounded-xl text-xs text-white placeholder:text-zinc-500 outline-none focus:border-amber-500/30 transition-all"
@@ -3762,7 +3835,7 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ isSuperAdmin =
                         {loadingMultiWordProfiles ? (
                           <div className="flex flex-col items-center justify-center py-20 gap-3">
                             <Loader2 className="w-6 h-6 text-amber-500 animate-spin" />
-                            <span className="text-[10px] uppercase font-bold text-zinc-500 tracking-wider">Analyzing Name Formats...</span>
+                            <span className="text-[10px] uppercase font-bold text-zinc-500 tracking-wider">Loading User Roster...</span>
                           </div>
                         ) : multiWordProfiles.filter(p => {
                           const term = bulkNameSearchTerm.trim().toLowerCase();
@@ -3770,7 +3843,7 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ isSuperAdmin =
                           return (p.full_name || '').toLowerCase().includes(term) || (p.email || '').toLowerCase().includes(term);
                         }).length === 0 ? (
                           <div className="text-center py-12 text-zinc-500 text-xs">
-                            No matching flagged profiles found.
+                            No matching user profiles found.
                           </div>
                         ) : (
                           multiWordProfiles.filter(p => {
@@ -3778,25 +3851,42 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ isSuperAdmin =
                             if (!term) return true;
                             return (p.full_name || '').toLowerCase().includes(term) || (p.email || '').toLowerCase().includes(term);
                           }).map((p) => {
-                            const guessedGiven = (p.full_name || '').trim().split(/\s+/)[0] || '';
+                            const isSendingThis = sendingIndividualEmail === p.email;
                             return (
-                              <div key={p.id} className="p-4 rounded-2xl bg-white/[0.02] hover:bg-white/[0.04] border border-white/5 transition-all space-y-2">
+                              <div key={p.id} className="p-4 rounded-2xl bg-white/[0.02] hover:bg-white/[0.04] border border-white/5 transition-all space-y-2.5">
                                 <div className="flex items-start justify-between gap-4">
                                   <div className="min-w-0 flex-1">
                                     <p className="text-xs font-black text-white truncate uppercase tracking-wide">
-                                      {p.full_name}
+                                      {p.full_name || 'No Name'}
                                     </p>
-                                    <p className="text-[10px] text-zinc-500 truncate mt-0.5">
+                                    <p className="text-[10px] text-zinc-500 truncate mt-0.5 font-mono">
                                       {p.email}
                                     </p>
                                   </div>
-                                  <span className="px-2 py-0.5 rounded bg-amber-500/5 border border-amber-500/10 text-[9px] font-black uppercase text-amber-400 tracking-widest whitespace-nowrap self-start">
-                                    Flagged
-                                  </span>
+                                  <button
+                                    type="button"
+                                    disabled={isSendingThis || !p.email}
+                                    onClick={() => {
+                                      setBulkNameTargetType('individual');
+                                      setBulkNameIndividualEmail(p.email);
+                                      sendBulkNameNotice(p.email);
+                                    }}
+                                    className="px-2.5 py-1.5 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/20 text-amber-400 text-[10px] font-bold uppercase tracking-wider transition-all flex items-center gap-1.5 disabled:opacity-50"
+                                    title="Send notice email to this user"
+                                  >
+                                    {isSendingThis ? (
+                                      <Loader2 className="w-3 h-3 animate-spin" />
+                                    ) : (
+                                      <Mail className="w-3 h-3" />
+                                    )}
+                                    <span>{isSendingThis ? "Sending..." : "Send Notice"}</span>
+                                  </button>
                                 </div>
                                 <div className="pt-2 border-t border-white/[0.03] flex items-center justify-between text-[10px]">
-                                  <span className="text-zinc-500 font-medium">Guessed Given Name:</span>
-                                  <span className="text-green-400 font-bold uppercase">{guessedGiven}</span>
+                                  <span className="text-zinc-500 font-medium flex items-center gap-1">
+                                    <Phone className="w-3 h-3 text-zinc-600" /> Phone:
+                                  </span>
+                                  <span className="text-zinc-300 font-mono font-bold">{p.phone || 'Missing'}</span>
                                 </div>
                               </div>
                             );

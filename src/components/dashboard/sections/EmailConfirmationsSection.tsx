@@ -72,39 +72,37 @@ export function EmailConfirmationsSection() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // States for Name notice Campaign
+  // States for Phone Broadcast Notice Campaign
   const [nameNoticeProfiles, setNameNoticeProfiles] = useState<any[]>([]);
   const [isLoadingNameNotice, setIsLoadingNameNotice] = useState(false);
   const [isSendingNameNotice, setIsSendingNameNotice] = useState(false);
   const [nameNoticeResult, setNameNoticeResult] = useState<any>(null);
-  const [nameNoticeSubject, setNameNoticeSubject] = useState("Urgent Action Required: Please update your registered full name to your Given Name only");
+  const [nameNoticeSubject, setNameNoticeSubject] = useState("[ACTION REQUIRED] Please update/verify your Phone Number for quick sign-in");
   const [nameNoticeTemplate, setNameNoticeTemplate] = useState(`<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #1e293b; padding: 25px; border: 1px solid #e2e8f0; border-radius: 16px; background-color: #ffffff;">
   <div style="text-align: center; margin-bottom: 25px; border-bottom: 2px solid #0c4a6e; padding-bottom: 15px;">
     <h1 style="color: #0c4a6e; margin: 0; font-size: 24px; font-weight: 800;">JOSEPHITE MATH CLUB</h1>
-    <p style="color: #64748b; margin: 5px 0 0 0; font-size: 12px; letter-spacing: 0.1em; font-weight: 600;">OFFICIAL ACTION REQUIRED: REGISTRATION DATABASE CLEANUP</p>
+    <p style="color: #64748b; margin: 5px 0 0 0; font-size: 12px; letter-spacing: 0.1em; font-weight: 600;">OFFICIAL NOTICE: LOGIN SYSTEM UPDATE & PHONE NUMBER VERIFICATION</p>
   </div>
   <p>Hello <strong>{NAME}</strong>,</p>
-  <p>Our administrative team has observed that your registered profile name uses your <strong>full name</strong> (e.g., "{NAME}") instead of your <strong>given name only</strong>.</p>
+  <p>We have updated the login system for Josephite Math Club. <strong>Logging in using full names or given names has been disabled.</strong> Sign-in is now strictly available via <strong>Phone Number or Email Address</strong>.</p>
   
-  <p>To ensure eligibility for JMC Olympiads and events, you must update your registered name to your <strong>given name only</strong> (single-word name).</p>
+  <p>To ensure you can easily log in to your dashboard at any time, please log in and ensure your <strong>active contact phone number</strong> is updated in your profile.</p>
 
-  <div style="background-color: #fffbeb; border-left: 4px solid #f59e0b; padding: 15px; border-radius: 8px; margin: 20px 0; font-size: 14px; color: #78350f;">
-    <strong>Example Correction:</strong><br />
-    • Full Name registered: <strong>Samin Tausif</strong><br />
-    • Corrected to Given Name only: <strong>Samin</strong>
+  <div style="background-color: #f0fdf4; border-left: 4px solid #16a34a; padding: 15px; border-radius: 8px; margin: 20px 0; font-size: 14px; color: #14532d;">
+    <strong>How to Sign In:</strong><br />
+    • <strong>Option 1:</strong> Use your registered <strong>Phone Number</strong> (e.g. 017XXXXXXXX) + Password<br />
+    • <strong>Option 2:</strong> Use your registered <strong>Email Address</strong> + Password
   </div>
-
-  <p>Please update your registered full name to your given name by clicking the link below:</p>
 
   <div style="text-align: center; margin: 30px 0;">
-    <a href="{REDIRECT_URL}" style="background-color: #f43f5e; color: #ffffff; text-decoration: none; padding: 12px 30px; border-radius: 8px; font-weight: bold; font-size: 14px; display: inline-block; box-shadow: 0 4px 6px -1px rgba(244, 63, 94, 0.2);">Correct My Name Now</a>
+    <a href="{REDIRECT_URL}" style="background-color: #0c4a6e; color: #ffffff; text-decoration: none; padding: 12px 30px; border-radius: 8px; font-weight: bold; font-size: 14px; display: inline-block; box-shadow: 0 4px 6px -1px rgba(12, 74, 110, 0.2);">Update Phone Number in Profile</a>
   </div>
 
-  <p>Alternatively, you can copy and paste this link in your browser:<br/> <a href="{REDIRECT_URL}" style="color: #0c4a6e; word-break: break-all;">{REDIRECT_URL}</a></p>
+  <p>Alternatively, visit: <a href="{REDIRECT_URL}" style="color: #0c4a6e; word-break: break-all;">{REDIRECT_URL}</a></p>
 
-  <p style="margin-top: 30px;">For any questions, please reply to this email or submit a help ticket on the platform.</p>
+  <p style="margin-top: 30px;">For any questions, please reply to this email or contact support on the JMC portal.</p>
   <br/>
-  <p style="border-top: 1px solid #e2e8f0; padding-top: 15px; font-size: 12px; color: #64748b; margin-bottom: 0;">Sincerely,<br/><strong>The Josephite Math Club Organizing Committee</strong></p>
+  <p style="border-top: 1px solid #e2e8f0; padding-top: 15px; font-size: 12px; color: #64748b; margin-bottom: 0;">Sincerely,<br/><strong>The Josephite Math Club Executive Committee</strong></p>
 </div>`);
 
   const fetchNameNoticeProfiles = useCallback(async () => {

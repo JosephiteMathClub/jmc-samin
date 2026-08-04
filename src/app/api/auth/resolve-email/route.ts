@@ -51,174 +51,74 @@ export async function POST(req: Request) {
 
     if (isPhoneInput) {
       try {
-        // Check profiles table (email column might hold phone string or matches phone)
-        const { data: profilePhone } = await supabaseAdmin
-          .from('profiles')
-          .select('full_name, email')
-          .eq('email', cleanIdentifier)
-          .maybeSingle();
+        const rawPhone = cleanIdentifier.replace(/\D/g, '');
+        const phoneVariants = Array.from(new Set([
+          cleanIdentifier,
+          rawPhone,
+          rawPhone.length >= 9 ? rawPhone.slice(-11) : rawPhone,
+          rawPhone.length >= 9 ? `0${rawPhone.slice(-10)}` : rawPhone,
+          rawPhone.length >= 9 ? `+880${rawPhone.slice(-10)}` : rawPhone,
+          rawPhone.length >= 9 ? `880${rawPhone.slice(-10)}` : rawPhone
+        ])).filter(Boolean);
 
-        if (profilePhone?.full_name) {
-          if (profilePhone.email && (profilePhone.email.includes(cleanIdentifier) || profilePhone.email.includes('@'))) {
-            return NextResponse.json({ email: profilePhone.email });
+        // 1. Check profiles table (phone or email matches any variant)
+        const { data: profilePhones } = await supabaseAdmin
+          .from('profiles')
+          .select('full_name, email, id')
+          .or(phoneVariants.map(v => `email.eq.${v}`).join(','));
+
+        if (profilePhones && profilePhones.length > 0) {
+          const target = profilePhones[0];
+          if (target.email) {
+            return NextResponse.json({ email: target.email });
           }
-          return NextResponse.json({ email: `${slugifyName(profilePhone.full_name)}@josephitre.club` });
+          if (target.full_name) {
+            return NextResponse.json({ email: `${slugifyName(target.full_name)}@josephitre.club` });
+          }
         }
 
-        // Find their registered email by checking member table
+        // 2. Find by checking member table phone column
         const { data: memberData } = await supabaseAdmin
           .from('member')
-          .select('full_name, email')
-          .eq('phone', cleanIdentifier)
-          .maybeSingle();
+          .select('full_name, email, phone')
+          .or(phoneVariants.map(v => `phone.eq.${v}`).join(','));
 
-        if (memberData) {
-          if (memberData.email) {
-            return NextResponse.json({ email: memberData.email });
+        if (memberData && memberData.length > 0) {
+          const target = memberData[0];
+          if (target.email) {
+            return NextResponse.json({ email: target.email });
           }
-          if (memberData.full_name) {
-            return NextResponse.json({ email: `${slugifyName(memberData.full_name)}@josephitre.club` });
+          if (target.full_name) {
+            return NextResponse.json({ email: `${slugifyName(target.full_name)}@josephitre.club` });
           }
         }
 
-        // Check ec_member table
+        // 3. Check ec_member table phone column
         const { data: ecData } = await supabaseAdmin
           .from('ec_member')
-          .select('full_name, email')
-          .eq('phone', cleanIdentifier)
-          .maybeSingle();
+          .select('full_name, email, phone')
+          .or(phoneVariants.map(v => `phone.eq.${v}`).join(','));
 
-        if (ecData) {
-          if (ecData.email) {
-            return NextResponse.json({ email: ecData.email });
+        if (ecData && ecData.length > 0) {
+          const target = ecData[0];
+          if (target.email) {
+            return NextResponse.json({ email: target.email });
           }
-          if (ecData.full_name) {
-            return NextResponse.json({ email: `${slugifyName(ecData.full_name)}@josephitre.club` });
+          if (target.full_name) {
+            return NextResponse.json({ email: `${slugifyName(target.full_name)}@josephitre.club` });
           }
         }
       } catch (err) {
         console.error('Error in phone resolution DB query:', err);
       }
 
-      // Fallback to virtual email
+      // Fallback to phone virtual email
       return NextResponse.json({ email: `${cleanIdentifier}@josephitre.club` });
     } else if (!isEmailInput) {
-      // It's a Name!
-      try {
-        // 1. Try to find they have a member or ec_member record with an email column first
-        const { data: memberByName } = await supabaseAdmin
-          .from('member')
-          .select('id, full_name, email')
-          .ilike('full_name', `%${cleanIdentifier}%`);
-
-        if (memberByName && memberByName.length > 0) {
-          const exactMatch = memberByName.find(m => m.full_name?.trim().toLowerCase() === cleanIdentifier.toLowerCase());
-          const targetMember = exactMatch || memberByName[0];
-          if (targetMember.email) {
-            return NextResponse.json({ email: targetMember.email });
-          }
-        }
-
-        const { data: ecByName } = await supabaseAdmin
-          .from('ec_member')
-          .select('id, full_name, email')
-          .ilike('full_name', `%${cleanIdentifier}%`);
-
-        if (ecByName && ecByName.length > 0) {
-          const exactMatch = ecByName.find(m => m.full_name?.trim().toLowerCase() === cleanIdentifier.toLowerCase());
-          const targetMember = exactMatch || ecByName[0];
-          if (targetMember.email) {
-            return NextResponse.json({ email: targetMember.email });
-          }
-        }
-
-        // 2. Try exact/close match on full_name in profiles
-        const { data: profiles } = await supabaseAdmin
-          .from('profiles')
-          .select('id, full_name')
-          .ilike('full_name', cleanIdentifier);
-
-        if (profiles && profiles.length > 0) {
-          const exactMatch = profiles.find(p => p.full_name?.trim().toLowerCase() === cleanIdentifier.toLowerCase());
-          const targetProfile = exactMatch || (profiles.length === 1 ? profiles[0] : null);
-          if (targetProfile) {
-            try {
-              const { data: uData } = await supabaseAdmin.auth.admin.getUserById(targetProfile.id);
-              if (uData?.user?.email) {
-                return NextResponse.json({ email: uData.user.email });
-              }
-            } catch (err) {
-              console.error('Error in getUserById during exact profiles resolution:', err);
-            }
-            return NextResponse.json({ email: `${slugifyName(targetProfile.full_name)}@josephitre.club` });
-          }
-        }
-
-        // 2. Try wildcard contains match in profiles
-        const { data: profilesWild } = await supabaseAdmin
-          .from('profiles')
-          .select('id, full_name')
-          .ilike('full_name', `%${cleanIdentifier}%`);
-
-        if (profilesWild && profilesWild.length > 0) {
-          const exactSlugMatch = profilesWild.find(p => slugifyName(p.full_name) === slugifyName(cleanIdentifier));
-          const targetProfile = exactSlugMatch || profilesWild[0];
-          try {
-            const { data: uData } = await supabaseAdmin.auth.admin.getUserById(targetProfile.id);
-            if (uData?.user?.email) {
-              return NextResponse.json({ email: uData.user.email });
-            }
-          } catch (err) {
-            console.error('Error in getUserById during wild profiles resolution:', err);
-          }
-          return NextResponse.json({ email: `${slugifyName(targetProfile.full_name)}@josephitre.club` });
-        }
-
-        // 3. Try searching member table
-        const { data: memberData } = await supabaseAdmin
-          .from('member')
-          .select('id, full_name')
-          .ilike('full_name', `%${cleanIdentifier}%`);
-
-        if (memberData && memberData.length > 0) {
-          const exactMatch = memberData.find(m => m.full_name?.trim().toLowerCase() === cleanIdentifier.toLowerCase());
-          const targetMember = exactMatch || memberData[0];
-          try {
-            const { data: uData } = await supabaseAdmin.auth.admin.getUserById(targetMember.id);
-            if (uData?.user?.email) {
-              return NextResponse.json({ email: uData.user.email });
-            }
-          } catch (err) {
-            console.error('Error in getUserById during member resolution:', err);
-          }
-          return NextResponse.json({ email: `${slugifyName(targetMember.full_name)}@josephitre.club` });
-        }
-
-        // 4. Try searching ec_member table
-        const { data: ecData } = await supabaseAdmin
-          .from('ec_member')
-          .select('id, full_name')
-          .ilike('full_name', `%${cleanIdentifier}%`);
-
-        if (ecData && ecData.length > 0) {
-          const exactMatch = ecData.find(m => m.full_name?.trim().toLowerCase() === cleanIdentifier.toLowerCase());
-          const targetMember = exactMatch || ecData[0];
-          try {
-            const { data: uData } = await supabaseAdmin.auth.admin.getUserById(targetMember.id);
-            if (uData?.user?.email) {
-              return NextResponse.json({ email: uData.user.email });
-            }
-          } catch (err) {
-            console.error('Error in getUserById during ec_member resolution:', err);
-          }
-          return NextResponse.json({ email: `${slugifyName(targetMember.full_name)}@josephitre.club` });
-        }
-      } catch (err) {
-        console.error('Error in name resolution DB query:', err);
-      }
-
-      // Default fallback
-      return NextResponse.json({ email: `${slugifyName(cleanIdentifier)}@josephitre.club` });
+      // Name input is explicitly disabled
+      return NextResponse.json({ 
+        error: 'Logging in using full name is no longer supported. Please log in using your Phone Number or Email Address.' 
+      }, { status: 400 });
     } else {
       // It's a real email input.
       try {
