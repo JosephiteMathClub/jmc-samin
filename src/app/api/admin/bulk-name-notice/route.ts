@@ -138,10 +138,26 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Missing subject or HTML template.' }, { status: 400 });
     }
 
-    // Determine absolute dynamic redirect URL based on request headers/origin
-    const urlObj = new URL(req.url);
-    const origin = urlObj.origin || 'https://jmc-sjs.org';
-    const redirectUrl = `${origin}/profile`;
+    // Determine absolute dynamic redirect URL (defaulting strictly to official domain https://jmc-sjs.org)
+    let appBaseUrl = 'https://jmc-sjs.org';
+    const envUrl = (process.env.NEXT_PUBLIC_APP_URL || '').trim();
+    if (envUrl && !envUrl.includes('localhost') && !envUrl.includes('127.0.0.1') && !envUrl.includes('run.app')) {
+      appBaseUrl = envUrl.startsWith('http') ? envUrl : `https://${envUrl}`;
+    } else {
+      const forwardedHost = req.headers.get('x-forwarded-host');
+      const host = forwardedHost || req.headers.get('host');
+      const proto = req.headers.get('x-forwarded-proto') || 'https';
+      if (host && !host.includes('localhost') && !host.includes('127.0.0.1') && !host.includes('0.0.0.0') && !host.includes('run.app')) {
+        appBaseUrl = `${proto}://${host}`;
+      }
+    }
+    const redirectUrl = `${appBaseUrl}/profile`;
+
+    // Sanitize template to replace any hardcoded localhost or preview container URLs with production appBaseUrl
+    const cleanTemplate = htmlTemplate
+      .replace(/https?:\/\/localhost(:\d+)?/gi, appBaseUrl)
+      .replace(/http:\/\/127\.0\.0\.1(:\d+)?/gi, appBaseUrl)
+      .replace(/https?:\/\/[a-zA-Z0-9-]+\.asia-southeast1\.run\.app/gi, appBaseUrl);
 
     const supabaseAdmin = getSupabaseAdmin();
     const { data: profiles, error: pErr } = await supabaseAdmin
@@ -180,7 +196,7 @@ export async function POST(req: Request) {
       const originalName = p.full_name || 'User';
 
       // Replace placeholders including dynamic redirect URL
-      const customizedHtml = htmlTemplate
+      const customizedHtml = cleanTemplate
         .replace(/{NAME}/g, originalName)
         .replace(/{EMAIL}/g, email)
         .replace(/{REDIRECT_URL}/g, redirectUrl);

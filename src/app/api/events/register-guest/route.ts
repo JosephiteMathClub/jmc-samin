@@ -178,14 +178,14 @@ export async function POST(req: Request) {
             <p style="font-size: 16px; line-height: 1.5;">You can now sign in to your dashboard to view your profile, manage your registrations, and check out announcements!</p>
             
             <div style="text-align: center; margin: 30px 0;">
-              <a href="${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/auth?mode=login" style="background-color: #0c4a6e; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">Sign In Now</a>
+              <a href="${(process.env.NEXT_PUBLIC_APP_URL && !process.env.NEXT_PUBLIC_APP_URL.includes('localhost')) ? process.env.NEXT_PUBLIC_APP_URL : 'https://jmc-sjs.org'}/auth?mode=login" style="background-color: #0c4a6e; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">Sign In Now</a>
             </div>
             
             <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;" />
             <p style="font-size: 12px; color: #6b7280; text-align: center;">Josephite Math Club Automated System</p>
           </div>
         `,
-        text: `Welcome to Josephite Math Club, ${fullName}!\n\nAn account has been automatically generated for you using your email and phone number.\n\nLogin Credentials:\nUsername / Full Name: ${fullName}\nEmail: ${cleanEmail}\nPassword: ${cleanPhone}\n\nYou can sign in at: ${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/auth?mode=login`,
+        text: `Welcome to Josephite Math Club, ${fullName}!\n\nAn account has been automatically generated for you using your email and phone number.\n\nLogin Credentials:\nUsername / Full Name: ${fullName}\nEmail: ${cleanEmail}\nPassword: ${cleanPhone}\n\nYou can sign in at: ${(process.env.NEXT_PUBLIC_APP_URL && !process.env.NEXT_PUBLIC_APP_URL.includes('localhost')) ? process.env.NEXT_PUBLIC_APP_URL : 'https://jmc-sjs.org'}/auth?mode=login`,
       }).catch(emailErr => {
         console.error('Failed to send welcome email to guest in background:', emailErr);
       });
@@ -312,7 +312,7 @@ export async function POST(req: Request) {
           <p style="font-size: 16px; line-height: 1.5;">Please allow up to a few hours for JMC administrators to verify your payment transaction ID with the Bkash statement. Once verified, your unique ID will be activated and viewable on your Profile Dashboard!</p>
 
           <div style="text-align: center; margin: 30px 0;">
-            <a href="${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/profile" style="background-color: #0c4a6e; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">Go to Profile Page</a>
+            <a href="${(process.env.NEXT_PUBLIC_APP_URL && !process.env.NEXT_PUBLIC_APP_URL.includes('localhost')) ? process.env.NEXT_PUBLIC_APP_URL : 'https://jmc-sjs.org'}/profile" style="background-color: #0c4a6e; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">Go to Profile Page</a>
           </div>
 
           <p style="font-size: 14px; color: #ef4444;"><strong>Important Note:</strong> Your auto-generated account password is <strong>${cleanPhone}</strong>. Keep it safe to log in later.</p>
