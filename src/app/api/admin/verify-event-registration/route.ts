@@ -56,8 +56,32 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: fetchError?.message || 'Record not found' }, { status: 404 });
     }
 
-    // Target strictly the single requested transaction record
-    const allLinkedRecords = [{ ...record, tableName }];
+    // Find all linked records for team/group registrations sharing the same base transaction ID
+    let allLinkedRecords: any[] = [{ ...record, tableName }];
+    const baseTrxnId = record.trxnid ? record.trxnid.replace(/-T\d+$/i, '').trim() : '';
+
+    if (baseTrxnId && !baseTrxnId.toUpperCase().startsWith('PROXY-')) {
+      const tables = ['primary_events', 'junior_events', 'secondary_events', 'higher_secondary_events'];
+      const linkedMap = new Map<string, any>();
+      linkedMap.set(`${tableName}:${record.id}`, { ...record, tableName });
+
+      for (const tb of tables) {
+        const { data: linkedData } = await supabaseAdmin
+          .from(tb)
+          .select('*')
+          .or(`trxnid.eq.${baseTrxnId},trxnid.ilike.${baseTrxnId}-T%`);
+
+        if (linkedData) {
+          linkedData.forEach((item: any) => {
+            const itemKey = `${tb}:${item.id}`;
+            if (!linkedMap.has(itemKey)) {
+              linkedMap.set(itemKey, { ...item, tableName: tb });
+            }
+          });
+        }
+      }
+      allLinkedRecords = Array.from(linkedMap.values());
+    }
 
     if (action === 'reject') {
       // Reject all linked records

@@ -95,7 +95,7 @@ export function EmailConfirmationsSection() {
   </div>
 
   <div style="text-align: center; margin: 30px 0;">
-    <a href="{REDIRECT_URL}" style="background-color: #0c4a6e; color: #ffffff; text-decoration: none; padding: 12px 30px; border-radius: 8px; font-weight: bold; font-size: 14px; display: inline-block; box-shadow: 0 4px 6px -1px rgba(12, 74, 110, 0.2);">Update Phone Number in Profile</a>
+    <a href="{REDIRECT_URL}" style="background-color: #0c4a6e; color: #ffffff; text-decoration: none; padding: 12px 30px; border-radius: 8px; font-weight: bold; font-size: 14px; display: inline-block; box-shadow: 0 4px 6px -1px rgba(12, 74, 110, 0.2);">Verify & Update Phone Number Now</a>
   </div>
 
   <p>Alternatively, visit: <a href="{REDIRECT_URL}" style="color: #0c4a6e; word-break: break-all;">{REDIRECT_URL}</a></p>

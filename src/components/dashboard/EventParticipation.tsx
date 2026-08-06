@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Trophy,
@@ -1009,6 +1009,58 @@ export const EventParticipation = ({
     setPendingList(allPending);
   }, [showToast]);
 
+  const getBaseTrxnId = useCallback((trxnid: string) => {
+    if (!trxnid) return "";
+    return trxnid.replace(/-T\d+$/i, "").trim().toUpperCase();
+  }, []);
+
+  const groupedPendingTransactions = useMemo(() => {
+    const map = new Map<string, {
+      key: string;
+      baseTrxnId: string;
+      tableName: string;
+      selectedEvents: string;
+      bkashNumber: string;
+      totalAmount: number;
+      leader: any;
+      members: any[];
+    }>();
+
+    pendingList.forEach((rec) => {
+      const trxnid = rec.trxnid || "";
+      const baseTrxn = getBaseTrxnId(trxnid);
+      
+      const groupKey = baseTrxn && !baseTrxn.startsWith("PROXY-")
+        ? `${rec.tableName}_${baseTrxn}_${(rec.selected_events || "").trim().toLowerCase()}`
+        : `${rec.tableName}_${rec.id}`;
+
+      if (!map.has(groupKey)) {
+        map.set(groupKey, {
+          key: groupKey,
+          baseTrxnId: baseTrxn || trxnid,
+          tableName: rec.tableName,
+          selectedEvents: rec.selected_events || "",
+          bkashNumber: rec.bkash_number || "",
+          totalAmount: Number(rec.amount) || 0,
+          leader: rec,
+          members: [rec],
+        });
+      } else {
+        const group = map.get(groupKey)!;
+        group.members.push(rec);
+        if (Number(rec.amount) > group.totalAmount) {
+          group.totalAmount = Number(rec.amount);
+        }
+        if (!trxnid.toUpperCase().includes("-T")) {
+          group.leader = rec;
+          if (rec.bkash_number) group.bkashNumber = rec.bkash_number;
+        }
+      }
+    });
+
+    return Array.from(map.values());
+  }, [pendingList, getBaseTrxnId]);
+
   useEffect(() => {
     fetchPendingRegistrations();
   }, [fetchPendingRegistrations]);
@@ -1043,8 +1095,15 @@ export const EventParticipation = ({
           data.message || `Transaction verified successfully`,
           "success",
         );
-        // Optimistic update: filter out only this single processed record
-        setPendingList((prev) => prev.filter((p) => p.id !== recordId));
+        // Optimistic update: filter out all member records matching targetBaseTrxn or recordId
+        const targetRec = pendingList.find((p) => p.id === recordId);
+        const targetBaseTrxn = targetRec?.trxnid ? getBaseTrxnId(targetRec.trxnid) : "";
+        setPendingList((prev) => prev.filter((p) => {
+          if (targetBaseTrxn && p.trxnid) {
+            return getBaseTrxnId(p.trxnid) !== targetBaseTrxn;
+          }
+          return p.id !== recordId;
+        }));
 
         // Log action
         await logAction(
@@ -1963,7 +2022,7 @@ export const EventParticipation = ({
           }`}
         >
           Event Transactions Verifier
-          {pendingList.length > 0 && (
+          {groupedPendingTransactions.length > 0 && (
             <span className="w-2 h-2 bg-red-500 rounded-full animate-bounce absolute top-2 right-2" />
           )}
         </button>
@@ -1992,7 +2051,7 @@ export const EventParticipation = ({
             </p>
           </div>
 
-          {pendingList.length === 0 ? (
+          {groupedPendingTransactions.length === 0 ? (
             <div className="glass-card p-16 text-center rounded-[2.5rem] border border-dashed border-white/10 max-w-3xl">
               <CheckCircle2 className="w-16 h-16 text-zinc-800 mx-auto mb-6 opacity-30 animate-pulse" />
               <p className="text-sm font-bold text-zinc-500 uppercase tracking-wide">
@@ -2004,13 +2063,22 @@ export const EventParticipation = ({
             </div>
           ) : (
             <div className="grid grid-cols-1 gap-6">
-              {pendingList.map((rec) => {
+              {groupedPendingTransactions.map((group) => {
+                const rec = group.leader;
                 const isEditingThis = editRecordId === rec.id;
+                const isMultiMember = group.members.length > 1;
+
                 return isEditingThis ? (
                   <div
-                    key={`${rec.tableName}-${rec.id}`}
+                    key={group.key}
                     className="glass-card p-8 rounded-3xl border border-amber-500/30 bg-[#030303]/90 flex flex-col gap-6 animate-fade-in text-left"
                   >
+                    <div className="flex justify-between items-center border-b border-white/10 pb-4">
+                      <h4 className="text-sm font-bold text-amber-400 uppercase tracking-wide">
+                        Editing Details for {rec.full_name}
+                      </h4>
+                      <span className="text-[10px] text-zinc-500 font-mono">ID: {rec.id}</span>
+                    </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
                         <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">
@@ -2105,13 +2173,13 @@ export const EventParticipation = ({
                       <button
                         onClick={() => handleSaveEdit(rec.id, rec.tableName)}
                         disabled={savingEdit}
-                        className="px-5 py-3 bg-amber-500 hover:bg-amber-400 text-black text-xs font-black uppercase tracking-widest rounded-2xl transition-all"
+                        className="px-5 py-3 bg-amber-500 hover:bg-amber-400 text-black text-xs font-black uppercase tracking-widest rounded-2xl transition-all cursor-pointer"
                       >
                         {savingEdit ? "Saving..." : "Save Changes"}
                       </button>
                       <button
                         onClick={() => setEditRecordId(null)}
-                        className="px-5 py-3 bg-white/5 hover:bg-white/10 border border-white/10 text-white text-xs font-black uppercase tracking-widest rounded-2xl transition-all"
+                        className="px-5 py-3 bg-white/5 hover:bg-white/10 border border-white/10 text-white text-xs font-black uppercase tracking-widest rounded-2xl transition-all cursor-pointer"
                       >
                         Cancel
                       </button>
@@ -2119,21 +2187,28 @@ export const EventParticipation = ({
                   </div>
                 ) : (
                   <div
-                    key={`${rec.tableName}-${rec.id}`}
+                    key={group.key}
                     className="glass-card p-8 rounded-3xl border border-white/5 hover:border-white/10 transition-all flex flex-col gap-6 text-left"
                   >
                     <div className="flex justify-between items-start flex-wrap gap-4">
                       <div>
                         <p className="text-zinc-500 text-[10px] font-bold uppercase tracking-widest mb-1">
-                          {rec.tableName.replace("_events", " events")}
+                          {group.tableName.replace("_events", " events")}
                         </p>
-                        <h3 className="text-xl font-black text-white uppercase tracking-tight">
-                          {rec.full_name}
+                        <h3 className="text-xl font-black text-white uppercase tracking-tight flex items-center gap-2 flex-wrap">
+                          {group.leader.full_name}
+                          {isMultiMember && (
+                            <span className="px-2.5 py-1 bg-amber-500/10 border border-amber-500/20 text-amber-400 text-[10px] font-bold rounded-lg flex items-center gap-1">
+                              <Users className="w-3 h-3" /> Team ({group.members.length} Members)
+                            </span>
+                          )}
                         </h3>
                       </div>
-                      <span className="px-4 py-2 bg-red-500/10 border border-red-500/20 text-red-500 text-[10px] font-black uppercase tracking-wider rounded-xl">
-                        Pending Verification
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className="px-4 py-2 bg-red-500/10 border border-red-500/20 text-red-500 text-[10px] font-black uppercase tracking-wider rounded-xl">
+                          Pending Verification
+                        </span>
+                      </div>
                     </div>
 
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 py-4 border-y border-white/5">
@@ -2142,7 +2217,11 @@ export const EventParticipation = ({
                           Class / Sec / Roll
                         </p>
                         <p className="text-xs text-white font-mono">
-                          Class {rec.class} • Sec {rec.section} • Roll {rec.roll}
+                          {isMultiMember ? (
+                            `${group.members.length} Team Members Registered`
+                          ) : (
+                            `Class ${group.leader.class} • Sec ${group.leader.section} • Roll ${group.leader.roll}`
+                          )}
                         </p>
                       </div>
                       <div>
@@ -2150,7 +2229,7 @@ export const EventParticipation = ({
                           BKash No.
                         </p>
                         <p className="text-xs text-white font-mono">
-                          {rec.bkash_number}
+                          {group.bkashNumber || rec.bkash_number}
                         </p>
                       </div>
                       <div>
@@ -2158,25 +2237,64 @@ export const EventParticipation = ({
                           TrxnID
                         </p>
                         <p className="text-xs text-amber-500 font-mono font-bold">
-                          {rec.trxnid}
+                          {group.baseTrxnId}
                         </p>
                       </div>
                       <div>
                         <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-1">
-                          Amount
+                          Total Amount
                         </p>
                         <p className="text-xs text-white font-mono">
-                          ৳{rec.amount}
+                          ৳{group.totalAmount}
                         </p>
                       </div>
                     </div>
+
+                    {isMultiMember && (
+                      <div className="bg-white/5 rounded-2xl p-4 border border-white/5 space-y-3">
+                        <div className="flex justify-between items-center">
+                          <p className="text-[10px] font-black text-amber-400 uppercase tracking-widest flex items-center gap-1.5">
+                            <Users className="w-3.5 h-3.5" /> Registered Team Members ({group.members.length})
+                          </p>
+                          <span className="text-[9px] text-zinc-400 font-mono">1 Grouped Transaction</span>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2.5">
+                          {group.members.map((m: any, idx: number) => (
+                            <div key={m.id} className="bg-white/5 p-3 rounded-xl border border-white/5 flex flex-col gap-1 text-left">
+                              <div className="flex items-center justify-between">
+                                <span className="text-xs font-bold text-white truncate">{m.full_name}</span>
+                                {idx === 0 ? (
+                                  <span className="text-[9px] px-1.5 py-0.5 bg-amber-500/20 text-amber-300 font-bold rounded uppercase">Leader</span>
+                                ) : (
+                                  <span className="text-[9px] px-1.5 py-0.5 bg-zinc-800 text-zinc-400 font-bold rounded uppercase">Member {idx + 1}</span>
+                                )}
+                              </div>
+                              <p className="text-[10px] text-zinc-400 font-mono">
+                                Class {m.class} • Sec {m.section} • Roll {m.roll}
+                              </p>
+                              <p className="text-[9px] text-zinc-500 font-mono truncate">
+                                TrxID: {m.trxnid}
+                              </p>
+                              {isSuperAdmin && (
+                                <button
+                                  onClick={() => startEditing(m)}
+                                  className="mt-1 text-[9px] text-orange-400 hover:underline text-left font-bold cursor-pointer"
+                                >
+                                  Edit Member Details
+                                </button>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
 
                     <div>
                       <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">
                         Registered Events
                       </p>
                       <div className="flex flex-wrap gap-2">
-                        {(rec.selected_events || "")
+                        {(group.selectedEvents || "")
                           .split(",")
                           .map((ev: string) => (
                             <span
@@ -2231,7 +2349,7 @@ export const EventParticipation = ({
                             className="py-3 px-5 rounded-xl bg-green-500 hover:bg-green-400 text-black font-black text-[10px] uppercase tracking-wider transition-all disabled:opacity-50 flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(34,197,94,0.1)] cursor-pointer"
                           >
                             <CheckCircle2 className="w-3.5 h-3.5" />
-                            Approve
+                            Approve {isMultiMember ? `Team (${group.members.length})` : ""}
                           </button>
                           <button
                             disabled={verifyingId !== null}
@@ -2245,7 +2363,7 @@ export const EventParticipation = ({
                             }
                             className="py-3 px-5 rounded-xl bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white border border-red-500/20 font-black text-[10px] uppercase tracking-wider transition-all disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
                           >
-                            Reject
+                            Reject {isMultiMember ? `Team (${group.members.length})` : ""}
                           </button>
                         </>
                       )}

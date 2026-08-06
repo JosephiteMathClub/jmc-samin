@@ -62,14 +62,15 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // 2. Parse and validate the new name
-    const { newFullName } = await req.json();
+    // 2. Parse and validate payload
+    const { newFullName, phone, memberClass, memberSection, memberRoll } = await req.json();
 
-    if (!newFullName || !newFullName.trim()) {
-      return NextResponse.json({ error: 'Name is required' }, { status: 400 });
+    const cleanNewName = newFullName ? newFullName.trim() : null;
+    const cleanPhone = phone ? phone.trim() : null;
+
+    if (!cleanNewName && !cleanPhone) {
+      return NextResponse.json({ error: 'Name or phone number is required' }, { status: 400 });
     }
-
-    const cleanNewName = newFullName.trim();
 
     const supabaseAdmin = getSupabaseAdmin();
 
@@ -77,38 +78,44 @@ export async function POST(req: Request) {
     const isVirtualEmail = !user.email || user.email.endsWith('@josephitre.club');
     let newAuthEmail = user.email;
 
-    if (isVirtualEmail) {
+    if (cleanNewName && isVirtualEmail) {
       const newSlug = slugifyName(cleanNewName);
       newAuthEmail = `${newSlug}@josephitre.club`;
     }
 
     // Update user auth metadata
-    const updatePayload: any = {
-      user_metadata: {
-        ...user.user_metadata,
-        full_name: cleanNewName
-      }
+    const userMetadataUpdate: any = {
+      ...user.user_metadata,
     };
-    if (isVirtualEmail && newAuthEmail) {
+    if (cleanNewName) userMetadataUpdate.full_name = cleanNewName;
+    if (cleanPhone) userMetadataUpdate.phone = cleanPhone;
+
+    const updatePayload: any = {
+      user_metadata: userMetadataUpdate
+    };
+    if (cleanNewName && isVirtualEmail && newAuthEmail) {
       updatePayload.email = newAuthEmail;
     }
 
     const { error: authUpdateError } = await supabaseAdmin.auth.admin.updateUserById(user.id, updatePayload);
 
     if (authUpdateError) {
-      console.error('Error updating auth email:', authUpdateError);
+      console.error('Error updating auth metadata:', authUpdateError);
       return NextResponse.json({ 
         error: `Failed to update credentials: ${authUpdateError.message}` 
       }, { status: 500 });
     }
 
     // Update public.profiles
+    const profileUpdatePayload: any = {
+      updated_at: new Date().toISOString()
+    };
+    if (cleanNewName) profileUpdatePayload.full_name = cleanNewName;
+    if (cleanPhone) profileUpdatePayload.phone = cleanPhone;
+
     const { error: profileUpdateError } = await supabaseAdmin
       .from('profiles')
-      .update({
-        full_name: cleanNewName,
-        updated_at: new Date().toISOString()
-      })
+      .update(profileUpdatePayload)
       .eq('id', user.id);
 
     if (profileUpdateError) {
@@ -117,10 +124,14 @@ export async function POST(req: Request) {
 
     // Update public.member
     const memberPayload: any = {
-      full_name: cleanNewName,
       updated_at: new Date().toISOString()
     };
-    if (isVirtualEmail && newAuthEmail) {
+    if (cleanNewName) memberPayload.full_name = cleanNewName;
+    if (cleanPhone) memberPayload.phone = cleanPhone;
+    if (memberClass !== undefined) memberPayload.class = memberClass;
+    if (memberSection !== undefined) memberPayload.section = memberSection;
+    if (memberRoll !== undefined) memberPayload.roll = memberRoll;
+    if (cleanNewName && isVirtualEmail && newAuthEmail) {
       memberPayload.email = newAuthEmail;
     }
 
@@ -135,10 +146,14 @@ export async function POST(req: Request) {
 
     // Update public.ec_member
     const ecPayload: any = {
-      full_name: cleanNewName,
       updated_at: new Date().toISOString()
     };
-    if (isVirtualEmail && newAuthEmail) {
+    if (cleanNewName) ecPayload.full_name = cleanNewName;
+    if (cleanPhone) ecPayload.phone = cleanPhone;
+    if (memberClass !== undefined) ecPayload.class = memberClass;
+    if (memberSection !== undefined) ecPayload.section = memberSection;
+    if (memberRoll !== undefined) ecPayload.roll = memberRoll;
+    if (cleanNewName && isVirtualEmail && newAuthEmail) {
       ecPayload.email = newAuthEmail;
     }
 
@@ -151,7 +166,7 @@ export async function POST(req: Request) {
       console.error('Error updating ec_member table:', ecUpdateError);
     }
 
-    return NextResponse.json({ success: true, newEmail: newAuthEmail });
+    return NextResponse.json({ success: true, newEmail: newAuthEmail, phone: cleanPhone });
 
   } catch (err: any) {
     console.error('API Error in update-name Route:', err);

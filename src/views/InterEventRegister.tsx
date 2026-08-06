@@ -2172,16 +2172,15 @@ export default function InterEventRegister() {
               ) : ((!user && !isProxyRegistration) || (isProxyRegistration && proxyVerified && proxyMethod === 'phone' && !proxyUserExists)) && hasEmailAddress === null ? (
                 <div className="p-8 border border-dashed border-pink-500/25 rounded-3xl bg-pink-500/5 text-center space-y-6 my-4">
                   <div className="w-14 h-14 bg-pink-500/10 border border-pink-500/20 text-pink-400 rounded-full flex items-center justify-center mx-auto">
-                    <Mail className="w-7 h-7" />
+                    <Sparkles className="w-7 h-7" />
                   </div>
                   <div className="space-y-2">
+                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-pink-400 font-mono">Registration Setup</p>
                     <h4 className="text-lg font-black uppercase tracking-wider text-white">
-                      {isProxyRegistration ? "Does this student have a valid Email?" : "Do you have a valid Email Address?"}
+                      How would you like to register?
                     </h4>
                     <p className="text-xs text-zinc-400 max-w-md mx-auto leading-relaxed">
-                      {isProxyRegistration 
-                        ? "If the student has an email address, their entry passes will be sent there. Otherwise, we can generate a virtual pass mapped to their phone number."
-                        : "We use your email address to send your entry passes, confirmation credentials, and payment invoices. If you do not have one, we can auto-generate a virtual account using your phone number."}
+                      Choose whether to register using both Email Address & Phone Number, or Phone Number only.
                     </p>
                   </div>
                   <div className="flex flex-col sm:flex-row gap-4 justify-center max-w-md mx-auto pt-2">
@@ -2190,9 +2189,10 @@ export default function InterEventRegister() {
                       onClick={() => {
                         setHasEmailAddress(true);
                       }}
-                      className="flex-1 py-4 px-6 bg-gradient-to-r from-pink-500 to-indigo-600 text-white font-black text-xs uppercase tracking-widest rounded-xl hover:opacity-90 transition-all cursor-pointer shadow-lg shadow-pink-500/15"
+                      className="flex-1 py-4 px-6 bg-gradient-to-r from-pink-500 to-indigo-600 text-white font-black text-xs uppercase tracking-widest rounded-xl hover:opacity-90 transition-all cursor-pointer shadow-lg shadow-pink-500/15 flex items-center justify-center gap-2"
                     >
-                      Yes, {isProxyRegistration ? "Has Email" : "I have an Email"}
+                      <Mail className="w-4 h-4" />
+                      Email & Phone Number
                     </button>
                     <button
                       type="button"
@@ -2200,9 +2200,10 @@ export default function InterEventRegister() {
                         setHasEmailAddress(false);
                         setEmail('');
                       }}
-                      className="flex-1 py-4 px-6 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 font-black text-xs uppercase tracking-widest rounded-xl transition-all cursor-pointer border border-white/5"
+                      className="flex-1 py-4 px-6 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 font-black text-xs uppercase tracking-widest rounded-xl transition-all cursor-pointer border border-white/5 flex items-center justify-center gap-2"
                     >
-                      No, {isProxyRegistration ? "No Email (Phone Only)" : "I do not have one"}
+                      <Phone className="w-4 h-4 text-pink-400" />
+                      Phone Number Only
                     </button>
                   </div>
                 </div>

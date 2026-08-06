@@ -102,22 +102,27 @@ export const BatchMemberUpload: React.FC<BatchMemberUploadProps> = ({
         for (let index = 0; index < jsonData.length; index++) {
           const row = jsonData[index];
           const rowNum = index + 1;
-          const email = row.Email || row.email;
-          const fullName = row["Full Name"] || row.full_name || row.Name || row.name;
-          const phone = String(row.Phone || row.phone || "");
-          const classVal = String(row.Class || row.class || "");
-          const sectionVal = String(row.Section || row.section || "");
-          const rollVal = String(row.Roll || row.roll || "");
+          const emailRaw = row.Email || row.email || "";
+          const email = String(emailRaw).trim().toLowerCase();
+          const fullName = String(row["Full Name"] || row.full_name || row.Name || row.name || "").trim();
+          const phone = String(row.Phone || row.phone || row.Mobile || row.mobile || row.Contact || row.contact || "").trim();
+          const classVal = String(row.Class || row.class || "").trim();
+          const sectionVal = String(row.Section || row.section || "").trim();
+          const rollVal = String(row.Roll || row.roll || "").trim();
 
-          if (!email || !fullName || !phone) {
+          if (!fullName || (!email && !phone)) {
             failCount++;
-            errors.push(`Row ${rowNum}: Missing required fields (Name, Email, or Phone)`);
+            errors.push(`Row ${rowNum}: Missing required fields (Name and Email or Phone)`);
             continue;
           }
 
+          const isPhoneOnly = !email && !!phone;
+          const registerMethod = isPhoneOnly ? 'phone_only' : 'both';
+
           // Compute EC indicator dynamically
-          const isRowEc = String(row.Is_EC || row.is_ec || row.EC || row.ec || "").toLowerCase() === 'yes' || 
-                           String(row.Is_EC || row.is_ec || row.EC || row.ec || "").toLowerCase() === 'true' || 
+          const isRowEc = String(row.Is_EC || row.is_ec || row.EC || row.ec || row.Role || row.role || "").toLowerCase() === 'yes' || 
+                           String(row.Is_EC || row.is_ec || row.EC || row.ec || row.Role || row.role || "").toLowerCase() === 'true' || 
+                           String(row.Is_EC || row.is_ec || row.EC || row.ec || row.Role || row.role || "").toLowerCase().includes('ec') ||
                            isEcUpload;
           
           let customMemberId = String(row.unique_id || row.Unique_ID || row.Unique_id || row.Member_ID || row.member_id || row.ID || row.id || "").trim();
@@ -153,28 +158,32 @@ export const BatchMemberUpload: React.FC<BatchMemberUploadProps> = ({
             departmentVal = '';
           }
 
-        try {
-          // 1. Check if user already exists in profiles
-          // We search by ID if we could, but here we only have email.
-          // If the email column is missing from profiles, this will fail.
-          // We'll wrap it in a try-catch specifically for this.
-          let profile = null;
           try {
-            const { data } = await supabase
-              .from('profiles')
-              .select('id')
-              .filter('email', 'eq', email.toLowerCase().trim())
-              .maybeSingle();
-            profile = data;
-          } catch (e) {
-            console.warn("Profiles table might be missing 'email' column, falling back to non-linked account creation.");
-          }
+            let profile = null;
+            try {
+              let queryEmail = email;
+              if (!queryEmail && phone) {
+                queryEmail = `${phone}@josephitre.club`;
+              }
+              if (queryEmail) {
+                const { data } = await supabase
+                  .from('profiles')
+                  .select('id')
+                  .or(`email.ilike.${queryEmail}${phone ? `,email.ilike.${phone}@josephitre.club` : ''}`)
+                  .limit(1);
+                if (data && data.length > 0) {
+                  profile = data[0];
+                }
+              }
+            } catch (e) {
+              console.warn("Profiles lookup failed, falling back to account creation flow.");
+            }
 
-          if (profile) {
-              logs.push(`Row ${rowNum}: Existing account found for ${email}. Updating member info.`);
+            if (profile) {
+              logs.push(`Row ${rowNum}: Existing account found for ${fullName}. Updating member info.`);
               await addMember({
                 full_name: fullName,
-                email: email.toLowerCase().trim(),
+                email: email,
                 phone: phone,
                 class: classVal,
                 section: sectionVal,
@@ -182,13 +191,14 @@ export const BatchMemberUpload: React.FC<BatchMemberUploadProps> = ({
                 hasAccount: true,
                 is_ec: isRowEc,
                 custom_member_id: customMemberId || undefined,
-                department: departmentVal || undefined
+                department: departmentVal || undefined,
+                register_method: registerMethod
               });
             } else {
-              logs.push(`Row ${rowNum}: No account found for ${email}. Creating new account...`);
+              logs.push(`Row ${rowNum}: No account found for ${fullName}. Creating user account & member record...`);
               await addMember({
                 full_name: fullName,
-                email: email.toLowerCase().trim(),
+                email: email,
                 phone: phone,
                 class: classVal,
                 section: sectionVal,
@@ -196,13 +206,14 @@ export const BatchMemberUpload: React.FC<BatchMemberUploadProps> = ({
                 hasAccount: false,
                 is_ec: isRowEc,
                 custom_member_id: customMemberId || undefined,
-                department: departmentVal || undefined
+                department: departmentVal || undefined,
+                register_method: registerMethod
               });
             }
             successCount++;
           } catch (err: any) {
             failCount++;
-            errors.push(`Row ${rowNum} (${email}): ${err.message || "Failed to process"}`);
+            errors.push(`Row ${rowNum} (${fullName || email || phone}): ${err.message || "Failed to process"}`);
           }
         }
 
@@ -296,22 +307,27 @@ export const BatchMemberUpload: React.FC<BatchMemberUploadProps> = ({
       for (let index = 0; index < jsonData.length; index++) {
         const row = jsonData[index];
         const rowNum = index + 1;
-        const email = row.Email || row.email;
-        const fullName = row["Full Name"] || row.full_name || row.Name || row.name;
-        const phone = String(row.Phone || row.phone || "");
-        const classVal = String(row.Class || row.class || "");
-        const sectionVal = String(row.Section || row.section || "");
-        const rollVal = String(row.Roll || row.roll || "");
+        const emailRaw = row.Email || row.email || "";
+        const email = String(emailRaw).trim().toLowerCase();
+        const fullName = String(row["Full Name"] || row.full_name || row.Name || row.name || "").trim();
+        const phone = String(row.Phone || row.phone || row.Mobile || row.mobile || row.Contact || row.contact || "").trim();
+        const classVal = String(row.Class || row.class || "").trim();
+        const sectionVal = String(row.Section || row.section || "").trim();
+        const rollVal = String(row.Roll || row.roll || "").trim();
 
-        if (!email || !fullName || !phone) {
+        if (!fullName || (!email && !phone)) {
           failCount++;
-          errors.push(`Row ${rowNum}: Missing required fields (Name, Email, or Phone)`);
+          errors.push(`Row ${rowNum}: Missing required fields (Name and Email or Phone)`);
           continue;
         }
 
+        const isPhoneOnly = !email && !!phone;
+        const registerMethod = isPhoneOnly ? 'phone_only' : 'both';
+
         // Compute EC indicator dynamically
-        const isRowEc = String(row.Is_EC || row.is_ec || row.EC || row.ec || "").toLowerCase() === 'yes' || 
-                         String(row.Is_EC || row.is_ec || row.EC || row.ec || "").toLowerCase() === 'true' || 
+        const isRowEc = String(row.Is_EC || row.is_ec || row.EC || row.ec || row.Role || row.role || "").toLowerCase() === 'yes' || 
+                         String(row.Is_EC || row.is_ec || row.EC || row.ec || row.Role || row.role || "").toLowerCase() === 'true' || 
+                         String(row.Is_EC || row.is_ec || row.EC || row.ec || row.Role || row.role || "").toLowerCase().includes('ec') ||
                          isEcUpload;
         
         let customMemberId = String(row.unique_id || row.Unique_ID || row.Unique_id || row.Member_ID || row.member_id || row.ID || row.id || "").trim();
@@ -350,21 +366,29 @@ export const BatchMemberUpload: React.FC<BatchMemberUploadProps> = ({
         try {
           let profile = null;
           try {
-            const { data } = await supabase
-              .from('profiles')
-              .select('id')
-              .filter('email', 'eq', email.toLowerCase().trim())
-              .maybeSingle();
-            profile = data;
+            let queryEmail = email;
+            if (!queryEmail && phone) {
+              queryEmail = `${phone}@josephitre.club`;
+            }
+            if (queryEmail) {
+              const { data } = await supabase
+                .from('profiles')
+                .select('id')
+                .or(`email.ilike.${queryEmail}${phone ? `,email.ilike.${phone}@josephitre.club` : ''}`)
+                .limit(1);
+              if (data && data.length > 0) {
+                profile = data[0];
+              }
+            }
           } catch (e) {
-            console.warn("Profiles table might be missing 'email' column, falling back to non-linked account creation.");
+            console.warn("Profiles lookup failed, falling back to account creation flow.");
           }
 
           if (profile) {
-            logs.push(`Row ${rowNum}: Existing account found for ${email}. Updating member info.`);
+            logs.push(`Row ${rowNum}: Existing account found for ${fullName}. Updating member info.`);
             await addMember({
               full_name: fullName,
-              email: email.toLowerCase().trim(),
+              email: email,
               phone: phone,
               class: classVal,
               section: sectionVal,
@@ -372,13 +396,14 @@ export const BatchMemberUpload: React.FC<BatchMemberUploadProps> = ({
               hasAccount: true,
               is_ec: isRowEc,
               custom_member_id: customMemberId || undefined,
-              department: departmentVal || undefined
+              department: departmentVal || undefined,
+              register_method: registerMethod
             });
           } else {
-            logs.push(`Row ${rowNum}: No account found for ${email}. Creating new account...`);
+            logs.push(`Row ${rowNum}: No account found for ${fullName}. Creating user account & member record...`);
             await addMember({
               full_name: fullName,
-              email: email.toLowerCase().trim(),
+              email: email,
               phone: phone,
               class: classVal,
               section: sectionVal,
@@ -386,13 +411,14 @@ export const BatchMemberUpload: React.FC<BatchMemberUploadProps> = ({
               hasAccount: false,
               is_ec: isRowEc,
               custom_member_id: customMemberId || undefined,
-              department: departmentVal || undefined
+              department: departmentVal || undefined,
+              register_method: registerMethod
             });
           }
           successCount++;
         } catch (err: any) {
           failCount++;
-          errors.push(`Row ${rowNum} (${email}): ${err.message || "Failed to process"}`);
+          errors.push(`Row ${rowNum} (${fullName || email || phone}): ${err.message || "Failed to process"}`);
         }
       }
 

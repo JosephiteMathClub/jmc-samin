@@ -468,12 +468,41 @@ const AdminDashboard = () => {
           .replace(/^_+|_+$/g, '');
       };
 
+      const phoneNum = (memberData.phone || '').trim();
+      const phoneVirtualEmail = phoneNum ? `${phoneNum}@josephitre.club` : '';
+
       const finalEmail = memberData.register_method === 'phone_only'
-        ? `${getSlugifiedUsername(memberData.full_name)}@josephitre.club`
+        ? (phoneVirtualEmail || `${getSlugifiedUsername(memberData.full_name)}@josephitre.club`)
         : getVirtualEmail(memberData.email);
 
-      // First, try to find an existing member record by email and full name to reuse their ID
-      if ((memberData.register_method === 'phone_only' || memberData.email) && memberData.full_name) {
+      // First, if phone_only, check if member or EC member already exists with this phone number
+      if (memberData.register_method === 'phone_only' && phoneNum) {
+        try {
+          const { data: memByPhone } = await supabase
+            .from('member')
+            .select('id')
+            .eq('phone', phoneNum)
+            .limit(1);
+          
+          if (memByPhone && memByPhone.length > 0) {
+            userId = memByPhone[0].id;
+          } else {
+            const { data: ecByPhone } = await supabase
+              .from('ec_member')
+              .select('id')
+              .eq('phone', phoneNum)
+              .limit(1);
+            if (ecByPhone && ecByPhone.length > 0) {
+              userId = ecByPhone[0].id;
+            }
+          }
+        } catch (e) {
+          console.error("Error looking up existing member by phone:", e);
+        }
+      }
+
+      // If not found by phone, try to find an existing member record by email and full name
+      if (!userId && (memberData.register_method === 'phone_only' || memberData.email) && memberData.full_name) {
         try {
           const { data: memByEmail } = await supabase
             .from('member')
@@ -501,7 +530,7 @@ const AdminDashboard = () => {
         }
       }
 
-      // Second, try to find an existing member record by class/section/roll if email lookup was not successful
+      // Second, try to find an existing member record by class/section/roll if lookup was not successful
       if (!userId && memberData.class && memberData.section && memberData.roll) {
         try {
           const { data: memByClass } = await supabase
@@ -534,7 +563,7 @@ const AdminDashboard = () => {
               phone: memberData.phone,
               password: memberData.phone, // Password is the phone number
               fullName: memberData.full_name,
-              useGivenNameAsLogin: memberData.register_method === 'phone_only'
+              usePhoneAsLogin: memberData.register_method === 'phone_only'
             }),
           });
 
@@ -545,8 +574,7 @@ const AdminDashboard = () => {
           userId = createData.userId || createData.user?.id;
           showToast("User account created!", "success");
         } else if (memberData.hasAccount && (memberData.register_method === 'phone_only' || memberData.email)) {
-          // If user has an account, find their ID by email
-          // Gracefully handle missing email column in profiles
+          // If user has an account, find their ID by email or virtual phone email
           let userData = null;
           try {
             const slug = (memberData.full_name || '').trim().toLowerCase().replace(/[^a-z0-9]/g, '_').replace(/__+/g, '_').replace(/^_+|_+$/g, '');
@@ -555,7 +583,7 @@ const AdminDashboard = () => {
             const { data, error: userError } = await supabase
               .from('profiles')
               .select('id')
-              .or(`email.eq.${finalEmail},email.eq.${virtualEmail}`)
+              .or(`email.eq.${finalEmail},email.eq.${virtualEmail}${phoneVirtualEmail ? `,email.eq.${phoneVirtualEmail}` : ''}`)
               .limit(1);
             
             if (userError) throw userError;
@@ -565,9 +593,30 @@ const AdminDashboard = () => {
           }
           
           if (!userData) {
-            throw new Error("Could not find an existing account with that email in our profiles database. Please ensure the user has signed up first.");
+            if (memberData.phone || memberData.email) {
+              const createRes = await fetch('/api/admin/create-user', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  email: memberData.register_method === 'phone_only' ? null : finalEmail,
+                  phone: memberData.phone || '01700000000',
+                  password: memberData.phone || '12345678',
+                  fullName: memberData.full_name,
+                  usePhoneAsLogin: memberData.register_method === 'phone_only'
+                }),
+              });
+              const createData = await createRes.json();
+              if (createRes.ok && (createData.userId || createData.user?.id)) {
+                userId = createData.userId || createData.user?.id;
+              } else {
+                throw new Error("Could not find or create an account matching those credentials.");
+              }
+            } else {
+              throw new Error("Could not find an existing account matching those credentials in our database. Please ensure the user has signed up first.");
+            }
+          } else {
+            userId = userData.id;
           }
-          userId = userData.id;
         }
       }
 

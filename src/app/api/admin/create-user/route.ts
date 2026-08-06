@@ -29,7 +29,7 @@ function getSupabaseAdmin() {
 
 export async function POST(req: Request) {
   try {
-    const { email, password, fullName, usePhoneAsLogin, useGivenNameAsLogin } = await req.json();
+    const { email, password, phone: reqBodyPhone, fullName, usePhoneAsLogin, useGivenNameAsLogin } = await req.json();
 
     if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
       console.error('CRITICAL: SUPABASE_SERVICE_ROLE_KEY is missing in env');
@@ -101,18 +101,20 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Forbidden: Admin access required' }, { status: 403 });
     }
 
+    const phoneVal = (reqBodyPhone || password || '').trim();
     const cleanEmail = (usePhoneAsLogin || useGivenNameAsLogin) ? null : (email ? email.trim().toLowerCase() : null);
     
-    // Assign the unique id
-    let virtualEmail;
+    // Assign the unique email for auth login
+    let virtualEmail: string;
     if (usePhoneAsLogin) {
-      virtualEmail = `${password.trim()}@josephitre.club`;
+      virtualEmail = `${phoneVal}@josephitre.club`;
+    } else if (cleanEmail) {
+      virtualEmail = cleanEmail;
     } else if (useGivenNameAsLogin) {
       const slug = fullName.trim().toLowerCase().replace(/[^a-z0-9]/g, '_').replace(/__+/g, '_').replace(/^_+|_+$/g, '');
       virtualEmail = `${slug}@josephitre.club`;
     } else {
-      const slug = fullName.trim().toLowerCase().replace(/[^a-z0-9]/g, '_').replace(/__+/g, '_').replace(/^_+|_+$/g, '');
-      virtualEmail = `${slug}@josephitre.club`;
+      virtualEmail = `${phoneVal}@josephitre.club`;
     }
 
     // 2. Create the new user
@@ -123,11 +125,62 @@ export async function POST(req: Request) {
       user_metadata: {
         full_name: fullName,
         real_email: cleanEmail,
-        phone: password.trim()
+        phone: phoneVal
       }
     });
 
     if (createError) {
+      const errMsg = (createError.message || '').toLowerCase();
+      if (errMsg.includes('already registered') || errMsg.includes('already exists') || errMsg.includes('email_exists')) {
+        try {
+          let existingProfile = null;
+          if (cleanEmail) {
+            const { data } = await supabaseAdmin
+              .from('profiles')
+              .select('id')
+              .ilike('email', cleanEmail)
+              .maybeSingle();
+            existingProfile = data;
+          }
+          if (!existingProfile && virtualEmail) {
+            const { data } = await supabaseAdmin
+              .from('profiles')
+              .select('id')
+              .ilike('email', virtualEmail)
+              .maybeSingle();
+            existingProfile = data;
+          }
+          if (!existingProfile && phoneVal) {
+            const phoneVirtual = `${phoneVal}@josephitre.club`;
+            const { data } = await supabaseAdmin
+              .from('profiles')
+              .select('id')
+              .ilike('email', phoneVirtual)
+              .maybeSingle();
+            existingProfile = data;
+          }
+
+          if (existingProfile?.id) {
+            await supabaseAdmin
+              .from('profiles')
+              .upsert({
+                id: existingProfile.id,
+                full_name: fullName,
+                role: 'member',
+                email: cleanEmail
+              }, { onConflict: 'id' });
+
+            return NextResponse.json({ 
+              userId: existingProfile.id, 
+              alreadyExisted: true,
+              message: 'Account already exists. Linked to existing user profile.'
+            });
+          }
+        } catch (e) {
+          console.error("Error looking up existing user on duplicate registration:", e);
+        }
+      }
+
       console.error('Error creating user:', createError);
       return NextResponse.json({ error: createError.message }, { status: 500 });
     }

@@ -73,7 +73,7 @@ export async function POST(req: Request) {
       teammatesList
     } = body;
 
-    if (!fullName || !email || !phone || !className || !section || !roll || !bkashNumber || !trxnid || !selectedEvents) {
+    if (!fullName || !phone || !className || !section || !roll || !bkashNumber || !trxnid || !selectedEvents) {
       return NextResponse.json({ error: 'All registration form fields are required.' }, { status: 400 });
     }
 
@@ -81,7 +81,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Please type in your name without spaces or just type in your surname' }, { status: 400 });
     }
 
-    const cleanEmail = email.trim().toLowerCase();
+    const cleanEmail = (email || `${phone.trim()}@josephitre.club`).trim().toLowerCase();
     const cleanPhone = phone.trim();
     const targetTable = getTargetTable(className);
 

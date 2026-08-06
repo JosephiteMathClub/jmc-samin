@@ -205,6 +205,7 @@ const EventRegister = () => {
   const [submitting, setSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [guestEmail, setGuestEmail] = useState('');
+  const [registerMethod, setRegisterMethod] = useState<'both' | 'phone_only'>('both');
   const [wasGuestRegistered, setWasGuestRegistered] = useState(false);
   const [showConfirmSegmentModal, setShowConfirmSegmentModal] = useState(false);
   const [hasConfirmedSegments, setHasConfirmedSegments] = useState(false);
@@ -981,7 +982,7 @@ const EventRegister = () => {
     }
 
     if (!user) {
-      if (!guestEmail.trim() || !guestEmail.includes('@')) {
+      if (registerMethod === 'both' && (!guestEmail.trim() || !guestEmail.includes('@'))) {
         showToast("Please enter a valid email address to auto-generate your account.", "error");
         return;
       }
@@ -1123,12 +1124,16 @@ const EventRegister = () => {
       const targetTable = getTargetTable(className);
       if (!user) {
         // Guest user flow: Register via our custom guest registration API
+        const finalGuestEmail = (registerMethod === 'phone_only' || !guestEmail.trim()) 
+          ? `${phone.trim()}@josephitre.club` 
+          : guestEmail.trim();
+
         const response = await fetch('/api/events/register-guest', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             fullName: fullName.trim(),
-            email: guestEmail.trim(),
+            email: finalGuestEmail,
             phone: phone.trim(),
             className,
             section,
@@ -2171,6 +2176,46 @@ const EventRegister = () => {
 
                     {(!isInterMode || interIsGeneralMemberQuestion !== null || isGeneralMember) && (
                       <>
+                        {/* Registration Setup Selection (Hidden for Logged-In Users & Proxy Mode) */}
+                        {!user && !isProxyRegistration && (
+                          <div className="p-6 rounded-2xl bg-white/5 border border-white/10 space-y-4 mb-6">
+                            <div className="text-center space-y-1">
+                              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-amber-500 font-mono">Registration Setup</p>
+                              <h4 className="text-xs font-black text-white uppercase tracking-wider">How would you like to register?</h4>
+                              <p className="text-[11px] text-zinc-400">Select whether you want to register using both Email & Phone Number, or Phone Number only.</p>
+                            </div>
+                            <div className="flex flex-col sm:flex-row gap-3 max-w-md mx-auto pt-1">
+                              <button
+                                type="button"
+                                onClick={() => setRegisterMethod('both')}
+                                className={`flex-1 py-3 px-4 rounded-xl border text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-2 ${
+                                  registerMethod === 'both'
+                                    ? 'bg-amber-500/20 border-amber-500 text-white shadow-lg shadow-amber-500/10'
+                                    : 'bg-black/40 border-white/10 text-zinc-400 hover:text-white hover:border-white/20'
+                                }`}
+                              >
+                                <Mail className="w-3.5 h-3.5 text-amber-500" />
+                                Email & Phone Number
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setRegisterMethod('phone_only');
+                                  setGuestEmail('');
+                                }}
+                                className={`flex-1 py-3 px-4 rounded-xl border text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-2 ${
+                                  registerMethod === 'phone_only'
+                                    ? 'bg-amber-500/20 border-amber-500 text-white shadow-lg shadow-amber-500/10'
+                                    : 'bg-black/40 border-white/10 text-zinc-400 hover:text-white hover:border-white/20'
+                                }`}
+                              >
+                                <Phone className="w-3.5 h-3.5 text-amber-500" />
+                                Phone Number Only
+                              </button>
+                            </div>
+                          </div>
+                        )}
+
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       
                       {/* Name */}
@@ -2281,21 +2326,40 @@ const EventRegister = () => {
                         </div>
                       )}
 
-                      {/* Guest Email Address */}
+                      {/* Guest Email Address / Phone-Only Notice */}
                       {!user && (
-                        <div className="space-y-3">
-                          <label className="text-[10px] font-black uppercase tracking-wider text-zinc-500">Email Address (for auto account generation)</label>
-                          <div className="relative group">
-                            <Mail className="absolute left-6 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500 group-focus-within:text-amber-500 transition-colors pointer-events-none" />
-                            <input 
-                              type="email"
-                              placeholder="YOUR EMAIL ADDRESS (E.G. STUDENT@EXAMPLE.COM)"
-                              value={guestEmail}
-                              onChange={(e) => setGuestEmail(e.target.value)}
-                              className="w-full pl-14 pr-6 py-4.5 bg-white/5 border border-white/10 rounded-2xl focus:outline-none focus:border-amber-500/50 focus:ring-4 focus:ring-amber-500/10 transition-all text-sm font-bold text-white placeholder:text-zinc-600"
-                            />
+                        registerMethod === 'both' ? (
+                          <div className="space-y-3">
+                            <label className="text-[10px] font-black uppercase tracking-wider text-zinc-500">Email Address (for auto account generation)</label>
+                            <div className="relative group">
+                              <Mail className="absolute left-6 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500 group-focus-within:text-amber-500 transition-colors pointer-events-none" />
+                              <input 
+                                type="email"
+                                placeholder="YOUR EMAIL ADDRESS (E.G. STUDENT@EXAMPLE.COM)"
+                                value={guestEmail}
+                                onChange={(e) => setGuestEmail(e.target.value)}
+                                className="w-full pl-14 pr-6 py-4.5 bg-white/5 border border-white/10 rounded-2xl focus:outline-none focus:border-amber-500/50 focus:ring-4 focus:ring-amber-500/10 transition-all text-sm font-bold text-white placeholder:text-zinc-600"
+                              />
+                            </div>
                           </div>
-                        </div>
+                        ) : (
+                          <div className="p-4 rounded-2xl bg-amber-500/5 border border-amber-500/10 flex flex-col justify-between gap-3 text-xs">
+                            <div className="flex items-start gap-2 text-amber-400/90 leading-normal">
+                              <Phone className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+                              <div>
+                                <p className="font-bold uppercase tracking-wider text-[10px] mb-0.5">Phone-Only Mode Active</p>
+                                <p className="text-[11px] text-zinc-400">Your phone number will act as your login username & password for account access.</p>
+                              </div>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => setRegisterMethod('both')}
+                              className="text-[10px] font-black uppercase tracking-widest text-amber-500 hover:text-amber-400 text-left transition-colors cursor-pointer w-fit"
+                            >
+                              Add Email Address &rarr;
+                            </button>
+                          </div>
+                        )
                       )}
 
                     </div>

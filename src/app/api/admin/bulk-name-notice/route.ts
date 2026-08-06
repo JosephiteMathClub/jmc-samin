@@ -151,13 +151,18 @@ export async function POST(req: Request) {
         appBaseUrl = `${proto}://${host}`;
       }
     }
-    const redirectUrl = `${appBaseUrl}/profile`;
+    const redirectUrl = `${appBaseUrl}/update-phone`;
 
     // Sanitize template to replace any hardcoded localhost or preview container URLs with production appBaseUrl
     const cleanTemplate = htmlTemplate
       .replace(/https?:\/\/localhost(:\d+)?/gi, appBaseUrl)
       .replace(/http:\/\/127\.0\.0\.1(:\d+)?/gi, appBaseUrl)
-      .replace(/https?:\/\/[a-zA-Z0-9-]+\.asia-southeast1\.run\.app/gi, appBaseUrl);
+      .replace(/https?:\/\/[a-zA-Z0-9-]+\.asia-southeast1\.run\.app/gi, appBaseUrl)
+      .replace(/\/profile\?action=update-phone/g, '/update-phone')
+      .replace(/\/profile\?action=update_phone/g, '/update-phone')
+      .replace(/\/profile\/update-phone/g, '/update-phone')
+      .replace(/\/profile"/g, '/update-phone"')
+      .replace(/\/profile'/g, "/update-phone'");
 
     const supabaseAdmin = getSupabaseAdmin();
     const { data: profiles, error: pErr } = await supabaseAdmin

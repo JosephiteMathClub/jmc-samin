@@ -8,7 +8,6 @@ import { ThemeProvider } from "@/context/ThemeContext";
 import ClientLayout from "@/components/ClientLayout";
 import { SmoothScroll } from "@/components/SmoothScroll";
 import React from "react";
-import Script from "next/script";
 import type { Metadata } from "next";
 
 const inter = Inter({
@@ -229,18 +228,12 @@ export default function RootLayout({
 
   return (
     <html lang="en">
-      <body
-        className={`${inter.variable} ${spaceGrotesk.variable} ${jetbrainsMono.variable} ${caveat.variable} ${cormorant.variable} antialiased bg-[#050505] text-zinc-100`}
-      >
-        <Script
-          id="structured-data"
+      <head>
+        <script
           type="application/ld+json"
-          strategy="beforeInteractive"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         />
-        <Script
-          id="mathjax-config"
-          strategy="beforeInteractive"
+        <script
           dangerouslySetInnerHTML={{
             __html: `
               window.MathJax = {
@@ -270,6 +263,10 @@ export default function RootLayout({
             `
           }}
         />
+      </head>
+      <body
+        className={`${inter.variable} ${spaceGrotesk.variable} ${jetbrainsMono.variable} ${caveat.variable} ${cormorant.variable} antialiased bg-[#050505] text-zinc-100`}
+      >
         <ThemeProvider>
           <AuthProvider>
             <ToastProvider>

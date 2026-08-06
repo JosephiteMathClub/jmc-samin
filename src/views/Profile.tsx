@@ -28,7 +28,9 @@ import {
   Download,
   Calendar,
   Ticket,
-  FileText
+  FileText,
+  Phone,
+  Smartphone
 } from 'lucide-react';
 import { toPng } from 'html-to-image';
 import dynamic from 'next/dynamic';
@@ -178,8 +180,25 @@ const Profile = () => {
   useMathJax();
   
   const [isEditing, setIsEditing] = useState(false);
+  const [showPhoneNoticeBanner, setShowPhoneNoticeBanner] = useState(false);
   const [activeSubTab, setActiveSubTab] = useState<'profile' | 'handouts'>('profile');
   const [fullName, setFullName] = useState('');
+  const [userPhone, setUserPhone] = useState('');
+
+  // Check URL query params for phone update request
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const action = params.get('action');
+      const edit = params.get('edit');
+      const updatePhone = params.get('updatePhone') || params.get('phone_notice');
+
+      if (action === 'update-phone' || action === 'update_phone' || edit === 'true' || updatePhone === 'true') {
+        setIsEditing(true);
+        setShowPhoneNoticeBanner(true);
+      }
+    }
+  }, []);
   const [isMember, setIsMember] = useState(false);
   const [isEc, setIsEc] = useState(false);
   const [verified, setVerified] = useState('no');
@@ -619,17 +638,29 @@ const Profile = () => {
       // Fetch from standard member table
       const { data: memberData } = await supabase
         .from('member')
-        .select('id, verified, member_id, is_ec, class, section, roll')
+        .select('id, verified, member_id, is_ec, class, section, roll, phone')
         .eq('id', user.id)
         .maybeSingle();
 
       // Fetch from ec_member table
       const { data: ecDataRaw } = await supabase
         .from('ec_member')
-        .select('id, verified, member_id, class, section, roll')
+        .select('id, verified, member_id, class, section, roll, phone')
         .eq('id', user.id)
         .maybeSingle();
       const ecData = ecDataRaw as any;
+
+      // Fetch from profiles table
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('phone, full_name')
+        .eq('id', user.id)
+        .maybeSingle();
+
+      const foundPhone = ecData?.phone || memberData?.phone || profileData?.phone || user?.user_metadata?.phone || '';
+      if (foundPhone) {
+        setUserPhone(foundPhone);
+      }
       
       const isUserEc = (ecData !== null) || 
                        (memberData?.is_ec === true) || 
@@ -845,23 +876,31 @@ const Profile = () => {
 
     try {
       const cleanNewName = fullName.trim();
-      const hasNameChanged = cleanNewName.toLowerCase() !== (profile?.full_name || '').trim().toLowerCase();
+      const cleanPhone = userPhone.trim();
 
-      if (hasNameChanged) {
-        if (/\s/.test(cleanNewName)) {
-          throw new Error('Please type in your name without spaces or just type in your surname. Your given name must be a single word.');
-        }
+      if (!cleanPhone) {
+        throw new Error('Phone number is required so you can log in using Phone Number + Password.');
+      }
 
-        const res = await fetch('/api/auth/update-name', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ newFullName: cleanNewName })
-        });
+      if (cleanNewName && /\s/.test(cleanNewName)) {
+        throw new Error('Please type in your name without spaces or just type in your surname. Your given name must be a single word.');
+      }
 
-        const resData = await res.json();
-        if (!res.ok) {
-          throw new Error(resData.error || 'Failed to update your given name.');
-        }
+      const res = await fetch('/api/auth/update-name', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          newFullName: cleanNewName,
+          phone: cleanPhone,
+          memberClass,
+          memberSection,
+          memberRoll
+        })
+      });
+
+      const resData = await res.json();
+      if (!res.ok) {
+        throw new Error(resData.error || 'Failed to update profile.');
       }
 
       if (isMember) {
@@ -873,6 +912,7 @@ const Profile = () => {
             section: memberSection,
             roll: memberRoll,
             full_name: cleanNewName,
+            phone: cleanPhone,
           })
           .eq('id', user?.id);
 
@@ -885,12 +925,13 @@ const Profile = () => {
               section: memberSection,
               roll: memberRoll,
               full_name: cleanNewName,
+              phone: cleanPhone,
             })
             .eq('id', user?.id);
           
-          if (ecError) throw ecError;
+          if (ecError) console.error('Error updating ec_member:', ecError);
         } else {
-          if (memberError) throw memberError;
+          if (memberError) console.error('Error updating member:', memberError);
         }
       } else {
         // Even if not a standard club member, update the profiles table
@@ -898,17 +939,24 @@ const Profile = () => {
           .from('profiles')
           .update({
             full_name: cleanNewName,
+            phone: cleanPhone,
             updated_at: new Date().toISOString()
           })
           .eq('id', user?.id);
 
-        if (profileError) throw profileError;
+        if (profileError) console.error('Error updating profiles:', profileError);
       }
 
       await refreshProfile();
       setSuccess(true);
       setIsEditing(false);
-      showToast('Profile updated successfully!', 'success');
+      setShowPhoneNoticeBanner(false);
+
+      if (typeof window !== 'undefined' && window.location.search.includes('action=update-phone')) {
+        window.history.replaceState({}, '', window.location.pathname);
+      }
+
+      showToast('Profile and Phone Number updated successfully!', 'success');
       setTimeout(() => setSuccess(false), 3000);
     } catch (err: any) {
       setError(err.message);
@@ -2140,11 +2188,45 @@ const Profile = () => {
                           <h3 className="text-2xl font-bold text-white">Edit Profile</h3>
                           <button 
                             type="button"
-                            onClick={() => setIsEditing(false)}
+                            onClick={() => {
+                              setIsEditing(false);
+                              setShowPhoneNoticeBanner(false);
+                            }}
                             className="text-sm font-bold text-zinc-500 hover:text-white transition-colors"
                           >
                             Cancel
                           </button>
+                        </div>
+
+                        {(showPhoneNoticeBanner || !userPhone) && (
+                          <div className="p-5 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-start gap-3.5 text-amber-300 shadow-[0_0_20px_rgba(245,158,11,0.1)]">
+                            <Smartphone className="w-6 h-6 text-amber-400 shrink-0 mt-0.5 animate-bounce" />
+                            <div>
+                              <h4 className="text-sm font-bold uppercase tracking-wider text-amber-400 mb-1">
+                                Action Required: Contact Phone Number
+                              </h4>
+                              <p className="text-xs text-amber-200/90 leading-relaxed font-medium">
+                                Full name login is now disabled. Please confirm or input your active mobile phone number below so you can sign in anytime using your Phone Number + Password.
+                              </p>
+                            </div>
+                          </div>
+                        )}
+
+                        <div className="space-y-2">
+                          <label className="text-xs font-bold uppercase tracking-widest text-amber-400 ml-1 flex items-center gap-1.5">
+                            <Phone className="w-3.5 h-3.5" /> Mobile / Phone Number (For Login)
+                          </label>
+                          <input 
+                            type="tel"
+                            required
+                            value={userPhone}
+                            onChange={(e) => setUserPhone(e.target.value)}
+                            placeholder="e.g. 01712345678"
+                            className="w-full px-6 py-4 bg-white/5 border border-amber-500/30 focus:border-amber-400 focus:ring-1 focus:ring-amber-400/20 rounded-2xl focus:outline-none transition-all text-white font-mono text-base"
+                          />
+                          <p className="text-[11px] text-zinc-400 ml-1">
+                            Use your active phone number. You can use this number to log in along with your password.
+                          </p>
                         </div>
 
                         <div className="space-y-2">
@@ -2222,6 +2304,28 @@ const Profile = () => {
                         className="space-y-12"
                       >
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                          <div className="p-8 rounded-3xl bg-white/5 border border-white/5 flex justify-between items-center flex-wrap gap-4">
+                            <div>
+                              <p className="text-xs font-bold uppercase tracking-widest text-zinc-500 mb-2 flex items-center gap-1.5">
+                                <Phone className="w-3.5 h-3.5 text-amber-400" /> Mobile / Phone Number (Sign-In)
+                              </p>
+                              <p className="text-white font-mono font-medium text-base">
+                                {userPhone ? userPhone : <span className="text-amber-400 font-sans italic text-sm">Not set — Click button to add</span>}
+                              </p>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setIsEditing(true);
+                                setShowPhoneNoticeBanner(true);
+                              }}
+                              className="px-4 py-2 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-400 text-xs font-bold rounded-xl transition-all cursor-pointer flex items-center gap-1.5"
+                            >
+                              <Edit3 className="w-3.5 h-3.5" />
+                              {userPhone ? 'Update' : 'Set Phone Number'}
+                            </button>
+                          </div>
+
                           <div className="p-8 rounded-3xl bg-white/5 border border-white/5">
                             <p className="text-xs font-bold uppercase tracking-widest text-zinc-500 mb-2">Email Address</p>
                             <p className="text-white font-medium">{cleanDisplayEmail(user.email)}</p>
