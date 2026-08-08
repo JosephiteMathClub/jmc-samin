@@ -5,6 +5,7 @@ import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 import { useContent } from '../context/ContentContext';
 import { useToast } from '../context/ToastContext';
+import { safeJsonClone } from '../lib/utils';
 
 export const useDashboard = () => {
   const { isAdmin, loading: authLoading } = useAuth();
@@ -20,7 +21,7 @@ export const useDashboard = () => {
   // Initialize local content with stable IDs
   useEffect(() => {
     if (content && Object.keys(content).length > 0 && !hasInitialized) {
-      const next = JSON.parse(JSON.stringify(content, (k, v) => (v && typeof v === 'object' && (v instanceof HTMLElement || (v as any).$$typeof)) ? undefined : v));
+      const next = safeJsonClone(content);
       
       const ensureIds = (obj: any, prefix: string = 'item'): any => {
         if (Array.isArray(obj)) {
@@ -156,7 +157,7 @@ export const useDashboard = () => {
 
   const resetLocalContent = useCallback(() => {
     if (content && Object.keys(content).length > 0) {
-      const next = JSON.parse(JSON.stringify(content, (k, v) => (v && typeof v === 'object' && (v instanceof HTMLElement || (v as any).$$typeof)) ? undefined : v));
+      const next = safeJsonClone(content);
       
       const ensureIds = (obj: any, prefix: string = 'item'): any => {
         if (Array.isArray(obj)) {

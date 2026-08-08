@@ -1607,3 +1607,5 @@ export function EmailConfirmationsSection() {
     </div>
   );
 }
+
+export default EmailConfirmationsSection;

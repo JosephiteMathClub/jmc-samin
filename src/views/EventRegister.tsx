@@ -1014,11 +1014,11 @@ const EventRegister = () => {
         return;
       }
 
-      // Additional Teammate 3 validation based on dynamic config member Count
-      const activeTeamConf = teamEventsList.find(tc => tc.name === selectedEvent);
-      if (activeTeamConf && activeTeamConf.memberCount === 3) {
+      // Additional Teammate 3 validation strictly for Tic-Tac-Toe
+      const isTicTacToe = selectedEvent && (selectedEvent.toLowerCase().includes("tic-tac-toe") || selectedEvent.toLowerCase().includes("tic tac toe"));
+      if (isTicTacToe) {
         if (!teamMember3Name.trim() || !teamMember3Class.trim() || !teamMember3Section.trim() || !teamMember3Gender) {
-          showToast("Please fill all required details (Name, Class, Section/Institute, and Gender) for Teammate 3.", "error");
+          showToast("Please fill all required details (Name, Class, Section/Institute, and Gender) for Teammate 3 (Required for Tic-Tac-Toe).", "error");
           return;
         }
       }
@@ -2702,8 +2702,8 @@ const EventRegister = () => {
                                     </div>
                                   </div>
 
-                                  {/* TEAMMATE 3 CARD */}
-                                  {(selectedEvents.includes("Tic-Tac-Toe") || teamEventsList.find(tc => tc.name === selectedEvents[0])?.memberCount === 3) && (
+                                  {/* TEAMMATE 3 CARD - Only for Tic-Tac-Toe */}
+                                  {selectedEvents.some(e => e.toLowerCase().includes("tic-tac-toe") || e.toLowerCase().includes("tic tac toe")) && (
                                     <div className="p-6 bg-white/[0.02] border border-white/5 rounded-2xl space-y-4">
                                       <div className="flex items-center justify-between">
                                         <h4 className="text-xs font-black uppercase tracking-wider text-zinc-300">Team Member 3</h4>

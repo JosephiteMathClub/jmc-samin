@@ -10,6 +10,31 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  async redirects() {
+    return [
+      {
+        source: '/inter-events',
+        destination: '/events/register?type=inter',
+        permanent: false,
+      },
+      {
+        source: '/inter-registration',
+        destination: '/events/register?type=inter',
+        permanent: false,
+      },
+      {
+        source: '/events/register-inter',
+        destination: '/events/register?type=inter',
+        permanent: false,
+      },
+      {
+        source: '/inter-event-register',
+        destination: '/events/register?type=inter',
+        permanent: false,
+      },
+    ];
+  },
 };
 
 export default nextConfig;
+

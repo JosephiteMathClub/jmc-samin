@@ -43,30 +43,29 @@ import { EventParticipation } from '../components/dashboard/EventParticipation';
 import { SuperAdminPanel, InterEventRegistrationConfigEditor } from '../components/dashboard/SuperAdminPanel';
 import { SupportManagement } from '../components/dashboard/SupportManagement';
 import { deleteFileFromStorage } from '../lib/storage';
+import { safeJsonClone } from '../lib/utils';
 import { cleanDisplayEmail } from '../lib/utils';
 
-import dynamic from 'next/dynamic';
-
-const DashboardHomeSection = dynamic(() => import('../components/dashboard/sections/DashboardHomeSection').then(mod => mod.DashboardHomeSection), { loading: () => <Skeleton className="h-64 w-full rounded-3xl" /> });
-const DashboardAboutSection = dynamic(() => import('../components/dashboard/sections/DashboardAboutSection').then(mod => mod.DashboardAboutSection), { loading: () => <Skeleton className="h-64 w-full rounded-3xl" /> });
-const DashboardEventsSection = dynamic(() => import('../components/dashboard/sections/DashboardEventsSection').then(mod => mod.DashboardEventsSection), { loading: () => <Skeleton className="h-64 w-full rounded-3xl" /> });
-const DashboardNoticesSection = dynamic(() => import('../components/dashboard/sections/DashboardNoticesSection').then(mod => mod.DashboardNoticesSection), { loading: () => <Skeleton className="h-64 w-full rounded-3xl" /> });
-const DashboardPanelSection = dynamic(() => import('../components/dashboard/sections/DashboardPanelSection').then(mod => mod.DashboardPanelSection), { loading: () => <Skeleton className="h-64 w-full rounded-3xl" /> });
-const DashboardGallerySection = dynamic(() => import('../components/dashboard/sections/DashboardGallerySection').then(mod => mod.DashboardGallerySection), { loading: () => <Skeleton className="h-64 w-full rounded-3xl" /> });
-const DashboardArticlesSection = dynamic(() => import('../components/dashboard/sections/DashboardArticlesSection'), { loading: () => <Skeleton className="h-64 w-full rounded-3xl" /> });
-const DashboardSiteSection = dynamic(() => import('../components/dashboard/sections/DashboardSiteSection').then(mod => mod.DashboardSiteSection), { loading: () => <Skeleton className="h-64 w-full rounded-3xl" /> });
-const DashboardMemberManagementSection = dynamic(() => import('../components/dashboard/sections/DashboardMemberManagementSection').then(mod => mod.DashboardMemberManagementSection), { loading: () => <Skeleton className="h-64 w-full rounded-3xl" /> });
-const DashboardEcMemberManagementSection = dynamic(() => import('../components/dashboard/sections/DashboardEcMemberManagementSection').then(mod => mod.DashboardEcMemberManagementSection), { loading: () => <Skeleton className="h-64 w-full rounded-3xl" /> });
-const FoodManagementSection = dynamic(() => import('../components/dashboard/sections/FoodManagementSection').then(mod => mod.FoodManagementSection), { loading: () => <Skeleton className="h-64 w-full rounded-3xl" /> });
-const ChallengeManagementSection = dynamic(() => import('../components/dashboard/sections/ChallengeManagementSection').then(mod => mod.ChallengeManagementSection), { loading: () => <Skeleton className="h-64 w-full rounded-3xl" /> });
-const DashboardAuditLogsSection = dynamic(() => import('../components/dashboard/sections/DashboardAuditLogsSection').then(mod => mod.DashboardAuditLogsSection), { loading: () => <Skeleton className="h-64 w-full rounded-3xl" /> });
-const EmailConfirmationsSection = dynamic(() => import('../components/dashboard/sections/EmailConfirmationsSection').then(mod => mod.EmailConfirmationsSection), { loading: () => <Skeleton className="h-64 w-full rounded-3xl" /> });
-const EventRegistrationsSection = dynamic(() => import('../components/dashboard/sections/EventRegistrationsSection').then(mod => mod.EventRegistrationsSection), { loading: () => <Skeleton className="h-64 w-full rounded-3xl" /> });
-const CaParticipantsSection = dynamic(() => import('../components/dashboard/sections/CaParticipantsSection').then(mod => mod.CaParticipantsSection), { loading: () => <Skeleton className="h-64 w-full rounded-3xl" /> });
-const StatisticsSection = dynamic(() => import('../components/dashboard/sections/StatisticsSection').then(mod => mod.StatisticsSection), { loading: () => <Skeleton className="h-64 w-full rounded-3xl" /> });
-const TicketPurchaseSection = dynamic(() => import('../components/dashboard/sections/TicketPurchaseSection').then(mod => mod.TicketPurchaseSection), { loading: () => <Skeleton className="h-64 w-full rounded-3xl" /> });
-const DashboardHandoutsSection = dynamic(() => import('../components/dashboard/sections/DashboardHandoutsSection').then(mod => mod.DashboardHandoutsSection), { loading: () => <Skeleton className="h-64 w-full rounded-3xl" /> });
-const DashboardResourcesSection = dynamic(() => import('../components/dashboard/sections/DashboardResourcesSection').then(mod => mod.DashboardResourcesSection), { loading: () => <Skeleton className="h-64 w-full rounded-3xl" /> });
+import { DashboardHomeSection } from '../components/dashboard/sections/DashboardHomeSection';
+import { DashboardAboutSection } from '../components/dashboard/sections/DashboardAboutSection';
+import { DashboardEventsSection } from '../components/dashboard/sections/DashboardEventsSection';
+import { DashboardNoticesSection } from '../components/dashboard/sections/DashboardNoticesSection';
+import { DashboardPanelSection } from '../components/dashboard/sections/DashboardPanelSection';
+import { DashboardGallerySection } from '../components/dashboard/sections/DashboardGallerySection';
+import DashboardArticlesSection from '../components/dashboard/sections/DashboardArticlesSection';
+import { DashboardSiteSection } from '../components/dashboard/sections/DashboardSiteSection';
+import { DashboardMemberManagementSection } from '../components/dashboard/sections/DashboardMemberManagementSection';
+import { DashboardEcMemberManagementSection } from '../components/dashboard/sections/DashboardEcMemberManagementSection';
+import { FoodManagementSection } from '../components/dashboard/sections/FoodManagementSection';
+import { ChallengeManagementSection } from '../components/dashboard/sections/ChallengeManagementSection';
+import { DashboardAuditLogsSection } from '../components/dashboard/sections/DashboardAuditLogsSection';
+import { EmailConfirmationsSection } from '../components/dashboard/sections/EmailConfirmationsSection';
+import { EventRegistrationsSection } from '../components/dashboard/sections/EventRegistrationsSection';
+import { CaParticipantsSection } from '../components/dashboard/sections/CaParticipantsSection';
+import { StatisticsSection } from '../components/dashboard/sections/StatisticsSection';
+import { TicketPurchaseSection } from '../components/dashboard/sections/TicketPurchaseSection';
+import { DashboardHandoutsSection } from '../components/dashboard/sections/DashboardHandoutsSection';
+import { DashboardResourcesSection } from '../components/dashboard/sections/DashboardResourcesSection';
 
 import ConfirmModal from '../components/ConfirmModal';
 import Image from 'next/image';
@@ -551,28 +550,32 @@ const AdminDashboard = () => {
 
       // If they don't exist yet as a member record, create/locate their auth account
       if (!userId) {
-        if (!memberData.hasAccount && (memberData.register_method === 'phone_only' || memberData.email) && memberData.phone) {
-          showToast("Creating user account...", "info");
+        if (!memberData.hasAccount && (memberData.email || memberData.phone)) {
+          const accountEmail = memberData.register_method === 'phone_only' ? null : finalEmail;
+          const accountPhone = memberData.phone || '01700000000';
+          const accountPassword = memberData.phone || '12345678';
+
           const createRes = await fetch('/api/admin/create-user', {
             method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              email: memberData.register_method === 'phone_only' ? null : finalEmail,
-              phone: memberData.phone,
-              password: memberData.phone, // Password is the phone number
+              email: accountEmail,
+              phone: accountPhone,
+              password: accountPassword,
               fullName: memberData.full_name,
               usePhoneAsLogin: memberData.register_method === 'phone_only'
             }),
           });
 
           const createData = await createRes.json();
-          if (!createRes.ok) {
-            throw new Error(createData.error || 'Failed to create user account');
+          if (createRes.ok && (createData.userId || createData.user?.id)) {
+            userId = createData.userId || createData.user?.id;
+          } else {
+            console.warn("Account creation endpoint response:", createData);
+            if (createData.error) {
+              throw new Error(createData.error);
+            }
           }
-          userId = createData.userId || createData.user?.id;
-          showToast("User account created!", "success");
         } else if (memberData.hasAccount && (memberData.register_method === 'phone_only' || memberData.email)) {
           // If user has an account, find their ID by email or virtual phone email
           let userData = null;
@@ -956,7 +959,7 @@ const AdminDashboard = () => {
 
   useEffect(() => {
     if (content) {
-      const cloned = JSON.parse(JSON.stringify(content));
+      const cloned = safeJsonClone(content);
       if (!cloned.resources || !Array.isArray(cloned.resources) || cloned.resources.length === 0) {
         cloned.resources = DEFAULT_CONTENT.resources || [];
       }

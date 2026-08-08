@@ -269,11 +269,20 @@ const Events = () => {
         category = norm.includes("wall magazine") ? "Exhibition track" : "Solo track";
       }
 
+      let allowedCategories = Array.isArray(seg.allowedCategories) && seg.allowedCategories.length > 0
+        ? seg.allowedCategories
+        : (norm.includes("escape room")
+            ? ["Secondary", "Higher Secondary"]
+            : norm.includes("truss")
+              ? ["Primary", "Junior"]
+              : ["Primary", "Junior", "Secondary", "Higher Secondary"]);
+
       return {
         id: segId,
         name: seg.name || segId,
         tagline: seg.tagline || "",
         category,
+        allowedCategories,
         icon: typeof seg.icon === 'string' ? getSegmentIcon(seg.icon) : (seg.icon || Trophy),
         isTeamEvent: isTeam,
         teamSize: isTeam ? (seg.teamSize || 3) : 1,

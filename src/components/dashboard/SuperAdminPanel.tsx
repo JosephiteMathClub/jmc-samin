@@ -1104,17 +1104,25 @@ export function InterEventRegistrationConfigEditor({ showToast }: { showToast: (
           return segs.map((s) => {
             const name = s.name || s.id || '';
             const norm = name.toLowerCase();
+            let allowedCategories = Array.isArray(s.allowedCategories) && s.allowedCategories.length > 0
+              ? s.allowedCategories
+              : (norm.includes('escape room') 
+                  ? ["Secondary", "Higher Secondary"] 
+                  : norm.includes('truss') 
+                    ? ["Primary", "Junior"] 
+                    : ["Primary", "Junior", "Secondary", "Higher Secondary"]);
+
             if (norm.includes('murder mystery') || norm.includes('wall magazine')) {
               let category = s.category || (norm.includes('wall magazine') ? 'Exhibition track' : 'Solo track');
               if (category.toLowerCase() === 'team track') {
                 category = norm.includes('wall magazine') ? 'Exhibition track' : 'Solo track';
               }
-              return { ...s, isTeamEvent: false, teamSize: 1, category };
+              return { ...s, isTeamEvent: false, teamSize: 1, category, allowedCategories };
             }
             if (norm.includes('escape room') || norm.includes('truss')) {
-              return { ...s, isTeamEvent: true, teamSize: s.teamSize || 3, category: s.category || 'Team track' };
+              return { ...s, isTeamEvent: true, teamSize: s.teamSize || 3, category: s.category || 'Team track', allowedCategories };
             }
-            return s;
+            return { ...s, allowedCategories };
           });
         };
 
@@ -1818,6 +1826,58 @@ export function InterEventRegistrationConfigEditor({ showToast }: { showToast: (
                           />
                           <span className="text-xs font-bold text-emerald-400">Free Entry Segment (BDT 0)</span>
                         </label>
+                      </div>
+
+                      {/* Category Eligibility Selection */}
+                      <div className="space-y-2 py-2 border-b border-white/5">
+                        <label className="text-[10px] font-black uppercase tracking-wider text-pink-400 font-mono flex items-center justify-between flex-wrap gap-1">
+                          <span>Allowed Category Restrictions</span>
+                          <span className="text-[9px] text-zinc-400 font-normal">
+                            {(!seg.allowedCategories || seg.allowedCategories.length === 0 || seg.allowedCategories.length === 4)
+                              ? "Available for All Categories (Primary, Junior, Secondary, Higher Secondary)"
+                              : `Selected (${seg.allowedCategories.length}): ${seg.allowedCategories.join(', ')}`}
+                          </span>
+                        </label>
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                          {[
+                            { id: "Primary", label: "Primary", classRange: "Class 3–5" },
+                            { id: "Junior", label: "Junior", classRange: "Class 6–8" },
+                            { id: "Secondary", label: "Secondary", classRange: "Class 9–10" },
+                            { id: "Higher Secondary", label: "Higher Secondary", classRange: "Class 11–12 / HSC" }
+                          ].map(cat => {
+                            const allowedList = Array.isArray(seg.allowedCategories) && seg.allowedCategories.length > 0 
+                              ? seg.allowedCategories 
+                              : ["Primary", "Junior", "Secondary", "Higher Secondary"];
+                            const isChecked = allowedList.includes(cat.id);
+
+                            return (
+                              <button
+                                key={cat.id}
+                                type="button"
+                                onClick={() => {
+                                  let nextList: string[];
+                                  if (isChecked) {
+                                    nextList = allowedList.filter((c: string) => c !== cat.id);
+                                  } else {
+                                    nextList = [...allowedList, cat.id];
+                                  }
+                                  handleUpdateSegment(idx, 'allowedCategories', nextList);
+                                }}
+                                className={`px-3 py-2 rounded-xl text-xs font-bold transition-all border flex flex-col items-start gap-0.5 cursor-pointer text-left ${
+                                  isChecked 
+                                    ? 'bg-pink-500/15 border-pink-500/40 text-white' 
+                                    : 'bg-black/40 border-white/5 text-zinc-500 hover:border-white/20'
+                                }`}
+                              >
+                                <div className="flex items-center gap-1.5 w-full justify-between">
+                                  <span className={isChecked ? 'text-pink-300' : 'text-zinc-400'}>{cat.label}</span>
+                                  <span className={`w-2 h-2 rounded-full ${isChecked ? 'bg-pink-400' : 'bg-zinc-700'}`} />
+                                </div>
+                                <span className="text-[9px] font-mono text-zinc-400">{cat.classRange}</span>
+                              </button>
+                            );
+                          })}
+                        </div>
                       </div>
 
                       {/* Banner Image URL and File Upload */}

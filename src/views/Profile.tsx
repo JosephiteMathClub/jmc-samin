@@ -180,6 +180,24 @@ const Profile = () => {
   useMathJax();
   
   const [isEditing, setIsEditing] = useState(false);
+  const isEditingRef = useRef(isEditing);
+
+  const startEditing = React.useCallback(() => {
+    isEditingRef.current = true;
+    setIsEditing(true);
+    setUserPhone(prev => (prev === 'N/A' || prev === 'n/a' ? '' : prev));
+  }, []);
+
+  const stopEditing = React.useCallback(() => {
+    isEditingRef.current = false;
+    setIsEditing(false);
+    setShowPhoneNoticeBanner(false);
+  }, []);
+
+  useEffect(() => {
+    isEditingRef.current = isEditing;
+  }, [isEditing]);
+
   const [showPhoneNoticeBanner, setShowPhoneNoticeBanner] = useState(false);
   const [activeSubTab, setActiveSubTab] = useState<'profile' | 'handouts'>('profile');
   const [fullName, setFullName] = useState('');
@@ -194,7 +212,7 @@ const Profile = () => {
       const updatePhone = params.get('updatePhone') || params.get('phone_notice');
 
       if (action === 'update-phone' || action === 'update_phone' || edit === 'true' || updatePhone === 'true') {
-        setIsEditing(true);
+        startEditing();
         setShowPhoneNoticeBanner(true);
       }
     }
@@ -658,8 +676,8 @@ const Profile = () => {
         .maybeSingle();
 
       const foundPhone = ecData?.phone || memberData?.phone || profileData?.phone || user?.user_metadata?.phone || '';
-      if (foundPhone) {
-        setUserPhone(foundPhone);
+      if (foundPhone && !isEditingRef.current) {
+        setUserPhone(foundPhone === 'N/A' || foundPhone === 'n/a' ? '' : foundPhone);
       }
       
       const isUserEc = (ecData !== null) || 
@@ -690,9 +708,11 @@ const Profile = () => {
         const mId = ecData?.member_id || memberData?.member_id || null;
         finalMId = mId;
         setMemberId(mId);
-        setMemberClass(ecData?.class || memberData?.class || '');
-        setMemberSection(ecData?.section || memberData?.section || '');
-        setMemberRoll(ecData?.roll || memberData?.roll || '');
+        if (!isEditingRef.current) {
+          setMemberClass(ecData?.class || memberData?.class || '');
+          setMemberSection(ecData?.section || memberData?.section || '');
+          setMemberRoll(ecData?.roll || memberData?.roll || '');
+        }
         if (mId) fetchAchievements(mId);
       } else if (memberData) {
         setIsMember(true);
@@ -713,9 +733,11 @@ const Profile = () => {
         const mId = memberData.member_id || null;
         finalMId = mId;
         setMemberId(mId);
-        setMemberClass(memberData.class || '');
-        setMemberSection(memberData.section || '');
-        setMemberRoll(memberData.roll || '');
+        if (!isEditingRef.current) {
+          setMemberClass(memberData.class || '');
+          setMemberSection(memberData.section || '');
+          setMemberRoll(memberData.roll || '');
+        }
         if (mId) fetchAchievements(mId);
       } else {
         // No member record found
@@ -723,9 +745,11 @@ const Profile = () => {
         setIsEc(false);
         setVerified('no');
         setMemberId(null);
-        setMemberClass('');
-        setMemberSection('');
-        setMemberRoll('');
+        if (!isEditingRef.current) {
+          setMemberClass('');
+          setMemberSection('');
+          setMemberRoll('');
+        }
       }
       
       await fetchRegisteredEventsList(finalMId);
@@ -826,14 +850,13 @@ const Profile = () => {
         });
     });
 
-    // Aggressive polling fallback - check every 1 second to ensure instant updates
-    // This is the PRIMARY mechanism since real-time may not be available in all contexts
+    // Polling fallback - check every 5 seconds to ensure updates when not editing
     const fallbackPollInterval = setInterval(() => {
-      if (isMounted) {
+      if (isMounted && !isEditingRef.current) {
         fetchRegisteredEventsList();
         checkMemberStatus();
       }
-    }, 1000);
+    }, 5000);
 
     return () => {
       isMounted = false;
@@ -849,19 +872,21 @@ const Profile = () => {
       const currentPath = window.location.pathname + window.location.search;
       router.push('/login?redirect=' + encodeURIComponent(currentPath));
     }
-    if (user) {
+    if (user && !isEditingRef.current) {
       fetchRegisteredEventsList();
       checkMemberStatus();
     }
-    if (profile) {
+    if (profile && !isEditingRef.current) {
       setFullName(profile.full_name || '');
     }
 
     // Refresh profile when window gains focus (e.g. after returning from registration tab)
     const handleFocus = () => {
-      refreshProfile();
-      checkMemberStatus();
-      fetchRegisteredEventsList();
+      if (!isEditingRef.current) {
+        refreshProfile();
+        checkMemberStatus();
+        fetchRegisteredEventsList();
+      }
     };
 
     window.addEventListener('focus', handleFocus);
@@ -949,8 +974,7 @@ const Profile = () => {
 
       await refreshProfile();
       setSuccess(true);
-      setIsEditing(false);
-      setShowPhoneNoticeBanner(false);
+      stopEditing();
 
       if (typeof window !== 'undefined' && window.location.search.includes('action=update-phone')) {
         window.history.replaceState({}, '', window.location.pathname);
@@ -1033,6 +1057,17 @@ const Profile = () => {
   const isRealGeneralMember = React.useMemo(() => {
     return isGeneralMember && !isEc;
   }, [isGeneralMember, isEc]);
+
+  const hasGeneralMemberPrivileges = React.useMemo(() => {
+    if (isEc || isAdmin) return true;
+    return isGeneralMember;
+  }, [isEc, isAdmin, isGeneralMember]);
+
+  useEffect(() => {
+    if (!hasGeneralMemberPrivileges && activeSubTab === 'handouts') {
+      setActiveSubTab('profile');
+    }
+  }, [hasGeneralMemberPrivileges, activeSubTab]);
 
   const unverifiedRegistrations = React.useMemo(() => {
     return registeredEventsList;
@@ -2117,15 +2152,22 @@ const Profile = () => {
                       </button>
                     )}
                       <button 
-                        onClick={() => setIsEditing(!isEditing)}
-                      className="w-full py-4 rounded-2xl bg-white/5 border border-white/10 text-white font-bold hover:bg-white/10 transition-all flex items-center justify-center gap-2"
-                    >
-                      <Settings className="w-4 h-4" />
-                      Edit Profile
-                    </button>
+                        type="button"
+                        onClick={() => {
+                          if (isEditing) {
+                            stopEditing();
+                          } else {
+                            startEditing();
+                          }
+                        }}
+                        className="w-full py-4 rounded-2xl bg-white/5 border border-white/10 text-white font-bold hover:bg-white/10 transition-all flex items-center justify-center gap-2 cursor-pointer"
+                      >
+                        <Settings className="w-4 h-4" />
+                        {isEditing ? 'Cancel Editing' : 'Edit Profile'}
+                      </button>
                     <button 
                       onClick={handleSignOut}
-                      className="w-full py-4 rounded-2xl bg-red-500/10 border border-red-500/20 text-red-500 font-bold hover:bg-red-500/20 transition-all flex items-center justify-center gap-2"
+                      className="w-full py-4 rounded-2xl bg-red-500/10 border border-red-500/20 text-red-500 font-bold hover:bg-red-500/20 transition-all flex items-center justify-center gap-2 cursor-pointer"
                     >
                       <LogOut className="w-4 h-4" />
                       Sign Out
@@ -2138,13 +2180,13 @@ const Profile = () => {
             {/* Main Content */}
             <div className="lg:col-span-8 space-y-8">
               <ScrollReveal direction="right" delay={0.2}>
-                {isGeneralMember && isRealGeneralMember && (
+                {hasGeneralMemberPrivileges && (
                   <div className="flex border-b border-white/10 gap-8 mb-6">
                     <button
                       type="button"
                       onClick={() => {
                         setActiveSubTab('profile');
-                        setIsEditing(false);
+                        stopEditing();
                       }}
                       className={`pb-4 text-xs font-bold uppercase tracking-widest transition-all cursor-pointer ${
                         activeSubTab === 'profile'
@@ -2158,7 +2200,7 @@ const Profile = () => {
                       type="button"
                       onClick={() => {
                         setActiveSubTab('handouts');
-                        setIsEditing(false);
+                        stopEditing();
                       }}
                       className={`pb-4 text-xs font-bold uppercase tracking-widest transition-all cursor-pointer flex items-center gap-2 ${
                         activeSubTab === 'handouts'
@@ -2172,7 +2214,7 @@ const Profile = () => {
                   </div>
                 )}
 
-                {activeSubTab === 'profile' || !isRealGeneralMember ? (
+                {activeSubTab === 'profile' || !hasGeneralMemberPrivileges ? (
                   <div className="p-8 md:p-12 rounded-[40px] bg-white/[0.03] border border-white/10 backdrop-blur-xl">
                     <AnimatePresence mode="wait">
                     {isEditing ? (
@@ -2188,11 +2230,8 @@ const Profile = () => {
                           <h3 className="text-2xl font-bold text-white">Edit Profile</h3>
                           <button 
                             type="button"
-                            onClick={() => {
-                              setIsEditing(false);
-                              setShowPhoneNoticeBanner(false);
-                            }}
-                            className="text-sm font-bold text-zinc-500 hover:text-white transition-colors"
+                            onClick={stopEditing}
+                            className="text-sm font-bold text-zinc-500 hover:text-white transition-colors cursor-pointer"
                           >
                             Cancel
                           </button>
@@ -2316,7 +2355,7 @@ const Profile = () => {
                             <button
                               type="button"
                               onClick={() => {
-                                setIsEditing(true);
+                                startEditing();
                                 setShowPhoneNoticeBanner(true);
                               }}
                               className="px-4 py-2 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-400 text-xs font-bold rounded-xl transition-all cursor-pointer flex items-center gap-1.5"

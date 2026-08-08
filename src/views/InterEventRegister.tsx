@@ -21,11 +21,14 @@ import {
   Trophy, 
   CheckCircle2, 
   AlertCircle, 
+  ShieldCheck, 
   Phone, 
   QrCode, 
   Mail, 
   Calendar, 
   RefreshCw,
+  Database,
+  Search,
   Zap,
   Brain,
   FileText,
@@ -137,6 +140,33 @@ function getSegmentColorStyle(cat: string) {
   return "from-amber-500/10 to-yellow-500/10 text-amber-400 border-amber-500/20";
 }
 
+export function getCategoryFromClass(classVal: string): string | null {
+  if (!classVal) return null;
+  const numClass = parseInt(classVal, 10);
+  if (isNaN(numClass)) {
+    const lower = classVal.toLowerCase();
+    if (lower.includes('primary') || lower.includes('3') || lower.includes('4') || lower.includes('5')) return 'Primary';
+    if (lower.includes('junior') || lower.includes('6') || lower.includes('7') || lower.includes('8')) return 'Junior';
+    if (lower.includes('secondary') && !lower.includes('higher')) return 'Secondary';
+    if (lower.includes('higher') || lower.includes('hsc') || lower.includes('11') || lower.includes('12')) return 'Higher Secondary';
+    return null;
+  }
+  if (numClass >= 3 && numClass <= 5) return "Primary";
+  if (numClass >= 6 && numClass <= 8) return "Junior";
+  if (numClass >= 9 && numClass <= 10) return "Secondary";
+  if (numClass >= 11 && numClass <= 12) return "Higher Secondary";
+  return null;
+}
+
+export function getCategoryClassRange(categories: string[]): string {
+  const ranges: string[] = [];
+  if (categories.includes("Primary")) ranges.push("Primary: Class 3–5");
+  if (categories.includes("Junior")) ranges.push("Junior: Class 6–8");
+  if (categories.includes("Secondary")) ranges.push("Secondary: Class 9–10");
+  if (categories.includes("Higher Secondary")) ranges.push("Higher Secondary: Class 11–12");
+  return ranges.join(", ");
+}
+
 // Hardcoded segments catalog as pristine baseline
 export const FREE_INTER_SEGMENTS = new Set([
   "Math Olympiad (Find-based)",
@@ -153,37 +183,39 @@ export function isFreeInterSegment(name: string): boolean {
 }
 
 const DEFAULT_INTER_SEGMENTS = [
-  { id: "Math Olympiad (Find-based)", name: "Math Olympiad (Find-based)", tagline: "Solve numeric mysteries and discover deep hidden structural patterns.", category: "Solo track", icon: Trophy, color: "from-amber-500/10 to-yellow-500/10 text-amber-400 border-amber-500/20" },
-  { id: "Math Olympiad (Proof-based)", name: "Math Olympiad (Proof-based)", tagline: "Draft elegant formal proofs and logically sound explanations.", category: "Solo track", icon: FileText, color: "from-blue-500/10 to-cyan-500/10 text-blue-400 border-blue-500/20" },
-  { id: "IQ Test", name: "IQ Test", tagline: "Race against the clock in analytical speed reasoning.", category: "Solo track", icon: Brain, color: "from-pink-500/10 to-rose-500/10 text-pink-400 border-pink-500/20" },
-  { id: "Human Calculator", name: "Human Calculator", tagline: "Unleash super-speed mental arithmetic and calculation loops.", category: "Solo track", icon: Zap, color: "from-green-500/10 to-emerald-500/10 text-green-400 border-green-500/20" },
-  { id: "Genesis", name: "Genesis", tagline: "Interactive math design and scientific origin-based discovery.", category: "Solo track", icon: Sparkles, color: "from-purple-500/10 to-violet-500/10 text-purple-400 border-purple-500/20" },
-  { id: "Geometry Dash", name: "Geometry Dash", tagline: "Navigate space calculations, angle proofs, and vector mazes.", category: "Solo track", icon: Compass, color: "from-indigo-500/10 to-blue-500/10 text-indigo-400 border-indigo-500/20" },
-  { id: "Probability Pressure", name: "Probability Pressure", tagline: "Calculate rapid-fire odds and stochastic outcomes under stress.", category: "Solo track", icon: Timer, color: "from-red-500/10 to-orange-500/10 text-red-400 border-red-500/20" },
-  { id: "Murder Mystery", name: "Murder Mystery", tagline: "Deduce clues and crack mathematical murder mystery cases.", category: "Solo track", icon: Eye, color: "from-pink-500/10 to-purple-500/10 text-pink-400 border-pink-500/20", isTeamEvent: false, teamSize: 1 },
-  { id: "Crack the Code", name: "Crack the Code", tagline: "Deconstruct cryptographic ciphers and decode encrypted strings.", category: "Solo track", icon: Lock, color: "from-teal-500/10 to-emerald-500/10 text-teal-400 border-teal-500/20" },
-  { id: "Complex Calamity", name: "Complex Calamity", tagline: "Grapple with complex numbers, imaginary axes, and fractals.", category: "Solo track", icon: HelpCircle, color: "from-amber-500/10 to-red-500/10 text-amber-400 border-amber-500/20" },
-  { id: "Sudoku", name: "Sudoku", tagline: "Solve grid placement challenges with extreme speed precision.", category: "Solo track", icon: Grid, color: "from-blue-500/10 to-indigo-500/10 text-blue-400 border-blue-500/20" },
-  { id: "Rubik’s Cube Showdown", name: "Rubik’s Cube Showdown", tagline: "Manipulate cubic modules and solve cubes in record times.", category: "Solo track", icon: Layers, color: "from-emerald-500/10 to-teal-500/10 text-emerald-400 border-emerald-500/20" },
-  { id: "5 min Professor", name: "5 min Professor", tagline: "Deliver a lightning lecture explaining abstract concepts simply.", category: "Solo track", icon: Award, color: "from-yellow-500/10 to-orange-500/10 text-yellow-400 border-yellow-500/20" },
-  { id: "Calculus Bee", name: "Calculus Bee", tagline: "Solve derivatives and integral equations in real-time playoffs.", category: "Solo track", icon: Activity, color: "from-red-500/10 to-rose-500/10 text-red-400 border-red-500/20" },
-  { id: "Escape Room", name: "Escape Room", tagline: "Decrypt physical room locks and spatial logic systems. (Team Event • Class 9-12)", category: "Team track", icon: Home, color: "from-violet-500/10 to-fuchsia-500/10 text-violet-400 border-violet-500/20" },
-  { id: "Combi Verse", name: "Combi Verse", tagline: "Navigate combinatorics, permutations, graph theory networks.", category: "Solo track", icon: Share2, color: "from-cyan-500/10 to-blue-500/10 text-cyan-400 border-cyan-500/20" },
-  { id: "Math Memes", name: "Math Memes", tagline: "Design humorous and intellectually witty math memes.", category: "Creative track", icon: Smile, color: "from-yellow-500/10 to-green-500/10 text-yellow-400 border-yellow-500/20" },
-  { id: "Math Article", name: "Math Article", tagline: "Draft a well-researched article on advanced mathematical theories.", category: "Writing track", icon: BookOpen, color: "from-zinc-500/10 to-slate-500/10 text-zinc-400 border-zinc-500/20" },
-  { id: "Math Vision", name: "Math Vision", tagline: "Design digital graphic art illustrating geometric formulas.", category: "Creative track", icon: ImageIcon, color: "from-pink-500/10 to-purple-500/10 text-pink-400 border-pink-500/20" },
-  { id: "Math Drawing", name: "Math Drawing", tagline: "Create pristine hand-drawn sketches of golden ratios and fractals.", category: "Creative track", icon: Edit, color: "from-purple-500/10 to-indigo-500/10 text-purple-400 border-purple-500/20" },
-  { id: "Truss", name: "Truss", tagline: "Build high-load structurally sound physical bridge trusses. (Team Event • Class 3-8)", category: "Team track", icon: Construction, color: "from-amber-500/10 to-orange-500/10 text-amber-400 border-amber-500/20" },
-  { id: "Wall Magazine Display", name: "Wall Magazine Display", tagline: "Design physical wall posters mapping historical math breakthroughs.", category: "Exhibition track", icon: Layout, color: "from-emerald-500/10 to-green-500/10 text-emerald-400 border-emerald-500/20" }
+  { id: "Math Olympiad (Find-based)", name: "Math Olympiad (Find-based)", tagline: "Solve numeric mysteries and discover deep hidden structural patterns.", category: "Solo track", icon: Trophy, color: "from-amber-500/10 to-yellow-500/10 text-amber-400 border-amber-500/20", allowedCategories: ["Primary", "Junior", "Secondary", "Higher Secondary"], isTeamEvent: false, teamSize: 1 },
+  { id: "Math Olympiad (Proof-based)", name: "Math Olympiad (Proof-based)", tagline: "Draft elegant formal proofs and logically sound explanations.", category: "Solo track", icon: FileText, color: "from-blue-500/10 to-cyan-500/10 text-blue-400 border-blue-500/20", allowedCategories: ["Secondary", "Higher Secondary"], isTeamEvent: false, teamSize: 1 },
+  { id: "IQ Test", name: "IQ Test", tagline: "Race against the clock in analytical speed reasoning.", category: "Solo track", icon: Brain, color: "from-pink-500/10 to-rose-500/10 text-pink-400 border-pink-500/20", allowedCategories: ["Primary", "Junior", "Secondary", "Higher Secondary"], isTeamEvent: false, teamSize: 1 },
+  { id: "Human Calculator", name: "Human Calculator", tagline: "Unleash super-speed mental arithmetic and calculation loops.", category: "Solo track", icon: Zap, color: "from-green-500/10 to-emerald-500/10 text-green-400 border-green-500/20", allowedCategories: ["Primary", "Junior"], isTeamEvent: false, teamSize: 1 },
+  { id: "Genesis", name: "Genesis", tagline: "Interactive math design and scientific origin-based discovery.", category: "Solo track", icon: Sparkles, color: "from-purple-500/10 to-violet-500/10 text-purple-400 border-purple-500/20", allowedCategories: ["Primary", "Junior", "Secondary", "Higher Secondary"], isTeamEvent: false, teamSize: 1 },
+  { id: "Geometry Dash", name: "Geometry Dash", tagline: "Navigate space calculations, angle proofs, and vector mazes.", category: "Solo track", icon: Compass, color: "from-indigo-500/10 to-blue-500/10 text-indigo-400 border-indigo-500/20", allowedCategories: ["Secondary", "Higher Secondary"], isTeamEvent: false, teamSize: 1 },
+  { id: "Probability Pressure", name: "Probability Pressure", tagline: "Calculate rapid-fire odds and stochastic outcomes under stress.", category: "Solo track", icon: Timer, color: "from-red-500/10 to-orange-500/10 text-red-400 border-red-500/20", allowedCategories: ["Secondary", "Higher Secondary"], isTeamEvent: false, teamSize: 1 },
+  { id: "Murder Mystery", name: "Murder Mystery", tagline: "Deduce clues and crack mathematical murder mystery cases.", category: "Solo track", icon: Eye, color: "from-pink-500/10 to-purple-500/10 text-pink-400 border-pink-500/20", isTeamEvent: false, teamSize: 1, allowedCategories: ["Primary", "Junior", "Secondary", "Higher Secondary"] },
+  { id: "Crack the Code", name: "Crack the Code", tagline: "Deconstruct cryptographic ciphers and decode encrypted strings.", category: "Solo track", icon: Lock, color: "from-teal-500/10 to-emerald-500/10 text-teal-400 border-teal-500/20", allowedCategories: ["Primary", "Junior", "Secondary", "Higher Secondary"], isTeamEvent: false, teamSize: 1 },
+  { id: "Complex Calamity", name: "Complex Calamity", tagline: "Grapple with complex numbers, imaginary axes, and fractals.", category: "Solo track", icon: HelpCircle, color: "from-amber-500/10 to-red-500/10 text-amber-400 border-amber-500/20", allowedCategories: ["Secondary", "Higher Secondary"], isTeamEvent: false, teamSize: 1 },
+  { id: "Sudoku", name: "Sudoku", tagline: "Solve grid placement challenges with extreme speed precision.", category: "Solo track", icon: Grid, color: "from-blue-500/10 to-indigo-500/10 text-blue-400 border-blue-500/20", allowedCategories: ["Primary", "Junior", "Secondary", "Higher Secondary"], isTeamEvent: false, teamSize: 1 },
+  { id: "Rubik’s Cube Showdown", name: "Rubik’s Cube Showdown", tagline: "Manipulate cubic modules and solve cubes in record times.", category: "Solo track", icon: Layers, color: "from-emerald-500/10 to-teal-500/10 text-emerald-400 border-emerald-500/20", allowedCategories: ["Primary", "Junior", "Secondary", "Higher Secondary"], isTeamEvent: false, teamSize: 1 },
+  { id: "5 min Professor", name: "5 min Professor", tagline: "Deliver a lightning lecture explaining abstract concepts simply.", category: "Solo track", icon: Award, color: "from-yellow-500/10 to-orange-500/10 text-yellow-400 border-yellow-500/20", allowedCategories: ["Secondary", "Higher Secondary"], isTeamEvent: false, teamSize: 1 },
+  { id: "Calculus Bee", name: "Calculus Bee", tagline: "Solve derivatives and integral equations in real-time playoffs.", category: "Solo track", icon: Activity, color: "from-red-500/10 to-rose-500/10 text-red-400 border-red-500/20", allowedCategories: ["Secondary", "Higher Secondary"], isTeamEvent: false, teamSize: 1 },
+  { id: "Combi Verse", name: "Combi Verse", tagline: "Navigate combinatorics, permutations, graph theory networks.", category: "Solo track", icon: Share2, color: "from-cyan-500/10 to-blue-500/10 text-cyan-400 border-cyan-500/20", allowedCategories: ["Secondary", "Higher Secondary"], isTeamEvent: false, teamSize: 1 },
+  { id: "Singularity", name: "Singularity", tagline: "Explore boundary-pushing theoretical physics & abstract math problems.", category: "Solo track", icon: Sparkles, color: "from-purple-500/10 to-indigo-500/10 text-purple-400 border-purple-500/20", allowedCategories: ["Secondary", "Higher Secondary"], isTeamEvent: false, teamSize: 1 },
+  { id: "Escape Room", name: "Escape Room", tagline: "Decrypt physical room locks and spatial logic systems (2 members).", category: "Team track", icon: Home, color: "from-violet-500/10 to-fuchsia-500/10 text-violet-400 border-violet-500/20", allowedCategories: ["Primary", "Junior", "Secondary", "Higher Secondary"], isTeamEvent: true, teamSize: 2 },
+  { id: "Truss", name: "Truss", tagline: "Build high-load structurally sound physical bridge trusses (2 members).", category: "Team track", icon: Construction, color: "from-amber-500/10 to-orange-500/10 text-amber-400 border-amber-500/20", allowedCategories: ["Primary", "Junior", "Secondary", "Higher Secondary"], isTeamEvent: true, teamSize: 2 },
+  { id: "Wall Magazine Display", name: "Wall Magazine Display", tagline: "Design physical wall posters mapping historical math breakthroughs (2 members).", category: "Team track", icon: Layout, color: "from-emerald-500/10 to-green-500/10 text-emerald-400 border-emerald-500/20", allowedCategories: ["Primary", "Junior", "Secondary", "Higher Secondary"], isTeamEvent: true, teamSize: 2 },
+  { id: "Tic-Tac-Toe", name: "Tic-Tac-Toe", tagline: "Strategic mathematical Tic-Tac-Toe grid playoffs (3 members).", category: "Team track", icon: Grid, color: "from-blue-500/10 to-cyan-500/10 text-blue-400 border-blue-500/20", allowedCategories: ["Primary", "Secondary", "Higher Secondary"], isTeamEvent: true, teamSize: 3 },
+  { id: "Math Memes", name: "Math Memes", tagline: "Design humorous and intellectually witty math memes.", category: "Creative track", icon: Smile, color: "from-yellow-500/10 to-green-500/10 text-yellow-400 border-yellow-500/20", allowedCategories: ["Primary", "Junior", "Secondary", "Higher Secondary"], isTeamEvent: false, teamSize: 1 },
+  { id: "Math Article", name: "Math Article", tagline: "Draft a well-researched article on advanced mathematical theories.", category: "Writing track", icon: BookOpen, color: "from-zinc-500/10 to-slate-500/10 text-zinc-400 border-zinc-500/20", allowedCategories: ["Primary", "Junior", "Secondary", "Higher Secondary"], isTeamEvent: false, teamSize: 1 },
+  { id: "Math Vision", name: "Math Vision", tagline: "Design digital graphic art illustrating geometric formulas.", category: "Creative track", icon: ImageIcon, color: "from-pink-500/10 to-purple-500/10 text-pink-400 border-pink-500/20", allowedCategories: ["Primary", "Junior", "Secondary", "Higher Secondary"], isTeamEvent: false, teamSize: 1 },
+  { id: "Math Drawing", name: "Math Drawing", tagline: "Create pristine hand-drawn sketches of golden ratios and fractals.", category: "Creative track", icon: Edit, color: "from-purple-500/10 to-indigo-500/10 text-purple-400 border-purple-500/20", allowedCategories: ["Primary", "Junior", "Secondary", "Higher Secondary"], isTeamEvent: false, teamSize: 1 }
 ];
 
 export function isTeamSegment(id: string, segmentList?: any[]): boolean {
   if (!id) return false;
   const norm = id.trim().toLowerCase();
-  if (norm.includes("murder mystery") || norm.includes("wall magazine")) {
+  if (norm.includes("murder mystery")) {
     return false;
   }
-  if (norm.includes("escape room") || norm.includes("truss")) {
+  if (norm.includes("escape room") || norm.includes("truss") || norm.includes("wall magazine") || norm.includes("tic-tac-toe") || norm.includes("tic tac toe")) {
     return true;
   }
   const list = (segmentList && Array.isArray(segmentList) && segmentList.length > 0) ? segmentList : DEFAULT_INTER_SEGMENTS;
@@ -192,6 +224,23 @@ export function isTeamSegment(id: string, segmentList?: any[]): boolean {
     return seg.isTeamEvent;
   }
   return false;
+}
+
+export function getSegmentTeamSize(id: string, segmentList?: any[]): number {
+  if (!id) return 1;
+  const norm = id.trim().toLowerCase();
+  if (norm.includes("tic-tac-toe") || norm.includes("tic tac toe") || norm.includes("tictactoe")) {
+    return 3;
+  }
+  if (norm.includes("escape room") || norm.includes("truss") || norm.includes("wall magazine")) {
+    return 2;
+  }
+  const list = (segmentList && Array.isArray(segmentList) && segmentList.length > 0) ? segmentList : DEFAULT_INTER_SEGMENTS;
+  const seg = list.find((s: any) => (s.id || s.name) === id);
+  if (seg && seg.isTeamEvent) {
+    return seg.teamSize || 2;
+  }
+  return 1;
 }
 
 export default function InterEventRegister() {
@@ -213,16 +262,32 @@ export default function InterEventRegister() {
     return rawList.map((s: any) => {
       const segId = s.id || s.name || "";
       const norm = segId.toLowerCase();
-      let isTeam = !!s.isTeamEvent;
-      if (norm.includes("murder mystery") || norm.includes("wall magazine")) {
+      let isTeam = typeof s.isTeamEvent === 'boolean' ? s.isTeamEvent : false;
+      if (norm.includes("murder mystery")) {
         isTeam = false;
-      } else if (norm.includes("escape room") || norm.includes("truss")) {
+      } else if (norm.includes("escape room") || norm.includes("truss") || norm.includes("wall magazine") || norm.includes("tic-tac-toe") || norm.includes("tic tac toe")) {
         isTeam = true;
       }
 
       let category = s.category || (isTeam ? "Team track" : "Solo track");
-      if (!isTeam && category.toLowerCase() === "team track") {
-        category = norm.includes("wall magazine") ? "Exhibition track" : "Solo track";
+
+      let allowedCategories = Array.isArray(s.allowedCategories) && s.allowedCategories.length > 0
+        ? s.allowedCategories
+        : (norm.includes("human calculator")
+            ? ["Primary", "Junior"]
+            : (norm.includes("tic-tac-toe") || norm.includes("tic tac toe"))
+              ? ["Primary", "Secondary", "Higher Secondary"]
+              : (norm.includes("proof") || norm.includes("5 min") || norm.includes("calculus") || norm.includes("combi") || norm.includes("singularity") || norm.includes("geometry dash") || norm.includes("complex") || norm.includes("probability"))
+                ? ["Secondary", "Higher Secondary"]
+                : ["Primary", "Junior", "Secondary", "Higher Secondary"]);
+
+      let teamSize = 1;
+      if (isTeam) {
+        if (norm.includes("tic-tac-toe") || norm.includes("tic tac toe") || norm.includes("tictactoe")) {
+          teamSize = 3;
+        } else {
+          teamSize = 2;
+        }
       }
 
       return {
@@ -230,9 +295,10 @@ export default function InterEventRegister() {
         name: s.name || segId,
         tagline: s.tagline || "",
         category,
+        allowedCategories,
         icon: typeof s.icon === 'string' ? getSegmentIconComponent(s.icon) : (s.icon || Trophy),
         isTeamEvent: isTeam,
-        teamSize: isTeam ? (s.teamSize || 3) : 1,
+        teamSize: teamSize,
         isFree: typeof s.isFree === 'boolean' ? s.isFree : isFreeInterSegment(s.name || segId),
         bannerUrl: s.bannerUrl || segmentBanners[s.name] || DEFAULT_SEGMENT_BANNERS[s.name] || DEFAULT_SEGMENT_BANNERS[segId] || "",
         description: s.description || segmentDescriptions[s.name] || DEFAULT_SEGMENT_DESCRIPTIONS[s.name] || DEFAULT_SEGMENT_DESCRIPTIONS[segId] || "",
@@ -317,6 +383,13 @@ export default function InterEventRegister() {
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [caCode, setCaCode] = useState("N/A");
+
+  // General Member 50% Discount States
+  const [isGeneralMember, setIsGeneralMember] = useState(false);
+  const [memberIdentifierInput, setMemberIdentifierInput] = useState('');
+  const [verifyingMember, setVerifyingMember] = useState(false);
+  const [memberVerifiedData, setMemberVerifiedData] = useState<{ memberName: string; memberId?: string } | null>(null);
+  const [memberVerificationError, setMemberVerificationError] = useState<string | null>(null);
   
   const [selectedSegments, setSelectedSegments] = useState<string[]>([]);
 
@@ -333,6 +406,10 @@ export default function InterEventRegister() {
   const [teamMember3Gender, setTeamMember3Gender] = useState('');
 
   const hasTeamSegment = selectedSegments.some(id => checkIsTeamSegment(id));
+  const is3MemberTeamSegment = selectedSegments.some(id => {
+    const norm = id.trim().toLowerCase();
+    return norm.includes("tic-tac-toe") || norm.includes("tic tac toe") || norm.includes("tictactoe");
+  });
 
   // Automatically reset teammate fields if team segments are deselected
   useEffect(() => {
@@ -345,28 +422,55 @@ export default function InterEventRegister() {
       setTeamMember3Class('');
       setTeamMember3Institute('');
       setTeamMember3Gender('');
+    } else if (!is3MemberTeamSegment) {
+      setTeamMember3Name('');
+      setTeamMember3Class('');
+      setTeamMember3Institute('');
+      setTeamMember3Gender('');
     }
-  }, [hasTeamSegment]);
+  }, [hasTeamSegment, is3MemberTeamSegment]);
 
-  // Helper function to validate segment class eligibility
+  // Helper function to validate segment class eligibility based on Category
   const isSegmentEligible = (segmentId: string, classVal: string): { eligible: boolean; reason?: string } => {
     if (!classVal) return { eligible: true };
-    const numClass = parseInt(classVal, 10);
 
-    if (segmentId === "Escape Room") {
-      if (isNaN(numClass) || numClass < 9 || numClass > 12) {
+    const studentCat = getCategoryFromClass(classVal);
+    const seg = INTER_SEGMENTS.find((s: any) => s.id === segmentId || s.name === segmentId);
+
+    if (seg) {
+      const allowed = Array.isArray(seg.allowedCategories) && seg.allowedCategories.length > 0 
+        ? seg.allowedCategories 
+        : null;
+
+      if (allowed && studentCat) {
+        if (!allowed.includes(studentCat)) {
+          return {
+            eligible: false,
+            reason: `${seg.name} is only available for: ${allowed.join(', ')} (${getCategoryClassRange(allowed)}). Your Class (${classVal}) belongs to ${studentCat}.`
+          };
+        }
+        return { eligible: true };
+      }
+    }
+
+    // Fallback checks
+    const numClass = parseInt(classVal, 10);
+    const norm = (segmentId || "").toLowerCase();
+
+    if (norm.includes("escape room")) {
+      if (isNaN(numClass) || (studentCat !== "Secondary" && studentCat !== "Higher Secondary")) {
         return {
           eligible: false,
-          reason: "Escape Room is for Secondary (Class 9-10) & Higher Secondary (Class 11-12)."
+          reason: "Escape Room is restricted to Secondary (Class 9-10) & Higher Secondary (Class 11-12)."
         };
       }
     }
 
-    if (segmentId === "Truss") {
-      if (isNaN(numClass) || numClass < 3 || numClass > 8) {
+    if (norm.includes("truss")) {
+      if (isNaN(numClass) || (studentCat !== "Primary" && studentCat !== "Junior")) {
         return {
           eligible: false,
-          reason: "Truss is for Primary (Class 3-5) & Secondary (Class 6-8)."
+          reason: "Truss is restricted to Primary (Class 3-5) & Junior (Class 6-8)."
         };
       }
     }
@@ -384,6 +488,7 @@ export default function InterEventRegister() {
 
   // Immediate Registration Check States
   const [checkingRegistration, setCheckingRegistration] = useState(false);
+  const [isScanningDB, setIsScanningDB] = useState(false);
   const [alreadyRegisteredEvents, setAlreadyRegisteredEvents] = useState<string[]>([]);
   const [registeredStudentName, setRegisteredStudentName] = useState<string>('');
   const [showUnselectedWarningModal, setShowUnselectedWarningModal] = useState(false);
@@ -1011,18 +1116,58 @@ export default function InterEventRegister() {
     }
   };
 
+  // Verify General Member for 50% discount
+  const handleVerifyGeneralMember = async () => {
+    const targetIdentifier = memberIdentifierInput.trim() || email.trim() || phone.trim();
+    if (!targetIdentifier) {
+      setMemberVerificationError("Please enter your registered phone number or email address.");
+      return;
+    }
+    setVerifyingMember(true);
+    setMemberVerificationError(null);
+    try {
+      const res = await fetch("/api/verify-general-member", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ identifier: targetIdentifier }),
+      });
+      const data = await res.json();
+      if (data.success && data.isMember) {
+        setIsGeneralMember(true);
+        setMemberVerifiedData({
+          memberName: data.memberName,
+          memberId: data.memberId,
+        });
+        setMemberVerificationError(null);
+      } else {
+        setIsGeneralMember(false);
+        setMemberVerifiedData(null);
+        setMemberVerificationError(data.message || "Member record not found. Please check your email or phone number.");
+      }
+    } catch (err: any) {
+      console.error("Error verifying general member:", err);
+      setIsGeneralMember(false);
+      setMemberVerifiedData(null);
+      setMemberVerificationError("Verification failed. Please try again.");
+    } finally {
+      setVerifyingMember(false);
+    }
+  };
+
   // Cost calculation
   const paidSelectedSegments = selectedSegments.filter(id => !isFreeInterSegment(id));
   const paidSoloSegments = paidSelectedSegments.filter(id => !checkIsTeamSegment(id));
   const paidTeamSegments = paidSelectedSegments.filter(id => checkIsTeamSegment(id));
 
   const soloFee = paidSoloSegments.length > 0 ? 100 : 0;
-  const teamFee = paidTeamSegments.length * 200;
-  const totalRawPrice = soloFee + teamFee;
+  const teamCount = paidTeamSegments.length;
+  const teamFee = teamCount * 200; // 1 = 200, 2 = 400, 3 = 600, 4 = 800 BDT
+
+  const totalRawPrice = teamFee + soloFee;
 
   const hasCaDiscount = false;
-  const discountAmount = 0;
-  const finalPrice = totalRawPrice;
+  const discountAmount = isGeneralMember ? Math.round(totalRawPrice * 0.5) : 0;
+  const finalPrice = Math.max(0, totalRawPrice - discountAmount);
   const isOnlyFreeSegments = selectedSegments.length > 0 && paidSelectedSegments.length === 0;
 
   // Toggle selection
@@ -1092,23 +1237,33 @@ export default function InterEventRegister() {
     }
 
     setErrorMessage("");
+    setIsScanningDB(true);
 
-    // Perform immediate registration status check
-    await checkRegistrationStatus(email, phone);
+    try {
+      // Perform immediate registration status check
+      await checkRegistrationStatus(email, phone);
 
-    // Verify if already fully registered
-    const eligibleForClass = INTER_SEGMENTS
-      .filter((seg: any) => isSegmentEligible(seg.id, className).eligible)
-      .map((seg: any) => seg.id);
+      // Verify if already fully registered
+      const eligibleForClass = INTER_SEGMENTS
+        .filter((seg: any) => isSegmentEligible(seg.id, className).eligible)
+        .map((seg: any) => seg.id);
 
-    const isFullyReg = eligibleForClass.length > 0 && eligibleForClass.every((id: string) => alreadyRegisteredEvents.includes(id));
-    
-    if (isFullyReg) {
-      setErrorMessage("Notice: You are already registered for all available events for your class level.");
-      return;
+      const isFullyReg = eligibleForClass.length > 0 && eligibleForClass.every((id: string) => alreadyRegisteredEvents.includes(id));
+      
+      if (isFullyReg) {
+        setErrorMessage("Notice: You are already registered for all available events for your class level.");
+        setIsScanningDB(false);
+        return;
+      }
+
+      // Smooth brief pause so user notices scan completion before navigating to step 2
+      await new Promise(r => setTimeout(r, 600));
+      setStep(2);
+    } catch (err) {
+      console.error("Error checking database registration status:", err);
+    } finally {
+      setIsScanningDB(false);
     }
-
-    setStep(2);
   };
 
   const handleAttemptRegister = () => {
@@ -1147,15 +1302,18 @@ export default function InterEventRegister() {
     if (hasTeamSegment) {
       const tm2Inst = teamMember2Institute.trim() || institute.trim();
       if (!teamMember2Name.trim() || !teamMember2Class || !tm2Inst || !teamMember2Gender) {
-        setErrorMessage("Please fill all required details (Name, Class, Institute, and Gender) for Team Member 2.");
+        setErrorMessage("Please fill all required details (Name, Class, Institute, and Gender) for Teammate 1.");
         return;
       }
 
-      const is3MemberEvent = selectedSegments.some((id: string) => id === "Escape Room" || id === "Truss");
+      const is3MemberEvent = selectedSegments.some((id: string) => {
+        const norm = id.trim().toLowerCase();
+        return norm.includes("tic-tac-toe") || norm.includes("tic tac toe") || norm.includes("tictactoe");
+      });
       if (is3MemberEvent) {
         const tm3Inst = teamMember3Institute.trim() || institute.trim();
         if (!teamMember3Name.trim() || !teamMember3Class || !tm3Inst || !teamMember3Gender) {
-          setErrorMessage("Please fill all required details (Name, Class, Institute, and Gender) for Team Member 3.");
+          setErrorMessage("Please fill all required details (Name, Class, Institute, and Gender) for Teammate 2 (Required for Tic-Tac-Toe).");
           return;
         }
       }
@@ -1984,20 +2142,63 @@ export default function InterEventRegister() {
               initial={{ opacity: 0, x: -10 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: 10 }}
-              className="bg-zinc-950 border border-white/10 rounded-[3rem] p-8 md:p-12 shadow-2xl relative"
+              className="space-y-8"
             >
-              <div className="absolute top-0 right-0 w-[150px] h-[150px] bg-pink-500/5 rounded-full blur-[50px] pointer-events-none" />
-              
-              <div className="mb-8 text-center md:text-left flex flex-col md:flex-row md:items-center justify-between gap-6">
-                <div>
-                  <h2 className="text-3xl font-black uppercase tracking-tight text-white flex items-center justify-center md:justify-start gap-3">
-                    <User className="w-8 h-8 text-pink-500" /> Participant Identity
-                  </h2>
-                  <p className="text-xs text-zinc-500 mt-1 max-w-xl font-medium leading-relaxed">
-                    Provide your official academic registry coordinates. Ensure your email and phone numbers are functional, as auto-passcodes will be dispatched there.
-                  </p>
+              {isScanningDB ? (
+                <div className="bg-zinc-950/90 border border-purple-500/30 rounded-[3rem] p-10 md:p-16 shadow-2xl relative text-center space-y-6 my-4 max-w-2xl mx-auto backdrop-blur-xl">
+                  <div className="absolute top-0 right-1/2 translate-x-1/2 -translate-y-1/2 w-[250px] h-[250px] bg-purple-500/15 rounded-full blur-[90px] pointer-events-none" />
+
+                  <div className="relative inline-flex items-center justify-center pt-2">
+                    <div className="w-20 h-20 rounded-3xl bg-purple-500/10 border border-purple-500/30 flex items-center justify-center shadow-inner">
+                      <Loader2 className="w-10 h-10 text-purple-400 animate-spin" />
+                    </div>
+                    <span className="absolute -top-1 -right-1 flex h-4 w-4">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-pink-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-4 w-4 bg-pink-500"></span>
+                    </span>
+                  </div>
+
+                  <div className="space-y-2">
+                    <span className="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest bg-purple-500/10 text-purple-300 border border-purple-500/20 font-mono">
+                      Database Search Active
+                    </span>
+                    <h3 className="text-2xl font-black uppercase tracking-tight text-white font-mono flex items-center justify-center gap-2">
+                      Fetching Important Information...
+                    </h3>
+                    <p className="text-xs text-zinc-400 max-w-md mx-auto leading-relaxed font-sans">
+                      Scanning central database records for <strong className="text-purple-300">{fullName || 'participant'}</strong> (<span className="text-zinc-200">{phone || email}</span>) to verify eligibility and existing event segment registrations...
+                    </p>
+                  </div>
+
+                  {/* Animated Loading Progress Bar */}
+                  <div className="w-full bg-white/5 border border-white/10 h-3 rounded-full overflow-hidden p-0.5 max-w-md mx-auto">
+                    <motion.div
+                      className="h-full bg-gradient-to-r from-purple-500 via-pink-500 to-indigo-500 rounded-full"
+                      initial={{ width: "10%" }}
+                      animate={{ width: "95%" }}
+                      transition={{ duration: 2.2, ease: "easeInOut" }}
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-center gap-2 text-[10px] font-mono text-zinc-500 uppercase tracking-widest pt-1">
+                    <Database className="w-3.5 h-3.5 text-purple-400 animate-pulse" />
+                    <span>Cross-checking records • Standby...</span>
+                  </div>
                 </div>
-              </div>
+              ) : (
+                <div className="bg-zinc-950 border border-white/10 rounded-[3rem] p-8 md:p-12 shadow-2xl relative">
+                  <div className="absolute top-0 right-0 w-[150px] h-[150px] bg-pink-500/5 rounded-full blur-[50px] pointer-events-none" />
+                  
+                  <div className="mb-8 text-center md:text-left flex flex-col md:flex-row md:items-center justify-between gap-6">
+                    <div>
+                      <h2 className="text-3xl font-black uppercase tracking-tight text-white flex items-center justify-center md:justify-start gap-3">
+                        <User className="w-8 h-8 text-pink-500" /> Participant Identity
+                      </h2>
+                      <p className="text-xs text-zinc-500 mt-1 max-w-xl font-medium leading-relaxed">
+                        Provide your official academic registry coordinates. Ensure your email and phone numbers are functional, as auto-passcodes will be dispatched there.
+                      </p>
+                    </div>
+                  </div>
 
               {/* Administrator Proxy Registration Toggle */}
               {isAdmin && (
@@ -2254,8 +2455,15 @@ export default function InterEventRegister() {
 
                   {/* Selective Class */}
                   <div className="space-y-3">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500 flex items-center gap-2 font-mono">
-                      Class Level <span className="text-pink-500">*</span>
+                    <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500 flex items-center justify-between font-mono">
+                      <span className="flex items-center gap-2">
+                        Class Level <span className="text-pink-500">*</span>
+                      </span>
+                      {className && getCategoryFromClass(className) && (
+                        <span className="text-pink-400 font-bold text-[9px] uppercase tracking-wider bg-pink-500/10 border border-pink-500/20 px-2 py-0.5 rounded-full font-sans">
+                          {getCategoryFromClass(className)} Category
+                        </span>
+                      )}
                     </label>
                     <div className="relative">
                       <BookOpen className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
@@ -2402,14 +2610,26 @@ export default function InterEventRegister() {
                 </div>
               )}
 
-              <div className="flex justify-end pt-8 mt-8 border-t border-white/5">
-                <button
-                  onClick={handleNextStep1}
-                  className="w-full sm:w-auto py-4 px-8 bg-gradient-to-r from-pink-500 to-indigo-600 text-white font-black text-xs uppercase tracking-widest rounded-xl hover:opacity-90 transition-all flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-pink-500/10 hover:scale-[1.02]"
-                >
-                  Continue to Segments <ArrowRight className="w-4 h-4" />
-                </button>
-              </div>
+                  <div className="flex justify-end pt-8 mt-8 border-t border-white/5">
+                    <button
+                      onClick={handleNextStep1}
+                      disabled={isScanningDB}
+                      className="w-full sm:w-auto py-4 px-8 bg-gradient-to-r from-pink-500 to-indigo-600 text-white font-black text-xs uppercase tracking-widest rounded-xl hover:opacity-90 transition-all flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-pink-500/10 hover:scale-[1.02] disabled:opacity-50"
+                    >
+                      {isScanningDB ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          Fetching Information...
+                        </>
+                      ) : (
+                        <>
+                          Continue to Segments <ArrowRight className="w-4 h-4" />
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              )}
             </motion.div>
           ) : step === 2 ? (
             <motion.div
@@ -2428,7 +2648,7 @@ export default function InterEventRegister() {
                       <Trophy className="w-8 h-8 text-pink-500" /> Event Segments
                     </h2>
                     <p className="text-xs text-zinc-500 mt-1 max-w-xl font-medium leading-relaxed">
-                      Select any number of our national mathematical event segments. Participating in any or all <span className="text-pink-400 font-bold">Solo events costs a flat BDT 100</span>, and <span className="text-pink-400 font-bold">Team events cost BDT 200</span> each.
+                      Select any number of our national mathematical event segments. Participating in any or all <span className="text-pink-400 font-bold">Solo events costs a flat BDT 100</span>. Team events: <span className="text-pink-400 font-bold">BDT 200 per team event</span> (1 = 200 BDT, 2 = 400 BDT, 3 = 600 BDT, 4 = 800 BDT). <span className="text-purple-400 font-bold">General members get 50% discount</span>!
                     </p>
                   </div>
 
@@ -2451,6 +2671,28 @@ export default function InterEventRegister() {
                 {errorMessage && (
                   <div className="mb-6 p-4 bg-rose-500/10 border border-rose-500/20 text-rose-500 rounded-2xl text-xs font-bold uppercase tracking-wide flex items-center gap-3">
                     <AlertCircle className="w-5 h-5" /> {errorMessage}
+                  </div>
+                )}
+
+                {/* Category Banner Status */}
+                {className && getCategoryFromClass(className) && (
+                  <div className="mb-6 p-4 rounded-2xl bg-gradient-to-r from-pink-500/15 via-indigo-500/10 to-purple-500/15 border border-pink-500/30 flex items-center justify-between flex-wrap gap-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-xl bg-pink-500/20 border border-pink-500/40 text-pink-300 font-black text-xs flex items-center justify-center font-mono">
+                        C{className}
+                      </div>
+                      <div>
+                        <div className="text-xs font-black text-white uppercase tracking-wider flex items-center gap-2">
+                          <span>Class {className} Student</span>
+                          <span className="text-[10px] font-mono text-pink-400 bg-pink-500/20 px-2 py-0.5 rounded-full border border-pink-500/30 font-bold">
+                            {getCategoryFromClass(className)} Category
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-zinc-300 font-mono mt-0.5">
+                          {getCategoryClassRange([getCategoryFromClass(className) || ''])} • Events restricted to your category are enforced automatically.
+                        </p>
+                      </div>
+                    </div>
                   </div>
                 )}
 
@@ -2577,6 +2819,16 @@ export default function InterEventRegister() {
                           <div>
                             <h4 className="text-base font-black text-white uppercase tracking-wide">{seg.name}</h4>
                             <p className="text-xs text-zinc-400 mt-1 leading-relaxed">{seg.tagline}</p>
+                            
+                            <div className="mt-2.5 flex items-center gap-2 flex-wrap font-mono text-[9px]">
+                              <span className="text-zinc-400 bg-white/5 border border-white/10 px-2 py-0.5 rounded-md">
+                                Eligibility: {
+                                  Array.isArray(seg.allowedCategories) && seg.allowedCategories.length > 0 && seg.allowedCategories.length < 4
+                                    ? seg.allowedCategories.join(', ')
+                                    : 'All Categories (Primary – Higher Secondary)'
+                                }
+                              </span>
+                            </div>
                           </div>
 
                           {isAlreadyRegistered && (
@@ -2586,8 +2838,9 @@ export default function InterEventRegister() {
                           )}
 
                           {!isAlreadyRegistered && !eligibility.eligible && (
-                            <div className="mt-2 p-2 rounded-lg bg-rose-500/10 border border-rose-500/20 text-[9px] font-mono text-rose-400 leading-tight">
-                              ⚠️ {eligibility.reason}
+                            <div className="mt-2 p-2.5 rounded-xl bg-rose-500/10 border border-rose-500/20 text-[10px] font-mono text-rose-300 leading-relaxed flex items-start gap-2">
+                              <AlertCircle className="w-3.5 h-3.5 text-rose-400 shrink-0 mt-0.5" />
+                              <span>{eligibility.reason}</span>
                             </div>
                           )}
                         </div>
@@ -2687,10 +2940,10 @@ export default function InterEventRegister() {
                     <div className="border-b border-white/10 pb-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                       <div>
                         <h3 className="text-sm font-black uppercase tracking-wider text-pink-400 flex items-center gap-2 font-mono">
-                          <User className="w-4 h-4" /> Team Members Information
+                          <User className="w-4 h-4" /> Shared Teammate Information
                         </h3>
                         <p className="text-[10px] text-zinc-400 mt-1 uppercase font-mono font-bold">
-                          Leader: {fullName || 'Registrant'} ({className ? `Class ${className}` : ''}) — Only Name, Class, Institute & Gender required
+                          Leader: {fullName || 'Registrant'} ({className ? `Class ${className}` : ''}) — Teammate info entered here applies to all selected team events.
                         </p>
                       </div>
                       <span className="px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider bg-pink-500/10 text-pink-400 border border-pink-500/20 w-fit">
@@ -2702,7 +2955,7 @@ export default function InterEventRegister() {
                     <div className="p-5 bg-black/40 border border-white/5 rounded-2xl space-y-4">
                       <h4 className="text-xs font-black uppercase tracking-wider text-zinc-300 flex items-center gap-2 font-mono">
                         <span className="w-5 h-5 rounded-full bg-pink-500/20 text-pink-400 flex items-center justify-center text-[10px] font-mono">2</span>
-                        Team Member 2
+                        Teammate 1 (2nd Team Member) <span className="text-pink-500">*</span>
                       </h4>
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -2761,68 +3014,78 @@ export default function InterEventRegister() {
                       </div>
                     </div>
 
-                    {/* TEAM MEMBER 3 */}
-                    <div className="p-5 bg-black/40 border border-white/5 rounded-2xl space-y-4">
-                      <h4 className="text-xs font-black uppercase tracking-wider text-zinc-300 flex items-center gap-2 font-mono">
-                        <span className="w-5 h-5 rounded-full bg-pink-500/20 text-pink-400 flex items-center justify-center text-[10px] font-mono">3</span>
-                        Team Member 3 {selectedSegments.some((id: string) => id === "Escape Room" || id === "Truss") ? '(Required)' : '(Optional)'}
-                      </h4>
-
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {/* Name */}
-                        <div className="space-y-1">
-                          <label className="text-[10px] font-black uppercase tracking-wider text-zinc-400 font-mono">Teammate Full Name</label>
-                          <input
-                            type="text"
-                            placeholder="FULL NAME"
-                            value={teamMember3Name}
-                            onChange={(e) => setTeamMember3Name(e.target.value)}
-                            className="w-full bg-black/60 border border-white/10 rounded-xl py-3 px-4 text-xs font-bold text-white focus:outline-none focus:border-pink-500 uppercase"
-                          />
+                    {/* TEAM MEMBER 3 - Only shown for Tic-Tac-Toe */}
+                    {selectedSegments.some((id: string) => {
+                      const norm = id.trim().toLowerCase();
+                      return norm.includes("tic-tac-toe") || norm.includes("tic tac toe") || norm.includes("tictactoe");
+                    }) && (
+                      <div className="p-5 bg-black/40 border border-white/5 rounded-2xl space-y-4">
+                        <div className="flex items-center justify-between">
+                          <h4 className="text-xs font-black uppercase tracking-wider text-zinc-300 flex items-center gap-2 font-mono">
+                            <span className="w-5 h-5 rounded-full bg-pink-500/20 text-pink-400 flex items-center justify-center text-[10px] font-mono">3</span>
+                            Teammate 2 (3rd Member) <span className="text-pink-500">*</span>
+                          </h4>
+                          <span className="text-[9px] font-black uppercase tracking-wider bg-pink-500/10 text-pink-400 border border-pink-500/20 px-2.5 py-1 rounded-full font-mono">
+                            Required
+                          </span>
                         </div>
 
-                        {/* Gender */}
-                        <div className="space-y-1">
-                          <label className="text-[10px] font-black uppercase tracking-wider text-zinc-400 font-mono">Gender</label>
-                          <select
-                            value={teamMember3Gender}
-                            onChange={(e) => setTeamMember3Gender(e.target.value)}
-                            className="w-full bg-black/60 border border-white/10 rounded-xl py-3 px-4 text-xs font-bold text-white focus:outline-none focus:border-pink-500 uppercase cursor-pointer"
-                          >
-                            <option value="" className="bg-zinc-950 text-zinc-500 font-extrabold">SELECT GENDER</option>
-                            <option value="male" className="bg-zinc-950 text-white font-extrabold">Male</option>
-                            <option value="female" className="bg-zinc-950 text-white font-extrabold">Female</option>
-                          </select>
-                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          {/* Name */}
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-black uppercase tracking-wider text-zinc-400 font-mono">Teammate Full Name <span className="text-pink-500">*</span></label>
+                            <input
+                              type="text"
+                              placeholder="FULL NAME"
+                              value={teamMember3Name}
+                              onChange={(e) => setTeamMember3Name(e.target.value)}
+                              className="w-full bg-black/60 border border-white/10 rounded-xl py-3 px-4 text-xs font-bold text-white focus:outline-none focus:border-pink-500 uppercase"
+                            />
+                          </div>
 
-                        {/* Class */}
-                        <div className="space-y-1">
-                          <label className="text-[10px] font-black uppercase tracking-wider text-zinc-400 font-mono">Class Level</label>
-                          <select
-                            value={teamMember3Class}
-                            onChange={(e) => setTeamMember3Class(e.target.value)}
-                            className="w-full bg-black/60 border border-white/10 rounded-xl py-3 px-4 text-xs font-bold text-white focus:outline-none focus:border-pink-500 uppercase cursor-pointer"
-                          >
-                            <option value="" className="bg-zinc-950 text-zinc-500 font-extrabold">SELECT CLASS</option>
-                            {[3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(n => (
-                              <option key={n} value={String(n)} className="bg-zinc-950 text-white font-extrabold">Class {n}</option>
-                            ))}
-                          </select>
-                        </div>
+                          {/* Gender */}
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-black uppercase tracking-wider text-zinc-400 font-mono">Gender <span className="text-pink-500">*</span></label>
+                            <select
+                              value={teamMember3Gender}
+                              onChange={(e) => setTeamMember3Gender(e.target.value)}
+                              className="w-full bg-black/60 border border-white/10 rounded-xl py-3 px-4 text-xs font-bold text-white focus:outline-none focus:border-pink-500 uppercase cursor-pointer"
+                            >
+                              <option value="" className="bg-zinc-950 text-zinc-500 font-extrabold">SELECT GENDER</option>
+                              <option value="male" className="bg-zinc-950 text-white font-extrabold">Male</option>
+                              <option value="female" className="bg-zinc-950 text-white font-extrabold">Female</option>
+                            </select>
+                          </div>
 
-                        {/* Institute */}
-                        <div className="space-y-1">
-                          <label className="text-[10px] font-black uppercase tracking-wider text-zinc-400 font-mono">Institution / School</label>
-                          <input
-                            type="text"
-                            placeholder="INSTITUTE / SCHOOL NAME"
-                            value={teamMember3Institute || institute}
-                            onChange={(e) => setTeamMember3Institute(e.target.value)}
-                            className="w-full bg-black/60 border border-white/10 rounded-xl py-3 px-4 text-xs font-bold text-white focus:outline-none focus:border-pink-500 uppercase"
-                          />
+                          {/* Class */}
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-black uppercase tracking-wider text-zinc-400 font-mono">Class Level <span className="text-pink-500">*</span></label>
+                            <select
+                              value={teamMember3Class}
+                              onChange={(e) => setTeamMember3Class(e.target.value)}
+                              className="w-full bg-black/60 border border-white/10 rounded-xl py-3 px-4 text-xs font-bold text-white focus:outline-none focus:border-pink-500 uppercase cursor-pointer"
+                            >
+                              <option value="" className="bg-zinc-950 text-zinc-500 font-extrabold">SELECT CLASS</option>
+                              {[3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(n => (
+                                <option key={n} value={String(n)} className="bg-zinc-950 text-white font-extrabold">Class {n}</option>
+                              ))}
+                            </select>
+                          </div>
+
+                          {/* Institute */}
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-black uppercase tracking-wider text-zinc-400 font-mono">Institution / School <span className="text-pink-500">*</span></label>
+                            <input
+                              type="text"
+                              placeholder="INSTITUTE / SCHOOL NAME"
+                              value={teamMember3Institute || institute}
+                              onChange={(e) => setTeamMember3Institute(e.target.value)}
+                              className="w-full bg-black/60 border border-white/10 rounded-xl py-3 px-4 text-xs font-bold text-white focus:outline-none focus:border-pink-500 uppercase"
+                            />
+                          </div>
                         </div>
                       </div>
-                    </div>
+                    )}
                   </motion.div>
                 )}
 
@@ -2922,6 +3185,79 @@ export default function InterEventRegister() {
                 </>
               )}
 
+              {/* General Member Verification & 50% Discount Card */}
+              <div className="p-6 rounded-2xl bg-gradient-to-r from-purple-950/40 via-indigo-950/20 to-black border border-purple-500/30 space-y-4 my-6 text-left">
+                <div className="flex items-center justify-between gap-2 border-b border-purple-500/20 pb-3">
+                  <div className="flex items-center gap-2">
+                    <ShieldCheck className="w-5 h-5 text-purple-400" />
+                    <h4 className="text-xs font-black uppercase tracking-wider text-purple-300 font-mono">
+                      Josephite General Member Discount
+                    </h4>
+                  </div>
+                  <span className="px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider bg-purple-500/20 text-purple-300 border border-purple-500/30">
+                    50% OFF
+                  </span>
+                </div>
+
+                <p className="text-xs text-zinc-300 leading-relaxed font-sans">
+                  Are you a registered General Member of Josephite Math Club? Get a <strong className="text-purple-300 font-bold">50% discount</strong> on all registration fees by verifying your registered Phone Number or Email Address.
+                </p>
+
+                {isGeneralMember && memberVerifiedData ? (
+                  <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 space-y-1 font-mono text-xs">
+                    <div className="flex items-center gap-2 text-emerald-400 font-bold">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                      <span>General Member Verified! 50% Discount Applied.</span>
+                    </div>
+                    <p className="text-[11px] text-zinc-300 mt-1">
+                      Member: <strong className="text-white">{memberVerifiedData.memberName}</strong> {memberVerifiedData.memberId ? `(${memberVerifiedData.memberId})` : ''}
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsGeneralMember(false);
+                        setMemberVerifiedData(null);
+                      }}
+                      className="text-[10px] text-zinc-400 underline hover:text-white mt-1 cursor-pointer"
+                    >
+                      Remove discount
+                    </button>
+                  </div>
+                ) : (
+                  <div className="space-y-3 pt-1">
+                    <div className="flex flex-col sm:flex-row gap-2">
+                      <input
+                        type="text"
+                        value={memberIdentifierInput}
+                        onChange={(e) => setMemberIdentifierInput(e.target.value)}
+                        placeholder="Enter Member Phone Number or Email..."
+                        className="flex-1 bg-black/60 border border-white/10 rounded-xl px-4 py-3 text-xs font-bold text-white placeholder:text-zinc-600 focus:outline-none focus:border-purple-500"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleVerifyGeneralMember}
+                        disabled={verifyingMember}
+                        className="px-5 py-3 bg-purple-600 hover:bg-purple-500 text-white font-black text-xs uppercase tracking-wider rounded-xl transition-all disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer shadow-md shadow-purple-600/20"
+                      >
+                        {verifyingMember ? (
+                          <>
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" /> Verifying...
+                          </>
+                        ) : (
+                          'Verify & Claim 50%'
+                        )}
+                      </button>
+                    </div>
+
+                    {memberVerificationError && (
+                      <p className="text-[11px] font-bold text-rose-400 flex items-center gap-1.5 font-mono">
+                        <AlertCircle className="w-3.5 h-3.5 shrink-0" /> {memberVerificationError}
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
+
               {/* Ledger Summary */}
               <div className="bg-black/40 border border-white/5 rounded-2xl p-6 space-y-4 mt-8">
                 <h4 className="text-[10px] font-black uppercase tracking-wider text-zinc-500 border-b border-white/5 pb-2 font-mono">TRANSACTION LEDGER SUMMARY</h4>
@@ -2945,6 +3281,12 @@ export default function InterEventRegister() {
                     <span className="text-zinc-500">Total Registration Fee:</span>
                     <span className="text-white font-bold">{totalRawPrice} BDT</span>
                   </div>
+                  {isGeneralMember && (
+                    <div className="flex justify-between text-purple-400 border-b border-white/5 pb-2">
+                      <span>General Member 50% Discount:</span>
+                      <span>-{discountAmount} BDT</span>
+                    </div>
+                  )}
                   {hasCaDiscount && (
                     <div className="flex justify-between text-green-400 border-b border-white/5 pb-2">
                       <span>10% CA Code Discount ({caCode}):</span>

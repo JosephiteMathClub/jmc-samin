@@ -177,4 +177,69 @@ export function cleanDisplayEmail(email: string | null | undefined): string {
   return cleaned;
 }
 
+/**
+ * Cycle-safe and DOM/React-node safe JSON stringify
+ */
+export function safeJsonStringify(obj: any, space?: number): string {
+  const seen = new WeakSet();
+  return JSON.stringify(
+    obj,
+    (key, value) => {
+      if (typeof value === 'object' && value !== null) {
+        // Filter DOM Nodes, Elements, or Window objects
+        if (
+          (typeof window !== 'undefined' && (value instanceof HTMLElement || value instanceof Node || value instanceof Element || value === window)) ||
+          typeof value.nodeType === 'number'
+        ) {
+          return undefined;
+        }
+
+        // Filter React Fiber nodes, React Elements, Synthetic Events, or internal Fiber pointers
+        if (
+          value.$$typeof ||
+          value.$typeof ||
+          key === 'stateNode' ||
+          key === 'return' ||
+          key === 'child' ||
+          key === 'sibling' ||
+          (typeof key === 'string' && (key.startsWith('__react') || key.startsWith('_react'))) ||
+          value.constructor?.name === 'FiberNode' ||
+          value.constructor?.name === 'HTMLDivElement' ||
+          value.constructor?.name === 'SyntheticBaseEvent' ||
+          value.constructor?.name === 'Event'
+        ) {
+          return undefined;
+        }
+
+        // Filter circular references
+        if (seen.has(value)) {
+          return undefined;
+        }
+        seen.add(value);
+      }
+
+      if (typeof value === 'function') {
+        return undefined;
+      }
+
+      return value;
+    },
+    space
+  );
+}
+
+/**
+ * Cycle-safe and DOM/React-node safe deep clone
+ */
+export function safeJsonClone<T>(obj: T): T {
+  if (!obj) return obj;
+  try {
+    return JSON.parse(safeJsonStringify(obj));
+  } catch (err) {
+    console.warn("safeJsonClone warning:", err);
+    return obj;
+  }
+}
+
+
 

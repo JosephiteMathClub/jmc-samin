@@ -71,77 +71,86 @@ export function EventRegistrationsSection() {
         "secondary_events",
         "higher_secondary_events",
       ];
-      let allReg: EventRegistrationRow[] = [];
 
-      for (const tb of tables) {
-        const { data, error: tableErr } = await supabase
-          .from(tb)
-          .select("*");
+      // 1. Fetch all four event tables in parallel for maximum speed
+      const tableResults = await Promise.all(
+        tables.map(async (tb) => {
+          const { data, error: tableErr } = await supabase
+            .from(tb)
+            .select("*")
+            .order("created_at", { ascending: false });
+          return { tb, data: data || [], error: tableErr };
+        })
+      );
 
+      let rawRowsWithTable: (any & { tableName: string })[] = [];
+      tableResults.forEach(({ tb, data, error: tableErr }) => {
         if (tableErr) {
           console.error(`Error fetching registrations from ${tb}:`, tableErr);
-          continue;
+        } else if (data) {
+          data.forEach(item => {
+            rawRowsWithTable.push({ ...item, tableName: tb });
+          });
+        }
+      });
+
+      // 2. Batch fetch profiles and member IDs in a single query for all user_ids
+      const allUserIds = Array.from(
+        new Set(rawRowsWithTable.map((r: any) => r.user_id).filter(Boolean))
+      );
+
+      let emailsMap: Record<string, string> = {};
+      let memberIdsMap: Record<string, string> = {};
+      let memberPhonesMap: Record<string, string> = {};
+
+      if (allUserIds.length > 0) {
+        const [profsRes, memberRes] = await Promise.all([
+          supabase
+            .from("profiles")
+            .select("id, email")
+            .in("id", allUserIds),
+          supabase
+            .from("member")
+            .select("id, member_id, phone")
+            .in("id", allUserIds)
+        ]);
+
+        if (!profsRes.error && profsRes.data) {
+          profsRes.data.forEach((p: any) => {
+            emailsMap[p.id] = p.email;
+          });
         }
 
-        if (data && data.length > 0) {
-          // Collect user IDs for profiles and member ID fetch
-          const userIds = data.map((d: any) => d.user_id).filter(Boolean);
-          let emailsMap: Record<string, string> = {};
-          let memberIdsMap: Record<string, string> = {};
-          let memberPhonesMap: Record<string, string> = {};
-          
-          if (userIds.length > 0) {
-            // Fetch both in parallel for optimal throughput
-            const [profsRes, memberRes] = await Promise.all([
-              supabase
-                .from("profiles")
-                .select("id, email")
-                .in("id", userIds),
-              supabase
-                .from("member")
-                .select("id, member_id, phone")
-                .in("id", userIds)
-            ]);
-
-            if (!profsRes.error && profsRes.data) {
-              profsRes.data.forEach((p: any) => {
-                emailsMap[p.id] = p.email;
-              });
-            }
-
-            if (!memberRes.error && memberRes.data) {
-              memberRes.data.forEach((m: any) => {
-                memberIdsMap[m.id] = m.member_id;
-                memberPhonesMap[m.id] = m.phone;
-              });
-            }
-          }
-
-          const mapped = data.map((item: any) => {
-            let normVerified: "yes" | "no" | "rejected" = "no";
-            if (item.verified === true || item.verified === "yes") {
-              normVerified = "yes";
-            } else if (item.verified === "rejected") {
-              normVerified = "rejected";
-            } else if (item.verified === false || item.verified === "no") {
-              normVerified = "no";
-            }
-
-            return {
-              ...item,
-              tableName: tb,
-              verified: normVerified,
-              email: emailsMap[item.user_id] || item.registered_by || "",
-              member_id: memberIdsMap[item.user_id] || "",
-              phone: item.phone || memberPhonesMap[item.user_id] || "",
-            };
+        if (!memberRes.error && memberRes.data) {
+          memberRes.data.forEach((m: any) => {
+            memberIdsMap[m.id] = m.member_id;
+            memberPhonesMap[m.id] = m.phone;
           });
-
-          allReg = [...allReg, ...mapped];
         }
       }
 
-      // Sort by created_at descending
+      // 3. Normalize registration records
+      const allReg: EventRegistrationRow[] = rawRowsWithTable.map((item: any) => {
+        let normVerified: "yes" | "no" | "rejected" = "no";
+        if (item.verified === true || item.verified === "yes") {
+          normVerified = "yes";
+        } else if (item.verified === "rejected") {
+          normVerified = "rejected";
+        } else if (item.verified === false || item.verified === "no") {
+          normVerified = "no";
+        }
+
+        return {
+          ...item,
+          tableName: item.tableName,
+          verified: normVerified,
+          email: emailsMap[item.user_id] || item.registered_by || "",
+          member_id: memberIdsMap[item.user_id] || "",
+          phone: item.phone || memberPhonesMap[item.user_id] || "",
+        };
+      });
+
+      // Sort by created_at descending (newest submissions first)
       allReg.sort((a, b) => {
         const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
         const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
@@ -157,8 +166,49 @@ export function EventRegistrationsSection() {
     }
   }, []);
 
+  // Set up instant real-time listener and background auto-refresh
   useEffect(() => {
     fetchAllRegistrations();
+
+    // Fast polling every 4 seconds to guarantee pending submissions appear instantly
+    const intervalId = setInterval(() => {
+      fetchAllRegistrations();
+    }, 4000);
+
+    // Supabase Realtime channel for postgres_changes
+    let channel: any = null;
+    if (isSupabaseConfigured) {
+      channel = supabase
+        .channel("event_registrations_realtime_sync")
+        .on(
+          "postgres_changes",
+          { event: "*", schema: "public", table: "primary_events" },
+          () => fetchAllRegistrations()
+        )
+        .on(
+          "postgres_changes",
+          { event: "*", schema: "public", table: "junior_events" },
+          () => fetchAllRegistrations()
+        )
+        .on(
+          "postgres_changes",
+          { event: "*", schema: "public", table: "secondary_events" },
+          () => fetchAllRegistrations()
+        )
+        .on(
+          "postgres_changes",
+          { event: "*", schema: "public", table: "higher_secondary_events" },
+          () => fetchAllRegistrations()
+        )
+        .subscribe();
+    }
+
+    return () => {
+      clearInterval(intervalId);
+      if (channel && isSupabaseConfigured) {
+        supabase.removeChannel(channel);
+      }
+    };
   }, [fetchAllRegistrations]);
 
   // Compute Deduplicated/Unique list of people dynamically
@@ -177,14 +227,17 @@ export function EventRegistrationsSection() {
         uniqueMap.set(key, item);
       } else {
         const existing = uniqueMap.get(key)!;
-        // Prioritize verified records over non-verified
-        const existingIsVerified = existing.verified === "yes";
-        const newIsVerified = item.verified === "yes";
+        
+        // CRITICAL: ALWAYS PRIORITIZE PENDING ("no") REGISTRATIONS OVER VERIFIED ("yes") ONES
+        // so admins can see and verify new pending money/transaction submissions!
+        const existingIsPending = existing.verified === "no";
+        const newIsPending = item.verified === "no";
 
-        if (!existingIsVerified && newIsVerified) {
+        if (!existingIsPending && newIsPending) {
+          // New record is pending, existing is verified/rejected -> replace with pending!
           uniqueMap.set(key, item);
-        } else if (existingIsVerified === newIsVerified) {
-          // Keep the newer submission if verification status is identical
+        } else if (existingIsPending === newIsPending) {
+          // If both have same pending/verified state, keep the newer submission
           const existingTime = existing.created_at ? new Date(existing.created_at).getTime() : 0;
           const newTime = item.created_at ? new Date(item.created_at).getTime() : 0;
           if (newTime > existingTime) {
@@ -210,8 +263,13 @@ export function EventRegistrationsSection() {
     });
   }, [registrations, uniquePeopleList, showUniqueOnly]);
 
-  // Combined Active Dataset
-  const activeDataset = showUniqueOnly ? uniquePeopleList : registrations;
+  // Combined Active Dataset (Guarantees all pending submissions are shown when filtering by Pending)
+  const activeDataset = useMemo(() => {
+    if (statusFilter === "no") {
+      return registrations;
+    }
+    return showUniqueOnly ? uniquePeopleList : registrations;
+  }, [statusFilter, showUniqueOnly, uniquePeopleList, registrations]);
 
   // Determine if a registration row is part of a team event
   const isTeamRegistration = useCallback((reg: EventRegistrationRow) => {
@@ -597,6 +655,34 @@ export function EventRegistrationsSection() {
         </div>
       </div>
 
+      {/* Pending Verifications Banner */}
+      {metrics.pendingForms > 0 && (
+        <div className="p-5 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 text-left shadow-lg shadow-amber-500/5">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-amber-500/20 border border-amber-500/30 flex items-center justify-center shrink-0">
+              <AlertCircle className="w-5 h-5 text-amber-400 animate-pulse" />
+            </div>
+            <div>
+              <h4 className="text-sm font-black text-white uppercase tracking-wider font-mono">
+                {metrics.pendingForms} Pending Registration{metrics.pendingForms > 1 ? "s" : ""} Awaiting Verification
+              </h4>
+              <p className="text-xs text-zinc-400 mt-0.5">
+                Participants have submitted payment details for event registration. Instant live sync is active.
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => {
+              setStatusFilter("no");
+              setShowUniqueOnly(false);
+            }}
+            className="px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-black text-xs font-black uppercase tracking-wider transition-all shrink-0 cursor-pointer shadow-md"
+          >
+            Inspect Pending Registrations ({metrics.pendingForms})
+          </button>
+        </div>
+      )}
+
       {error && (
         <div className="p-6 rounded-2xl bg-red-500/5 border border-red-500/10 text-red-400 text-xs flex gap-3 items-center">
           <AlertCircle className="w-5 h-5 shrink-0" />
@@ -943,130 +1029,164 @@ export function EventRegistrationsSection() {
           )}
 
           {/* TEAM EVENTS RENDERING SECTION */}
-          {(eventTypeFilter === "all" || eventTypeFilter === "team") && individualTeamRegistrants.length > 0 && (
-            <div className="space-y-4">
+          {(eventTypeFilter === "all" || eventTypeFilter === "team") && filteredTeamRegistrations.length > 0 && (
+            <div className="space-y-6">
               {eventTypeFilter === "all" && (
-                <div className="flex items-center gap-3">
-                  <span className="w-2 h-2 rounded-full bg-purple-500 animate-pulse" />
-                  <h3 className="text-xs font-black text-white uppercase tracking-wider">
-                    Team Event Registrants ({individualTeamRegistrants.length} Members)
+                <div className="flex items-center gap-3 border-b border-purple-500/20 pb-3">
+                  <span className="w-2.5 h-2.5 rounded-full bg-purple-500 animate-pulse" />
+                  <h3 className="text-xs font-black text-white uppercase tracking-wider font-mono">
+                    Team Registrations ({filteredTeamRegistrations.length} Teams)
                   </h3>
                 </div>
               )}
               
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {individualTeamRegistrants.map((member) => {
-                  const isApproved = member.verified === "yes";
-                  const isRejected = member.verified === "rejected";
-                  const isLeader = !member.trxnid.includes("-T");
-                  
+              <div className="grid grid-cols-1 gap-6">
+                {filteredTeamRegistrations.map((team) => {
+                  const leader = team.members.find(m => !m.trxnid.includes("-T")) || team.members[0];
+                  const teammates = team.members.filter(m => m.id !== leader.id);
+                  const isApproved = team.verified === "yes";
+                  const isRejected = team.verified === "rejected";
+
                   return (
                     <div 
-                      key={member.id}
-                      className={`bg-[#0b0b0b]/60 border rounded-[2rem] p-6 space-y-4 transition-all hover:scale-[1.01] hover:bg-[#0f0f0f]/80 flex flex-col justify-between ${
+                      key={team.id}
+                      className={`bg-[#0c0c0e]/90 border rounded-[2.5rem] p-6 sm:p-8 space-y-6 shadow-2xl relative transition-all ${
                         isApproved 
-                          ? "border-green-500/20 shadow-lg shadow-green-500/5" 
+                          ? "border-green-500/30 shadow-green-500/5" 
                           : isRejected 
-                          ? "border-red-500/20 shadow-lg shadow-red-500/5" 
-                          : "border-yellow-500/20 shadow-lg shadow-yellow-500/5"
+                          ? "border-red-500/30 shadow-red-500/5" 
+                          : "border-amber-500/30 shadow-amber-500/5"
                       }`}
                     >
-                      <div className="space-y-4">
-                        {/* Card Header with event & status */}
-                        <div className="flex items-start justify-between gap-4 border-b border-white/5 pb-4">
-                          <div>
-                            <span className="px-2.5 py-1 rounded-full bg-amber-500/10 border border-amber-500/25 text-amber-400 text-[9px] font-black tracking-wider uppercase">
-                              {member.eventName}
+                      {/* Team Card Top Bar */}
+                      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-white/10 pb-5">
+                        <div className="space-y-1.5">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="px-3 py-1 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-400 text-xs font-black tracking-wider uppercase flex items-center gap-1.5 font-mono">
+                              <Users className="w-3.5 h-3.5 text-amber-400" />
+                              {team.eventName}
                             </span>
-                            <div className="font-mono text-[10px] font-bold text-zinc-400 mt-2 flex items-center gap-1">
-                              <span className="text-[8px] text-zinc-500 bg-white/5 px-1 py-0.5 rounded">TRX</span>
-                              {member.trxnid}
-                            </div>
-                          </div>
-                          
-                          <div>
-                            {isApproved ? (
-                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-green-500/10 text-green-400 text-[8px] font-extrabold border border-green-500/20">
-                                <span className="w-1 h-1 rounded-full bg-green-400" />
-                                VERIFIED
-                              </span>
-                            ) : isRejected ? (
-                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-red-500/10 text-red-500/80 text-[8px] font-extrabold border border-red-500/20">
-                                <span className="w-1 h-1 rounded-full bg-red-400" />
-                                REJECTED
-                              </span>
-                            ) : (
-                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-yellow-500/10 text-yellow-400 text-[8px] font-extrabold border border-yellow-500/20">
-                                <span className="w-1 h-1 rounded-full bg-yellow-400 animate-pulse" />
-                                PENDING
-                              </span>
-                            )}
+                            <span className="text-[10px] font-mono font-bold text-zinc-400 bg-white/5 border border-white/10 px-2.5 py-1 rounded-full">
+                              TRX: <strong className="text-white">{team.baseTrxnId}</strong>
+                            </span>
+                            <span className="text-[10px] font-mono font-bold text-zinc-400 bg-white/5 border border-white/10 px-2.5 py-1 rounded-full">
+                              bKash: <strong className="text-zinc-200">{team.bkash_number || "N/A"}</strong>
+                            </span>
                           </div>
                         </div>
 
-                        {/* Personal info */}
-                        <div className="flex items-center gap-3 min-w-0">
-                          <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${
-                            isLeader ? "bg-amber-500/10 text-amber-500 border border-amber-500/20" : "bg-purple-500/10 text-purple-400 border border-purple-500/20"
-                          }`}>
-                            <User className="w-4 h-4" />
+                        <div className="flex items-center gap-3">
+                          <span className="text-xs font-black text-white bg-emerald-500/10 border border-emerald-500/30 px-3 py-1.5 rounded-xl font-mono">
+                            ৳ {team.amount} BDT
+                          </span>
+                          {isApproved ? (
+                            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-green-500/10 text-green-400 text-[10px] font-extrabold border border-green-500/30 font-mono">
+                              <span className="w-1.5 h-1.5 rounded-full bg-green-400" />
+                              VERIFIED
+                            </span>
+                          ) : isRejected ? (
+                            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-red-500/10 text-red-400 text-[10px] font-extrabold border border-red-500/30 font-mono">
+                              <span className="w-1.5 h-1.5 rounded-full bg-red-400" />
+                              REJECTED
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/10 text-amber-400 text-[10px] font-extrabold border border-amber-500/30 font-mono">
+                              <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
+                              PENDING
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Team Members Grid - Singular Large Card containing Leader and Teammate Info */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {/* TEAM LEADER CARD SECTION */}
+                        <div className="bg-gradient-to-br from-amber-500/10 via-amber-500/5 to-transparent border border-amber-500/30 rounded-2xl p-5 space-y-3 relative">
+                          <div className="flex items-center justify-between border-b border-amber-500/20 pb-2.5">
+                            <span className="px-2.5 py-0.5 rounded text-[8px] font-black bg-amber-500/20 text-amber-400 uppercase tracking-widest font-mono flex items-center gap-1">
+                              👑 Team Leader
+                            </span>
+                            {leader.member_id && (
+                              <span className="font-mono text-[9px] font-bold text-amber-300 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/30">
+                                {leader.member_id}
+                              </span>
+                            )}
                           </div>
-                          <div className="min-w-0 text-left">
-                            <div className="flex items-center gap-1.5 flex-wrap">
-                              <span className="font-bold text-white text-sm truncate">{member.full_name}</span>
-                              {isLeader ? (
-                                <span className="px-1.5 py-0.5 rounded text-[7px] font-extrabold bg-amber-500/20 text-amber-400 uppercase tracking-wider">Leader</span>
-                              ) : (
-                                <span className="px-1.5 py-0.5 rounded text-[7px] font-extrabold bg-purple-500/20 text-purple-400 uppercase tracking-wider">Teammate</span>
-                              )}
-                            </div>
-                            <p className="font-mono text-[10px] text-zinc-500 mt-0.5">
-                              Class {member.class} | Sec: {member.section} | Roll: {member.roll}
+
+                          <div className="space-y-1 text-left">
+                            <h4 className="font-extrabold text-white text-sm">{leader.full_name}</h4>
+                            <p className="font-mono text-[10px] text-zinc-400">
+                              Class {leader.class} | Sec: <strong className="text-zinc-200">{leader.section}</strong> | Roll: <strong className="text-zinc-200">{leader.roll}</strong>
                             </p>
-                            {member.phone && (
-                              <p className="font-mono text-[10px] text-amber-500 font-bold mt-0.5">
-                                📞 {member.phone}
+                            {leader.email && (
+                              <p className="font-mono text-[10px] text-zinc-500 truncate" title={leader.email}>
+                                ✉️ {leader.email}
+                              </p>
+                            )}
+                            {leader.phone && (
+                              <p className="font-mono text-[10px] text-amber-400 font-bold mt-1">
+                                📞 {leader.phone}
                               </p>
                             )}
                           </div>
+
+                          <div className="pt-2 border-t border-amber-500/10 flex justify-end">
+                            <button
+                              onClick={() => setSelectedRegistrant(leader)}
+                              className="px-2.5 py-1 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/20 rounded-lg text-[9px] font-bold uppercase tracking-wider flex items-center gap-1 cursor-pointer transition-all"
+                            >
+                              <Eye className="w-3 h-3" /> Inspect Leader
+                            </button>
+                          </div>
                         </div>
 
-                        {/* Teammates section */}
-                        {member.teammatesList.length > 0 && (
-                          <div className="bg-white/[0.01] border border-white/5 rounded-2xl p-3 text-left">
-                            <span className="text-[8px] font-black text-zinc-500 uppercase tracking-widest font-sans block mb-1">
-                              Team Members
-                            </span>
-                            <p className="text-[10px] text-zinc-300 font-medium leading-relaxed">
-                              {member.teammatesList.join(", ")}
-                            </p>
+                        {/* TEAMMATES CARD SECTIONS */}
+                        {teammates.map((tm, idx) => (
+                          <div key={tm.id || idx} className="bg-white/[0.02] border border-white/10 rounded-2xl p-5 space-y-3 relative">
+                            <div className="flex items-center justify-between border-b border-white/5 pb-2.5">
+                              <span className="px-2.5 py-0.5 rounded text-[8px] font-black bg-purple-500/20 text-purple-300 uppercase tracking-widest font-mono flex items-center gap-1">
+                                👥 Teammate {idx + 1}
+                              </span>
+                              {tm.member_id && (
+                                <span className="font-mono text-[9px] font-bold text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">
+                                  {tm.member_id}
+                                </span>
+                              )}
+                            </div>
+
+                            <div className="space-y-1 text-left">
+                              <h4 className="font-extrabold text-white text-sm">{tm.full_name}</h4>
+                              <p className="font-mono text-[10px] text-zinc-400">
+                                Class {tm.class} | Sec/Inst: <strong className="text-zinc-200">{tm.section}</strong> | Roll: <strong className="text-zinc-200">{tm.roll}</strong>
+                              </p>
+                              {tm.email && (
+                                <p className="font-mono text-[10px] text-zinc-500 truncate" title={tm.email}>
+                                  ✉️ {tm.email}
+                                </p>
+                              )}
+                              {tm.phone && (
+                                <p className="font-mono text-[10px] text-amber-400 font-bold mt-1">
+                                  📞 {tm.phone}
+                                </p>
+                              )}
+                            </div>
+
+                            <div className="pt-2 border-t border-white/5 flex justify-end">
+                              <button
+                                onClick={() => setSelectedRegistrant(tm)}
+                                className="px-2.5 py-1 bg-white/5 hover:bg-white/10 text-zinc-300 border border-white/10 rounded-lg text-[9px] font-bold uppercase tracking-wider flex items-center gap-1 cursor-pointer transition-all"
+                              >
+                                <Eye className="w-3 h-3 text-amber-500" /> Inspect Member
+                              </button>
+                            </div>
                           </div>
-                        )}
+                        ))}
                       </div>
 
-                      {/* Card Footer */}
-                      <div className="bg-white/[0.01] border border-white/5 rounded-2xl p-3 flex items-center justify-between text-[11px] font-mono text-zinc-400 mt-2">
-                        <div className="text-left">
-                          <span className="text-[8px] font-black text-zinc-500 uppercase tracking-widest font-sans block">
-                            bKash Mobile
-                          </span>
-                          <span className="text-white font-bold">{member.bkash_number || "N/A"}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          {member.member_id && (
-                            <span className="font-mono text-[9px] font-bold text-amber-400 tracking-wider bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/20">
-                              {member.member_id}
-                            </span>
-                          )}
-                          <button
-                            onClick={() => setSelectedRegistrant(member)}
-                            className="p-1.5 rounded-lg bg-zinc-900 border border-white/5 text-zinc-400 hover:text-white hover:bg-zinc-800 transition-all cursor-pointer flex items-center gap-1 font-sans text-[10px]"
-                            title="Inspect Details"
-                          >
-                            <Eye className="w-3.5 h-3.5" />
-                            Inspect
-                          </button>
-                        </div>
+                      {/* Team Card Footer */}
+                      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 text-[10px] font-mono text-zinc-500 pt-3 border-t border-white/5">
+                        <span>Registered: {team.created_at ? new Date(team.created_at).toLocaleString() : 'N/A'}</span>
+                        <span className="text-zinc-400 font-bold">Total Team Size: {team.members.length} Members</span>
                       </div>
                     </div>
                   );
