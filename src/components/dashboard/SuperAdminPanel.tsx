@@ -385,16 +385,18 @@ export function RegistrationToggleControl() {
                 <p className="font-bold text-amber-500/90 uppercase tracking-wider text-[9px]">⚠️ Setup Action Required:</p>
                 <p>Run the SQL in your Supabase SQL Editor to provision the settings table:</p>
                 <pre className="text-zinc-500 mt-1 select-all overflow-x-auto whitespace-pre p-2 rounded bg-black">
-{`CREATE TABLE public.system_settings (
+{`CREATE TABLE IF NOT EXISTS public.system_settings (
     key TEXT PRIMARY KEY,
     value JSONB NOT NULL,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
-INSERT INTO public.system_settings (key, value) VALUES ('event_registration_enabled', 'true'::jsonb);
+INSERT INTO public.system_settings (key, value) VALUES ('event_registration_enabled', 'true'::jsonb) ON CONFLICT (key) DO NOTHING;
 ALTER TABLE public.system_settings ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Allow public read access to system settings" ON public.system_settings FOR SELECT USING (true);
-CREATE POLICY "Allow admins to insert/update system settings" ON public.system_settings FOR ALL USING (
-    EXISTS (SELECT 1 FROM public.profiles WHERE profiles.id = auth.uid() AND profiles.role = 'admin')
+CREATE POLICY "Allow admins to insert/update system settings" ON public.system_settings FOR ALL TO authenticated USING (
+    public.is_admin()
+) WITH CHECK (
+    public.is_admin()
 );`}
                 </pre>
               </div>
@@ -1280,7 +1282,7 @@ export function InterEventRegistrationConfigEditor({ showToast }: { showToast: (
       interSegments
     };
     try {
-      const { error } = await supabase
+      let { error } = await supabase
         .from('system_settings')
         .upsert({
           key: 'inter_registration_config',
@@ -1288,7 +1290,22 @@ export function InterEventRegistrationConfigEditor({ showToast }: { showToast: (
           updated_at: new Date().toISOString()
         });
 
-      if (error) throw error;
+      if (error) {
+        console.warn("Client-side system_settings update failed, attempting admin API route...", error);
+        const res = await fetch('/api/admin/system-settings', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            key: 'inter_registration_config',
+            value: payload
+          })
+        });
+
+        if (!res.ok) {
+          const resJson = await res.json().catch(() => ({}));
+          throw new Error(resJson.error || error.message || 'Failed to update inter configuration');
+        }
+      }
 
       if (saveAllContent) {
         await saveAllContent({

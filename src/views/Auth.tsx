@@ -160,39 +160,68 @@ const Auth = () => {
           // Client-side fallback for phone/email
           if (isPhoneInput) {
             try {
+              const rawPhone = finalEmail.replace(/\D/g, '');
+              const last10 = rawPhone.length >= 10 ? rawPhone.slice(-10) : rawPhone;
+              const phoneVariants = Array.from(new Set([
+                finalEmail,
+                rawPhone,
+                last10,
+                `0${last10}`,
+                `+880${last10}`,
+                `880${last10}`
+              ])).filter(Boolean);
+
+              let matchedEmail = '';
               let matchedName = '';
+
+              const orConds = [
+                ...phoneVariants.map(v => `phone.eq.${v}`),
+                ...phoneVariants.map(v => `email.eq.${v}`)
+              ].join(',');
+
+              // 1. Check profiles
               const { data: pData } = await supabase
                 .from('profiles')
-                .select('full_name')
-                .eq('email', finalEmail)
+                .select('full_name, email, phone')
+                .or(orConds)
                 .maybeSingle();
-              if (pData?.full_name) {
-                matchedName = pData.full_name;
+
+              if (pData) {
+                if (pData.email) matchedEmail = pData.email;
+                else if (pData.full_name) matchedName = pData.full_name;
               }
 
-              if (!matchedName) {
+              if (!matchedEmail && !matchedName) {
                 const { data: memberData } = await supabase
                   .from('member')
-                  .select('full_name')
-                  .eq('phone', finalEmail)
+                  .select('full_name, email, email_address, phone')
+                  .or(orConds)
                   .maybeSingle();
-                if (memberData?.full_name) {
-                  matchedName = memberData.full_name;
+
+                if (memberData) {
+                  if (memberData.email) matchedEmail = memberData.email;
+                  else if (memberData.email_address) matchedEmail = memberData.email_address;
+                  else if (memberData.full_name) matchedName = memberData.full_name;
                 }
               }
 
-              if (!matchedName) {
+              if (!matchedEmail && !matchedName) {
                 const { data: ecData } = await supabase
                   .from('ec_member')
-                  .select('full_name')
-                  .eq('phone', finalEmail)
+                  .select('full_name, email, email_address, phone')
+                  .or(orConds)
                   .maybeSingle();
-                if (ecData?.full_name) {
-                  matchedName = ecData.full_name;
+
+                if (ecData) {
+                  if (ecData.email) matchedEmail = ecData.email;
+                  else if (ecData.email_address) matchedEmail = ecData.email_address;
+                  else if (ecData.full_name) matchedName = ecData.full_name;
                 }
               }
 
-              if (matchedName) {
+              if (matchedEmail) {
+                finalEmail = matchedEmail;
+              } else if (matchedName) {
                 finalEmail = `${slugifyName(matchedName)}@josephitre.club`;
               } else {
                 finalEmail = `${finalEmail}@josephitre.club`;

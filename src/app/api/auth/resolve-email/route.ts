@@ -52,23 +52,35 @@ export async function POST(req: Request) {
     if (isPhoneInput) {
       try {
         const rawPhone = cleanIdentifier.replace(/\D/g, '');
+        const last10 = rawPhone.length >= 10 ? rawPhone.slice(-10) : rawPhone;
         const phoneVariants = Array.from(new Set([
           cleanIdentifier,
           rawPhone,
-          rawPhone.length >= 9 ? rawPhone.slice(-11) : rawPhone,
-          rawPhone.length >= 9 ? `0${rawPhone.slice(-10)}` : rawPhone,
-          rawPhone.length >= 9 ? `+880${rawPhone.slice(-10)}` : rawPhone,
-          rawPhone.length >= 9 ? `880${rawPhone.slice(-10)}` : rawPhone
+          last10,
+          `0${last10}`,
+          `+880${last10}`,
+          `880${last10}`
         ])).filter(Boolean);
 
-        // 1. Check profiles table (phone or email matches any variant)
+        // 1. Check profiles table (both phone and email columns)
+        const orConditions = [
+          ...phoneVariants.map(v => `phone.eq.${v}`),
+          ...phoneVariants.map(v => `email.eq.${v}`)
+        ].join(',');
+
         const { data: profilePhones } = await supabaseAdmin
           .from('profiles')
-          .select('full_name, email, id')
-          .or(phoneVariants.map(v => `email.eq.${v}`).join(','));
+          .select('id, full_name, email, phone')
+          .or(orConditions);
 
         if (profilePhones && profilePhones.length > 0) {
           const target = profilePhones[0];
+          if (target.id) {
+            const { data: authUserData } = await supabaseAdmin.auth.admin.getUserById(target.id);
+            if (authUserData?.user?.email) {
+              return NextResponse.json({ email: authUserData.user.email });
+            }
+          }
           if (target.email) {
             return NextResponse.json({ email: target.email });
           }
@@ -80,13 +92,22 @@ export async function POST(req: Request) {
         // 2. Find by checking member table phone column
         const { data: memberData } = await supabaseAdmin
           .from('member')
-          .select('full_name, email, phone')
-          .or(phoneVariants.map(v => `phone.eq.${v}`).join(','));
+          .select('id, full_name, email, email_address, phone')
+          .or(orConditions);
 
         if (memberData && memberData.length > 0) {
           const target = memberData[0];
+          if (target.id) {
+            const { data: authUserData } = await supabaseAdmin.auth.admin.getUserById(target.id);
+            if (authUserData?.user?.email) {
+              return NextResponse.json({ email: authUserData.user.email });
+            }
+          }
           if (target.email) {
             return NextResponse.json({ email: target.email });
+          }
+          if (target.email_address) {
+            return NextResponse.json({ email: target.email_address });
           }
           if (target.full_name) {
             return NextResponse.json({ email: `${slugifyName(target.full_name)}@josephitre.club` });
@@ -96,24 +117,49 @@ export async function POST(req: Request) {
         // 3. Check ec_member table phone column
         const { data: ecData } = await supabaseAdmin
           .from('ec_member')
-          .select('full_name, email, phone')
-          .or(phoneVariants.map(v => `phone.eq.${v}`).join(','));
+          .select('id, full_name, email, email_address, phone')
+          .or(orConditions);
 
         if (ecData && ecData.length > 0) {
           const target = ecData[0];
+          if (target.id) {
+            const { data: authUserData } = await supabaseAdmin.auth.admin.getUserById(target.id);
+            if (authUserData?.user?.email) {
+              return NextResponse.json({ email: authUserData.user.email });
+            }
+          }
           if (target.email) {
             return NextResponse.json({ email: target.email });
           }
+          if (target.email_address) {
+            return NextResponse.json({ email: target.email_address });
+          }
           if (target.full_name) {
             return NextResponse.json({ email: `${slugifyName(target.full_name)}@josephitre.club` });
+          }
+        }
+
+        // 4. Fallback check: Search auth.users metadata for matching phone
+        const { data: usersData } = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 1000 });
+        if (usersData?.users) {
+          const matchedUser = usersData.users.find(u => {
+            const uPhone = (u.phone || u.user_metadata?.phone || '').toString().replace(/\D/g, '');
+            if (!uPhone) return false;
+            return uPhone === rawPhone || uPhone.endsWith(last10) || rawPhone.endsWith(uPhone.slice(-10));
+          });
+
+          if (matchedUser?.email) {
+            return NextResponse.json({ email: matchedUser.email });
           }
         }
       } catch (err) {
         console.error('Error in phone resolution DB query:', err);
       }
 
-      // Fallback to phone virtual email
-      return NextResponse.json({ email: `${cleanIdentifier}@josephitre.club` });
+      // If no account matched this phone number, return helpful error
+      return NextResponse.json({ 
+        error: 'No registered account found with this phone number. Please check the phone number or register a new account.' 
+      }, { status: 400 });
     } else if (!isEmailInput) {
       // Name input is explicitly disabled
       return NextResponse.json({ 

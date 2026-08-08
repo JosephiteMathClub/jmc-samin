@@ -212,12 +212,19 @@ BEGIN
   RETURN (
     EXISTS (
       SELECT 1 FROM public.profiles 
-      WHERE id = auth.uid() AND (role = 'admin' OR role = 'super_admin')
+      WHERE id = auth.uid() AND (LOWER(role) = 'admin' OR LOWER(role) = 'super_admin')
     )
     OR (
-      auth.jwt() ->> 'email' IN (
-        'l47idkpro@gmail.com'
+      LOWER(COALESCE(auth.jwt() ->> 'email', '')) IN (
+        'l47idkpro@gmail.com',
+        'samintausif38@gmail.com'
       )
+    )
+    OR (
+      LOWER(COALESCE(auth.jwt() -> 'user_metadata' ->> 'role', '')) IN ('admin', 'super_admin')
+    )
+    OR (
+      auth.role() = 'service_role'
     )
   );
 END;
@@ -230,12 +237,19 @@ BEGIN
   RETURN (
     EXISTS (
       SELECT 1 FROM public.profiles 
-      WHERE id = auth.uid() AND role = 'super_admin'
+      WHERE id = auth.uid() AND LOWER(role) = 'super_admin'
     )
     OR (
-      auth.jwt() ->> 'email' IN (
-        'l47idkpro@gmail.com'
+      LOWER(COALESCE(auth.jwt() ->> 'email', '')) IN (
+        'l47idkpro@gmail.com',
+        'samintausif38@gmail.com'
       )
+    )
+    OR (
+      LOWER(COALESCE(auth.jwt() -> 'user_metadata' ->> 'role', '')) = 'super_admin'
+    )
+    OR (
+      auth.role() = 'service_role'
     )
   );
 END;
@@ -302,10 +316,17 @@ BEGIN
     COALESCE(NEW.raw_user_meta_data ->> 'full_name', NEW.email),
     NEW.email,
     CASE 
-      WHEN NEW.email = 'l47idkpro@gmail.com' THEN 'admin'
+      WHEN LOWER(NEW.email) IN ('l47idkpro@gmail.com', 'samintausif38@gmail.com') THEN 'super_admin'
+      WHEN LOWER(NEW.raw_user_meta_data ->> 'role') IN ('admin', 'super_admin') THEN NEW.raw_user_meta_data ->> 'role'
       ELSE 'member'
     END
-  );
+  )
+  ON CONFLICT (id) DO UPDATE SET
+    role = CASE 
+      WHEN LOWER(EXCLUDED.email) IN ('l47idkpro@gmail.com', 'samintausif38@gmail.com') THEN 'super_admin'
+      WHEN LOWER(EXCLUDED.role) IN ('admin', 'super_admin') THEN EXCLUDED.role
+      ELSE public.profiles.role
+    END;
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
@@ -326,11 +347,22 @@ SELECT
   COALESCE(raw_user_meta_data ->> 'full_name', email),
   email,
   CASE 
-    WHEN email = 'l47idkpro@gmail.com' THEN 'admin'
+    WHEN LOWER(email) IN ('l47idkpro@gmail.com', 'samintausif38@gmail.com') THEN 'super_admin'
+    WHEN LOWER(raw_user_meta_data ->> 'role') IN ('admin', 'super_admin') THEN raw_user_meta_data ->> 'role'
     ELSE 'member'
   END
 FROM auth.users
-ON CONFLICT (id) DO NOTHING;
+ON CONFLICT (id) DO UPDATE SET
+  role = CASE 
+    WHEN LOWER(EXCLUDED.email) IN ('l47idkpro@gmail.com', 'samintausif38@gmail.com') THEN 'super_admin'
+    WHEN LOWER(EXCLUDED.role) IN ('admin', 'super_admin') THEN EXCLUDED.role
+    ELSE public.profiles.role
+  END;
+
+-- Explicitly ensure super_admin role in profiles for primary admins
+UPDATE public.profiles
+SET role = 'super_admin'
+WHERE LOWER(email) IN ('l47idkpro@gmail.com', 'samintausif38@gmail.com');
 
 -- ==========================================
 -- 6. Create Policies
@@ -806,7 +838,10 @@ DROP POLICY IF EXISTS "Allow public read access to system settings" ON public.sy
 CREATE POLICY "Allow public read access to system settings" ON public.system_settings FOR SELECT USING (true);
 
 DROP POLICY IF EXISTS "Allow admins to insert/update system settings" ON public.system_settings;
-CREATE POLICY "Allow admins to insert/update system settings" ON public.system_settings FOR ALL USING (public.is_admin());
+CREATE POLICY "Allow admins to insert/update system settings" ON public.system_settings FOR ALL TO authenticated USING (public.is_admin()) WITH CHECK (public.is_admin());
+
+DROP POLICY IF EXISTS "Allow service role full access to system_settings" ON public.system_settings;
+CREATE POLICY "Allow service role full access to system_settings" ON public.system_settings FOR ALL TO service_role USING (true) WITH CHECK (true);
 
 -- Insert default system settings if missing
 INSERT INTO public.system_settings (key, value) VALUES

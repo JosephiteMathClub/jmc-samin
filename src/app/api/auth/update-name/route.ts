@@ -106,8 +106,9 @@ export async function POST(req: Request) {
       }, { status: 500 });
     }
 
-    // Update public.profiles
+    // Update public.profiles (using upsert so missing profile rows are created)
     const profileUpdatePayload: any = {
+      id: user.id,
       updated_at: new Date().toISOString()
     };
     if (cleanNewName) profileUpdatePayload.full_name = cleanNewName;
@@ -115,8 +116,7 @@ export async function POST(req: Request) {
 
     const { error: profileUpdateError } = await supabaseAdmin
       .from('profiles')
-      .update(profileUpdatePayload)
-      .eq('id', user.id);
+      .upsert(profileUpdatePayload, { onConflict: 'id' });
 
     if (profileUpdateError) {
       console.error('Error updating profiles table:', profileUpdateError);
