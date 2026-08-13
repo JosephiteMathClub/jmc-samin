@@ -92,10 +92,18 @@ export const metadata: Metadata = {
     type: "website",
     images: [
       {
+        url: "https://jmc-sjs.org/images/og-image.png",
+        width: 1200,
+        height: 630,
+        type: "image/png",
+        alt: "Josephite Math Club Official Showcase Banner",
+      },
+      {
         url: "/images/og-image.png",
         width: 1200,
         height: 630,
-        alt: "Josephite Math Club Header Showcase",
+        type: "image/png",
+        alt: "Josephite Math Club Official Showcase Banner",
       },
     ],
   },
@@ -103,7 +111,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Josephite Math Club | JMC Official",
     description: "Explore mathematics beyond textbook formulas. Challenge problems, workshops, events, and a vibrant community.",
-    images: ["/images/og-image.png"],
+    images: ["https://jmc-sjs.org/images/og-image.png", "/images/og-image.png"],
   },
   robots: {
     index: true,

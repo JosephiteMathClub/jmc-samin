@@ -22,7 +22,7 @@ import {
   FileText
 } from "lucide-react";
 import { supabase, isSupabaseConfigured } from "../../../lib/supabase";
-import { matchesSearchWithFuzzy } from "../../../lib/utils";
+import { matchesSearchWithFuzzy, resolveEventNames } from "../../../lib/utils";
 
 interface CaParticipantRow {
   id: string;
@@ -602,8 +602,8 @@ export function CaParticipantsSection() {
                       </td>
 
                       {/* Selected Events */}
-                      <td className="py-5 px-6 text-zinc-400 font-medium max-w-[160px] truncate" title={row.selected_events}>
-                        {row.selected_events}
+                      <td className="py-5 px-6 text-zinc-400 font-medium max-w-[160px] truncate" title={resolveEventNames(row.selected_events)}>
+                        {resolveEventNames(row.selected_events)}
                       </td>
 
                       {/* Amount */}

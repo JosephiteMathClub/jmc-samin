@@ -29,6 +29,7 @@ import {
   Download,
 } from "lucide-react";
 import { supabase, isSupabaseConfigured } from "../../lib/supabase";
+import { resolveEventNames } from "../../lib/utils";
 import { useToast } from "../../context/ToastContext";
 import { useContent } from "../../context/ContentContext";
 import { DEFAULT_CONTENT } from "../../data/default-content";
@@ -1039,7 +1040,7 @@ export const EventParticipation = ({
           key: groupKey,
           baseTrxnId: baseTrxn || trxnid,
           tableName: rec.tableName,
-          selectedEvents: rec.selected_events || "",
+          selectedEvents: resolveEventNames(rec.selected_events || ""),
           bkashNumber: rec.bkash_number || "",
           totalAmount: Number(rec.amount) || 0,
           leader: rec,
@@ -2294,7 +2295,7 @@ export const EventParticipation = ({
                         Registered Events
                       </p>
                       <div className="flex flex-wrap gap-2">
-                        {(group.selectedEvents || "")
+                        {(resolveEventNames(group.selectedEvents) || "")
                           .split(",")
                           .map((ev: string) => (
                             <span

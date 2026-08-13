@@ -53,8 +53,9 @@ import ScrollReveal from '../components/ScrollReveal';
 import confetti from 'canvas-confetti';
 
 import { usePerformance } from '../hooks/usePerformance';
-import { resolveImageUrl, cleanDisplayEmail } from '../lib/utils';
+import { resolveImageUrl, cleanDisplayEmail, resolveEventNames } from '../lib/utils';
 import { useMathJax } from '../hooks/useMathJax';
+import { PurchaseSlipModal, PurchaseSlipCandidate } from '../components/dashboard/PurchaseSlipModal';
 
 const isValidClassForTable = (className: string, tableName: string): boolean => {
   if (!className) return false;
@@ -154,7 +155,8 @@ const getTicketCode = (reg: any, isGeneralMember: boolean, isEc: boolean, member
 
 const formatSegments = (eventsStr: string | null) => {
   if (!eventsStr) return "—";
-  const events = eventsStr.split(',').map(e => e.trim());
+  const resolved = resolveEventNames(eventsStr);
+  const events = resolved.split(',').map(e => e.trim());
   if (events.length <= 4) return events.join(', ');
   // Group first 4 events, and the rest on the second line
   const firstFour = events.slice(0, 4).join(', ');
@@ -244,6 +246,28 @@ const Profile = () => {
   const [downloadingTicket, setDownloadingTicket] = useState(false);
   const [ticketImageFailed, setTicketImageFailed] = useState(false);
   const ticketRef = useRef<HTMLDivElement>(null);
+
+  const [activeSlipCandidate, setActiveSlipCandidate] = useState<PurchaseSlipCandidate | null>(null);
+  const [showSlipModal, setShowSlipModal] = useState(false);
+
+  const openSlipForRegistration = (reg: any) => {
+    const candidate: PurchaseSlipCandidate = {
+      id: reg?.id?.split('-')[0]?.toUpperCase() || reg?.trxnid || 'JMC-SLIP',
+      fullName: reg?.full_name || profile?.full_name || fullName || 'Participant',
+      email: profile?.email || user?.email || '',
+      phone: reg?.bkash_number || profile?.phone || userPhone || '',
+      memberId: memberId || reg?.member_id || ('EVT-' + (reg?.id?.split('-')[0]?.toUpperCase() || 'PASS')),
+      class: reg?.class || memberClass || 'N/A',
+      section: reg?.section || memberSection || 'N/A',
+      roll: reg?.roll || memberRoll || 'N/A',
+      school: reg?.school || 'St. Joseph Higher Secondary School',
+      trxnid: reg?.trxnid || 'VERIFIED',
+      eventsList: (reg?.selected_events || '').split(',').map((s: string) => s.trim()).filter(Boolean),
+      verified: reg?.verified === 'yes',
+    };
+    setActiveSlipCandidate(candidate);
+    setShowSlipModal(true);
+  };
 
   const downloadTicketPng = async () => {
     if (!ticketRef.current || downloadingTicket) return;
@@ -552,10 +576,10 @@ const Profile = () => {
       let hasOnlyMathOlympiadReg = false;
       let hasAnyVerifiedEvent = false;
       for (const tb of tables) {
-        const { data, error } = await supabase
+        let { data, error } = await supabase
           .from(tb)
           .select('*')
-          .eq('user_id', user.id);
+          .or(userPhone ? `user_id.eq.${user.id},bkash_number.eq.${userPhone}` : `user_id.eq.${user.id}`);
         
         if (error) {
           console.error(`Error loading events from ${tb}:`, error);
@@ -2005,6 +2029,13 @@ const Profile = () => {
         })()}
       </AnimatePresence>
 
+      {/* Verification Slip Modal */}
+      <PurchaseSlipModal 
+        candidate={activeSlipCandidate} 
+        isOpen={showSlipModal} 
+        onClose={() => setShowSlipModal(false)} 
+      />
+
       <div className="container mx-auto px-4">
         <div className="max-w-6xl mx-auto">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
@@ -2081,15 +2112,26 @@ const Profile = () => {
                         </button>
                       )}
                       {registeredEventsList.length > 0 && (
-                        <button
-                          onClick={() => {
-                            setShowTicketModal(true);
-                          }}
-                          className="px-3.5 py-1.5 rounded-full bg-gradient-to-r from-indigo-600 to-indigo-500 text-white text-[8px] sm:text-[9px] font-black uppercase tracking-widest border border-white/20 shadow-[0_4px_20px_rgba(99,102,241,0.4)] active:scale-95 hover:brightness-110 transition-all cursor-pointer whitespace-nowrap flex items-center gap-1"
-                        >
-                          <Ticket className="w-3 h-3" />
-                          Show Ticket
-                        </button>
+                        <>
+                          <button
+                            onClick={() => {
+                              setShowTicketModal(true);
+                            }}
+                            className="px-3.5 py-1.5 rounded-full bg-gradient-to-r from-indigo-600 to-indigo-500 text-white text-[8px] sm:text-[9px] font-black uppercase tracking-widest border border-white/20 shadow-[0_4px_20px_rgba(99,102,241,0.4)] active:scale-95 hover:brightness-110 transition-all cursor-pointer whitespace-nowrap flex items-center gap-1"
+                          >
+                            <Ticket className="w-3 h-3" />
+                            Show Ticket
+                          </button>
+                          <button
+                            onClick={() => {
+                              openSlipForRegistration(registeredEventsList[0]);
+                            }}
+                            className="px-3.5 py-1.5 rounded-full bg-gradient-to-r from-emerald-600 to-teal-500 text-white text-[8px] sm:text-[9px] font-black uppercase tracking-widest border border-white/20 shadow-[0_4px_20px_rgba(16,185,129,0.4)] active:scale-95 hover:brightness-110 transition-all cursor-pointer whitespace-nowrap flex items-center gap-1"
+                          >
+                            <FileText className="w-3 h-3" />
+                            Verification Slip
+                          </button>
+                        </>
                       )}
                     </div>
                   </div>
@@ -2130,15 +2172,26 @@ const Profile = () => {
                       </button>
                     )}
                     {registeredEventsList.length > 0 ? (
-                      <button 
-                        onClick={() => {
-                          setShowTicketModal(true);
-                        }}
-                        className="w-full py-4 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 font-bold hover:bg-indigo-500/20 transition-all flex items-center justify-center gap-2 group/ticket"
-                      >
-                        <Ticket className="w-4 h-4 group-hover/ticket:rotate-12 transition-transform" />
-                        Show Ticket
-                      </button>
+                      <>
+                        <button 
+                          onClick={() => {
+                            setShowTicketModal(true);
+                          }}
+                          className="w-full py-4 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 font-bold hover:bg-indigo-500/20 transition-all flex items-center justify-center gap-2 group/ticket"
+                        >
+                          <Ticket className="w-4 h-4 group-hover/ticket:rotate-12 transition-transform" />
+                          Show Ticket
+                        </button>
+                        <button 
+                          onClick={() => {
+                            openSlipForRegistration(registeredEventsList[0]);
+                          }}
+                          className="w-full py-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-bold hover:bg-emerald-500/20 transition-all flex items-center justify-center gap-2 group/slip"
+                        >
+                          <FileText className="w-4 h-4 group-hover/slip:rotate-12 transition-transform" />
+                          Verification Slip (QR Code & PDF)
+                        </button>
+                      </>
                     ) : (
                       <button 
                         onClick={() => {
@@ -2547,7 +2600,13 @@ const Profile = () => {
                                         <p className="text-[10px] font-mono font-medium text-zinc-400 mt-0.5">TrxID: {reg.trxnid}</p>
                                       </div>
                                       <div className="flex items-center justify-between mt-2 pt-2 border-t border-white/5">
-                                        <span className="text-[9px] uppercase font-bold tracking-widest text-zinc-500">Status</span>
+                                        <button
+                                          onClick={() => openSlipForRegistration(reg)}
+                                          className="px-2.5 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/20 hover:bg-emerald-500/20 text-emerald-400 font-bold text-[9px] uppercase tracking-wider flex items-center gap-1 transition-all cursor-pointer"
+                                        >
+                                          <FileText className="w-3 h-3" />
+                                          Verification Slip (QR)
+                                        </button>
                                         <div className="flex flex-col items-end gap-0.5">
                                           <span className={`text-[10px] font-bold uppercase tracking-wider ${
                                             reg.verified === 'yes' ? 'text-green-400' :
@@ -2653,7 +2712,13 @@ const Profile = () => {
                                         </div>
                                         
                                         <div className="flex items-center justify-between mt-6 pt-4 border-t border-white/5 px-2">
-                                          <span className="text-[8px] uppercase font-bold tracking-widest text-zinc-500">Verification</span>
+                                          <button
+                                            onClick={() => openSlipForRegistration(reg)}
+                                            className="px-2.5 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/20 hover:bg-emerald-500/20 text-emerald-400 font-bold text-[9px] uppercase tracking-wider flex items-center gap-1 transition-all cursor-pointer"
+                                          >
+                                            <FileText className="w-3 h-3" />
+                                            Verification Slip (QR)
+                                          </button>
                                           <div className="flex flex-col items-end gap-0.5">
                                             <span className={`text-[10px] font-black uppercase tracking-widest ${
                                               reg.verified === 'yes' ? 'text-emerald-400' :

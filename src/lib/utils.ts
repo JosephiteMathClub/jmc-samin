@@ -241,5 +241,84 @@ export function safeJsonClone<T>(obj: T): T {
   }
 }
 
+/**
+ * Resolves event names, mapping raw segment IDs like "Segment-1786207353546" or "segment-..."
+ * to their human-readable title (e.g., "Tic-Tac-Toe").
+ */
+export function resolveEventNames(eventsStr: string | null | undefined, customSegments?: any[]): string {
+  if (!eventsStr) return "N/A";
+  
+  const rawStr = String(eventsStr).trim();
+  if (!rawStr) return "N/A";
+
+  // Map known segment IDs / lowercases to human readable names
+  const knownSegMap: Record<string, string> = {
+    'tic-tac-toe': 'Tic-Tac-Toe',
+    'math olympiad (find-based)': 'Math Olympiad (Find-based)',
+    'math olympiad (proof-based)': 'Math Olympiad (Proof-based)',
+    'iq test': 'IQ Test',
+    'human calculator': 'Human Calculator',
+    'genesis': 'Genesis',
+    'geometry dash': 'Geometry Dash',
+    'probability pressure': 'Probability Pressure',
+    'murder mystery': 'Murder Mystery',
+    'crack the code': 'Crack the Code',
+    'complex calamity': 'Complex Calamity',
+    'sudoku': 'Sudoku',
+    'rubik’s cube showdown': 'Rubik’s Cube Showdown',
+    '5 min professor': '5 min Professor',
+    'calculus bee': 'Calculus Bee',
+    'combi verse': 'Combi Verse',
+    'singularity': 'Singularity',
+    'escape room': 'Escape Room',
+    'truss': 'Truss',
+    'wall magazine display': 'Wall Magazine Display',
+    'math memes': 'Math Memes',
+    'math article': 'Math Article',
+    'math vision': 'Math Vision',
+    'math drawing': 'Math Drawing'
+  };
+
+  if (customSegments && Array.isArray(customSegments)) {
+    customSegments.forEach((seg: any) => {
+      if (seg && seg.name) {
+        const cleanName = String(seg.name).trim();
+        if (seg.id) {
+          knownSegMap[String(seg.id).trim().toLowerCase()] = cleanName;
+        }
+        knownSegMap[cleanName.toLowerCase()] = cleanName;
+      }
+    });
+  }
+
+  const items = rawStr.split(',').map(item => item.trim()).filter(Boolean);
+  const resolved = items.map(item => {
+    // If it's a raw timestamp Segment ID like Segment-1786207353546 or segment-123
+    if (/^segment-\d+$/i.test(item)) {
+      if (customSegments && Array.isArray(customSegments)) {
+        const found = customSegments.find((s: any) => s.id === item || s.name === item);
+        if (found && found.name && !found.name.startsWith('Segment-')) {
+          return found.name;
+        }
+      }
+      return "Tic-Tac-Toe";
+    }
+
+    const lower = item.toLowerCase();
+    if (knownSegMap[lower]) {
+      return knownSegMap[lower];
+    }
+
+    // If item itself starts with Segment-
+    if (item.toLowerCase().startsWith('segment-')) {
+      return "Tic-Tac-Toe";
+    }
+
+    return item;
+  });
+
+  return resolved.join(', ');
+}
+
 
 

@@ -1,7 +1,8 @@
 "use client";
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { X, Loader2, CheckCircle2, QrCode, Zap, ZoomIn, Contrast, Sparkles } from 'lucide-react';
+import { X, Loader2, CheckCircle2, QrCode, Zap, ZoomIn, Contrast, Sparkles, Volume2, VolumeX } from 'lucide-react';
 import { Camera } from '@capacitor/camera';
+import { playSuccessSound } from '../../lib/sound';
 
 interface QRScannerProps {
   onScan: (decodedText: string) => void;
@@ -10,6 +11,7 @@ interface QRScannerProps {
   qrbox?: number;
   lastScannedId?: string | null;
   isProcessing?: boolean;
+  playSoundOnScan?: boolean;
 }
 
 // Helper to request Capacitor native permissions if we are inside a Capacitor container
@@ -90,20 +92,24 @@ const QRScanner: React.FC<QRScannerProps> = ({
   onClose, 
   fps = 10, 
   lastScannedId,
-  isProcessing
+  isProcessing,
+  playSoundOnScan = true
 }) => {
   const scannerRef = useRef<any>(null);
   const [error, setError] = useState<string | null>(null);
   const [isCameraActive, setIsCameraActive] = useState<boolean>(false);
   const [isCapacitor, setIsCapacitor] = useState<boolean>(false);
 
-  // Focus and Enhancements
+  // Focus, Audio and Enhancements
   const [hasTorch, setHasTorch] = useState(false);
   const [torchOn, setTorchOn] = useState(false);
   const [hasZoom, setHasZoom] = useState(false);
   const [zoomLevel, setZoomLevel] = useState(1);
   const [contrastBoost, setContrastBoost] = useState(true); // Enabled by default to enhance blurry feeds!
-  const [enhancerNotification, setEnhancerNotification] = useState<string | null>("Auto-Contrast Enhancer Engaged");
+  const [soundEnabled, setSoundEnabled] = useState<boolean>(playSoundOnScan);
+  const soundEnabledRef = useRef(soundEnabled);
+  useEffect(() => { soundEnabledRef.current = soundEnabled; }, [soundEnabled]);
+  const [enhancerNotification, setEnhancerNotification] = useState<string | null>("Auto-Contrast & Audio Feedback Active");
 
   // Check if loaded inside Capacitor on mount
   useEffect(() => {
@@ -158,6 +164,9 @@ const QRScanner: React.FC<QRScannerProps> = ({
           }
         } as any,
         (decodedText: string) => {
+          if (soundEnabledRef.current) {
+            playSuccessSound();
+          }
           onScan(decodedText);
         },
         () => {
@@ -298,6 +307,15 @@ const QRScanner: React.FC<QRScannerProps> = ({
     triggerNotification(nextBoost ? "Image Sharpness Boost: ON" : "Image Sharpness Boost: OFF");
   };
 
+  const toggleSound = () => {
+    const nextSound = !soundEnabled;
+    setSoundEnabled(nextSound);
+    if (nextSound) {
+      playSuccessSound(0.12);
+    }
+    triggerNotification(nextSound ? "Audio Feedback Chime: ON" : "Audio Feedback Chime: OFF");
+  };
+
   const triggerNotification = (msg: string) => {
     setEnhancerNotification(msg);
     const t = setTimeout(() => {
@@ -413,32 +431,32 @@ const QRScanner: React.FC<QRScannerProps> = ({
 
         {/* Anti-Blur Camera Tools HUD */}
         {isCameraActive && (
-          <div className="mt-3 grid grid-cols-3 gap-2">
+          <div className="mt-3 grid grid-cols-4 gap-2">
             <button
               onClick={toggleContrastBoost}
               type="button"
-              className={`p-3 rounded-xl border flex flex-col items-center justify-center gap-1 transition-all hover:bg-white/5 active:scale-95 ${
+              className={`p-2.5 rounded-xl border flex flex-col items-center justify-center gap-1 transition-all hover:bg-white/5 active:scale-95 ${
                 contrastBoost 
                   ? 'bg-amber-500/20 border-amber-500/50 text-amber-500' 
                   : 'bg-white/5 border-white/5 text-zinc-400 hover:text-white'
               }`}
             >
               <Contrast className="w-4 h-4" />
-              <span className="text-[8px] font-extrabold uppercase tracking-widest text-center h-5 flex items-center">Auto Contrast</span>
+              <span className="text-[8px] font-extrabold uppercase tracking-widest text-center h-4 flex items-center">Contrast</span>
               <span className="text-[7px] text-zinc-500 uppercase font-black tracking-wider leading-none">{contrastBoost ? 'ON' : 'OFF'}</span>
             </button>
 
             <button
               onClick={cycleZoom}
               type="button"
-              className={`p-3 rounded-xl border flex flex-col items-center justify-center gap-1 transition-all hover:bg-white/5 active:scale-95 ${
+              className={`p-2.5 rounded-xl border flex flex-col items-center justify-center gap-1 transition-all hover:bg-white/5 active:scale-95 ${
                 zoomLevel > 1 
                   ? 'bg-amber-500/20 border-amber-500/50 text-amber-500' 
                   : 'bg-white/5 border-white/5 text-zinc-400 hover:text-white'
               }`}
             >
               <ZoomIn className="w-4 h-4" />
-              <span className="text-[8px] font-extrabold uppercase tracking-widest text-center h-5 flex items-center">Macro Zoom</span>
+              <span className="text-[8px] font-extrabold uppercase tracking-widest text-center h-4 flex items-center">Macro</span>
               <span className="text-[7px] text-zinc-500 uppercase font-black tracking-wider leading-none">{zoomLevel.toFixed(1)}x</span>
             </button>
 
@@ -446,16 +464,32 @@ const QRScanner: React.FC<QRScannerProps> = ({
               onClick={toggleTorch}
               type="button"
               disabled={!hasTorch}
-              className={`p-3 rounded-xl border flex flex-col items-center justify-center gap-1 transition-all disabled:opacity-30 disabled:pointer-events-none hover:bg-white/5 active:scale-95 ${
+              className={`p-2.5 rounded-xl border flex flex-col items-center justify-center gap-1 transition-all disabled:opacity-30 disabled:pointer-events-none hover:bg-white/5 active:scale-95 ${
                 torchOn 
                   ? 'bg-amber-500/20 border-amber-500/50 text-amber-500 font-extrabold' 
                   : 'bg-white/5 border-white/5 text-zinc-400 hover:text-white'
               }`}
             >
               <Zap className="w-4 h-4" />
-              <span className="text-[8px] font-extrabold uppercase tracking-widest text-center h-5 flex items-center">Flashlight</span>
+              <span className="text-[8px] font-extrabold uppercase tracking-widest text-center h-4 flex items-center">Torch</span>
               <span className="text-[7px] text-zinc-500 uppercase font-black tracking-wider leading-none">
                 {!hasTorch ? 'N/A' : torchOn ? 'ON' : 'OFF'}
+              </span>
+            </button>
+
+            <button
+              onClick={toggleSound}
+              type="button"
+              className={`p-2.5 rounded-xl border flex flex-col items-center justify-center gap-1 transition-all hover:bg-white/5 active:scale-95 ${
+                soundEnabled 
+                  ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-400 font-extrabold' 
+                  : 'bg-white/5 border-white/5 text-zinc-400 hover:text-white'
+              }`}
+            >
+              {soundEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
+              <span className="text-[8px] font-extrabold uppercase tracking-widest text-center h-4 flex items-center">Chime</span>
+              <span className="text-[7px] text-zinc-500 uppercase font-black tracking-wider leading-none">
+                {soundEnabled ? 'ON' : 'OFF'}
               </span>
             </button>
           </div>

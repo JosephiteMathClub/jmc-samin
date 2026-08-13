@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Search, 
@@ -20,11 +20,18 @@ import {
   User,
   Users,
   Building,
-  BookOpen
+  BookOpen,
+  QrCode,
+  FileText,
+  Camera,
+  Scan
 } from 'lucide-react';
 import { supabase, isSupabaseConfigured } from '../../../lib/supabase';
 import { useAuth } from '../../../context/AuthContext';
-import { matchesSearchWithFuzzy } from '../../../lib/utils';
+import { matchesSearchWithFuzzy, resolveEventNames } from '../../../lib/utils';
+import { playSuccessSound, playErrorSound } from '../../../lib/sound';
+import QRScanner from '../QRScanner';
+import { PurchaseSlipModal, PurchaseSlipCandidate } from '../PurchaseSlipModal';
 
 interface TicketPurchase {
   id: string; // user UUID
@@ -73,7 +80,161 @@ export function TicketPurchaseSection() {
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
   // Subtab State
-  const [subTab, setSubTab] = useState<'validation' | 'spot_purchase'>('validation');
+  const [subTab, setSubTab] = useState<'validation' | 'tickify_qr' | 'spot_purchase'>('validation');
+
+  // Purchase Slip Modal State
+  const [selectedSlipCandidate, setSelectedSlipCandidate] = useState<PurchaseSlipCandidate | null>(null);
+  const [isSlipModalOpen, setIsSlipModalOpen] = useState(false);
+
+  // Tickify Continuous QR Scanner State & Overlay Popup
+  const [tickifyScanPopup, setTickifyScanPopup] = useState<{
+    type: 'verified' | 'already' | 'error';
+    candidateName?: string;
+    memberId?: string;
+    className?: string;
+    message: string;
+  } | null>(null);
+
+  const scanCooldownRef = useRef<{ [key: string]: number }>({});
+
+  // Helper to find candidate by decoded QR text (JSON payload, PassId, memberId, phone, email, etc.)
+  const findMatchingCandidate = useCallback((scannedText: string, candidatesList: Candidate[]) => {
+    if (!scannedText) return null;
+
+    let parsedId = '';
+    let parsedName = '';
+    let parsedTrxn = '';
+
+    // 1. Try parsing JSON payload from purchase slip or pass
+    try {
+      const json = JSON.parse(scannedText);
+      parsedId = (json.id || json.member_id || json.memberId || json.code || '').toString().trim();
+      parsedName = (json.name || json.full_name || json.fullName || '').toString().trim();
+      parsedTrxn = (json.trxnid || json.trxn_id || json.trxId || '').toString().trim();
+    } catch (e) {
+      // 2. Try Key-Value formatted string: PassId:... \n Name:...
+      if (scannedText.includes('PassId:')) {
+        const matchId = scannedText.match(/PassId:\s*([^\n\r]+)/i);
+        if (matchId) parsedId = matchId[1].trim();
+        const matchName = scannedText.match(/Name:\s*([^\n\r]+)/i);
+        if (matchName) parsedName = matchName[1].trim();
+      } else {
+        parsedId = scannedText.trim();
+      }
+    }
+
+    const cleanId = parsedId.toUpperCase();
+    const cleanTrxn = parsedTrxn.toUpperCase();
+    const cleanName = parsedName.toLowerCase();
+
+    return candidatesList.find(cand => {
+      const cId = (cand.memberId || '').toUpperCase();
+      const cRealId = (cand.id || '').toUpperCase();
+      const cPhone = (cand.phone || '').replace(/\D/g, '');
+      const cEmail = (cand.email || '').toLowerCase();
+      const cName = (cand.fullName || '').toLowerCase();
+
+      if (cleanId) {
+        if (cId === cleanId) return true;
+        if (cRealId === cleanId) return true;
+        if (`SPOT-${cId}` === cleanId) return true;
+        if (`JMC-${cId}` === cleanId) return true;
+        if (cId.replace(/^JMC-/, '') === cleanId.replace(/^JMC-/, '')) return true;
+      }
+
+      if (cleanTrxn && cand.id.toUpperCase().includes(cleanTrxn)) return true;
+      if (cleanName && cName === cleanName) return true;
+
+      const rawClean = scannedText.trim().toLowerCase();
+      if (cEmail && cEmail === rawClean) return true;
+      if (cPhone && cPhone.length > 5 && rawClean.includes(cPhone)) return true;
+
+      return false;
+    });
+  }, []);
+
+  // Continuous Scan Handler for Tickify Mode
+  const handleTickifyScan = useCallback(async (decodedText: string) => {
+    if (!decodedText) return;
+
+    const now = Date.now();
+    if (scanCooldownRef.current[decodedText] && now - scanCooldownRef.current[decodedText] < 2500) {
+      return; // 2.5s cooldown per identical QR code frame
+    }
+    scanCooldownRef.current[decodedText] = now;
+
+    const matched = findMatchingCandidate(decodedText, candidates);
+
+    if (!matched) {
+      playErrorSound(0.12);
+      setTickifyScanPopup({
+        type: 'error',
+        message: `Unrecognized QR code or Ticket ID: "${decodedText.slice(0, 30)}"`
+      });
+      setTimeout(() => {
+        setTickifyScanPopup(prev => (prev?.type === 'error' ? null : prev));
+      }, 2500);
+      return;
+    }
+
+    const existing = purchases[matched.id];
+    const wasValidated = existing?.validated === true;
+
+    // Auto-mark ticket validated, snacks claimed, souvenir claimed, and certificate
+    const updatedPurchase: TicketPurchase = {
+      id: matched.id,
+      fullName: matched.fullName,
+      email: matched.email,
+      phone: matched.phone,
+      memberId: matched.memberId,
+      class: matched.class,
+      section: matched.section,
+      roll: matched.roll,
+      confirmed: true,
+      confirmedAt: existing?.confirmedAt || new Date().toISOString(),
+      confirmedBy: existing?.confirmedBy || user?.email || 'Admin',
+      validated: true,
+      validatedAt: existing?.validatedAt || new Date().toISOString(),
+      validatedBy: user?.email || 'Admin',
+      snacks: true,
+      souvenir: true,
+      certificate: true,
+      candidateType: matched.candidateType
+    };
+
+    const newPurchases = {
+      ...purchases,
+      [matched.id]: updatedPurchase
+    };
+
+    // Save purchase state in background
+    await savePurchaseState(newPurchases);
+
+    if (wasValidated) {
+      playSuccessSound(0.12);
+      setTickifyScanPopup({
+        type: 'already',
+        candidateName: matched.fullName,
+        memberId: matched.memberId || matched.id,
+        className: matched.class,
+        message: 'Already Validated - Entry & Perks Re-confirmed'
+      });
+    } else {
+      playSuccessSound(0.2);
+      setTickifyScanPopup({
+        type: 'verified',
+        candidateName: matched.fullName,
+        memberId: matched.memberId || matched.id,
+        className: matched.class,
+        message: 'Member Verified! Ticket, Snacks & Souvenir Checked'
+      });
+    }
+
+    // Auto-dismiss popup after 2.5 seconds WITHOUT closing the scanner!
+    setTimeout(() => {
+      setTickifyScanPopup(null);
+    }, 2500);
+  }, [candidates, purchases, findMatchingCandidate, user?.email]);
 
   // Spot Purchase Form State
   const [spotName, setSpotName] = useState('');
@@ -263,7 +424,8 @@ export function TicketPurchaseSection() {
         if (!reg.user_id) return;
         const uid = reg.user_id.toLowerCase();
         const existing = eventParticipantsMap.get(uid);
-        const eventsList = reg.selected_events ? reg.selected_events.split(',').map((e: string) => e.trim()).filter(Boolean) : [];
+        const resolvedEvts = reg.selected_events ? resolveEventNames(reg.selected_events) : '';
+        const eventsList = resolvedEvts ? resolvedEvts.split(',').map((e: string) => e.trim()).filter(Boolean) : [];
         
         if (existing) {
           existing.events = Array.from(new Set([...existing.events, ...eventsList]));
@@ -641,10 +803,10 @@ export function TicketPurchaseSection() {
       </div>
 
       {/* Subtabs selection */}
-      <div className="flex p-1 rounded-full bg-white/[0.02] border border-white/5 backdrop-blur-md shadow-lg self-start">
+      <div className="flex flex-wrap p-1 rounded-full bg-white/[0.02] border border-white/5 backdrop-blur-md shadow-lg self-start gap-1">
         <button
           onClick={() => setSubTab('validation')}
-          className={`px-6 py-2.5 rounded-full text-xs font-semibold tracking-wider uppercase transition-all relative cursor-pointer flex items-center gap-2 ${
+          className={`px-5 py-2.5 rounded-full text-xs font-semibold tracking-wider uppercase transition-all relative cursor-pointer flex items-center gap-2 ${
             subTab === 'validation' ? 'text-black font-bold' : 'text-zinc-500 hover:text-zinc-300'
           }`}
         >
@@ -658,9 +820,30 @@ export function TicketPurchaseSection() {
             />
           )}
         </button>
+
+        <button
+          onClick={() => setSubTab('tickify_qr')}
+          className={`px-5 py-2.5 rounded-full text-xs font-semibold tracking-wider uppercase transition-all relative cursor-pointer flex items-center gap-2 ${
+            subTab === 'tickify_qr' ? 'text-black font-bold' : 'text-zinc-500 hover:text-zinc-300'
+          }`}
+        >
+          <Scan className="w-4 h-4 relative z-10" />
+          <span className="relative z-10 flex items-center gap-1.5">
+            QR Verification (Tickify Mode)
+            <span className="px-1.5 py-0.5 rounded-full text-[9px] bg-emerald-500/30 text-emerald-950 font-extrabold uppercase">Live</span>
+          </span>
+          {subTab === 'tickify_qr' && (
+            <motion.div 
+              layoutId="activeSubTabPill" 
+              className="absolute inset-0 bg-emerald-400 rounded-full"
+              transition={{ type: "spring", bounce: 0.15, duration: 0.5 }}
+            />
+          )}
+        </button>
+
         <button
           onClick={() => setSubTab('spot_purchase')}
-          className={`px-6 py-2.5 rounded-full text-xs font-semibold tracking-wider uppercase transition-all relative cursor-pointer flex items-center gap-2 ${
+          className={`px-5 py-2.5 rounded-full text-xs font-semibold tracking-wider uppercase transition-all relative cursor-pointer flex items-center gap-2 ${
             subTab === 'spot_purchase' ? 'text-black font-bold' : 'text-zinc-500 hover:text-zinc-300'
           }`}
         >
@@ -683,7 +866,103 @@ export function TicketPurchaseSection() {
         </div>
       )}
 
-      {subTab === 'spot_purchase' ? (
+      {subTab === 'tickify_qr' ? (
+        <motion.div
+          key="tickify_scanner_view"
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -10 }}
+          transition={{ duration: 0.2 }}
+          className="max-w-3xl mx-auto space-y-6"
+        >
+          <div className="p-6 rounded-[2.5rem] bg-white/[0.02] border border-white/5 space-y-2 text-center">
+            <span className="px-3 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-widest bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 inline-flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" /> Continuous Verification Engine
+            </span>
+            <h3 className="text-xl font-black text-white uppercase font-display tracking-tight">TICKIFY QR CODE SCANNER</h3>
+            <p className="text-xs text-zinc-400 max-w-lg mx-auto">
+              Scanner launches once and remains live for continuous verification. Position participant QR code in camera view. Upon scanning, ticket validation, snacks, souvenir, and event status are auto-checked with a temporary popup notification.
+            </p>
+          </div>
+
+          {/* Continuous Camera Feed & Floating Popup */}
+          <div className="relative rounded-[2.5rem] overflow-hidden border border-emerald-500/20 bg-black min-h-[420px] shadow-2xl">
+            
+            {/* Live Camera Feed */}
+            <QRScanner
+              onScan={handleTickifyScan}
+              onClose={() => setSubTab('validation')}
+              fps={15}
+            />
+
+            {/* FLOATING VERIFICATION OVERLAY POPUP */}
+            <AnimatePresence>
+              {tickifyScanPopup && (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.9, y: -20 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.9, y: -20 }}
+                  transition={{ duration: 0.2 }}
+                  className={`absolute inset-x-4 top-12 z-50 p-6 rounded-3xl border shadow-2xl backdrop-blur-2xl flex flex-col items-center text-center space-y-3 ${
+                    tickifyScanPopup.type === 'verified'
+                      ? 'bg-emerald-950/95 border-emerald-500/60 text-white shadow-emerald-500/20'
+                      : tickifyScanPopup.type === 'already'
+                      ? 'bg-amber-950/95 border-amber-500/60 text-white shadow-amber-500/20'
+                      : 'bg-red-950/95 border-red-500/60 text-white shadow-red-500/20'
+                  }`}
+                >
+                  <div className={`w-14 h-14 rounded-2xl flex items-center justify-center border shadow-lg ${
+                    tickifyScanPopup.type === 'verified'
+                      ? 'bg-emerald-500/20 border-emerald-500/40 text-emerald-400'
+                      : tickifyScanPopup.type === 'already'
+                      ? 'bg-amber-500/20 border-amber-500/40 text-amber-400'
+                      : 'bg-red-500/20 border-red-500/40 text-red-400'
+                  }`}>
+                    {tickifyScanPopup.type === 'verified' && <ShieldCheck className="w-8 h-8 animate-bounce" />}
+                    {tickifyScanPopup.type === 'already' && <CheckCircle2 className="w-8 h-8 animate-pulse" />}
+                    {tickifyScanPopup.type === 'error' && <XCircle className="w-8 h-8 animate-pulse" />}
+                  </div>
+
+                  <div>
+                    <span className={`text-[10px] font-black uppercase tracking-widest block ${
+                      tickifyScanPopup.type === 'verified' ? 'text-emerald-400' :
+                      tickifyScanPopup.type === 'already' ? 'text-amber-400' : 'text-red-400'
+                    }`}>
+                      {tickifyScanPopup.type === 'verified' ? '✓ MEMBER VERIFIED' :
+                       tickifyScanPopup.type === 'already' ? 'ℹ ALREADY VERIFIED' : '⚠ UNRECOGNIZED QR CODE'}
+                    </span>
+                    
+                    {tickifyScanPopup.candidateName && (
+                      <h4 className="text-xl font-black text-white font-display mt-0.5">
+                        {tickifyScanPopup.candidateName}
+                      </h4>
+                    )}
+
+                    {tickifyScanPopup.memberId && (
+                      <p className="text-xs font-mono font-bold text-emerald-300 mt-1">
+                        ID: {tickifyScanPopup.memberId} {tickifyScanPopup.className ? `• Class ${tickifyScanPopup.className}` : ''}
+                      </p>
+                    )}
+
+                    <p className="text-xs font-medium text-zinc-300 mt-1">
+                      {tickifyScanPopup.message}
+                    </p>
+                  </div>
+
+                  {tickifyScanPopup.type !== 'error' && (
+                    <div className="flex flex-wrap justify-center gap-2 pt-1 text-[10px] font-bold font-mono text-emerald-300">
+                      <span className="px-2.5 py-1 rounded-full bg-emerald-500/20 border border-emerald-500/30">✓ Ticket Validated</span>
+                      <span className="px-2.5 py-1 rounded-full bg-amber-500/20 border border-amber-500/30">✓ Snacks Claimed</span>
+                      <span className="px-2.5 py-1 rounded-full bg-purple-500/20 border border-purple-500/30">✓ Souvenir Claimed</span>
+                    </div>
+                  )}
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+          </div>
+        </motion.div>
+      ) : subTab === 'spot_purchase' ? (
         <motion.div
           key="spot_purchase_form"
           initial={{ opacity: 0, y: 10 }}
@@ -1043,7 +1322,7 @@ export function TicketPurchaseSection() {
                     ) : (
                       <div className="space-y-4">
                         {/* Ticket issued & Validate action */}
-                        <div className="flex items-center justify-between">
+                        <div className="flex items-center justify-between gap-2">
                           <div className="flex flex-col">
                             <span className="text-[10px] font-mono text-emerald-400 font-bold flex items-center gap-1">
                               <CheckCircle2 className="w-3.5 h-3.5" /> Ticket Issued
@@ -1053,24 +1332,38 @@ export function TicketPurchaseSection() {
                             </span>
                           </div>
 
-                          <button
-                            onClick={() => toggleValidation(cand.id)}
-                            disabled={actionLoading === `${cand.id}-validate` || isValidated}
-                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-[11px] font-bold transition-all ${
-                              isValidated 
-                                ? 'bg-violet-500/5 border-violet-500/20 text-violet-400/60 cursor-not-allowed' 
-                                : 'bg-white/[0.03] border-white/10 text-white hover:bg-white/[0.08]'
-                            }`}
-                          >
-                            {actionLoading === `${cand.id}-validate` ? (
-                              <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                            ) : isValidated ? (
-                              <ShieldCheck className="w-3.5 h-3.5" />
-                            ) : (
-                              <Check className="w-3.5 h-3.5" />
-                            )}
-                            {isValidated ? 'Validated' : 'Validate'}
-                          </button>
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => {
+                                setSelectedSlipCandidate(cand);
+                                setIsSlipModalOpen(true);
+                              }}
+                              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-[11px] font-bold text-emerald-400 transition-all cursor-pointer"
+                              title="View & Email Purchase Slip with QR Code"
+                            >
+                              <FileText className="w-3.5 h-3.5" />
+                              <span>Slip & QR</span>
+                            </button>
+
+                            <button
+                              onClick={() => toggleValidation(cand.id)}
+                              disabled={actionLoading === `${cand.id}-validate` || isValidated}
+                              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-[11px] font-bold transition-all ${
+                                isValidated 
+                                  ? 'bg-violet-500/5 border-violet-500/20 text-violet-400/60 cursor-not-allowed' 
+                                  : 'bg-white/[0.03] border-white/10 text-white hover:bg-white/[0.08]'
+                              }`}
+                            >
+                              {actionLoading === `${cand.id}-validate` ? (
+                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                              ) : isValidated ? (
+                                <ShieldCheck className="w-3.5 h-3.5" />
+                              ) : (
+                                <Check className="w-3.5 h-3.5" />
+                              )}
+                              {isValidated ? 'Validated' : 'Validate'}
+                            </button>
+                          </div>
                         </div>
 
                         {/* Interactive Item Checklist */}
@@ -1146,6 +1439,14 @@ export function TicketPurchaseSection() {
       )}
         </>
       )}
+
+      {/* Purchase Slip & QR Modal */}
+      <PurchaseSlipModal
+        candidate={selectedSlipCandidate}
+        isOpen={isSlipModalOpen}
+        onClose={() => setIsSlipModalOpen(false)}
+        onEmailSent={() => handleRefresh()}
+      />
     </div>
   );
 }

@@ -8,17 +8,17 @@ export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
 
   if (host.startsWith('know-math-symbols.') || host === 'symbols.jmc-sjs.org') {
-    if (pathname === '/' || (!pathname.startsWith('/know-math-symbols') && !pathname.startsWith('/_next') && !pathname.startsWith('/api'))) {
+    if (pathname === '/') {
       const url = request.nextUrl.clone();
-      url.pathname = '/know-math-symbols' + (pathname === '/' ? '' : pathname);
+      url.pathname = '/know-math-symbols';
       return NextResponse.rewrite(url);
     }
   }
 
   if (host.startsWith('discover-math-play.') || host === 'play.jmc-sjs.org') {
-    if (pathname === '/' || (!pathname.startsWith('/discover-math-play') && !pathname.startsWith('/_next') && !pathname.startsWith('/api'))) {
+    if (pathname === '/') {
       const url = request.nextUrl.clone();
-      url.pathname = '/discover-math-play' + (pathname === '/' ? '' : pathname);
+      url.pathname = '/discover-math-play';
       return NextResponse.rewrite(url);
     }
   }
@@ -26,6 +26,9 @@ export async function middleware(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
     request,
   });
+
+  const isSecureProtocol = request.nextUrl.protocol === 'https:' || request.headers.get('x-forwarded-proto') === 'https';
+  const cookieSameSite = isSecureProtocol ? ('none' as const) : ('lax' as const);
 
   let supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
   if (supabaseUrl && !supabaseUrl.startsWith('http')) {
@@ -63,19 +66,18 @@ export async function middleware(request: NextRequest) {
             request,
           });
           cookiesToSet.forEach(({ name, value, options }: any) => {
-            // Force SameSite=None for AI Studio iframes
             const overridenOptions = {
               ...options,
-              sameSite: 'none' as const,
-              secure: true,
+              sameSite: cookieSameSite,
+              secure: isSecureProtocol,
             };
             supabaseResponse.cookies.set(name, value, overridenOptions);
           });
         },
       },
       cookieOptions: {
-        sameSite: 'none',
-        secure: true,
+        sameSite: cookieSameSite,
+        secure: isSecureProtocol,
       }
     }
   );
@@ -96,8 +98,8 @@ export async function middleware(request: NextRequest) {
             redirectResponse.cookies.set(cookie.name, cookie.value, {
               path: cookie.path,
               domain: cookie.domain,
-              secure: true,
-              sameSite: 'none',
+              secure: isSecureProtocol,
+              sameSite: cookieSameSite,
               maxAge: cookie.maxAge,
             });
           });
@@ -143,8 +145,8 @@ export async function middleware(request: NextRequest) {
             homeResponse.cookies.set(cookie.name, cookie.value, {
               path: cookie.path,
               domain: cookie.domain,
-              secure: true,
-              sameSite: 'none',
+              secure: isSecureProtocol,
+              sameSite: cookieSameSite,
               maxAge: cookie.maxAge,
             });
           });

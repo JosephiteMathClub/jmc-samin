@@ -23,8 +23,11 @@ import {
   Mail,
   Calendar,
   RefreshCw,
-  UserPlus
+  UserPlus,
+  FileText,
+  Download
 } from 'lucide-react';
+import { PurchaseSlipModal, PurchaseSlipCandidate } from '../components/dashboard/PurchaseSlipModal';
 import { 
   markFestivalDatesInUserAccount, 
   getGoogleCalendarAllDaysUrl, 
@@ -204,6 +207,7 @@ const EventRegister = () => {
   const [fetchingMemberStatus, setFetchingMemberStatus] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [showSlipModal, setShowSlipModal] = useState(false);
   const [guestEmail, setGuestEmail] = useState('');
   const [registerMethod, setRegisterMethod] = useState<'both' | 'phone_only'>('both');
   const [wasGuestRegistered, setWasGuestRegistered] = useState(false);
@@ -1014,8 +1018,8 @@ const EventRegister = () => {
         return;
       }
 
-      // Additional Teammate 3 validation strictly for Tic-Tac-Toe
-      const isTicTacToe = selectedEvent && (selectedEvent.toLowerCase().includes("tic-tac-toe") || selectedEvent.toLowerCase().includes("tic tac toe"));
+      // Additional Teammate 3 validation strictly for Tic-Tac-Toe / 3-member team events
+      const isTicTacToe = selectedEvent && (selectedEvent.toLowerCase().includes("tic") || teamEventsList.find(tc => tc.name === selectedEvent)?.memberCount === 3);
       if (isTicTacToe) {
         if (!teamMember3Name.trim() || !teamMember3Class.trim() || !teamMember3Section.trim() || !teamMember3Gender) {
           showToast("Please fill all required details (Name, Class, Section/Institute, and Gender) for Teammate 3 (Required for Tic-Tac-Toe).", "error");
@@ -1218,6 +1222,7 @@ const EventRegister = () => {
         setWasGuestRegistered(true);
         markFestivalDatesInUserAccount(guestEmail.trim());
         setIsSuccess(true);
+        setShowSlipModal(true);
         setSubmitting(false);
         return;
       }
@@ -1507,6 +1512,7 @@ const EventRegister = () => {
 
       markFestivalDatesInUserAccount(user?.email || guestEmail);
       setIsSuccess(true);
+      setShowSlipModal(true);
       showToast("Event registration request submitted successfully!", "success");
     } catch (err: any) {
       console.error("Submission Error:", err);
@@ -1694,6 +1700,60 @@ const EventRegister = () => {
                 </span>
               )}
             </p>
+
+            {/* Verification Slip Auto-Download & Pass Notice */}
+            <div className="p-6 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl text-left space-y-4 w-full mb-8">
+              <div className="flex items-center justify-between border-b border-emerald-500/20 pb-3">
+                <div className="flex items-center gap-2">
+                  <FileText className="w-5 h-5 text-emerald-400" />
+                  <div>
+                    <h4 className="text-xs font-black uppercase tracking-wider text-white">Official Verification Slip (PDF)</h4>
+                    <p className="text-[10px] text-emerald-400 font-bold uppercase tracking-widest mt-0.5">✓ Scannable Pass & QR Code Generated</p>
+                  </div>
+                </div>
+                <span className="px-2.5 py-1 bg-emerald-500/20 text-emerald-300 text-[9px] font-black uppercase tracking-wider rounded-full">
+                  Auto-Downloaded
+                </span>
+              </div>
+              
+              <p className="text-xs text-zinc-300 leading-relaxed font-sans">
+                Your official <strong>Verification Slip PDF with QR Code</strong> has been generated and auto-downloaded to your device.
+              </p>
+
+              <div className="p-3.5 bg-black/50 rounded-xl text-[11px] text-amber-300 border border-amber-500/20 leading-relaxed font-medium">
+                ℹ️ <strong>Notice:</strong> You can also log in anytime using your required credentials (registered phone number / email) to download this verification slip PDF again from your <strong>Profile Page</strong>.
+              </div>
+
+              <div className="flex gap-3 pt-1">
+                <button
+                  type="button"
+                  onClick={() => setShowSlipModal(true)}
+                  className="flex-1 py-3 px-4 bg-emerald-500 hover:bg-emerald-400 text-black font-black text-xs uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-emerald-500/20"
+                >
+                  <Download className="w-4 h-4" /> Download Verification PDF Pass Again
+                </button>
+              </div>
+            </div>
+
+            <PurchaseSlipModal 
+              candidate={{
+                id: interUniqueId || 'JMC-PASS',
+                fullName: fullName || 'Participant',
+                email: guestEmail || user?.email || interAccountEmail || '',
+                phone: phone || '',
+                memberId: interUniqueId || 'JMC-PASS',
+                class: className || 'N/A',
+                section: section || 'N/A',
+                roll: roll || 'N/A',
+                school: 'St. Joseph Higher Secondary School',
+                trxnid: trxnid || 'VERIFIED',
+                eventsList: selectedEvents,
+                verified: finalAmount === 0 || isProxyRegistration,
+              }}
+              isOpen={showSlipModal}
+              autoDownload={true}
+              onClose={() => setShowSlipModal(false)}
+            />
 
             {/* Festival Calendar Scheduled Notification */}
             <div className="p-6 bg-gradient-to-br from-indigo-950/40 via-purple-950/20 to-black border border-indigo-500/30 rounded-2xl text-left space-y-4 w-full mb-8">
@@ -2609,10 +2669,22 @@ const EventRegister = () => {
                                 >
                                   <div className="border-b border-white/5 pb-2">
                                     <h3 className="text-base font-black uppercase tracking-wider text-indigo-400 flex items-center gap-2">
-                                      <User className="w-4 h-4" /> Team Members Profiles
+                                      <User className="w-4 h-4" />
+                                      {selectedEvents.some(e => e.toLowerCase().includes("tic")) && selectedEvents.length > 1
+                                        ? "Shared & Tic-Tac-Toe Teammate Details"
+                                        : selectedEvents.some(e => e.toLowerCase().includes("tic"))
+                                        ? "Tic-Tac-Toe Team Member Details"
+                                        : "Team Members Profiles"
+                                      }
                                     </h3>
-                                    <p className="text-[10px] text-zinc-500 mt-1 uppercase font-bold">
-                                      Member 1 (Leader): {fullName} ({cleanDisplayEmail(user?.email)}) - Filled automatically
+                                    <p className="text-[10px] text-zinc-400 mt-1 uppercase font-bold leading-relaxed">
+                                      Leader: {fullName} ({cleanDisplayEmail(user?.email)}) — 
+                                      {selectedEvents.some(e => e.toLowerCase().includes("tic")) && selectedEvents.length > 1
+                                        ? " Other team events require 1 teammate (Teammate 1). Both teammates (Teammate 1 & Teammate 2) will be registered under Tic-Tac-Toe."
+                                        : selectedEvents.some(e => e.toLowerCase().includes("tic"))
+                                        ? " Tic-Tac-Toe is a 3-member team event requiring 2 teammates."
+                                        : " Filled automatically"
+                                      }
                                     </p>
                                   </div>
 
@@ -2702,8 +2774,12 @@ const EventRegister = () => {
                                     </div>
                                   </div>
 
-                                  {/* TEAMMATE 3 CARD - Only for Tic-Tac-Toe */}
-                                  {selectedEvents.some(e => e.toLowerCase().includes("tic-tac-toe") || e.toLowerCase().includes("tic tac toe")) && (
+                                  {/* TEAMMATE 3 CARD - Only for Tic-Tac-Toe / 3-member team events */}
+                                  {selectedEvents.some(e => {
+                                    if (!e) return false;
+                                    const l = e.toLowerCase();
+                                    return l.includes("tic") || l.includes("toe") || l.includes("tac") || teamEventsList.find(tc => tc.name === e)?.memberCount === 3;
+                                  }) && (
                                     <div className="p-6 bg-white/[0.02] border border-white/5 rounded-2xl space-y-4">
                                       <div className="flex items-center justify-between">
                                         <h4 className="text-xs font-black uppercase tracking-wider text-zinc-300">Team Member 3</h4>

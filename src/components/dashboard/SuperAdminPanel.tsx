@@ -43,7 +43,8 @@ import {
   ArrowDown,
   Edit,
   Eye,
-  FileText
+  FileText,
+  RefreshCw
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useToast } from '../../context/ToastContext';
@@ -53,6 +54,7 @@ import { DashboardSection } from './DashboardSection';
 import { DashboardButton } from './DashboardButton';
 import { DashboardFormField } from './DashboardFormField';
 import { SupportManagement } from './SupportManagement';
+import { PurchaseSlipModal, PurchaseSlipCandidate } from './PurchaseSlipModal';
 import Image from 'next/image';
 import dynamic from 'next/dynamic';
 import { cleanDisplayEmail } from '../../lib/utils';
@@ -1169,8 +1171,11 @@ export function InterEventRegistrationConfigEditor({ showToast }: { showToast: (
     setInterSegments(prev => {
       const copy = [...prev];
       copy[idx] = { ...copy[idx], [field]: value };
-      if (field === 'name' && !copy[idx].id) {
-        copy[idx].id = value;
+      if (field === 'name') {
+        const cleanName = String(value || '').trim();
+        if (cleanName && (!copy[idx].id || copy[idx].id.startsWith('Segment-') || copy[idx].id.startsWith('segment-'))) {
+          copy[idx].id = cleanName;
+        }
       }
       return copy;
     });
@@ -1271,6 +1276,16 @@ export function InterEventRegistrationConfigEditor({ showToast }: { showToast: (
   const handleSave = async (updatedLaunchState?: boolean) => {
     setSaving(true);
     const targetLaunch = updatedLaunchState !== undefined ? updatedLaunchState : isEventPageLaunched;
+
+    const cleanedSegments = interSegments.map(s => {
+      const cleanName = String(s.name || s.id || 'Event Segment').trim();
+      let cleanId = String(s.id || '').trim();
+      if (!cleanId || cleanId.startsWith('Segment-') || cleanId.startsWith('segment-')) {
+        cleanId = cleanName;
+      }
+      return { ...s, id: cleanId, name: cleanName };
+    });
+
     const payload = {
       bkashNumber,
       paymentDescription,
@@ -1279,7 +1294,7 @@ export function InterEventRegistrationConfigEditor({ showToast }: { showToast: (
       isEventPageLaunched: targetLaunch,
       teaserVideoEnabled,
       teaserVideoUrl,
-      interSegments
+      interSegments: cleanedSegments
     };
     try {
       let { error } = await supabase
@@ -1974,7 +1989,19 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ isSuperAdmin =
   const [loading, setLoading] = useState(true);
   const [promoting, setPromoting] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [activeSubTab, setActiveSubTab] = useState<'users' | 'database' | 'positions' | 'support' | 'email' | 'food' | 'cards' | 'transactions' | 'registration' | 'manual_announce' | 'bulk_name_notice'>('users');
+  const [activeSubTab, setActiveSubTab] = useState<'users' | 'database' | 'positions' | 'support' | 'email' | 'food' | 'cards' | 'transactions' | 'registration' | 'manual_announce' | 'bulk_name_notice' | 'resend_verification'>('users');
+  
+  // Resend Verification Pass State
+  const [resendRegistrations, setResendRegistrations] = useState<any[]>([]);
+  const [loadingResendRegs, setLoadingResendRegs] = useState(false);
+  const [resendSearchTerm, setResendSearchTerm] = useState('');
+  const [resendStatusFilter, setResendStatusFilter] = useState<'all' | 'verified' | 'pending'>('all');
+  const [resendSelected, setResendSelected] = useState<Record<string, boolean>>({});
+  const [manualResendEmail, setManualResendEmail] = useState('');
+  const [resendingSingle, setResendingSingle] = useState<string | null>(null);
+  const [resendingBulk, setResendingBulk] = useState(false);
+  const [resendModalCandidate, setResendModalCandidate] = useState<PurchaseSlipCandidate | null>(null);
+  const [showResendModal, setShowResendModal] = useState(false);
   
   // Member ID Cards state
   const [members, setMembers] = useState<any[]>([]);
@@ -3092,6 +3119,147 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ isSuperAdmin =
     }
   };
 
+  const fetchResendRegistrations = useCallback(async () => {
+    setLoadingResendRegs(true);
+    try {
+      const mergedList: any[] = [];
+      const tables = ['event_registrations', 'inter_school_registrations', 'intra_event_registrations'];
+
+      for (const tb of tables) {
+        const { data, error } = await supabase
+          .from(tb)
+          .select('*')
+          .order('created_at', { ascending: false });
+
+        if (!error && data) {
+          data.forEach((item: any) => {
+            const resolvedEvents = (item.selected_events || item.segments || '').split(',').map((s: string) => s.trim()).filter(Boolean);
+            mergedList.push({
+              ...item,
+              _sourceTable: tb,
+              _uniqueKey: `${tb}-${item.id || item.member_id || Math.random()}`,
+              email: item.email || item.recipient_email || item.bkash_number || '',
+              fullName: item.full_name || item.name || 'Participant',
+              memberId: item.member_id || item.id?.split('-')[0]?.toUpperCase() || item.trxnid || 'PASS',
+              className: String(item.class || 'N/A'),
+              section: String(item.section || 'N/A'),
+              roll: String(item.roll || 'N/A'),
+              school: item.school || item.institution || 'St. Joseph Higher Secondary School',
+              trxnid: item.trxnid || 'VERIFIED',
+              eventsList: resolvedEvents,
+              selected_events: resolvedEvents.join(', '),
+              verified: item.verified === 'yes' || item.verified === true
+            });
+          });
+        }
+      }
+
+      setResendRegistrations(mergedList);
+    } catch (err) {
+      console.error("Failed to fetch registrations for resend tab:", err);
+    } finally {
+      setLoadingResendRegs(false);
+    }
+  }, []);
+
+  const handleResendVerificationEmail = async (reg: any, customEmail?: string) => {
+    const targetEmail = (customEmail || reg.email || reg.recipient_email || '').trim();
+    if (!targetEmail) {
+      showToast("No valid recipient email address provided.", "error");
+      return;
+    }
+
+    setResendingSingle(reg._uniqueKey || reg.id || targetEmail);
+    try {
+      const payload = {
+        recipientEmail: targetEmail,
+        recipientName: reg.fullName || reg.full_name || reg.name || 'Participant',
+        memberId: reg.memberId || reg.member_id || reg.id || 'JMC-PASS',
+        className: reg.className || reg.class || 'N/A',
+        section: reg.section || 'N/A',
+        roll: reg.roll || 'N/A',
+        trxnid: reg.trxnid || 'VERIFIED',
+        events: Array.isArray(reg.eventsList) && reg.eventsList.length > 0 ? reg.eventsList.join(', ') : (reg.selected_events || 'Josephite Math Club Event Pass'),
+        school: reg.school || reg.institution || 'St. Joseph Higher Secondary School'
+      };
+
+      const res = await fetch('/api/admin/send-purchase-slip', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          recipients: [payload],
+          verifiedBy: 'Super Admin'
+        })
+      });
+
+      const data = await res.json();
+      if (res.ok && data.success) {
+        showToast(`Verification PDF & QR pass email successfully sent to ${targetEmail}!`, "success");
+      } else {
+        throw new Error(data.error || 'Failed to dispatch email');
+      }
+    } catch (err: any) {
+      console.error("Resend verification email error:", err);
+      showToast(err.message || "Failed to dispatch verification pass email.", "error");
+    } finally {
+      setResendingSingle(null);
+    }
+  };
+
+  const handleResendBulkVerification = async () => {
+    const selectedKeys = Object.keys(resendSelected).filter(k => resendSelected[k]);
+    if (selectedKeys.length === 0) {
+      showToast("Please select at least one registrant to resend.", "info");
+      return;
+    }
+
+    const targetCandidates = resendRegistrations.filter(r => selectedKeys.includes(r._uniqueKey));
+    if (targetCandidates.length === 0) return;
+
+    setResendingBulk(true);
+
+    try {
+      const payloads = targetCandidates.map(reg => ({
+        recipientEmail: reg.email,
+        recipientName: reg.fullName,
+        memberId: reg.memberId,
+        className: reg.className,
+        section: reg.section,
+        roll: reg.roll,
+        trxnid: reg.trxnid,
+        events: Array.isArray(reg.eventsList) ? reg.eventsList.join(', ') : reg.selected_events,
+        school: reg.school
+      })).filter(p => p.recipientEmail);
+
+      if (payloads.length === 0) {
+        showToast("None of the selected candidates have a valid email address.", "error");
+        return;
+      }
+
+      const res = await fetch('/api/admin/send-purchase-slip', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          recipients: payloads,
+          verifiedBy: 'Super Admin Bulk'
+        })
+      });
+
+      const data = await res.json();
+      if (res.ok && data.success) {
+        showToast(`Bulk verification emails sent to ${data.results?.filter((r: any) => r.success).length || payloads.length} candidates!`, "success");
+        setResendSelected({});
+      } else {
+        throw new Error(data.error || 'Bulk dispatch failed');
+      }
+    } catch (err: any) {
+      console.error("Bulk resend error:", err);
+      showToast(err.message || "Failed to perform bulk resend.", "error");
+    } finally {
+      setResendingBulk(false);
+    }
+  };
+
   useEffect(() => {
     if (activeSubTab === 'users') fetchUsers();
     if (activeSubTab === 'database') fetchTableData(selectedTable);
@@ -3101,6 +3269,7 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ isSuperAdmin =
     if (activeSubTab === 'cards') fetchVerifiedMembers();
     if (activeSubTab === 'transactions') fetchVerifiedTransactions();
     if (activeSubTab === 'bulk_name_notice') fetchMultiWordProfiles();
+    if (activeSubTab === 'resend_verification') fetchResendRegistrations();
   }, [
     activeSubTab, 
     selectedTable, 
@@ -3281,6 +3450,7 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ isSuperAdmin =
           { id: 'food', label: 'Food Management', icon: Utensils },
           { id: 'cards', label: 'Member ID Cards', icon: QrCode },
           { id: 'transactions', label: 'Verified Transactions', icon: CheckCircle2 },
+          { id: 'resend_verification', label: 'Resend Verification Pass', icon: Mail },
           { id: 'registration', label: 'Registration Toggle', icon: ShieldAlert },
           { id: 'database', label: 'Database Explorer', icon: DatabaseZap }
         ].map(tab => (
@@ -4836,7 +5006,262 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ isSuperAdmin =
             </DashboardSection>
           </motion.div>
         )}
+
+        {activeSubTab === 'resend_verification' && (
+          <motion.div
+            key="resend_verification"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="space-y-8"
+          >
+            <DashboardSection 
+              title="Resend Verification PDF Slips & Scannable QR Pass" 
+              description="Manually or in bulk dispatch official verification PDF slips with embedded QR code passes to participants who missed or didn't receive their verification emails."
+              icon={Mail}
+            >
+              <div className="space-y-6">
+                
+                {/* Manual Single Email Dispatch Box */}
+                <div className="p-6 rounded-2xl bg-gradient-to-r from-amber-500/10 via-zinc-900 to-indigo-500/10 border border-amber-500/20 space-y-4">
+                  <div className="flex items-center gap-2">
+                    <Mail className="w-5 h-5 text-amber-400" />
+                    <div>
+                      <h4 className="text-sm font-black uppercase tracking-wider text-white">Direct Email Dispatch</h4>
+                      <p className="text-[11px] text-zinc-400">Manually type any participant email address to immediately send their Verification PDF Slip & QR Code pass.</p>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    <input 
+                      type="email"
+                      value={manualResendEmail}
+                      onChange={(e) => setManualResendEmail(e.target.value)}
+                      placeholder="Enter target email address (e.g., student@gmail.com)"
+                      className="flex-1 px-4 py-3 bg-black/60 border border-white/10 rounded-xl text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-amber-500"
+                    />
+                    <button
+                      type="button"
+                      disabled={!manualResendEmail.trim() || !!resendingSingle}
+                      onClick={() => {
+                        const target = resendRegistrations.find(r => r.email?.toLowerCase() === manualResendEmail.trim().toLowerCase()) || {
+                          email: manualResendEmail.trim(),
+                          fullName: 'Participant',
+                          memberId: 'JMC-VERIFIED',
+                          className: 'N/A',
+                          section: 'N/A',
+                          roll: 'N/A',
+                          trxnid: 'VERIFIED',
+                          selected_events: 'Josephite Math Club Event Pass',
+                          school: 'St. Joseph Higher Secondary School'
+                        };
+                        handleResendVerificationEmail(target, manualResendEmail.trim());
+                      }}
+                      className="px-6 py-3 rounded-xl bg-amber-500 hover:bg-amber-400 disabled:opacity-40 text-black font-black text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-amber-500/20"
+                    >
+                      {resendingSingle ? <Loader2 className="w-4 h-4 animate-spin" /> : <Mail className="w-4 h-4" />}
+                      Send Verification PDF & QR
+                    </button>
+                  </div>
+                </div>
+
+                {/* Filters and Search Toolbar */}
+                <div className="flex flex-col md:flex-row justify-between items-stretch md:items-center gap-4">
+                  <div className="relative flex-1">
+                    <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-500" />
+                    <input 
+                      type="text"
+                      value={resendSearchTerm}
+                      onChange={(e) => setResendSearchTerm(e.target.value)}
+                      placeholder="Search by Name, Email, Phone, Member ID, TrxID, School..."
+                      className="w-full pl-10 pr-4 py-2.5 bg-zinc-900 border border-white/10 rounded-xl text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-amber-500"
+                    />
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-3">
+                    <select
+                      value={resendStatusFilter}
+                      onChange={(e) => setResendStatusFilter(e.target.value as any)}
+                      className="px-3 py-2.5 bg-zinc-900 border border-white/10 rounded-xl text-xs font-bold text-white focus:outline-none"
+                    >
+                      <option value="all">All Statuses</option>
+                      <option value="verified">Verified Only</option>
+                      <option value="pending">Pending Only</option>
+                    </select>
+
+                    <button
+                      type="button"
+                      onClick={fetchResendRegistrations}
+                      disabled={loadingResendRegs}
+                      className="px-4 py-2.5 bg-zinc-800 hover:bg-zinc-700 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-2 border border-white/10 cursor-pointer"
+                    >
+                      <RefreshCw className={`w-3.5 h-3.5 ${loadingResendRegs ? 'animate-spin' : ''}`} />
+                      Refresh List
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={handleResendBulkVerification}
+                      disabled={resendingBulk || Object.values(resendSelected).filter(Boolean).length === 0}
+                      className="px-5 py-2.5 bg-emerald-500 hover:bg-emerald-400 disabled:opacity-40 text-black rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 cursor-pointer shadow-lg shadow-emerald-500/20"
+                    >
+                      {resendingBulk ? <Loader2 className="w-4 h-4 animate-spin" /> : <Mail className="w-4 h-4" />}
+                      Resend Selected ({Object.values(resendSelected).filter(Boolean).length})
+                    </button>
+                  </div>
+                </div>
+
+                {/* Table of Registered Participants */}
+                <div className="border border-white/10 rounded-2xl overflow-x-auto bg-black/40">
+                  {loadingResendRegs ? (
+                    <div className="p-12 text-center text-zinc-500 flex flex-col items-center justify-center gap-3">
+                      <Loader2 className="w-8 h-8 animate-spin text-amber-500" />
+                      <p className="text-xs font-mono uppercase tracking-wider">Loading registered candidates from database...</p>
+                    </div>
+                  ) : (
+                    <table className="w-full text-left border-collapse">
+                      <thead>
+                        <tr className="border-b border-white/10 bg-white/[0.02] text-[10px] font-black uppercase tracking-wider text-zinc-400 font-mono">
+                          <th className="p-4 w-10 text-center">
+                            <input 
+                              type="checkbox"
+                              checked={resendRegistrations.length > 0 && resendRegistrations.every(r => resendSelected[r._uniqueKey])}
+                              onChange={(e) => {
+                                const checked = e.target.checked;
+                                const newSel: Record<string, boolean> = {};
+                                resendRegistrations.forEach(r => { newSel[r._uniqueKey] = checked; });
+                                setResendSelected(newSel);
+                              }}
+                              className="rounded border-zinc-700 bg-zinc-900 text-amber-500 focus:ring-0 cursor-pointer"
+                            />
+                          </th>
+                          <th className="p-4">Participant Details</th>
+                          <th className="p-4">IDs & Credentials</th>
+                          <th className="p-4">Academic & Institution</th>
+                          <th className="p-4">Events Registered</th>
+                          <th className="p-4">Status</th>
+                          <th className="p-4 text-right">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-white/5 text-xs">
+                        {resendRegistrations
+                          .filter(r => {
+                            if (resendStatusFilter === 'verified' && !r.verified) return false;
+                            if (resendStatusFilter === 'pending' && r.verified) return false;
+                            if (!resendSearchTerm.trim()) return true;
+                            const q = resendSearchTerm.toLowerCase().trim();
+                            return (
+                              r.fullName?.toLowerCase().includes(q) ||
+                              r.email?.toLowerCase().includes(q) ||
+                              r.bkash_number?.includes(q) ||
+                              r.memberId?.toLowerCase().includes(q) ||
+                              r.trxnid?.toLowerCase().includes(q) ||
+                              r.school?.toLowerCase().includes(q)
+                            );
+                          })
+                          .map((reg) => {
+                            const isSelected = !!resendSelected[reg._uniqueKey];
+                            const isResendingThis = resendingSingle === reg._uniqueKey;
+
+                            return (
+                              <tr key={reg._uniqueKey} className={`hover:bg-white/[0.02] transition-colors ${isSelected ? 'bg-amber-500/5' : ''}`}>
+                                <td className="p-4 text-center">
+                                  <input 
+                                    type="checkbox"
+                                    checked={isSelected}
+                                    onChange={(e) => {
+                                      setResendSelected(prev => ({
+                                        ...prev,
+                                        [reg._uniqueKey]: e.target.checked
+                                      }));
+                                    }}
+                                    className="rounded border-zinc-700 bg-zinc-900 text-amber-500 focus:ring-0 cursor-pointer"
+                                  />
+                                </td>
+                                <td className="p-4">
+                                  <p className="font-bold text-white text-sm">{reg.fullName}</p>
+                                  <p className="text-[11px] text-zinc-400 font-mono mt-0.5">{reg.email || 'No email saved'}</p>
+                                  {reg.bkash_number && (
+                                    <p className="text-[10px] text-zinc-500 font-mono">📱 {reg.bkash_number}</p>
+                                  )}
+                                </td>
+                                <td className="p-4 font-mono">
+                                  <p className="text-amber-400 font-bold text-xs">ID: {reg.memberId}</p>
+                                  <p className="text-[10px] text-zinc-400">TrxID: {reg.trxnid}</p>
+                                </td>
+                                <td className="p-4">
+                                  <p className="text-white font-medium">Class {reg.className} {reg.section !== 'N/A' ? `(${reg.section})` : ''}</p>
+                                  <p className="text-[11px] text-zinc-400 line-clamp-1">{reg.school}</p>
+                                </td>
+                                <td className="p-4">
+                                  <p className="text-xs text-indigo-300 font-medium font-mono line-clamp-2">{reg.selected_events}</p>
+                                </td>
+                                <td className="p-4">
+                                  <span className={`px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider ${
+                                    reg.verified 
+                                      ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' 
+                                      : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                                  }`}>
+                                    {reg.verified ? '✓ Verified' : '⏳ Pending'}
+                                  </span>
+                                </td>
+                                <td className="p-4 text-right">
+                                  <div className="flex items-center justify-end gap-2">
+                                    <button
+                                      type="button"
+                                      disabled={isResendingThis}
+                                      onClick={() => handleResendVerificationEmail(reg)}
+                                      className="px-3 py-1.5 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-400 font-bold text-[10px] uppercase tracking-wider transition-all flex items-center gap-1.5 cursor-pointer"
+                                    >
+                                      {isResendingThis ? <Loader2 className="w-3 h-3 animate-spin" /> : <Mail className="w-3 h-3" />}
+                                      Resend Email (PDF & QR)
+                                    </button>
+
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        const candidate: PurchaseSlipCandidate = {
+                                          id: reg.memberId,
+                                          fullName: reg.fullName,
+                                          email: reg.email,
+                                          phone: reg.bkash_number || '',
+                                          memberId: reg.memberId,
+                                          class: reg.className,
+                                          section: reg.section,
+                                          roll: reg.roll,
+                                          school: reg.school,
+                                          trxnid: reg.trxnid,
+                                          eventsList: reg.eventsList,
+                                          verified: reg.verified,
+                                        };
+                                        setResendModalCandidate(candidate);
+                                        setShowResendModal(true);
+                                      }}
+                                      className="px-2.5 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-zinc-300 font-bold text-[10px] uppercase tracking-wider transition-all flex items-center gap-1 cursor-pointer"
+                                    >
+                                      <Eye className="w-3 h-3" /> Slip
+                                    </button>
+                                  </div>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                      </tbody>
+                    </table>
+                  )}
+                </div>
+
+              </div>
+            </DashboardSection>
+          </motion.div>
+        )}
       </AnimatePresence>
+
+      <PurchaseSlipModal 
+        candidate={resendModalCandidate} 
+        isOpen={showResendModal} 
+        onClose={() => setShowResendModal(false)} 
+      />
 
       {mounted && typeof document !== 'undefined' && createPortal(
         <div className="print-container-portal hidden print:block bg-transparent text-white">

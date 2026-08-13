@@ -19,10 +19,14 @@ import {
   Calendar,
   Layers,
   Sparkles,
-  ArrowUpDown
+  ArrowUpDown,
+  Mail,
+  Send,
+  Ticket
 } from "lucide-react";
 import { supabase, isSupabaseConfigured } from "../../../lib/supabase";
-import { matchesSearchWithFuzzy } from "../../../lib/utils";
+import { matchesSearchWithFuzzy, resolveEventNames } from "../../../lib/utils";
+import { PurchaseSlipModal, PurchaseSlipCandidate } from "../PurchaseSlipModal";
 
 interface EventRegistrationRow {
   id: string;
@@ -48,6 +52,7 @@ interface EventRegistrationRow {
 export function EventRegistrationsSection() {
   const [registrations, setRegistrations] = useState<EventRegistrationRow[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
   // Controls
@@ -55,14 +60,89 @@ export function EventRegistrationsSection() {
   const [statusFilter, setStatusFilter] = useState<"all" | "yes" | "no" | "rejected">("all");
   const [tableFilter, setTableFilter] = useState<string>("all");
   const [classFilter, setClassFilter] = useState<string>("all");
+  const [sectionFilter, setSectionFilter] = useState<string>("all");
+  const [specificEventFilter, setSpecificEventFilter] = useState<string>("all");
+  const [dateFilter, setDateFilter] = useState<"all" | "today" | "7days" | "30days">("all");
+  const [amountFilter, setAmountFilter] = useState<"all" | "paid" | "free" | "tier1" | "tier2">("all");
   const [showUniqueOnly, setShowUniqueOnly] = useState<boolean>(true); // default to true to show unique participants
   const [selectedRegistrant, setSelectedRegistrant] = useState<EventRegistrationRow | null>(null);
   const [eventTypeFilter, setEventTypeFilter] = useState<"all" | "solo" | "team">("all");
-  const [sortBy, setSortBy] = useState<"date" | "name" | "class" | "event">("date");
+  const [sortBy, setSortBy] = useState<"date_desc" | "date_asc" | "name_asc" | "name_desc" | "class_asc" | "class_desc" | "event_asc">("date_desc");
 
-  const fetchAllRegistrations = useCallback(async () => {
+  // Purchase Slip Modal & Bulk Dispatch State
+  const [selectedSlipCandidate, setSelectedSlipCandidate] = useState<PurchaseSlipCandidate | null>(null);
+  const [isSlipModalOpen, setIsSlipModalOpen] = useState(false);
+  const [bulkDispatching, setBulkDispatching] = useState(false);
+  const [dispatchNotice, setDispatchNotice] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+
+  const handleBulkDispatchSlips = async () => {
+    // Find all verified registrants with email address
+    const verifiedList = registrations.filter(r => r.verified === 'yes' && r.email && r.email.trim() !== '');
+
+    if (verifiedList.length === 0) {
+      setDispatchNotice({
+        type: 'error',
+        message: 'No verified registrants with email addresses found.'
+      });
+      return;
+    }
+
+    if (!confirm(`Are you sure you want to dispatch purchase slips with QR codes to ${verifiedList.length} verified registrants?`)) {
+      return;
+    }
+
+    setBulkDispatching(true);
+    setDispatchNotice(null);
+
+    const recipients = verifiedList.map(item => ({
+      recipientEmail: item.email,
+      recipientName: item.full_name,
+      memberId: item.member_id || item.user_id || item.id,
+      className: item.class,
+      section: item.section || 'N/A',
+      roll: item.roll || 'N/A',
+      trxnid: item.trxnid,
+      events: item.selected_events,
+      school: 'St. Joseph Higher Secondary School'
+    }));
+
+    try {
+      const res = await fetch('/api/admin/send-purchase-slip', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          recipients,
+          verifiedBy: 'Super Admin'
+        })
+      });
+
+      const data = await res.json();
+      if (!res.ok || data.error) {
+        throw new Error(data.error || 'Failed to dispatch purchase slips');
+      }
+
+      setDispatchNotice({
+        type: 'success',
+        message: `Purchase Slips successfully dispatched to ${data.results?.filter((r: any) => r.success).length || recipients.length} verified registrants!`
+      });
+    } catch (err: any) {
+      console.error('Bulk dispatch error:', err);
+      setDispatchNotice({
+        type: 'error',
+        message: err.message || 'Failed to dispatch purchase slips'
+      });
+    } finally {
+      setBulkDispatching(false);
+    }
+  };
+
+  const fetchAllRegistrations = useCallback(async (isSilent = false) => {
     if (!isSupabaseConfigured) return;
-    setIsLoading(true);
+    if (isSilent) {
+      setIsSyncing(true);
+    } else {
+      setIsLoading(true);
+    }
     setError(null);
     try {
       const tables = [
@@ -163,17 +243,18 @@ export function EventRegistrationsSection() {
       setError(err.message || "Could not retrieve event registration details from the database.");
     } finally {
       setIsLoading(false);
+      setIsSyncing(false);
     }
   }, []);
 
   // Set up instant real-time listener and background auto-refresh
   useEffect(() => {
-    fetchAllRegistrations();
+    fetchAllRegistrations(false);
 
-    // Fast polling every 4 seconds to guarantee pending submissions appear instantly
+    // Silent background poll every 30 seconds as fallback (no full UI unmount/skeleton)
     const intervalId = setInterval(() => {
-      fetchAllRegistrations();
-    }, 4000);
+      fetchAllRegistrations(true);
+    }, 30000);
 
     // Supabase Realtime channel for postgres_changes
     let channel: any = null;
@@ -183,22 +264,22 @@ export function EventRegistrationsSection() {
         .on(
           "postgres_changes",
           { event: "*", schema: "public", table: "primary_events" },
-          () => fetchAllRegistrations()
+          () => fetchAllRegistrations(true)
         )
         .on(
           "postgres_changes",
           { event: "*", schema: "public", table: "junior_events" },
-          () => fetchAllRegistrations()
+          () => fetchAllRegistrations(true)
         )
         .on(
           "postgres_changes",
           { event: "*", schema: "public", table: "secondary_events" },
-          () => fetchAllRegistrations()
+          () => fetchAllRegistrations(true)
         )
         .on(
           "postgres_changes",
           { event: "*", schema: "public", table: "higher_secondary_events" },
-          () => fetchAllRegistrations()
+          () => fetchAllRegistrations(true)
         )
         .subscribe();
     }
@@ -263,6 +344,14 @@ export function EventRegistrationsSection() {
     });
   }, [registrations, uniquePeopleList, showUniqueOnly]);
 
+  // Dynamic set of sections for section filter dropdown
+  const sectionsDropdownList = useMemo(() => {
+    const sourceList = showUniqueOnly ? uniquePeopleList : registrations;
+    return Array.from(
+      new Set(sourceList.map((log) => (log.section || "").trim()).filter(Boolean))
+    ).sort((a, b) => a.localeCompare(b));
+  }, [registrations, uniquePeopleList, showUniqueOnly]);
+
   // Combined Active Dataset (Guarantees all pending submissions are shown when filtering by Pending)
   const activeDataset = useMemo(() => {
     if (statusFilter === "no") {
@@ -270,6 +359,61 @@ export function EventRegistrationsSection() {
     }
     return showUniqueOnly ? uniquePeopleList : registrations;
   }, [statusFilter, showUniqueOnly, uniquePeopleList, registrations]);
+
+  // Dynamic list of resolved individual segment/event names
+  const specificEventsDropdownList = useMemo(() => {
+    const eventsSet = new Set<string>();
+    activeDataset.forEach((reg) => {
+      const resolved = resolveEventNames(reg.selected_events);
+      if (resolved && resolved !== "N/A") {
+        resolved.split(',').forEach((ev) => {
+          const cleanEv = ev.trim();
+          if (cleanEv) eventsSet.add(cleanEv);
+        });
+      }
+    });
+    return Array.from(eventsSet).sort((a, b) => a.localeCompare(b));
+  }, [activeDataset]);
+
+  // Reset all filters
+  const handleResetFilters = useCallback(() => {
+    setSearchQuery("");
+    setStatusFilter("all");
+    setTableFilter("all");
+    setClassFilter("all");
+    setSectionFilter("all");
+    setSpecificEventFilter("all");
+    setDateFilter("all");
+    setAmountFilter("all");
+    setEventTypeFilter("all");
+    setSortBy("date_desc");
+  }, []);
+
+  const hasActiveFilters = useMemo(() => {
+    return (
+      searchQuery.trim() !== "" ||
+      statusFilter !== "all" ||
+      tableFilter !== "all" ||
+      classFilter !== "all" ||
+      sectionFilter !== "all" ||
+      specificEventFilter !== "all" ||
+      dateFilter !== "all" ||
+      amountFilter !== "all" ||
+      eventTypeFilter !== "all" ||
+      sortBy !== "date_desc"
+    );
+  }, [
+    searchQuery,
+    statusFilter,
+    tableFilter,
+    classFilter,
+    sectionFilter,
+    specificEventFilter,
+    dateFilter,
+    amountFilter,
+    eventTypeFilter,
+    sortBy
+  ]);
 
   // Determine if a registration row is part of a team event
   const isTeamRegistration = useCallback((reg: EventRegistrationRow) => {
@@ -281,11 +425,72 @@ export function EventRegistrationsSection() {
     );
   }, []);
 
+  // Helper to check if event string includes Tic-Tac-Toe
+  const isTicTacToeEvent = useCallback((eventStr: string) => {
+    if (!eventStr) return false;
+    const lower = eventStr.toLowerCase();
+    const resolved = resolveEventNames(eventStr).toLowerCase();
+    return lower.includes("tic-tac-toe") || lower.includes("tic tac toe") || lower.includes("tictactoe") || resolved.includes("tic-tac-toe");
+  }, []);
+
   // Helper to strip the teammate suffix (-T2, -T3) to find the parent Transaction ID
   const getBaseTrxnId = useCallback((trxnid: string) => {
     if (!trxnid) return "";
     return trxnid.replace(/-T\d+$/, "").trim().toUpperCase();
   }, []);
+
+  // Universal Filter Evaluator
+  const passesFilters = useCallback((reg: EventRegistrationRow, q: string) => {
+    if (statusFilter !== "all" && reg.verified !== statusFilter) {
+      return false;
+    }
+    if (tableFilter !== "all" && reg.tableName !== tableFilter) {
+      return false;
+    }
+    if (classFilter !== "all" && reg.class !== classFilter) {
+      return false;
+    }
+    if (sectionFilter !== "all" && (reg.section || "").trim().toLowerCase() !== sectionFilter.toLowerCase()) {
+      return false;
+    }
+    if (specificEventFilter !== "all") {
+      const resolved = resolveEventNames(reg.selected_events).toLowerCase();
+      const raw = (reg.selected_events || "").toLowerCase();
+      const target = specificEventFilter.toLowerCase();
+      if (!resolved.includes(target) && !raw.includes(target)) {
+        return false;
+      }
+    }
+    if (dateFilter !== "all" && reg.created_at) {
+      const regTime = new Date(reg.created_at).getTime();
+      const now = Date.now();
+      if (dateFilter === "today") {
+        const todayStart = new Date().setHours(0, 0, 0, 0);
+        if (regTime < todayStart) return false;
+      } else if (dateFilter === "7days") {
+        if (regTime < now - 7 * 86400 * 1000) return false;
+      } else if (dateFilter === "30days") {
+        if (regTime < now - 30 * 86400 * 1000) return false;
+      }
+    }
+    if (amountFilter !== "all") {
+      const amt = reg.amount || 0;
+      if (amountFilter === "paid" && amt <= 0) return false;
+      if (amountFilter === "free" && amt > 0) return false;
+      if (amountFilter === "tier1" && (amt <= 0 || amt > 200)) return false;
+      if (amountFilter === "tier2" && amt <= 200) return false;
+    }
+    if (q) {
+      const matchRes = matchesSearchWithFuzzy(reg, q, {
+        nameField: 'full_name',
+        secondaryFields: ['email', 'member_id', 'phone', 'class', 'section', 'roll', 'trxnid', 'bkash_number', 'selected_events']
+      });
+      const resolvedEvts = resolveEventNames(reg.selected_events).toLowerCase();
+      const matchesResolvedEvents = resolvedEvts.includes(q);
+      if (!matchRes.matches && !matchesResolvedEvents) return false;
+    }
+    return true;
+  }, [statusFilter, tableFilter, classFilter, sectionFilter, specificEventFilter, dateFilter, amountFilter]);
 
   const soloRegistrantsList = useMemo(() => {
     return activeDataset.filter(reg => !isTeamRegistration(reg));
@@ -307,7 +512,7 @@ export function EventRegistrationsSection() {
     activeDataset.forEach((reg) => {
       if (isTeamRegistration(reg)) {
         const baseTrxn = getBaseTrxnId(reg.trxnid);
-        const eventName = reg.selected_events;
+        const eventName = resolveEventNames(reg.selected_events);
         const key = `${baseTrxn}_${eventName}`;
 
         if (!teamsMap.has(key)) {
@@ -328,7 +533,6 @@ export function EventRegistrationsSection() {
           if (reg.amount > team.amount) {
             team.amount = reg.amount;
           }
-          // Prioritize non-teammate (the leader who actually paid and has the base transaction ID)
           if (!reg.trxnid.includes("-T")) {
             team.verified = reg.verified;
             team.created_at = reg.created_at;
@@ -343,70 +547,59 @@ export function EventRegistrationsSection() {
 
   const filteredSoloRegistrants = useMemo(() => {
     const q = searchQuery.toLowerCase().trim();
-    
-    return soloRegistrantsList.filter((reg) => {
-      // Status Filter
-      if (statusFilter !== "all" && reg.verified !== statusFilter) {
-        return false;
-      }
-      // Table Level Filter
-      if (tableFilter !== "all" && reg.tableName !== tableFilter) {
-        return false;
-      }
-      // Class Filter
-      if (classFilter !== "all" && reg.class !== classFilter) {
-        return false;
-      }
-      
-      if (q) {
-        const matchRes = matchesSearchWithFuzzy(reg, q, {
-          nameField: 'full_name',
-          secondaryFields: ['email', 'member_id', 'phone', 'class', 'section', 'roll', 'trxnid', 'bkash_number', 'selected_events']
-        });
-        return matchRes.matches;
-      }
-      
-      return true;
-    });
-  }, [soloRegistrantsList, statusFilter, tableFilter, classFilter, searchQuery]);
+    return soloRegistrantsList.filter((reg) => passesFilters(reg, q));
+  }, [soloRegistrantsList, passesFilters, searchQuery]);
 
   const filteredTeamRegistrations = useMemo(() => {
     const q = searchQuery.toLowerCase().trim();
     
     return groupedTeamsList.filter((team) => {
-      if (statusFilter !== "all" && team.verified !== statusFilter) {
-        return false;
-      }
-      if (tableFilter !== "all" && team.tableName !== tableFilter) {
-        return false;
-      }
+      if (statusFilter !== "all" && team.verified !== statusFilter) return false;
+      if (tableFilter !== "all" && team.tableName !== tableFilter) return false;
       if (classFilter !== "all") {
-        const hasClassMember = team.members.some(m => m.class === classFilter);
-        if (!hasClassMember) return false;
+        if (!team.members.some(m => m.class === classFilter)) return false;
       }
-      
+      if (sectionFilter !== "all") {
+        if (!team.members.some(m => (m.section || "").trim().toLowerCase() === sectionFilter.toLowerCase())) return false;
+      }
+      if (specificEventFilter !== "all") {
+        const target = specificEventFilter.toLowerCase();
+        const matchesTeamEvent = team.eventName.toLowerCase().includes(target);
+        const matchesMemberEvent = team.members.some(m => resolveEventNames(m.selected_events).toLowerCase().includes(target));
+        if (!matchesTeamEvent && !matchesMemberEvent) return false;
+      }
+      if (dateFilter !== "all" && team.created_at) {
+        const teamTime = new Date(team.created_at).getTime();
+        const now = Date.now();
+        if (dateFilter === "today") {
+          const todayStart = new Date().setHours(0, 0, 0, 0);
+          if (teamTime < todayStart) return false;
+        } else if (dateFilter === "7days") {
+          if (teamTime < now - 7 * 86400 * 1000) return false;
+        } else if (dateFilter === "30days") {
+          if (teamTime < now - 30 * 86400 * 1000) return false;
+        }
+      }
+      if (amountFilter !== "all") {
+        const amt = team.amount || 0;
+        if (amountFilter === "paid" && amt <= 0) return false;
+        if (amountFilter === "free" && amt > 0) return false;
+        if (amountFilter === "tier1" && (amt <= 0 || amt > 200)) return false;
+        if (amountFilter === "tier2" && amt <= 200) return false;
+      }
       if (q) {
-        const matchesSearch = team.members.some((m) => {
-          const matchRes = matchesSearchWithFuzzy(m, q, {
-            nameField: 'full_name',
-            secondaryFields: ['email', 'member_id', 'phone', 'class', 'section', 'roll', 'trxnid', 'bkash_number', 'selected_events']
-          });
-          return matchRes.matches;
-        });
-        
+        const matchesSearch = team.members.some((m) => passesFilters(m, q));
         const matchesTeamFields = 
           team.baseTrxnId.toLowerCase().includes(q) ||
           team.bkash_number.toLowerCase().includes(q) ||
           team.eventName.toLowerCase().includes(q);
           
-        if (!matchesSearch && !matchesTeamFields) {
-          return false;
-        }
+        if (!matchesSearch && !matchesTeamFields) return false;
       }
       
       return true;
     });
-  }, [groupedTeamsList, statusFilter, tableFilter, classFilter, searchQuery]);
+  }, [groupedTeamsList, statusFilter, tableFilter, classFilter, sectionFilter, specificEventFilter, dateFilter, amountFilter, passesFilters, searchQuery]);
 
   // Individual team member list flat-mapped and sorted
   const individualTeamRegistrants = useMemo(() => {
@@ -434,19 +627,17 @@ export function EventRegistrationsSection() {
     });
 
     return [...allMembers].sort((a, b) => {
-      if (sortBy === "name") {
-        return (a.full_name || "").localeCompare(b.full_name || "");
-      }
-      if (sortBy === "class") {
+      if (sortBy === "name_asc") return (a.full_name || "").localeCompare(b.full_name || "");
+      if (sortBy === "name_desc") return (b.full_name || "").localeCompare(a.full_name || "");
+      if (sortBy === "class_asc" || sortBy === "class_desc") {
         const classA = parseInt(a.class || "0", 10);
         const classB = parseInt(b.class || "0", 10);
-        if (!isNaN(classA) && !isNaN(classB)) {
-          return classA - classB;
-        }
-        return (a.class || "").localeCompare(b.class || "");
+        const diff = (!isNaN(classA) && !isNaN(classB)) ? classA - classB : (a.class || "").localeCompare(b.class || "");
+        return sortBy === "class_asc" ? diff : -diff;
       }
-      if (sortBy === "event") {
-        return (a.eventName || "").localeCompare(b.eventName || "");
+      if (sortBy === "event_asc") return (a.eventName || "").localeCompare(b.eventName || "");
+      if (sortBy === "date_asc") {
+        return (a.created_at ? new Date(a.created_at).getTime() : 0) - (b.created_at ? new Date(b.created_at).getTime() : 0);
       }
       const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
       const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
@@ -456,19 +647,17 @@ export function EventRegistrationsSection() {
 
   const sortedSoloRegistrants = useMemo(() => {
     return [...filteredSoloRegistrants].sort((a, b) => {
-      if (sortBy === "name") {
-        return (a.full_name || "").localeCompare(b.full_name || "");
-      }
-      if (sortBy === "class") {
+      if (sortBy === "name_asc") return (a.full_name || "").localeCompare(b.full_name || "");
+      if (sortBy === "name_desc") return (b.full_name || "").localeCompare(a.full_name || "");
+      if (sortBy === "class_asc" || sortBy === "class_desc") {
         const classA = parseInt(a.class || "0", 10);
         const classB = parseInt(b.class || "0", 10);
-        if (!isNaN(classA) && !isNaN(classB)) {
-          return classA - classB;
-        }
-        return (a.class || "").localeCompare(b.class || "");
+        const diff = (!isNaN(classA) && !isNaN(classB)) ? classA - classB : (a.class || "").localeCompare(b.class || "");
+        return sortBy === "class_asc" ? diff : -diff;
       }
-      if (sortBy === "event") {
-        return (a.selected_events || "").localeCompare(b.selected_events || "");
+      if (sortBy === "event_asc") return resolveEventNames(a.selected_events).localeCompare(resolveEventNames(b.selected_events));
+      if (sortBy === "date_asc") {
+        return (a.created_at ? new Date(a.created_at).getTime() : 0) - (b.created_at ? new Date(b.created_at).getTime() : 0);
       }
       const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
       const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
@@ -492,14 +681,18 @@ export function EventRegistrationsSection() {
     const uniquePeople = uniquePeopleList.length;
     const verifiedUnique = uniquePeopleList.filter(p => p.verified === "yes").length;
     const pendingForms = registrations.filter(r => r.verified === "no").length;
+    const ticTacToeUnique = uniquePeopleList.filter(p => isTicTacToeEvent(p.selected_events)).length;
+    const ticTacToeTotal = registrations.filter(p => isTicTacToeEvent(p.selected_events)).length;
 
     return {
       totalForms,
       uniquePeople,
       verifiedUnique,
-      pendingForms
+      pendingForms,
+      ticTacToeUnique,
+      ticTacToeTotal
     };
-  }, [registrations, uniquePeopleList]);
+  }, [registrations, uniquePeopleList, isTicTacToeEvent]);
 
   // Export Filtered Table to CSV File
   const handleExportCSV = () => {
@@ -512,43 +705,53 @@ export function EventRegistrationsSection() {
       "Class",
       "Section",
       "Roll",
+      "Phone Number",
       "Bkash Number",
       "Transaction ID",
-      "Amount Paid",
-      "Registered Events",
+      "Amount Paid (BDT)",
+      "Format",
+      "Registered Events / Segments",
       "Verification Status",
       "Account Email",
       "Submission Date",
-      "Registration Portal/Category"
+      "Registration Portal / Category"
     ];
 
     // CSV format values
-    const rows = filteredRegistrants.map((reg) => [
-      `"${reg.full_name.replace(/"/g, '""')}"`,
-      `"${reg.member_id || "PENDING"}"`,
-      `"${reg.class}"`,
-      `"${reg.section.replace(/"/g, '""')}"`,
-      `"${reg.roll}"`,
-      `"'${reg.bkash_number}"`, // Prefix with ' to treat as text in Excel
-      `"${reg.trxnid}"`,
-      reg.amount,
-      `"${(reg.selected_events || "").replace(/"/g, '""')}"`,
-      `"${reg.verified.toUpperCase()}"`,
-      `"${reg.email || ""}"`,
-      `"${reg.created_at ? new Date(reg.created_at).toLocaleString() : ""}"`,
-      `"${reg.tableName.replace(/_/g, " ").toUpperCase()}"`
-    ]);
+    const rows = filteredRegistrants.map((reg) => {
+      const isTeam = isTeamRegistration(reg);
+      const resolvedEvents = resolveEventNames(reg.selected_events);
+      const cleanPhone = reg.phone || "";
+      const cleanBkash = reg.bkash_number || "";
+      
+      return [
+        `"${(reg.full_name || "").replace(/"/g, '""')}"`,
+        `"${reg.member_id || "PENDING"}"`,
+        `"${reg.class || ""}"`,
+        `"${(reg.section || "").replace(/"/g, '""')}"`,
+        `"${reg.roll || ""}"`,
+        `"'${cleanPhone}"`,
+        `"'${cleanBkash}"`,
+        `"${reg.trxnid || ""}"`,
+        reg.amount || 0,
+        `"${isTeam ? "TEAM" : "SOLO"}"`,
+        `"${resolvedEvents.replace(/"/g, '""')}"`,
+        `"${(reg.verified || "no").toUpperCase()}"`,
+        `"${(reg.email || "").replace(/"/g, '""')}"`,
+        `"${reg.created_at ? new Date(reg.created_at).toLocaleString() : ""}"`,
+        `"${(reg.tableName || "").replace(/_/g, " ").toUpperCase()}"`
+      ];
+    });
 
-    const csvContent = "data:text/csv;charset=utf-8," 
+    const csvContent = "data:text/csv;charset=utf-8,\uFEFF" 
       + [headers.join(","), ...rows.map(e => e.join(","))].join("\n");
     
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
     
-    const fileName = showUniqueOnly 
-      ? "Unique_Event_Registrants_Export.csv" 
-      : "All_Registration_Submissions_Export.csv";
+    const dateStamp = new Date().toISOString().slice(0, 10);
+    const fileName = `Filtered_Event_Registrants_${filteredRegistrants.length}_items_${dateStamp}.csv`;
       
     link.setAttribute("download", fileName);
     document.body.appendChild(link);
@@ -579,7 +782,21 @@ export function EventRegistrationsSection() {
         </div>
 
         {/* Action Buttons */}
-        <div className="flex items-center gap-3 self-start lg:self-end">
+        <div className="flex flex-wrap items-center gap-3 self-start lg:self-end">
+          <button
+            onClick={handleBulkDispatchSlips}
+            disabled={bulkDispatching || registrations.filter(r => r.verified === 'yes').length === 0}
+            className="px-5 py-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 disabled:opacity-40 text-black font-black uppercase text-[10px] tracking-widest transition-all flex items-center gap-2 cursor-pointer shadow-lg shadow-emerald-500/10 active:scale-95"
+            title="Send purchase slips & QR codes to all verified registrants via email"
+          >
+            {bulkDispatching ? (
+              <Loader2 className="w-4 h-4 animate-spin text-black" />
+            ) : (
+              <Send className="w-4 h-4" />
+            )}
+            {bulkDispatching ? "Dispatching..." : `Send Slips to Verified (${registrations.filter(r => r.verified === 'yes').length})`}
+          </button>
+
           <button
             onClick={handleExportCSV}
             disabled={filteredRegistrants.length === 0}
@@ -590,16 +807,16 @@ export function EventRegistrationsSection() {
           </button>
 
           <button
-            onClick={fetchAllRegistrations}
-            disabled={isLoading}
+            onClick={() => fetchAllRegistrations(true)}
+            disabled={isLoading || isSyncing}
             className="px-5 py-3 rounded-xl bg-amber-500 hover:bg-amber-400 disabled:bg-amber-500/50 text-black font-black uppercase text-[10px] tracking-widest transition-all flex items-center gap-2 cursor-pointer shadow-lg shadow-amber-500/10"
           >
-            {isLoading ? (
+            {isLoading || isSyncing ? (
               <Loader2 className="w-4 h-4 animate-spin" />
             ) : (
               <RefreshCw className="w-4 h-4" />
             )}
-            {isLoading ? "Syncing..." : "Sync Database"}
+            {isLoading || isSyncing ? "Syncing..." : "Sync Database"}
           </button>
         </div>
       </div>
@@ -767,6 +984,39 @@ export function EventRegistrationsSection() {
             </div>
           </div>
 
+          {showUniqueOnly && (
+            <div className="p-5 bg-gradient-to-r from-purple-950/40 via-purple-900/20 to-pink-950/20 border border-purple-500/40 rounded-3xl space-y-3 shadow-xl">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-purple-500/20 pb-3">
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 bg-purple-500/20 border border-purple-500/30 rounded-2xl text-xl">
+                    🎯
+                  </div>
+                  <div>
+                    <h3 className="text-xs font-black uppercase tracking-wider text-purple-200 flex items-center gap-2 font-mono">
+                      Unique Registrants View — Tic-Tac-Toe Special Event Tracking
+                    </h3>
+                    <p className="text-[10px] text-purple-300/80 font-medium mt-0.5">
+                      Tic-Tac-Toe requires a 3-member team (Leader + 2 Teammates). In this Unique Registrants view, Tic-Tac-Toe entries are highlighted with a distinct purple border and team badges for immediate audit clarity.
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <span className="px-3 py-1.5 rounded-xl bg-purple-500/20 border border-purple-500/40 text-purple-200 text-xs font-mono font-black">
+                    {metrics.ticTacToeUnique} Unique Tic-Tac-Toe Registrations
+                  </span>
+                  <button
+                    onClick={() => {
+                      setSpecificEventFilter("Tic-Tac-Toe");
+                    }}
+                    className="px-3.5 py-1.5 rounded-xl bg-purple-500/30 hover:bg-purple-500/50 border border-purple-500/50 text-white text-[10px] font-black uppercase tracking-wider font-mono transition-all cursor-pointer flex items-center gap-1.5"
+                  >
+                    🎯 Filter Tic-Tac-Toe
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
           <div className="text-[10px] text-zinc-400 font-bold uppercase tracking-widest bg-white/5 border border-white/5 px-4 py-2 rounded-xl">
             {showUniqueOnly 
               ? "⚡ DEDUPLICATING multiple submissions by Name + Class + Section + Roll. Showing the highest priority record." 
@@ -775,86 +1025,247 @@ export function EventRegistrationsSection() {
           </div>
         </div>
 
-        {/* Filter Controls Row */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 pt-2">
-          {/* Advanced Search Input */}
-          <div className="relative col-span-1 lg:col-span-1">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search people, trxnid, phone, class..."
-              className="w-full pl-11 pr-4 py-3.5 bg-white/5 border border-white/10 rounded-2xl text-white outline-none focus:border-amber-500/50 transition-all text-xs font-bold"
-            />
+        {/* Filter Controls Grid */}
+        <div className="space-y-3 pt-2">
+          {/* Row 1: Search, Event Segment, Status, Portal Section */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            {/* Advanced Search Input */}
+            <div className="relative">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search name, phone, trxnid, email, roll..."
+                className="w-full pl-11 pr-8 py-3 bg-white/5 border border-white/10 rounded-2xl text-white outline-none focus:border-amber-500/50 transition-all text-xs font-bold"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery("")}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-white text-xs p-1 cursor-pointer"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+
+            {/* Specific Event / Segment Filter */}
+            <div className="flex items-center gap-2 bg-white/5 border border-white/10 px-4 py-3 rounded-2xl">
+              <Sparkles className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+              <select
+                value={specificEventFilter}
+                onChange={(e) => setSpecificEventFilter(e.target.value)}
+                className="bg-transparent border-none text-white text-xs outline-none font-bold pr-4 cursor-pointer w-full truncate"
+              >
+                <option value="all" className="bg-neutral-900 text-white">All Events & Segments</option>
+                {specificEventsDropdownList.map((ev) => (
+                  <option key={ev} value={ev} className="bg-neutral-900 text-white">
+                    {ev}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Status filter dropdown */}
+            <div className="flex items-center gap-2 bg-white/5 border border-white/10 px-4 py-3 rounded-2xl">
+              <Filter className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value as any)}
+                className="bg-transparent border-none text-white text-xs outline-none font-bold pr-4 cursor-pointer w-full"
+              >
+                <option value="all" className="bg-neutral-900 text-white">All Statuses</option>
+                <option value="yes" className="bg-neutral-900 text-white">Verified Only (Done)</option>
+                <option value="no" className="bg-neutral-900 text-white">Pending Only</option>
+                <option value="rejected" className="bg-neutral-900 text-white">Rejected Only</option>
+              </select>
+            </div>
+
+            {/* Table Level filter */}
+            <div className="flex items-center gap-2 bg-white/5 border border-white/10 px-4 py-3 rounded-2xl">
+              <Layers className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
+              <select
+                value={tableFilter}
+                onChange={(e) => {
+                  setTableFilter(e.target.value);
+                  setClassFilter("all");
+                }}
+                className="bg-transparent border-none text-white text-xs outline-none font-bold pr-4 cursor-pointer w-full"
+              >
+                <option value="all" className="bg-neutral-900 text-white">All Categories / Portals</option>
+                <option value="primary_events" className="bg-neutral-900 text-white">Primary (Class 3-5)</option>
+                <option value="junior_events" className="bg-neutral-900 text-white">Junior (Class 6-8)</option>
+                <option value="secondary_events" className="bg-neutral-900 text-white">Secondary (Class 9-10)</option>
+                <option value="higher_secondary_events" className="bg-neutral-900 text-white">Higher Secondary (Class 11-12)</option>
+              </select>
+            </div>
           </div>
 
-          {/* Status filter dropdown */}
-          <div className="flex items-center gap-2 bg-white/5 border border-white/10 px-4 py-3.5 rounded-2xl">
-            <Filter className="w-3.5 h-3.5 text-zinc-400" />
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value as any)}
-              className="bg-transparent border-none text-white text-xs outline-none font-bold pr-4 cursor-pointer w-full"
-            >
-              <option value="all" className="bg-neutral-900 text-white">All Statuses</option>
-              <option value="yes" className="bg-neutral-900 text-white">Verified Only (Done)</option>
-              <option value="no" className="bg-neutral-900 text-white">Pending Only</option>
-              <option value="rejected" className="bg-neutral-900 text-white">Rejected Only</option>
-            </select>
-          </div>
+          {/* Row 2: Class, Section, Date Range, Amount, Sorting */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+            {/* Class filter */}
+            <div className="flex items-center gap-2 bg-white/5 border border-white/10 px-4 py-3 rounded-2xl">
+              <School className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
+              <select
+                value={classFilter}
+                onChange={(e) => setClassFilter(e.target.value)}
+                className="bg-transparent border-none text-white text-xs outline-none font-bold pr-4 cursor-pointer w-full"
+              >
+                <option value="all" className="bg-neutral-900 text-white">All Class Levels</option>
+                {classesDropdownList.map((cls) => (
+                  <option key={cls} value={cls} className="bg-neutral-900 text-white">
+                    Class {cls}
+                  </option>
+                ))}
+              </select>
+            </div>
 
-          {/* Table Level filter */}
-          <div className="flex items-center gap-2 bg-white/5 border border-white/10 px-4 py-3.5 rounded-2xl">
-            <Layers className="w-3.5 h-3.5 text-zinc-400" />
-            <select
-              value={tableFilter}
-              onChange={(e) => {
-                setTableFilter(e.target.value);
-                setClassFilter("all");
-              }}
-              className="bg-transparent border-none text-white text-xs outline-none font-bold pr-4 cursor-pointer w-full"
-            >
-              <option value="all" className="bg-neutral-900 text-white">All Table Sections</option>
-              <option value="primary_events" className="bg-neutral-900 text-white">Primary (Class 3-5)</option>
-              <option value="junior_events" className="bg-neutral-900 text-white">Junior (Class 6-8)</option>
-              <option value="secondary_events" className="bg-neutral-900 text-white">Secondary (Class 9-10)</option>
-              <option value="higher_secondary_events" className="bg-neutral-900 text-white">Higher Secondary (Class 11-12)</option>
-            </select>
-          </div>
+            {/* Section filter */}
+            <div className="flex items-center gap-2 bg-white/5 border border-white/10 px-4 py-3 rounded-2xl">
+              <FileText className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
+              <select
+                value={sectionFilter}
+                onChange={(e) => setSectionFilter(e.target.value)}
+                className="bg-transparent border-none text-white text-xs outline-none font-bold pr-4 cursor-pointer w-full"
+              >
+                <option value="all" className="bg-neutral-900 text-white">All Sections</option>
+                {sectionsDropdownList.map((sec) => (
+                  <option key={sec} value={sec} className="bg-neutral-900 text-white">
+                    Section {sec}
+                  </option>
+                ))}
+              </select>
+            </div>
 
-          {/* Class filter */}
-          <div className="flex items-center gap-2 bg-white/5 border border-white/10 px-4 py-3.5 rounded-2xl">
-            <School className="w-3.5 h-3.5 text-zinc-400" />
-            <select
-              value={classFilter}
-              onChange={(e) => setClassFilter(e.target.value)}
-              className="bg-transparent border-none text-white text-xs outline-none font-bold pr-4 cursor-pointer w-full"
-            >
-              <option value="all" className="bg-neutral-900 text-white">All Class Levels</option>
-              {classesDropdownList.map((cls) => (
-                <option key={cls} value={cls} className="bg-neutral-900 text-white">
-                  Class {cls}
-                </option>
-              ))}
-            </select>
-          </div>
+            {/* Date filter */}
+            <div className="flex items-center gap-2 bg-white/5 border border-white/10 px-4 py-3 rounded-2xl">
+              <Calendar className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
+              <select
+                value={dateFilter}
+                onChange={(e) => setDateFilter(e.target.value as any)}
+                className="bg-transparent border-none text-white text-xs outline-none font-bold pr-4 cursor-pointer w-full"
+              >
+                <option value="all" className="bg-neutral-900 text-white">All Time</option>
+                <option value="today" className="bg-neutral-900 text-white">Today (24 Hours)</option>
+                <option value="7days" className="bg-neutral-900 text-white">Last 7 Days</option>
+                <option value="30days" className="bg-neutral-900 text-white">Last 30 Days</option>
+              </select>
+            </div>
 
-          {/* Sort selection dropdown */}
-          <div className="flex items-center gap-2 bg-white/5 border border-white/10 px-4 py-3.5 rounded-2xl">
-            <ArrowUpDown className="w-3.5 h-3.5 text-zinc-400" />
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as any)}
-              className="bg-transparent border-none text-white text-xs outline-none font-bold pr-4 cursor-pointer w-full"
-            >
-              <option value="date" className="bg-neutral-900 text-white">Sort by Date (Newest)</option>
-              <option value="name" className="bg-neutral-900 text-white">Sort by Name (A-Z)</option>
-              <option value="class" className="bg-neutral-900 text-white">Sort by Class (Ascending)</option>
-              <option value="event" className="bg-neutral-900 text-white">Sort by Event Name</option>
-            </select>
+            {/* Amount filter */}
+            <div className="flex items-center gap-2 bg-white/5 border border-white/10 px-4 py-3 rounded-2xl">
+              <span className="text-xs text-amber-500 font-black">৳</span>
+              <select
+                value={amountFilter}
+                onChange={(e) => setAmountFilter(e.target.value as any)}
+                className="bg-transparent border-none text-white text-xs outline-none font-bold pr-4 cursor-pointer w-full"
+              >
+                <option value="all" className="bg-neutral-900 text-white">All Payment Amounts</option>
+                <option value="paid" className="bg-neutral-900 text-white">Paid Registrations (&gt; 0 BDT)</option>
+                <option value="free" className="bg-neutral-900 text-white">Free Registrations (0 BDT)</option>
+                <option value="tier1" className="bg-neutral-900 text-white">1 - 200 BDT</option>
+                <option value="tier2" className="bg-neutral-900 text-white">200+ BDT</option>
+              </select>
+            </div>
+
+            {/* Sort selection dropdown */}
+            <div className="flex items-center gap-2 bg-white/5 border border-white/10 px-4 py-3 rounded-2xl">
+              <ArrowUpDown className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value as any)}
+                className="bg-transparent border-none text-white text-xs outline-none font-bold pr-4 cursor-pointer w-full"
+              >
+                <option value="date_desc" className="bg-neutral-900 text-white">Date: Newest First</option>
+                <option value="date_asc" className="bg-neutral-900 text-white">Date: Oldest First</option>
+                <option value="name_asc" className="bg-neutral-900 text-white">Name: A to Z</option>
+                <option value="name_desc" className="bg-neutral-900 text-white">Name: Z to A</option>
+                <option value="class_asc" className="bg-neutral-900 text-white">Class: Ascending</option>
+                <option value="class_desc" className="bg-neutral-900 text-white">Class: Descending</option>
+                <option value="event_asc" className="bg-neutral-900 text-white">Event Name: A to Z</option>
+              </select>
+            </div>
           </div>
         </div>
+
+        {/* Active Filter Badges & Results Bar */}
+        {hasActiveFilters && (
+          <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-white/5">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-[10px] font-black uppercase tracking-wider text-zinc-500">
+                Active Filters:
+              </span>
+
+              {searchQuery && (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 text-[10px] font-bold">
+                  Search: "{searchQuery}"
+                  <button onClick={() => setSearchQuery("")} className="hover:text-white font-bold cursor-pointer">✕</button>
+                </span>
+              )}
+
+              {specificEventFilter !== "all" && (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-purple-500/10 border border-purple-500/20 text-purple-400 text-[10px] font-bold">
+                  Event: {specificEventFilter}
+                  <button onClick={() => setSpecificEventFilter("all")} className="hover:text-white font-bold cursor-pointer">✕</button>
+                </span>
+              )}
+
+              {statusFilter !== "all" && (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-green-500/10 border border-green-500/20 text-green-400 text-[10px] font-bold">
+                  Status: {statusFilter === "yes" ? "Verified" : statusFilter === "no" ? "Pending" : "Rejected"}
+                  <button onClick={() => setStatusFilter("all")} className="hover:text-white font-bold cursor-pointer">✕</button>
+                </span>
+              )}
+
+              {tableFilter !== "all" && (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-400 text-[10px] font-bold">
+                  Portal: {tableFilter.replace(/_/g, " ").toUpperCase()}
+                  <button onClick={() => setTableFilter("all")} className="hover:text-white font-bold cursor-pointer">✕</button>
+                </span>
+              )}
+
+              {classFilter !== "all" && (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 text-[10px] font-bold">
+                  Class: {classFilter}
+                  <button onClick={() => setClassFilter("all")} className="hover:text-white font-bold cursor-pointer">✕</button>
+                </span>
+              )}
+
+              {sectionFilter !== "all" && (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[10px] font-bold">
+                  Section: {sectionFilter}
+                  <button onClick={() => setSectionFilter("all")} className="hover:text-white font-bold cursor-pointer">✕</button>
+                </span>
+              )}
+
+              {dateFilter !== "all" && (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-orange-500/10 border border-orange-500/20 text-orange-400 text-[10px] font-bold">
+                  Date: {dateFilter === "today" ? "Today" : dateFilter === "7days" ? "Last 7 Days" : "Last 30 Days"}
+                  <button onClick={() => setDateFilter("all")} className="hover:text-white font-bold cursor-pointer">✕</button>
+                </span>
+              )}
+
+              {amountFilter !== "all" && (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 text-[10px] font-bold">
+                  Amount: {amountFilter.toUpperCase()}
+                  <button onClick={() => setAmountFilter("all")} className="hover:text-white font-bold cursor-pointer">✕</button>
+                </span>
+              )}
+            </div>
+
+            <div className="flex items-center gap-3">
+              <span className="text-[10px] font-bold text-zinc-400">
+                Showing {filteredRegistrants.length} matching registrants
+              </span>
+              <button
+                onClick={handleResetFilters}
+                className="px-3 py-1 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer"
+              >
+                Reset All Filters
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Main Grid table list */}
@@ -906,68 +1317,89 @@ export function EventRegistrationsSection() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-white/5 font-medium">
-                      {sortedSoloRegistrants.map((reg) => (
-                        <tr key={reg.id} className="hover:bg-white/[0.01] transition-all">
-                          {/* Identity Info */}
-                          <td className="p-5">
-                            <div className="flex items-center gap-3">
-                              <div className="w-8 h-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center">
-                                <User className="w-4 h-4 text-zinc-400" />
-                              </div>
-                              <div>
-                                <div className="font-bold text-white text-xs">{reg.full_name || "N/A"}</div>
-                                <div className="font-mono text-[9px] text-zinc-500 mt-0.5 break-all">
-                                  {reg.email || "No connected email"}
+                      {sortedSoloRegistrants.map((reg) => {
+                        const isTic = isTicTacToeEvent(reg.selected_events);
+                        return (
+                          <tr 
+                            key={reg.id} 
+                            className={isTic ? "bg-purple-950/20 border-l-4 border-l-purple-500 hover:bg-purple-900/30 transition-all" : "hover:bg-white/[0.01] transition-all"}
+                          >
+                            {/* Identity Info */}
+                            <td className="p-5">
+                              <div className="flex items-center gap-3">
+                                <div className={`w-8 h-8 rounded-full border flex items-center justify-center ${
+                                  isTic ? "bg-purple-500/20 border-purple-500/40 text-purple-300" : "bg-white/5 border-white/10 text-zinc-400"
+                                }`}>
+                                  <User className="w-4 h-4" />
                                 </div>
-                                {reg.phone && (
-                                  <div className="font-mono text-[9px] text-amber-500 font-bold mt-0.5">
-                                    📞 {reg.phone}
+                                <div>
+                                  <div className="font-bold text-white text-xs flex items-center gap-1.5">
+                                    {reg.full_name || "N/A"}
+                                    {isTic && (
+                                      <span className="text-[9px] font-mono text-purple-300 font-extrabold bg-purple-500/20 px-1.5 py-0.5 rounded border border-purple-500/30">
+                                        🎯 Tic-Tac-Toe
+                                      </span>
+                                    )}
                                   </div>
-                                )}
+                                  <div className="font-mono text-[9px] text-zinc-500 mt-0.5 break-all">
+                                    {reg.email || "No connected email"}
+                                  </div>
+                                  {reg.phone && (
+                                    <div className="font-mono text-[9px] text-amber-500 font-bold mt-0.5">
+                                      📞 {reg.phone}
+                                    </div>
+                                  )}
+                                </div>
                               </div>
-                            </div>
-                          </td>
+                            </td>
 
-                          {/* Unique Ticket ID */}
-                          <td className="p-5">
-                            {reg.member_id ? (
-                              <div className="flex flex-col gap-1 items-start">
-                                <span className="font-mono font-bold text-[11px] text-amber-400 tracking-wider bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">
-                                  {reg.member_id}
+                            {/* Unique Ticket ID */}
+                            <td className="p-5">
+                              {reg.member_id ? (
+                                <div className="flex flex-col gap-1 items-start">
+                                  <span className="font-mono font-bold text-[11px] text-amber-400 tracking-wider bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">
+                                    {reg.member_id}
+                                  </span>
+                                  {reg.member_id.startsWith("JMC-") ? (
+                                    <span className="text-[7px] font-extrabold text-slate-400 uppercase tracking-wider bg-slate-500/10 px-1 py-0.5 rounded">
+                                      General Member
+                                    </span>
+                                  ) : (
+                                    <span className="text-[7px] font-extrabold text-blue-400 uppercase tracking-wider bg-blue-500/10 px-1 py-0.5 rounded">
+                                      Event Ticket
+                                    </span>
+                                  )}
+                                </div>
+                              ) : (
+                                <span className="text-zinc-600 font-mono text-[9px] bg-white/5 px-2 py-1 rounded border border-white/5">
+                                  PENDING VERIFICATION
                                 </span>
-                                {reg.member_id.startsWith("JMC-") ? (
-                                  <span className="text-[7px] font-extrabold text-slate-400 uppercase tracking-wider bg-slate-500/10 px-1 py-0.5 rounded">
-                                    General Member
-                                  </span>
-                                ) : (
-                                  <span className="text-[7px] font-extrabold text-blue-400 uppercase tracking-wider bg-blue-500/10 px-1 py-0.5 rounded">
-                                    Event Ticket
+                              )}
+                            </td>
+
+                            {/* Class/Sec/Roll */}
+                            <td className="p-5">
+                              <div className="space-y-0.5">
+                                <div className="text-xs font-bold text-zinc-300">Class {reg.class}</div>
+                                <div className="font-mono text-[9px] text-zinc-500 uppercase tracking-wider">
+                                  Sec: <span className="text-zinc-300 font-bold">{reg.section}</span> | Roll: <span className="text-zinc-300 font-bold">{reg.roll}</span>
+                                </div>
+                              </div>
+                            </td>
+
+                            {/* Selected Events list */}
+                            <td className="p-5">
+                              <div className="space-y-1">
+                                <div className="text-xs text-amber-500 font-black max-w-xs truncate" title={resolveEventNames(reg.selected_events)}>
+                                  {resolveEventNames(reg.selected_events)}
+                                </div>
+                                {isTic && (
+                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-purple-500/20 border border-purple-500/40 text-purple-300 font-extrabold text-[9px] uppercase tracking-wider font-mono">
+                                    🎯 Tic-Tac-Toe (3-Member Event)
                                   </span>
                                 )}
                               </div>
-                            ) : (
-                              <span className="text-zinc-600 font-mono text-[9px] bg-white/5 px-2 py-1 rounded border border-white/5">
-                                PENDING VERIFICATION
-                              </span>
-                            )}
-                          </td>
-
-                          {/* Class/Sec/Roll */}
-                          <td className="p-5">
-                            <div className="space-y-0.5">
-                              <div className="text-xs font-bold text-zinc-300">Class {reg.class}</div>
-                              <div className="font-mono text-[9px] text-zinc-500 uppercase tracking-wider">
-                                Sec: <span className="text-zinc-300 font-bold">{reg.section}</span> | Roll: <span className="text-zinc-300 font-bold">{reg.roll}</span>
-                              </div>
-                            </div>
-                          </td>
-
-                          {/* Selected Events list */}
-                          <td className="p-5">
-                            <div className="text-xs text-amber-500 font-black max-w-xs truncate" title={reg.selected_events}>
-                              {reg.selected_events}
-                            </div>
-                          </td>
+                            </td>
 
                           {/* Payment references */}
                           <td className="p-5">
@@ -1020,7 +1452,8 @@ export function EventRegistrationsSection() {
                             </button>
                           </td>
                         </tr>
-                      ))}
+                      );
+                    })}
                     </tbody>
                   </table>
                 </div>
@@ -1064,7 +1497,7 @@ export function EventRegistrationsSection() {
                           <div className="flex items-center gap-2 flex-wrap">
                             <span className="px-3 py-1 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-400 text-xs font-black tracking-wider uppercase flex items-center gap-1.5 font-mono">
                               <Users className="w-3.5 h-3.5 text-amber-400" />
-                              {team.eventName}
+                              {resolveEventNames(team.eventName)}
                             </span>
                             <span className="text-[10px] font-mono font-bold text-zinc-400 bg-white/5 border border-white/10 px-2.5 py-1 rounded-full">
                               TRX: <strong className="text-white">{team.baseTrxnId}</strong>
@@ -1329,7 +1762,7 @@ export function EventRegistrationsSection() {
               <div>
                 <p className="text-zinc-500 text-[9px] font-black uppercase tracking-wider mb-2">Registered Events List</p>
                 <div className="text-white font-extrabold bg-amber-500/5 px-4 py-3 rounded-2xl border border-amber-500/10 text-xs">
-                  {selectedRegistrant.selected_events}
+                  {resolveEventNames(selectedRegistrant.selected_events)}
                 </div>
               </div>
 
@@ -1344,7 +1777,32 @@ export function EventRegistrationsSection() {
             </div>
 
             {/* Footer */}
-            <div className="flex justify-end pt-2 border-t border-white/5">
+            <div className="flex justify-between items-center pt-2 border-t border-white/5">
+              {selectedRegistrant.verified === "yes" && (
+                <button
+                  onClick={() => {
+                    setSelectedSlipCandidate({
+                      id: selectedRegistrant.id,
+                      fullName: selectedRegistrant.full_name,
+                      email: selectedRegistrant.email,
+                      phone: selectedRegistrant.phone,
+                      memberId: selectedRegistrant.member_id || selectedRegistrant.user_id || selectedRegistrant.id,
+                      class: selectedRegistrant.class,
+                      section: selectedRegistrant.section,
+                      roll: selectedRegistrant.roll,
+                      school: 'St. Joseph Higher Secondary School',
+                      trxnid: selectedRegistrant.trxnid,
+                      eventsList: [resolveEventNames(selectedRegistrant.selected_events)],
+                      verified: true
+                    });
+                    setIsSlipModalOpen(true);
+                  }}
+                  className="px-5 py-3 bg-emerald-500 hover:bg-emerald-400 text-black text-xs font-black uppercase tracking-wider rounded-xl transition-all shadow-lg shadow-emerald-500/10 flex items-center gap-2 cursor-pointer"
+                >
+                  <Ticket className="w-4 h-4" /> View Purchase Slip & QR
+                </button>
+              )}
+
               <button
                 onClick={() => setSelectedRegistrant(null)}
                 className="px-6 py-3 cursor-pointer bg-amber-500 hover:bg-amber-400 text-black text-xs font-black uppercase tracking-wider rounded-xl transition-all shadow-lg shadow-amber-500/10"
@@ -1355,6 +1813,13 @@ export function EventRegistrationsSection() {
           </div>
         </div>
       )}
+
+      {/* Purchase Slip Modal */}
+      <PurchaseSlipModal
+        candidate={selectedSlipCandidate}
+        isOpen={isSlipModalOpen}
+        onClose={() => setIsSlipModalOpen(false)}
+      />
     </div>
   );
 }

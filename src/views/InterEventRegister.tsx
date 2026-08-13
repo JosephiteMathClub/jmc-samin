@@ -65,8 +65,10 @@ import {
   Upload,
   Plus,
   AlertTriangle,
+  Download,
   X
 } from 'lucide-react';
+import { PurchaseSlipModal, PurchaseSlipCandidate } from '../components/dashboard/PurchaseSlipModal';
 
 const DEFAULT_SEGMENT_BANNERS: Record<string, string> = {
   "Math Olympiad (Find-based)": "https://images.unsplash.com/photo-1509228468518-180dd4864904?auto=format&fit=crop&w=1200&q=80",
@@ -202,7 +204,7 @@ const DEFAULT_INTER_SEGMENTS = [
   { id: "Escape Room", name: "Escape Room", tagline: "Decrypt physical room locks and spatial logic systems (2 members).", category: "Team track", icon: Home, color: "from-violet-500/10 to-fuchsia-500/10 text-violet-400 border-violet-500/20", allowedCategories: ["Primary", "Junior", "Secondary", "Higher Secondary"], isTeamEvent: true, teamSize: 2 },
   { id: "Truss", name: "Truss", tagline: "Build high-load structurally sound physical bridge trusses (2 members).", category: "Team track", icon: Construction, color: "from-amber-500/10 to-orange-500/10 text-amber-400 border-amber-500/20", allowedCategories: ["Primary", "Junior", "Secondary", "Higher Secondary"], isTeamEvent: true, teamSize: 2 },
   { id: "Wall Magazine Display", name: "Wall Magazine Display", tagline: "Design physical wall posters mapping historical math breakthroughs (2 members).", category: "Team track", icon: Layout, color: "from-emerald-500/10 to-green-500/10 text-emerald-400 border-emerald-500/20", allowedCategories: ["Primary", "Junior", "Secondary", "Higher Secondary"], isTeamEvent: true, teamSize: 2 },
-  { id: "Tic-Tac-Toe", name: "Tic-Tac-Toe", tagline: "Strategic mathematical Tic-Tac-Toe grid playoffs (3 members).", category: "Team track", icon: Grid, color: "from-blue-500/10 to-cyan-500/10 text-blue-400 border-blue-500/20", allowedCategories: ["Primary", "Secondary", "Higher Secondary"], isTeamEvent: true, teamSize: 3 },
+  { id: "Tic-Tac-Toe", name: "Tic-Tac-Toe", tagline: "Strategic mathematical Tic-Tac-Toe grid playoffs (3 members).", category: "Team track", icon: Grid, color: "from-blue-500/10 to-cyan-500/10 text-blue-400 border-blue-500/20", allowedCategories: ["Primary", "Junior", "Secondary", "Higher Secondary"], isTeamEvent: true, teamSize: 3 },
   { id: "Math Memes", name: "Math Memes", tagline: "Design humorous and intellectually witty math memes.", category: "Creative track", icon: Smile, color: "from-yellow-500/10 to-green-500/10 text-yellow-400 border-yellow-500/20", allowedCategories: ["Primary", "Junior", "Secondary", "Higher Secondary"], isTeamEvent: false, teamSize: 1 },
   { id: "Math Article", name: "Math Article", tagline: "Draft a well-researched article on advanced mathematical theories.", category: "Writing track", icon: BookOpen, color: "from-zinc-500/10 to-slate-500/10 text-zinc-400 border-zinc-500/20", allowedCategories: ["Primary", "Junior", "Secondary", "Higher Secondary"], isTeamEvent: false, teamSize: 1 },
   { id: "Math Vision", name: "Math Vision", tagline: "Design digital graphic art illustrating geometric formulas.", category: "Creative track", icon: ImageIcon, color: "from-pink-500/10 to-purple-500/10 text-pink-400 border-pink-500/20", allowedCategories: ["Primary", "Junior", "Secondary", "Higher Secondary"], isTeamEvent: false, teamSize: 1 },
@@ -405,10 +407,43 @@ export default function InterEventRegister() {
   const [teamMember3Institute, setTeamMember3Institute] = useState('');
   const [teamMember3Gender, setTeamMember3Gender] = useState('');
 
+  const checkIs3MemberSegment = React.useCallback((id: any) => {
+    if (!id) return false;
+    const rawStr = typeof id === 'string' ? id : (id?.id || id?.name || String(id));
+    const norm = String(rawStr).trim().toLowerCase();
+    if (
+      norm.includes("tic") ||
+      norm.includes("toe") ||
+      norm.includes("tac") ||
+      norm.includes("tictactoe")
+    ) {
+      return true;
+    }
+    const seg = INTER_SEGMENTS.find((s: any) => 
+      (s.id && String(s.id).trim().toLowerCase() === norm) || 
+      (s.name && String(s.name).trim().toLowerCase() === norm)
+    );
+    if (seg) {
+      const segNorm = (String(seg.id) + " " + String(seg.name)).toLowerCase();
+      if (segNorm.includes("tic") || segNorm.includes("toe") || segNorm.includes("tac") || seg.teamSize === 3 || seg.teamSize >= 3) {
+        return true;
+      }
+    }
+    return getSegmentTeamSize(rawStr, INTER_SEGMENTS) >= 3;
+  }, [INTER_SEGMENTS]);
+
   const hasTeamSegment = selectedSegments.some(id => checkIsTeamSegment(id));
-  const is3MemberTeamSegment = selectedSegments.some(id => {
-    const norm = id.trim().toLowerCase();
-    return norm.includes("tic-tac-toe") || norm.includes("tic tac toe") || norm.includes("tictactoe");
+  const is3MemberTeamSegment = selectedSegments.some((id: any) => {
+    if (!id) return false;
+    const rawId = typeof id === 'string' ? id : (id?.id || id?.name || String(id));
+    const s = String(rawId).toLowerCase();
+    if (s.includes("tic") || s.includes("toe") || s.includes("tac") || s.includes("tictactoe")) {
+      return true;
+    }
+    return checkIs3MemberSegment(id);
+  });
+  const hasOtherTeamSegment = selectedSegments.some(id => {
+    return checkIsTeamSegment(id) && !checkIs3MemberSegment(id);
   });
 
   // Automatically reset teammate fields if team segments are deselected
@@ -483,6 +518,7 @@ export default function InterEventRegister() {
   
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [showSlipModal, setShowSlipModal] = useState(false);
   const [successInfo, setSuccessInfo] = useState<any>(null);
   const [errorMessage, setErrorMessage] = useState("");
 
@@ -1306,11 +1342,7 @@ export default function InterEventRegister() {
         return;
       }
 
-      const is3MemberEvent = selectedSegments.some((id: string) => {
-        const norm = id.trim().toLowerCase();
-        return norm.includes("tic-tac-toe") || norm.includes("tic tac toe") || norm.includes("tictactoe");
-      });
-      if (is3MemberEvent) {
+      if (is3MemberTeamSegment) {
         const tm3Inst = teamMember3Institute.trim() || institute.trim();
         if (!teamMember3Name.trim() || !teamMember3Class || !tm3Inst || !teamMember3Gender) {
           setErrorMessage("Please fill all required details (Name, Class, Institute, and Gender) for Teammate 2 (Required for Tic-Tac-Toe).");
@@ -1407,6 +1439,17 @@ export default function InterEventRegister() {
         ? 'PROXY-' + Math.random().toString(36).substring(2, 9).toUpperCase() 
         : (finalPrice === 0 ? (trxnId.trim().toUpperCase() || ('FREE-INTER-' + Math.floor(100000 + Math.random() * 900000).toString())) : trxnId.trim().toUpperCase());
 
+      const resolvedSelectedEventNames = selectedSegments.map((id: string) => {
+        const seg = INTER_SEGMENTS.find((s: any) => s.id === id || s.name === id);
+        if (seg && seg.name && !seg.name.startsWith('Segment-')) {
+          return seg.name;
+        }
+        if (/^segment-\d+$/i.test(id) || id.startsWith('Segment-')) {
+          return "Tic-Tac-Toe";
+        }
+        return id;
+      });
+
       const response = await fetch('/api/events/register-inter', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1421,7 +1464,7 @@ export default function InterEventRegister() {
           bkashNumber: finalBkash,
           trxnid: finalTrxn,
           amount: finalPrice,
-          selectedEvents: selectedSegments,
+          selectedEvents: resolvedSelectedEventNames,
           isProxyRegistration: isProxyRegistration,
           userId: resolvedUserId,
           teammatesList
@@ -1442,6 +1485,7 @@ export default function InterEventRegister() {
 
       setSuccessInfo(resData);
       setIsSuccess(true);
+      setShowSlipModal(true);
     } catch (err: any) {
       console.error(err);
       setErrorMessage(err.message || "Something went wrong. Please check your connection and try again.");
@@ -2058,6 +2102,60 @@ export default function InterEventRegister() {
                   </div>
                 </div>
               )}
+
+              {/* Verification Slip Auto-Download & Pass Notice */}
+              <div className="p-6 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl text-left space-y-4 w-full">
+                <div className="flex items-center justify-between border-b border-emerald-500/20 pb-3">
+                  <div className="flex items-center gap-2">
+                    <FileText className="w-5 h-5 text-emerald-400" />
+                    <div>
+                      <h4 className="text-xs font-black uppercase tracking-wider text-white">Official Verification Slip (PDF)</h4>
+                      <p className="text-[10px] text-emerald-400 font-bold uppercase tracking-widest mt-0.5">✓ Scannable Pass & QR Code Generated</p>
+                    </div>
+                  </div>
+                  <span className="px-2.5 py-1 bg-emerald-500/20 text-emerald-300 text-[9px] font-black uppercase tracking-wider rounded-full">
+                    Auto-Downloaded
+                  </span>
+                </div>
+                
+                <p className="text-xs text-zinc-300 leading-relaxed font-sans">
+                  Your official <strong>Verification Slip PDF with QR Code</strong> has been generated and auto-downloaded to your device.
+                </p>
+
+                <div className="p-3.5 bg-black/50 rounded-xl text-[11px] text-amber-300 border border-amber-500/20 leading-relaxed font-medium">
+                  ℹ️ <strong>Notice:</strong> You can also log in anytime using your required credentials (registered phone number / email) to download this verification slip PDF again from your <strong>Profile Page</strong>.
+                </div>
+
+                <div className="flex gap-3 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => setShowSlipModal(true)}
+                    className="flex-1 py-3 px-4 bg-emerald-500 hover:bg-emerald-400 text-black font-black text-xs uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-emerald-500/20"
+                  >
+                    <Download className="w-4 h-4" /> Download Verification PDF Pass Again
+                  </button>
+                </div>
+              </div>
+
+              <PurchaseSlipModal 
+                candidate={{
+                  id: successInfo?.member_id || successInfo?.registration?.member_id || 'JMC-PASS',
+                  fullName: fullName || 'Participant',
+                  email: email || '',
+                  phone: phone || '',
+                  memberId: successInfo?.member_id || successInfo?.registration?.member_id || 'JMC-PASS',
+                  class: className || 'N/A',
+                  section: 'N/A',
+                  roll: 'N/A',
+                  school: institute || 'St. Joseph Higher Secondary School',
+                  trxnid: trxnId || 'VERIFIED',
+                  eventsList: selectedSegments,
+                  verified: true,
+                }}
+                isOpen={showSlipModal}
+                autoDownload={true}
+                onClose={() => setShowSlipModal(false)}
+              />
 
               {/* Festival Calendar Dates Automatically Scheduled */}
               <div className="p-6 bg-gradient-to-br from-indigo-950/40 via-purple-950/20 to-black border border-indigo-500/30 rounded-2xl text-left space-y-4">
@@ -2937,26 +3035,46 @@ export default function InterEventRegister() {
                     animate={{ opacity: 1, y: 0 }}
                     className="mt-8 space-y-6 p-6 rounded-3xl bg-zinc-900/60 border border-pink-500/20"
                   >
-                    <div className="border-b border-white/10 pb-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <div className="border-b border-white/10 pb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                       <div>
                         <h3 className="text-sm font-black uppercase tracking-wider text-pink-400 flex items-center gap-2 font-mono">
-                          <User className="w-4 h-4" /> Shared Teammate Information
+                          <User className="w-4 h-4" />
+                          {is3MemberTeamSegment && hasOtherTeamSegment
+                            ? "Shared & Tic-Tac-Toe Teammate Information"
+                            : is3MemberTeamSegment
+                            ? "Tic-Tac-Toe Team Member Information"
+                            : "Shared Teammate Information"
+                          }
                         </h3>
-                        <p className="text-[10px] text-zinc-400 mt-1 uppercase font-mono font-bold">
-                          Leader: {fullName || 'Registrant'} ({className ? `Class ${className}` : ''}) — Teammate info entered here applies to all selected team events.
+                        <p className="text-[10px] text-zinc-300 mt-1 uppercase font-mono font-bold leading-relaxed">
+                          Leader: <span className="text-white font-extrabold">{fullName || 'Registrant'}</span> ({className ? `Class ${className}` : ''}) — 
+                          {is3MemberTeamSegment && hasOtherTeamSegment
+                            ? " Note: Other selected team events require 1 teammate (Teammate 1). Both teammates (Teammate 1 & Teammate 2) will be kept under Tic-Tac-Toe."
+                            : is3MemberTeamSegment
+                            ? " Tic-Tac-Toe requires a 3-member team (Leader + 2 Teammates)."
+                            : " Teammate info entered here applies to all selected team events."
+                          }
                         </p>
                       </div>
-                      <span className="px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider bg-pink-500/10 text-pink-400 border border-pink-500/20 w-fit">
-                        Team Event Selected
+                      <span className="px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-wider bg-pink-500/10 text-pink-400 border border-pink-500/20 w-fit shrink-0 font-mono">
+                        {is3MemberTeamSegment ? "3-Member Team Event Included" : "Team Event Selected"}
                       </span>
                     </div>
 
-                    {/* TEAM MEMBER 2 */}
+                    {/* TEAM MEMBER 2 (Teammate 1) */}
                     <div className="p-5 bg-black/40 border border-white/5 rounded-2xl space-y-4">
-                      <h4 className="text-xs font-black uppercase tracking-wider text-zinc-300 flex items-center gap-2 font-mono">
-                        <span className="w-5 h-5 rounded-full bg-pink-500/20 text-pink-400 flex items-center justify-center text-[10px] font-mono">2</span>
-                        Teammate 1 (2nd Team Member) <span className="text-pink-500">*</span>
-                      </h4>
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                        <h4 className="text-xs font-black uppercase tracking-wider text-zinc-200 flex items-center gap-2 font-mono">
+                          <span className="w-5 h-5 rounded-full bg-pink-500/20 text-pink-400 flex items-center justify-center text-[10px] font-mono">2</span>
+                          Teammate 1 (2nd Team Member) <span className="text-pink-500">*</span>
+                        </h4>
+                        <span className="text-[9px] font-black uppercase tracking-wider bg-pink-500/10 text-pink-400 border border-pink-500/20 px-2.5 py-0.5 rounded-full font-mono w-fit">
+                          {hasOtherTeamSegment && is3MemberTeamSegment
+                            ? "Shared across all team events (including Tic-Tac-Toe)"
+                            : "Required"
+                          }
+                        </span>
+                      </div>
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {/* Name */}
@@ -3014,42 +3132,42 @@ export default function InterEventRegister() {
                       </div>
                     </div>
 
-                    {/* TEAM MEMBER 3 - Only shown for Tic-Tac-Toe */}
-                    {selectedSegments.some((id: string) => {
-                      const norm = id.trim().toLowerCase();
-                      return norm.includes("tic-tac-toe") || norm.includes("tic tac toe") || norm.includes("tictactoe");
-                    }) && (
-                      <div className="p-5 bg-black/40 border border-white/5 rounded-2xl space-y-4">
-                        <div className="flex items-center justify-between">
-                          <h4 className="text-xs font-black uppercase tracking-wider text-zinc-300 flex items-center gap-2 font-mono">
-                            <span className="w-5 h-5 rounded-full bg-pink-500/20 text-pink-400 flex items-center justify-center text-[10px] font-mono">3</span>
-                            Teammate 2 (3rd Member) <span className="text-pink-500">*</span>
+                    {/* TEAM MEMBER 3 - Kept for Tic-Tac-Toe */}
+                    {is3MemberTeamSegment && (
+                      <div className="p-5 bg-purple-950/20 border border-purple-500/30 rounded-2xl space-y-4">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                          <h4 className="text-xs font-black uppercase tracking-wider text-purple-200 flex items-center gap-2 font-mono">
+                            <span className="w-5 h-5 rounded-full bg-purple-500/30 text-purple-300 flex items-center justify-center text-[10px] font-mono">3</span>
+                            Teammate 2 (3rd Member) <span className="text-purple-400">*</span>
                           </h4>
-                          <span className="text-[9px] font-black uppercase tracking-wider bg-pink-500/10 text-pink-400 border border-pink-500/20 px-2.5 py-1 rounded-full font-mono">
-                            Required
+                          <span className="text-[9px] font-black uppercase tracking-wider bg-purple-500/20 text-purple-300 border border-purple-500/40 px-2.5 py-0.5 rounded-full font-mono w-fit">
+                            {hasOtherTeamSegment
+                              ? "Required specifically for Tic-Tac-Toe (3-member team)"
+                              : "Required for Tic-Tac-Toe"
+                            }
                           </span>
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           {/* Name */}
                           <div className="space-y-1">
-                            <label className="text-[10px] font-black uppercase tracking-wider text-zinc-400 font-mono">Teammate Full Name <span className="text-pink-500">*</span></label>
+                            <label className="text-[10px] font-black uppercase tracking-wider text-zinc-400 font-mono">Teammate Full Name <span className="text-purple-400">*</span></label>
                             <input
                               type="text"
                               placeholder="FULL NAME"
                               value={teamMember3Name}
                               onChange={(e) => setTeamMember3Name(e.target.value)}
-                              className="w-full bg-black/60 border border-white/10 rounded-xl py-3 px-4 text-xs font-bold text-white focus:outline-none focus:border-pink-500 uppercase"
+                              className="w-full bg-black/60 border border-purple-500/20 rounded-xl py-3 px-4 text-xs font-bold text-white focus:outline-none focus:border-purple-400 uppercase"
                             />
                           </div>
 
                           {/* Gender */}
                           <div className="space-y-1">
-                            <label className="text-[10px] font-black uppercase tracking-wider text-zinc-400 font-mono">Gender <span className="text-pink-500">*</span></label>
+                            <label className="text-[10px] font-black uppercase tracking-wider text-zinc-400 font-mono">Gender <span className="text-purple-400">*</span></label>
                             <select
                               value={teamMember3Gender}
                               onChange={(e) => setTeamMember3Gender(e.target.value)}
-                              className="w-full bg-black/60 border border-white/10 rounded-xl py-3 px-4 text-xs font-bold text-white focus:outline-none focus:border-pink-500 uppercase cursor-pointer"
+                              className="w-full bg-black/60 border border-purple-500/20 rounded-xl py-3 px-4 text-xs font-bold text-white focus:outline-none focus:border-purple-400 uppercase cursor-pointer"
                             >
                               <option value="" className="bg-zinc-950 text-zinc-500 font-extrabold">SELECT GENDER</option>
                               <option value="male" className="bg-zinc-950 text-white font-extrabold">Male</option>
@@ -3059,11 +3177,11 @@ export default function InterEventRegister() {
 
                           {/* Class */}
                           <div className="space-y-1">
-                            <label className="text-[10px] font-black uppercase tracking-wider text-zinc-400 font-mono">Class Level <span className="text-pink-500">*</span></label>
+                            <label className="text-[10px] font-black uppercase tracking-wider text-zinc-400 font-mono">Class Level <span className="text-purple-400">*</span></label>
                             <select
                               value={teamMember3Class}
                               onChange={(e) => setTeamMember3Class(e.target.value)}
-                              className="w-full bg-black/60 border border-white/10 rounded-xl py-3 px-4 text-xs font-bold text-white focus:outline-none focus:border-pink-500 uppercase cursor-pointer"
+                              className="w-full bg-black/60 border border-purple-500/20 rounded-xl py-3 px-4 text-xs font-bold text-white focus:outline-none focus:border-purple-400 uppercase cursor-pointer"
                             >
                               <option value="" className="bg-zinc-950 text-zinc-500 font-extrabold">SELECT CLASS</option>
                               {[3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(n => (
@@ -3074,13 +3192,13 @@ export default function InterEventRegister() {
 
                           {/* Institute */}
                           <div className="space-y-1">
-                            <label className="text-[10px] font-black uppercase tracking-wider text-zinc-400 font-mono">Institution / School <span className="text-pink-500">*</span></label>
+                            <label className="text-[10px] font-black uppercase tracking-wider text-zinc-400 font-mono">Institution / School <span className="text-purple-400">*</span></label>
                             <input
                               type="text"
                               placeholder="INSTITUTE / SCHOOL NAME"
                               value={teamMember3Institute || institute}
                               onChange={(e) => setTeamMember3Institute(e.target.value)}
-                              className="w-full bg-black/60 border border-white/10 rounded-xl py-3 px-4 text-xs font-bold text-white focus:outline-none focus:border-pink-500 uppercase"
+                              className="w-full bg-black/60 border border-purple-500/20 rounded-xl py-3 px-4 text-xs font-bold text-white focus:outline-none focus:border-purple-400 uppercase"
                             />
                           </div>
                         </div>

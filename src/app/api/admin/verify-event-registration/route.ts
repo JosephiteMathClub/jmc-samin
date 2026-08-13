@@ -24,6 +24,20 @@ function getSupabaseAdmin() {
   });
 }
 
+const cleanEventNames = (evStr: string) => {
+  if (!evStr) return "N/A";
+  if (evStr.includes("Segment-") || evStr.includes("segment-")) {
+    return evStr.split(',').map(s => {
+      const trimmed = s.trim();
+      if (/^segment-\d+$/i.test(trimmed) || trimmed.startsWith('Segment-')) {
+        return "Tic-Tac-Toe";
+      }
+      return trimmed;
+    }).join(', ');
+  }
+  return evStr;
+};
+
 export async function POST(req: Request) {
   try {
     const { recordId, tableName, action, emailAddress, verifiedBy } = await req.json();
@@ -131,7 +145,7 @@ export async function POST(req: Request) {
               <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; color: #333; padding: 20px; border: 1px solid #f1f5f9; border-radius: 8px;">
                 <h1 style="color: #ef4444; font-size: 24px;">Registration Correction Needed</h1>
                 <p>Hello <strong>${linkedRec.full_name}</strong>,</p>
-                <p>We couldn't verify your group/team bKash payment transaction with TrxID <strong>${linkedRec.trxnid || 'N/A'}</strong> for your selected Events (<strong>${linkedRec.selected_events}</strong>).</p>
+                <p>We couldn't verify your group/team bKash payment transaction with TrxID <strong>${linkedRec.trxnid || 'N/A'}</strong> for your selected Events (<strong>${cleanEventNames(linkedRec.selected_events)}</strong>).</p>
                 <p>Please coordinate with your team captain to verify the bKash Sender wallet phone number and Transaction ID (TrxID) and submit a correction.</p>
                 <p>If you have any questions, please reply to this email or submit a help ticket on the platform.</p>
                 <br/>
@@ -149,7 +163,7 @@ export async function POST(req: Request) {
                   recipient_section: String(linkedRec.section || ''),
                   recipient_roll: String(linkedRec.roll || ''),
                   subject: 'Event Registration Verification Update - Josephite Math Club',
-                  body_text: `We couldn't verify your group/team bKash payment transaction with TrxID ${linkedRec.trxnid || 'N/A'} for your selected Events (${linkedRec.selected_events}).`,
+                  body_text: `We couldn't verify your group/team bKash payment transaction with TrxID ${linkedRec.trxnid || 'N/A'} for your selected Events (${cleanEventNames(linkedRec.selected_events)}).`,
                   verified_by: verifiedBy || 'Admin',
                   status: 'sent'
                 }]);
@@ -168,7 +182,7 @@ export async function POST(req: Request) {
                   recipient_section: String(linkedRec.section || ''),
                   recipient_roll: String(linkedRec.roll || ''),
                   subject: 'Event Registration Verification Update - Josephite Math Club',
-                  body_text: `We couldn't verify your group/team bKash payment transaction with TrxID ${linkedRec.trxnid || 'N/A'} for your selected Events (${linkedRec.selected_events}).`,
+                  body_text: `We couldn't verify your group/team bKash payment transaction with TrxID ${linkedRec.trxnid || 'N/A'} for your selected Events (${cleanEventNames(linkedRec.selected_events)}).`,
                   verified_by: verifiedBy || 'Admin',
                   status: 'failed',
                   error_message: String(emailErr?.message || emailErr)
@@ -398,26 +412,110 @@ export async function POST(req: Request) {
           console.error("Failed to log approval to admin_audit_logs:", auditErr);
         }
 
-        // Send confirmation email asynchronously (non-blocking)
+        // Send confirmation email asynchronously (non-blocking) with full Verification Slip & QR Code
         if (linkedEmail) {
+          const qrPayload = JSON.stringify({
+            id: memberIdToUse,
+            member_id: memberIdToUse,
+            name: linkedRec.full_name || 'Participant',
+            class: String(linkedRec.class || 'N/A'),
+            section: String(linkedRec.section || 'N/A'),
+            roll: String(linkedRec.roll || 'N/A'),
+            trxnid: linkedRec.trxnid || 'VERIFIED',
+            events: cleanEventNames(linkedRec.selected_events),
+            type: 'ticket_slip',
+            v: '1.0'
+          });
+
+          const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(qrPayload)}&color=000000&bgcolor=ffffff&margin=10`;
+          const profileLink = `${process.env.NEXT_PUBLIC_APP_URL || 'https://jmc-mathfest.vercel.app'}/profile`;
+
           sendEmail({
             to: linkedEmail,
-            subject: '🎉 Event Registration Approved! - Josephite Math Club',
+            subject: `🎟️ Official Verification Slip & Event Ticket Pass [ID: ${memberIdToUse}] - Josephite Math Club`,
             html: `
-              <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; color: #333; padding: 25px; border: 1px solid #e2e8f0; border-radius: 12px; background-color: #fafbfc;">
-                <h1 style="color: #0284c7; font-size: 26px; margin-bottom: 20px;">Welcome to the Event Arena!</h1>
-                <p>Hello <strong>${linkedRec.full_name}</strong>,</p>
-                <p>Your team/group registration of <strong>${linkedRec.selected_events}</strong> has been successfully verified and approved!</p>
-                <div style="background-color: #f1f5f9; border-left: 4px solid #0284c7; padding: 15px; margin: 20px 0; border-radius: 4px;">
-                  <h3 style="margin: 0 0 10px 0; color: #0f172a; font-size: 14px; text-transform: uppercase; letter-spacing: 0.05em;">Registered Team Event:</h3>
-                  <p style="margin: 0; font-size: 15px; font-weight: bold; color: #334155;">${linkedRec.selected_events}</p>
-                  <p style="margin: 8px 0 0 0; font-size: 12px; color: #64748b;">Category: <strong>${categoryToUse} (Class ${linkedRec.class})</strong></p>
+              <div style="font-family: Arial, sans-serif; max-width: 650px; margin: 0 auto; color: #0f172a; padding: 0; background-color: #f8fafc; border-radius: 16px; overflow: hidden; border: 1px solid #e2e8f0;">
+                <div style="background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); padding: 30px; text-align: center; color: #ffffff;">
+                  <p style="font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 2px; margin: 0 0 6px 0; color: #bae6fd;">Josephite Math Club</p>
+                  <h1 style="font-size: 24px; font-weight: 900; margin: 0; letter-spacing: -0.5px;">OFFICIAL VERIFICATION SLIP & ENTRY PASS</h1>
+                  <p style="font-size: 13px; margin: 6px 0 0 0; color: #e0f2fe;">Annual Math Festival & Event Participation Ticket</p>
                 </div>
-                <p>This participation is associated with your unique ID: <strong>${memberIdToUse}</strong>. You can view it live on your <strong>Profile Dashboard</strong> anytime.</p>
-                <p>Get ready to test your mathematical boundaries and best of luck!</p>
-                <br/>
-                <hr style="border: 0; border-top: 1px solid #e2e8f0; margin-bottom: 20px;" />
-                <p style="font-size: 11px; color: #64748b; line-height: 1.5;">This email was automatically dispatched by the JMC Verification Engine. If you encounter any bugs, please reach out to JMC support.</p>
+
+                <div style="padding: 30px;">
+                  <div style="text-align: center; margin-bottom: 24px;">
+                    <span style="display: inline-block; background-color: #dcfce7; color: #15803d; border: 1px solid #86efac; font-size: 12px; font-weight: 800; padding: 6px 16px; border-radius: 20px; text-transform: uppercase; letter-spacing: 1px;">
+                      ✓ VERIFIED & APPROVED PASS
+                    </span>
+                  </div>
+
+                  <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-bottom: 24px;">
+                    <tr>
+                      <td valign="top" style="padding-right: 15px;">
+                        <p style="font-size: 10px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 1px; margin: 0 0 4px 0;">Registrant Name</p>
+                        <p style="font-size: 18px; font-weight: 800; color: #0f172a; margin: 0 0 16px 0;">${linkedRec.full_name || 'Participant'}</p>
+
+                        <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-bottom: 16px;">
+                          <tr>
+                            <td width="50%" valign="top">
+                              <p style="font-size: 10px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 1px; margin: 0 0 4px 0;">Unique Entry ID</p>
+                              <p style="font-size: 15px; font-family: monospace; font-weight: 900; color: #0284c7; margin: 0;">${memberIdToUse}</p>
+                            </td>
+                            <td width="50%" valign="top">
+                              <p style="font-size: 10px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 1px; margin: 0 0 4px 0;">Transaction ID</p>
+                              <p style="font-size: 13px; font-family: monospace; font-weight: 700; color: #334155; margin: 0;">${linkedRec.trxnid || 'VERIFIED'}</p>
+                            </td>
+                          </tr>
+                        </table>
+
+                        <div style="background-color: #f1f5f9; padding: 12px; border-radius: 10px; border: 1px solid #e2e8f0; font-family: monospace; font-size: 12px; color: #334155;">
+                          <strong>Class:</strong> ${linkedRec.class || 'N/A'} &nbsp;|&nbsp; 
+                          <strong>Section:</strong> ${linkedRec.section || 'N/A'} &nbsp;|&nbsp; 
+                          <strong>Roll:</strong> ${linkedRec.roll || 'N/A'}
+                        </div>
+
+                        <p style="font-size: 10px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 1px; margin: 16px 0 4px 0;">Institution</p>
+                        <p style="font-size: 13px; color: #334155; margin: 0;">${linkedRec.school || 'St. Joseph Higher Secondary School'}</p>
+                      </td>
+
+                      <td width="160" valign="top" align="center" style="background-color: #ffffff; padding: 16px; border-radius: 16px; border: 1px solid #e2e8f0;">
+                        <img src="${qrImageUrl}" alt="Verification Ticket QR Code" width="140" height="140" style="display: block; width: 140px; height: 140px; border: 0;" />
+                        <p style="font-size: 11px; font-family: monospace; font-weight: 800; color: #0f172a; margin: 10px 0 2px 0;">${memberIdToUse}</p>
+                        <p style="font-size: 9px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 1px; margin: 0;">Scannable Ticket QR</p>
+                      </td>
+                    </tr>
+                  </table>
+
+                  <div style="background-color: #ffffff; padding: 16px; border-radius: 12px; border: 1px solid #e2e8f0; margin-bottom: 20px;">
+                    <p style="font-size: 10px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 1px; margin: 0 0 8px 0;">Registered Event Segments</p>
+                    <p style="font-size: 14px; font-weight: 700; color: #0284c7; margin: 0; font-family: monospace;">${cleanEventNames(linkedRec.selected_events)}</p>
+                  </div>
+
+                  <div style="background-color: #f0fdf4; padding: 14px; border-radius: 12px; border: 1px solid #bbf7d0; margin-bottom: 24px;">
+                    <table width="100%" border="0" cellspacing="0" cellpadding="0">
+                      <tr>
+                        <td style="font-size: 12px; font-weight: 800; color: #166534;">Entitlements Included:</td>
+                        <td align="right" style="font-size: 12px; font-weight: 700; color: #15803d;">
+                          ✓ Event Entry &nbsp;•&nbsp; ✓ Snacks Token &nbsp;•&nbsp; ✓ Souvenir
+                        </td>
+                      </tr>
+                    </table>
+                  </div>
+
+                  <div style="text-align: center; margin-bottom: 24px;">
+                    <a href="${profileLink}" style="display: inline-block; background-color: #0284c7; color: #ffffff; text-decoration: none; font-size: 14px; font-weight: 800; padding: 14px 28px; border-radius: 12px; text-transform: uppercase; letter-spacing: 0.5px; box-shadow: 0 4px 12px rgba(2,132,199,0.3);">
+                      📥 View & Download Slip on Profile
+                    </a>
+                  </div>
+
+                  <p style="font-size: 12px; color: #64748b; text-align: center; margin: 0; line-height: 1.5;">
+                    Please keep this verification slip saved or present your QR Code at the festival entry booth.<br/>
+                    Registered using mobile/phone? Access your verification slip anytime on your <a href="${profileLink}" style="color: #0284c7; text-decoration: underline;">Profile Page</a>.
+                  </p>
+                </div>
+
+                <div style="background-color: #f1f5f9; padding: 16px; text-align: center; border-top: 1px solid #e2e8f0;">
+                  <p style="font-size: 11px; color: #94a3b8; margin: 0;">Verified by JMC Admin Engine • St. Joseph Higher Secondary School</p>
+                </div>
               </div>
             `
           }).then(async () => {
@@ -430,8 +528,8 @@ export async function POST(req: Request) {
                   recipient_class: String(linkedRec.class || ''),
                   recipient_section: String(linkedRec.section || ''),
                   recipient_roll: String(linkedRec.roll || ''),
-                  subject: `Event Registration Approved! - ${linkedRec.selected_events}`,
-                  body_text: `Your team/group registration of ${linkedRec.selected_events} has been successfully verified and approved!`,
+                  subject: `Event Registration Approved! - ${cleanEventNames(linkedRec.selected_events)}`,
+                  body_text: `Your team/group registration of ${cleanEventNames(linkedRec.selected_events)} has been successfully verified and approved!`,
                   verified_by: verifiedBy || 'Admin',
                   status: 'sent'
                 }]);
@@ -449,8 +547,8 @@ export async function POST(req: Request) {
                   recipient_class: String(linkedRec.class || ''),
                   recipient_section: String(linkedRec.section || ''),
                   recipient_roll: String(linkedRec.roll || ''),
-                  subject: `Event Registration Approved! - ${linkedRec.selected_events}`,
-                  body_text: `Your team/group registration of ${linkedRec.selected_events} has been successfully verified and approved!`,
+                  subject: `Event Registration Approved! - ${cleanEventNames(linkedRec.selected_events)}`,
+                  body_text: `Your team/group registration of ${cleanEventNames(linkedRec.selected_events)} has been successfully verified and approved!`,
                   verified_by: verifiedBy || 'Admin',
                   status: 'failed',
                   error_message: String(emailErr?.message || emailErr)

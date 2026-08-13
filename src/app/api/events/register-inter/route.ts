@@ -302,6 +302,14 @@ export async function POST(req: Request) {
       }
     }
 
+    const cleanedSelectedEvents = (Array.isArray(selectedEvents) ? selectedEvents : [selectedEvents]).map((ev: string) => {
+      const s = String(ev || '').trim();
+      if (/^segment-\d+$/i.test(s) || s.startsWith('Segment-')) {
+        return 'Tic-Tac-Toe';
+      }
+      return s;
+    });
+
     // Insert registration payload into events table
     const registrationPayload = {
       user_id: finalUserId,
@@ -313,7 +321,7 @@ export async function POST(req: Request) {
       bkash_number: bkashNumber,
       trxnid: trxnid,
       amount: amount,
-      selected_events: selectedEvents.join(', '),
+      selected_events: cleanedSelectedEvents.join(', '),
       verified: isVerifiedNow ? 'yes' : 'no'
     };
 

@@ -8,7 +8,7 @@ import ScrollReveal from '../components/ScrollReveal';
 import Image from 'next/image';
 import { Skeleton } from '../components/Skeleton';
 import { ExpandableEventCards } from '../components/ExpandableEventCards';
-import { resolveImageUrl } from '../lib/utils';
+import { resolveImageUrl, resolveEventNames } from '../lib/utils';
 import { useAuth } from '../context/AuthContext';
 import { useRouter } from 'next/navigation';
 import { supabase } from '../lib/supabase';
@@ -537,7 +537,7 @@ const Events = () => {
                 <div>
                   <span class="block text-[9px] uppercase tracking-widest text-gray-400 font-extrabold mb-1">Registered Segments</span>
                   <div class="flex flex-wrap gap-1.5 mt-1">
-                    ${(reg.selected_events || '').split(',').map((ev: string) => `
+                    ${(resolveEventNames(reg.selected_events) || '').split(',').map((ev: string) => `
                       <span class="px-2 py-1 bg-gray-100 border border-gray-200 text-gray-800 text-[9px] font-extrabold uppercase tracking-wider rounded">
                         ✓ ${ev.trim()}
                       </span>
@@ -624,7 +624,7 @@ const Events = () => {
             <div className="space-y-2">
               <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-widest block">Registered Segments Included</span>
               <div className="flex flex-wrap gap-2">
-                {reg.selected_events?.split(',').map((ev: string, idx: number) => (
+                {resolveEventNames(reg.selected_events)?.split(',').map((ev: string, idx: number) => (
                   <span key={idx} className="px-3 py-1 bg-white/5 border border-white/5 text-zinc-300 text-[10px] font-black uppercase tracking-wider rounded-lg flex items-center gap-1.5">
                     <Tag className="w-3 h-3 text-amber-500" />
                     {ev.trim()}
