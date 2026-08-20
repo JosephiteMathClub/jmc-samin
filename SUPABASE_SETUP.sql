@@ -889,3 +889,46 @@ BEGIN
 END $$;
 
 
+-- ==========================================
+-- 13. Previous Year Participants (Historical Archive)
+-- ==========================================
+
+CREATE TABLE IF NOT EXISTS public.previous_year_participants (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    original_id TEXT,
+    user_id UUID,
+    full_name TEXT NOT NULL,
+    email TEXT NOT NULL,
+    phone TEXT,
+    bkash_number TEXT,
+    academic_class TEXT,
+    section TEXT,
+    roll TEXT,
+    school TEXT,
+    source_table TEXT,
+    selected_events TEXT,
+    trxnid TEXT,
+    amount NUMERIC DEFAULT 0,
+    academic_year TEXT DEFAULT '2025-2026',
+    verified TEXT DEFAULT 'yes',
+    archived_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    metadata JSONB DEFAULT '{}'::jsonb
+);
+
+-- Indices for fast searching and filtering
+CREATE INDEX IF NOT EXISTS idx_prev_participants_email ON public.previous_year_participants(email);
+CREATE INDEX IF NOT EXISTS idx_prev_participants_phone ON public.previous_year_participants(phone);
+CREATE INDEX IF NOT EXISTS idx_prev_participants_year ON public.previous_year_participants(academic_year);
+CREATE INDEX IF NOT EXISTS idx_prev_participants_source ON public.previous_year_participants(source_table);
+
+-- Enable RLS
+ALTER TABLE public.previous_year_participants ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Allow super admins full access to previous_year_participants" ON public.previous_year_participants;
+CREATE POLICY "Allow super admins full access to previous_year_participants" ON public.previous_year_participants FOR ALL TO authenticated USING (public.is_super_admin()) WITH CHECK (public.is_super_admin());
+
+DROP POLICY IF EXISTS "Allow service role full access to previous_year_participants" ON public.previous_year_participants;
+CREATE POLICY "Allow service role full access to previous_year_participants" ON public.previous_year_participants FOR ALL TO service_role USING (true) WITH CHECK (true);
+
+

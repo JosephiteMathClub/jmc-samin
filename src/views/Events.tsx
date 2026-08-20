@@ -149,6 +149,7 @@ const Events = () => {
   const [segmentBanners, setSegmentBanners] = useState<Record<string, string>>({});
   const [segmentDescriptions, setSegmentDescriptions] = useState<Record<string, string>>({});
   const [configInterSegments, setConfigInterSegments] = useState<any[] | null>(null);
+  const [interRegProvider, setInterRegProvider] = useState<'website' | 'tickify'>('website');
   const [expandedSegments, setExpandedSegments] = useState<string[]>([]);
 
   const toggleExpandSegment = (name: string) => {
@@ -182,6 +183,11 @@ const Events = () => {
                 }
                 if (val.segmentDescriptions && typeof val.segmentDescriptions === 'object') {
                   setSegmentDescriptions(val.segmentDescriptions);
+                }
+                if (val.registrationProvider === 'tickify') {
+                  setInterRegProvider('tickify');
+                } else {
+                  setInterRegProvider('website');
                 }
                 if (Array.isArray(val.interSegments) && val.interSegments.length > 0) {
                   setConfigInterSegments(val.interSegments);
@@ -1030,14 +1036,23 @@ const Events = () => {
                   <div className="absolute top-0 right-0 w-[150px] h-[150px] bg-indigo-500/5 rounded-full blur-[50px] pointer-events-none" />
                   
                   <div className="space-y-2 text-center md:text-left flex-1 min-w-0">
-                    <span className="px-3 py-1 rounded bg-indigo-500/10 text-indigo-400 text-[9px] font-black uppercase tracking-widest border border-indigo-500/20">
-                      National Scale
-                    </span>
+                    <div className="flex flex-wrap items-center justify-center md:justify-start gap-2">
+                      <span className="px-3 py-1 rounded bg-indigo-500/10 text-indigo-400 text-[9px] font-black uppercase tracking-widest border border-indigo-500/20">
+                        National Scale
+                      </span>
+                      {interRegProvider === 'tickify' && (
+                        <span className="px-3 py-1 rounded bg-amber-500/10 text-amber-300 text-[9px] font-black uppercase tracking-widest border border-amber-500/20 flex items-center gap-1">
+                          <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" /> Official Tickify Portal
+                        </span>
+                      )}
+                    </div>
                     <h2 className="text-2xl md:text-3xl font-black text-white uppercase tracking-tight pt-2">
                       National Inter-School Mathematics Championship
                     </h2>
                     <p className="text-xs text-zinc-400 font-medium max-w-xl leading-relaxed">
-                      External students from any school/college across Bangladesh can priority pre-register to reserve their ticket priority for team/solo tracks.
+                      {interRegProvider === 'tickify' 
+                        ? 'Official participant registration has moved to Tickify for automated ticketing, instant payment verification, and seat allocation.'
+                        : 'External students from any school/college across Bangladesh can priority pre-register to reserve their ticket priority for team/solo tracks.'}
                     </p>
                   </div>
 
@@ -1046,9 +1061,14 @@ const Events = () => {
                       onClick={() => {
                         router.push('/events/register?type=inter');
                       }}
-                      className="w-full md:w-auto py-5 px-8 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white font-black text-xs uppercase tracking-[0.2em] transition-all shadow-[0_0_30px_rgba(99,102,241,0.25)] flex items-center justify-center gap-2 group flex-shrink-0 cursor-pointer"
+                      className={`w-full md:w-auto py-5 px-8 rounded-2xl font-black text-xs uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-2 group flex-shrink-0 cursor-pointer ${
+                        interRegProvider === 'tickify'
+                          ? 'bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-black shadow-[0_0_30px_rgba(245,158,11,0.25)]'
+                          : 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-[0_0_30px_rgba(99,102,241,0.25)]'
+                      }`}
                     >
-                      Register Now <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                      {interRegProvider === 'tickify' ? 'Proceed to Tickify Registration' : 'Register Now'}{' '}
+                      <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                     </button>
                   </div>
                 </motion.div>

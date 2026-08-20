@@ -2,12 +2,14 @@ import DevelopersView from "@/views/Developers";
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Web Platform Architects & Engineers",
-  description: "Meet the student architects, full-stack engineers, design specialists, and technical minds who designed and developed the official Josephite Math Club digital platform.",
+  title: "Main Developer & Platform Architects | Josephite Math Club",
+  description: "Meet Samin Tausif, the main developer and chief architect of the official Josephite Math Club digital platform, and the engineering contributors.",
   keywords: [
+    "Samin Tausif",
+    "Main Developer Josephite Math Club",
+    "Chief Architect JMC",
     "Josephite Math Club Developers",
     "Staff Web Engineers SJS",
-    "Samin Tausif",
     "Tawhid Bin Omar",
     "Sharan Haque Shakin",
     "Sanjid Kabir",
@@ -17,15 +19,15 @@ export const metadata: Metadata = {
     canonical: "/developers",
   },
   openGraph: {
-    title: "Web Platform Architects & Engineers | Josephite Math Club",
-    description: "Meet the engineering minds and designers behind the official SJS Math Club web application, built with high-performance modern tech stacks.",
+    title: "Samin Tausif - Main Developer & Chief Architect | Josephite Math Club",
+    description: "Explore the features, systems, and architectural contributions engineered by Samin Tausif for the official JMC platform.",
     url: "https://jmc-sjs.org/developers",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Official JMC Web Platform Architects",
-    description: "Meet the full-stack student developers and designers who brought the Josephite Math Club workspace to life.",
+    title: "Samin Tausif - Main Developer & Chief Architect",
+    description: "The main developer and architectural visionary behind the official Josephite Math Club web application.",
   },
 };
 
@@ -37,8 +39,8 @@ export default function DevelopersPage() {
         "@type": "WebPage",
         "@id": "https://jmc-sjs.org/developers#webpage",
         "url": "https://jmc-sjs.org/developers",
-        "name": "Web Platform Architects & Engineers",
-        "description": "The technical development, optimization credits, and engine architecture of the official JMC web platform.",
+        "name": "Samin Tausif - Main Developer & Platform Architects",
+        "description": "Samin Tausif, the main developer and chief platform architect of the official Josephite Math Club digital ecosystem.",
         "isPartOf": {
           "@id": "https://jmc-sjs.org/#website"
         },

@@ -44,7 +44,16 @@ import {
   Edit,
   Eye,
   FileText,
-  RefreshCw
+  RefreshCw,
+  Keyboard,
+  ListFilter,
+  MessageSquare,
+  ExternalLink,
+  Link as LinkIcon,
+  Sparkles,
+  Laptop,
+  Ticket,
+  Archive
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useToast } from '../../context/ToastContext';
@@ -55,6 +64,7 @@ import { DashboardButton } from './DashboardButton';
 import { DashboardFormField } from './DashboardFormField';
 import { SupportManagement } from './SupportManagement';
 import { PurchaseSlipModal, PurchaseSlipCandidate } from './PurchaseSlipModal';
+import { ParticipantHistoryTab } from './ParticipantHistoryTab';
 import Image from 'next/image';
 import dynamic from 'next/dynamic';
 import { cleanDisplayEmail } from '../../lib/utils';
@@ -1037,6 +1047,14 @@ export function InterEventRegistrationConfigEditor({ showToast }: { showToast: (
   const [pricePerSegment, setPricePerSegment] = useState<number>(150);
   const [caCodes, setCaCodes] = useState<string[]>([]);
   const [newCaCode, setNewCaCode] = useState<string>('');
+  const [caCodeInputMode, setCaCodeInputMode] = useState<'selectable' | 'typing'>('selectable');
+
+  // Registration View Provider (Website Native Form vs. Tickify Portal Card)
+  const [registrationProvider, setRegistrationProvider] = useState<'website' | 'tickify'>('website');
+  const [tickifyUrl, setTickifyUrl] = useState<string>('');
+  const [tickifyNoticeReason, setTickifyNoticeReason] = useState<string>(
+    'Registration for the National Inter-School Math Olympiad & Festival has been relocated from the website to Tickify for seamless ticketing, automated seat allocation, and instant confirmation.'
+  );
 
   // Event Page Launch & Teaser Video States
   const [isEventPageLaunched, setIsEventPageLaunched] = useState<boolean>(false);
@@ -1054,6 +1072,10 @@ export function InterEventRegistrationConfigEditor({ showToast }: { showToast: (
     paymentDescription: "Please pay BDT 150 per event segment to our bKash personal/merchant account. Highlighted Phone: 01789456123. If you use a valid Campus Ambassador (CA) code, you will get a discount!",
     pricePerSegment: 150,
     caCodes: [],
+    caCodeInputMode: 'selectable' as 'selectable' | 'typing',
+    registrationProvider: 'website' as 'website' | 'tickify',
+    tickifyUrl: '',
+    tickifyNoticeReason: 'Registration for the National Inter-School Math Olympiad & Festival has been relocated from the website to Tickify for seamless ticketing, automated seat allocation, and instant confirmation.',
     isEventPageLaunched: false,
     teaserVideoEnabled: true,
     teaserVideoUrl: "https://vjs.zencdn.net/v/oceans.mp4"
@@ -1086,6 +1108,10 @@ export function InterEventRegistrationConfigEditor({ showToast }: { showToast: (
             setPaymentDescription(val.paymentDescription || DEFAULT_INTER_CONFIG.paymentDescription);
             setPricePerSegment(typeof val.pricePerSegment === 'number' ? val.pricePerSegment : DEFAULT_INTER_CONFIG.pricePerSegment);
             setCaCodes(val.caCodes || DEFAULT_INTER_CONFIG.caCodes);
+            setCaCodeInputMode(val.caCodeInputMode === 'typing' ? 'typing' : 'selectable');
+            setRegistrationProvider(val.registrationProvider === 'tickify' ? 'tickify' : 'website');
+            setTickifyUrl(val.tickifyUrl || '');
+            setTickifyNoticeReason(val.tickifyNoticeReason || DEFAULT_INTER_CONFIG.tickifyNoticeReason);
             setIsEventPageLaunched(Boolean(val.isEventPageLaunched));
             setTeaserVideoEnabled(val.teaserVideoEnabled !== false);
             setTeaserVideoUrl(val.teaserVideoUrl || DEFAULT_INTER_CONFIG.teaserVideoUrl);
@@ -1137,6 +1163,10 @@ export function InterEventRegistrationConfigEditor({ showToast }: { showToast: (
         setPaymentDescription(DEFAULT_INTER_CONFIG.paymentDescription);
         setPricePerSegment(DEFAULT_INTER_CONFIG.pricePerSegment);
         setCaCodes(DEFAULT_INTER_CONFIG.caCodes);
+        setCaCodeInputMode(DEFAULT_INTER_CONFIG.caCodeInputMode);
+        setRegistrationProvider(DEFAULT_INTER_CONFIG.registrationProvider);
+        setTickifyUrl(DEFAULT_INTER_CONFIG.tickifyUrl);
+        setTickifyNoticeReason(DEFAULT_INTER_CONFIG.tickifyNoticeReason);
         setIsEventPageLaunched(DEFAULT_INTER_CONFIG.isEventPageLaunched);
         setTeaserVideoEnabled(DEFAULT_INTER_CONFIG.teaserVideoEnabled);
         setTeaserVideoUrl(DEFAULT_INTER_CONFIG.teaserVideoUrl);
@@ -1291,6 +1321,10 @@ export function InterEventRegistrationConfigEditor({ showToast }: { showToast: (
       paymentDescription,
       pricePerSegment: Number(pricePerSegment),
       caCodes,
+      caCodeInputMode,
+      registrationProvider,
+      tickifyUrl: tickifyUrl.trim(),
+      tickifyNoticeReason: tickifyNoticeReason.trim(),
       isEventPageLaunched: targetLaunch,
       teaserVideoEnabled,
       teaserVideoUrl,
@@ -1617,6 +1651,184 @@ export function InterEventRegistrationConfigEditor({ showToast }: { showToast: (
             placeholder="150"
           />
         </div>
+      </div>
+
+      {/* Registration View Provider Toggle (Website Native Form vs. Tickify Registration Card) */}
+      <div className="p-6 rounded-2xl bg-gradient-to-r from-amber-950/30 via-orange-950/20 to-black border border-amber-500/30 space-y-5">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <span className="px-2.5 py-0.5 rounded-full text-[9px] font-mono font-bold uppercase tracking-wider bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                Form Display Mode
+              </span>
+              <span className="text-[10px] font-mono uppercase tracking-widest text-zinc-400">
+                Active: <strong className={registrationProvider === 'tickify' ? 'text-amber-400 font-bold' : 'text-emerald-400 font-bold'}>{registrationProvider === 'tickify' ? 'Tickify Registration (Redirect Card)' : 'Website Form (Native Multi-Step)'}</strong>
+              </span>
+            </div>
+            <h4 className="text-sm font-extrabold text-white uppercase tracking-wider flex items-center gap-2">
+              <Ticket className="w-4 h-4 text-amber-400" /> Registration View Mode / Provider
+            </h4>
+            <p className="text-[11px] text-zinc-400 font-sans leading-relaxed max-w-xl">
+              Toggle what visitors see on the Inter-School event registration page. If toggled to <strong>Tickify Registration</strong>, the native registration form will not be shown anymore and will be replaced with an elegant card informing users that registration has moved to Tickify, featuring a direct button to redirect to your configured link.
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2 p-1.5 bg-black/60 border border-white/10 rounded-2xl shrink-0">
+            <button
+              type="button"
+              onClick={() => setRegistrationProvider('website')}
+              className={`px-4 py-2.5 rounded-xl text-xs font-bold font-mono uppercase tracking-wider transition-all flex items-center gap-2 cursor-pointer ${
+                registrationProvider === 'website'
+                  ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-600/30'
+                  : 'text-zinc-400 hover:text-white hover:bg-white/5'
+              }`}
+            >
+              <Laptop className="w-3.5 h-3.5" /> Website Form
+            </button>
+            <button
+              type="button"
+              onClick={() => setRegistrationProvider('tickify')}
+              className={`px-4 py-2.5 rounded-xl text-xs font-bold font-mono uppercase tracking-wider transition-all flex items-center gap-2 cursor-pointer ${
+                registrationProvider === 'tickify'
+                  ? 'bg-gradient-to-r from-amber-500 to-orange-600 text-white shadow-lg shadow-amber-500/30'
+                  : 'text-zinc-400 hover:text-white hover:bg-white/5'
+              }`}
+            >
+              <ExternalLink className="w-3.5 h-3.5" /> Tickify Registration
+            </button>
+          </div>
+        </div>
+
+        {registrationProvider === 'tickify' ? (
+          <div className="p-5 rounded-xl bg-amber-500/10 border border-amber-500/30 space-y-4">
+            <div className="flex items-start gap-3">
+              <Sparkles className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
+              <div className="space-y-1">
+                <h5 className="text-xs font-bold text-amber-200 uppercase tracking-wider">
+                  Tickify Mode Active: Form Hidden & Replaced with Announcement Card
+                </h5>
+                <p className="text-[11px] text-zinc-300 leading-relaxed">
+                  Visitors visiting the inter-school registration link will not see the multi-step form. Instead, they will be presented with a premium card announcing that registration has moved to Tickify, with a direct CTA button redirecting them to the link specified below.
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-2 pt-2 border-t border-amber-500/20">
+              <label className="text-[10px] font-black uppercase tracking-wider text-amber-300 font-mono flex items-center gap-2">
+                <LinkIcon className="w-3.5 h-3.5" /> Tickify Registration URL / Redirect Link
+              </label>
+              <div className="relative">
+                <input
+                  type="url"
+                  value={tickifyUrl}
+                  onChange={(e) => setTickifyUrl(e.target.value)}
+                  placeholder="https://tickify.live/events/josephite-math-olympiad-2026"
+                  className="w-full bg-black/60 border border-amber-500/40 rounded-xl px-4 py-3 text-xs font-mono font-bold text-white focus:outline-none focus:border-amber-400 transition-all placeholder:text-zinc-600"
+                />
+              </div>
+              <p className="text-[10px] text-zinc-400 font-mono">
+                {tickifyUrl.trim() ? (
+                  <span className="text-emerald-400 flex items-center gap-1.5">
+                    <Check className="w-3 h-3" /> Configured Target: <span className="underline truncate">{tickifyUrl}</span>
+                  </span>
+                ) : (
+                  <span className="text-amber-400/90 font-medium">
+                    * If you haven't added the Tickify link yet, the button will display a "Link Coming Soon" status for visitors. You can update this link anytime.
+                  </span>
+                )}
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-[10px] font-black uppercase tracking-wider text-zinc-400 font-mono">
+                Notice Message & Reason (Optional Customization)
+              </label>
+              <textarea
+                value={tickifyNoticeReason}
+                onChange={(e) => setTickifyNoticeReason(e.target.value)}
+                rows={2}
+                className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-zinc-200 focus:outline-none focus:border-amber-400 transition-all [resize:none]"
+                placeholder="Registration for the National Inter-School Math Olympiad & Festival has been relocated from the website to Tickify for seamless ticketing, automated seat allocation, and instant confirmation."
+              />
+            </div>
+          </div>
+        ) : (
+          <div className="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-xs text-emerald-200 flex items-start gap-2.5">
+            <Laptop className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+            <div className="text-[11px] leading-relaxed">
+              <strong>Website Form Active:</strong> Visitors will access the full 3-step interactive registration wizard (personal details, segment selection, and bKash payment verification) directly on this website.
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* CA Code Input Mode Toggle (Selectable Dropdown vs. Typeable Text Input) */}
+      <div className="p-6 rounded-2xl bg-gradient-to-r from-pink-950/30 via-purple-950/20 to-black border border-pink-500/30 space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <span className="px-2.5 py-0.5 rounded-full text-[9px] font-mono font-bold uppercase tracking-wider bg-pink-500/20 text-pink-400 border border-pink-500/30">
+                Form UI Control
+              </span>
+              <span className="text-[10px] font-mono uppercase tracking-widest text-zinc-400">
+                Active Mode: <strong className={caCodeInputMode === 'typing' ? 'text-pink-400 font-bold' : 'text-indigo-400 font-bold'}>{caCodeInputMode === 'typing' ? 'Typing Mode (Text Field)' : 'Selectable Mode (Dropdown)'}</strong>
+              </span>
+            </div>
+            <h4 className="text-sm font-extrabold text-white uppercase tracking-wider">
+              Campus Ambassador (CA) Code Input Mode
+            </h4>
+            <p className="text-[11px] text-zinc-400 font-sans leading-relaxed max-w-xl">
+              Toggle whether registrants pick from the pre-configured CA codes list via a dropdown or type in the CA ambassador name/code freely with an interactive manga speech bubble guide.
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2 p-1.5 bg-black/60 border border-white/10 rounded-2xl shrink-0">
+            <button
+              type="button"
+              onClick={() => setCaCodeInputMode('selectable')}
+              className={`px-4 py-2.5 rounded-xl text-xs font-bold font-mono uppercase tracking-wider transition-all flex items-center gap-2 cursor-pointer ${
+                caCodeInputMode === 'selectable'
+                  ? 'bg-pink-600 text-white shadow-lg shadow-pink-600/30'
+                  : 'text-zinc-400 hover:text-white hover:bg-white/5'
+              }`}
+            >
+              <ListFilter className="w-3.5 h-3.5" /> Selectable (Dropdown)
+            </button>
+            <button
+              type="button"
+              onClick={() => setCaCodeInputMode('typing')}
+              className={`px-4 py-2.5 rounded-xl text-xs font-bold font-mono uppercase tracking-wider transition-all flex items-center gap-2 cursor-pointer ${
+                caCodeInputMode === 'typing'
+                  ? 'bg-gradient-to-r from-pink-600 to-indigo-600 text-white shadow-lg shadow-pink-600/30'
+                  : 'text-zinc-400 hover:text-white hover:bg-white/5'
+              }`}
+            >
+              <Keyboard className="w-3.5 h-3.5" /> Typing (Text Field)
+            </button>
+          </div>
+        </div>
+
+        {caCodeInputMode === 'typing' ? (
+          <div className="p-4 rounded-xl bg-pink-500/10 border border-pink-500/25 text-xs text-pink-200 flex items-start gap-3">
+            <MessageSquare className="w-4 h-4 text-pink-400 shrink-0 mt-0.5" />
+            <div className="text-[11px] leading-relaxed space-y-1">
+              <p>
+                <strong>Typing Mode Active:</strong> The registration form will render an editable text input for the CA Code. Clicking or focusing on the field triggers a stylized manga conversation bubble informing visitors that:
+              </p>
+              <ul className="list-disc list-inside space-y-0.5 text-zinc-300">
+                <li>CA's name must be all small (lowercase) and without any spaces (e.g., <code className="text-pink-300 font-mono">samintausif</code>).</li>
+                <li>Unregistered or unconfirmed CA names will be automatically voided.</li>
+              </ul>
+            </div>
+          </div>
+        ) : (
+          <div className="p-3.5 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-xs text-indigo-200 flex items-start gap-2.5">
+            <ListFilter className="w-4 h-4 text-indigo-400 shrink-0 mt-0.5" />
+            <div className="text-[11px] leading-relaxed">
+              <strong>Selectable Mode Active:</strong> Registrants choose from the list of verified CA codes in the list below via a clean select dropdown.
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Selective CA Codes Management */}
@@ -1989,7 +2201,7 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ isSuperAdmin =
   const [loading, setLoading] = useState(true);
   const [promoting, setPromoting] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [activeSubTab, setActiveSubTab] = useState<'users' | 'database' | 'positions' | 'support' | 'email' | 'food' | 'cards' | 'transactions' | 'registration' | 'manual_announce' | 'bulk_name_notice' | 'resend_verification'>('users');
+  const [activeSubTab, setActiveSubTab] = useState<'users' | 'database' | 'positions' | 'support' | 'email' | 'food' | 'cards' | 'transactions' | 'registration' | 'manual_announce' | 'bulk_name_notice' | 'resend_verification' | 'participant_history'>('users');
   
   // Resend Verification Pass State
   const [resendRegistrations, setResendRegistrations] = useState<any[]>([]);
@@ -2296,6 +2508,7 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ isSuperAdmin =
     'junior_events', 
     'secondary_events', 
     'higher_secondary_events', 
+    'previous_year_participants',
     'event_participation', 
     'site_content', 
     'support_tickets'
@@ -3326,6 +3539,27 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ isSuperAdmin =
     }
     if (!window.confirm('Are you sure you want to delete this row? This action is irreversible.')) return;
     try {
+      const liveTables = ['primary_events', 'junior_events', 'secondary_events', 'higher_secondary_events'];
+      
+      if (liveTables.includes(tableName)) {
+        // Automatically archive into previous_year_participants before deleting
+        const res = await fetch('/api/admin/participant-history', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'archive_and_delete_single',
+            tableName,
+            rowId
+          })
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+          setTableData(prev => prev.filter(row => row.id !== rowId));
+          showToast('Row deleted from live table and preserved in previous_year_participants!', 'success');
+          return;
+        }
+      }
+
       // Handle different ID types (id for UUID, or specific key for site_content)
       const idKey = tableName === 'site_content' ? 'id' : 'id';
       const { error } = await supabase
@@ -3447,6 +3681,7 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ isSuperAdmin =
           { id: 'email', label: 'Email Status', icon: Mail },
           { id: 'manual_announce', label: 'Email Announcements Manually', icon: Mail },
           { id: 'bulk_name_notice', label: 'Phone Broadcast Notice', icon: PhoneCall },
+          { id: 'participant_history', label: 'Updating History of Participants Email', icon: Archive },
           { id: 'food', label: 'Food Management', icon: Utensils },
           { id: 'cards', label: 'Member ID Cards', icon: QrCode },
           { id: 'transactions', label: 'Verified Transactions', icon: CheckCircle2 },
@@ -4145,6 +4380,17 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ isSuperAdmin =
                 </div>
               </div>
             </DashboardSection>
+          </motion.div>
+        )}
+
+        {activeSubTab === 'participant_history' && (
+          <motion.div
+            key="participant_history"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+          >
+            <ParticipantHistoryTab showToast={showToast} isSuperAdmin={isSuperAdmin} />
           </motion.div>
         )}
 

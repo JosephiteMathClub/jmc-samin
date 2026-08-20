@@ -88,6 +88,7 @@ const Navbar = () => {
     { name: 'Notices', path: '/notices' },
     { name: 'Gallery', path: '/gallery' },
     { name: 'Panel', path: '/panel' },
+    { name: 'Developers', path: '/developers' },
     { name: 'Online Events', path: '/online-events' },
   ];
 

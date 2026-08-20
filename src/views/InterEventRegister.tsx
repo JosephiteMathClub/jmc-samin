@@ -66,6 +66,8 @@ import {
   Plus,
   AlertTriangle,
   Download,
+  MessageSquare,
+  Ticket,
   X
 } from 'lucide-react';
 import { PurchaseSlipModal, PurchaseSlipCandidate } from '../components/dashboard/PurchaseSlipModal';
@@ -322,6 +324,17 @@ export default function InterEventRegister() {
   const [paymentDesc, setPaymentDesc] = useState("Please pay BDT 100 registration fee to our bKash personal/merchant account. Highlighted Phone: 01789456123.");
   const [pricePerSegment, setPricePerSegment] = useState(100);
   const [caCodesList, setCaCodesList] = useState<string[]>([]);
+  const [caCodeInputMode, setCaCodeInputMode] = useState<'selectable' | 'typing'>('selectable');
+  const [showCaMangaBubble, setShowCaMangaBubble] = useState(false);
+  const caInputContainerRef = React.useRef<HTMLDivElement | null>(null);
+
+  // Registration View Provider (Website Native Form vs. Tickify Portal Card)
+  const [registrationProvider, setRegistrationProvider] = useState<'website' | 'tickify'>('website');
+  const [tickifyUrl, setTickifyUrl] = useState<string>('');
+  const [tickifyNoticeReason, setTickifyNoticeReason] = useState<string>(
+    'Registration for the National Inter-School Math Olympiad & Festival has been relocated from the website to Tickify for seamless ticketing, automated seat allocation, and instant confirmation.'
+  );
+
   const [expandedSegments, setExpandedSegments] = useState<string[]>([]);
 
   const toggleExpandSegment = (id: string) => {
@@ -667,6 +680,25 @@ export default function InterEventRegister() {
           if (Array.isArray(configVal.caCodes)) {
             setCaCodesList(configVal.caCodes);
           }
+          if (configVal.caCodeInputMode === 'typing') {
+            setCaCodeInputMode('typing');
+          } else {
+            setCaCodeInputMode('selectable');
+          }
+
+          if (configVal.registrationProvider === 'tickify') {
+            setRegistrationProvider('tickify');
+          } else {
+            setRegistrationProvider('website');
+          }
+
+          if (configVal.tickifyUrl && typeof configVal.tickifyUrl === 'string') {
+            setTickifyUrl(configVal.tickifyUrl.trim());
+          }
+
+          if (configVal.tickifyNoticeReason && typeof configVal.tickifyNoticeReason === 'string') {
+            setTickifyNoticeReason(configVal.tickifyNoticeReason.trim());
+          }
 
           if (configVal.segmentBanners && typeof configVal.segmentBanners === 'object') {
             setSegmentBanners(configVal.segmentBanners);
@@ -754,6 +786,27 @@ export default function InterEventRegister() {
     setVideoEnded(true);
     setShowingVideo(false);
   };
+
+  // Close Manga Conversation Bubble when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent | TouchEvent) => {
+      if (
+        caInputContainerRef.current &&
+        !caInputContainerRef.current.contains(event.target as Node)
+      ) {
+        setShowCaMangaBubble(false);
+      }
+    };
+
+    if (showCaMangaBubble) {
+      document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener('touchstart', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
+    };
+  }, [showCaMangaBubble]);
 
   const handleStartVideoWithAudio = () => {
     setHasStartedAudio(true);
@@ -1450,6 +1503,21 @@ export default function InterEventRegister() {
         return id;
       });
 
+      // CA Code validation & voiding logic
+      let resolvedCaCode: string | null = caCode ? caCode.trim().toLowerCase().replace(/\s+/g, '') : null;
+      if (resolvedCaCode && resolvedCaCode !== 'n/a') {
+        if (caCodeInputMode === 'typing' && caCodesList.length > 0) {
+          const isValidCa = caCodesList.some(
+            (c: string) => c.trim().toLowerCase().replace(/\s+/g, '') === resolvedCaCode
+          );
+          if (!isValidCa) {
+            resolvedCaCode = null; // Unconfirmed/unregistered CA code is voided
+          }
+        }
+      } else {
+        resolvedCaCode = null;
+      }
+
       const response = await fetch('/api/events/register-inter', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1460,7 +1528,7 @@ export default function InterEventRegister() {
           phone: isProxyRegistration ? proxyPhoneNumber.trim() : phone.trim(),
           className,
           institute: institute.trim(),
-          caCode: caCode || null,
+          caCode: resolvedCaCode,
           bkashNumber: finalBkash,
           trxnid: finalTrxn,
           amount: finalPrice,
@@ -1966,6 +2034,149 @@ export default function InterEventRegister() {
               </div>
             );
           })()}
+        </div>
+      </div>
+    );
+  }
+
+  // Tickify Relocation Card Display (When toggled to Tickify Registration)
+  if (registrationProvider === 'tickify') {
+    return (
+      <div className="min-h-screen bg-[#020205] text-white flex flex-col items-center justify-center p-4 sm:p-6 relative overflow-x-hidden">
+        {/* Ambient Cosmic Lights & Gradients */}
+        <div className="absolute top-[15%] left-[50%] -translate-x-1/2 w-[600px] h-[600px] bg-gradient-to-tr from-amber-500/10 via-orange-500/5 to-transparent rounded-full blur-[140px] pointer-events-none" />
+        <div className="absolute bottom-[10%] right-[10%] w-[350px] h-[350px] bg-indigo-500/5 rounded-full blur-[120px] pointer-events-none" />
+
+        <div className="max-w-2xl w-full mx-auto space-y-8 relative z-10">
+          
+          {/* Top Exit Navigation */}
+          <div className="flex items-center justify-between">
+            <button
+              onClick={() => router.push('/events')}
+              className="inline-flex items-center gap-2 text-xs font-mono font-bold uppercase tracking-widest text-zinc-400 hover:text-white transition-colors cursor-pointer"
+            >
+              <ArrowLeft className="w-4 h-4" /> Back to Events Hub
+            </button>
+            <span className="text-[10px] font-mono uppercase tracking-widest text-amber-400/90 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20">
+              National Inter-School Olympiad 2026
+            </span>
+          </div>
+
+          {/* Master Tickify Relocation Card */}
+          <motion.div
+            initial={{ opacity: 0, y: 25, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            transition={{ duration: 0.65, ease: [0.22, 1, 0.36, 1] }}
+            className="relative rounded-[2.5rem] bg-gradient-to-b from-zinc-900/90 via-[#0a0c12] to-black border border-amber-500/30 p-8 sm:p-12 text-center space-y-8 shadow-[0_25px_80px_rgba(0,0,0,0.8),0_0_50px_rgba(245,158,11,0.08)] backdrop-blur-2xl overflow-hidden"
+          >
+            {/* Top Glowing Mesh Strip */}
+            <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-transparent via-amber-500 to-transparent" />
+            <div className="absolute top-0 right-0 w-48 h-48 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
+
+            {/* Glowing Beacon & Ticket Emblem */}
+            <div className="space-y-3 flex flex-col items-center">
+              <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-amber-500/30 bg-amber-500/10 text-amber-300 text-[10px] font-mono font-bold uppercase tracking-[0.25em] shadow-[0_0_20px_rgba(245,158,11,0.15)]">
+                <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping" />
+                Official Ticketing Partner
+              </div>
+
+              <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-amber-500/20 via-orange-500/10 to-yellow-600/10 border border-amber-500/30 flex items-center justify-center text-amber-400 shadow-[0_0_30px_rgba(245,158,11,0.2)] mt-2">
+                <Ticket className="w-10 h-10 stroke-[1.5]" />
+              </div>
+            </div>
+
+            {/* Headline */}
+            <div className="space-y-3">
+              <h1 className="text-2xl sm:text-4xl font-black text-white uppercase tracking-tight font-display">
+                Registration Has Moved to <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-orange-400 to-amber-500">Tickify</span>
+              </h1>
+              <p className="text-sm sm:text-base text-zinc-300 font-sans leading-relaxed max-w-lg mx-auto font-light">
+                {tickifyNoticeReason || "Registration for the National Inter-School Math Olympiad & Festival has been relocated from the website to Tickify for seamless ticketing, automated seat allocation, and instant confirmation."}
+              </p>
+            </div>
+
+            {/* Key Perks / Reasons Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-left pt-2">
+              <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/5 space-y-1.5">
+                <div className="w-8 h-8 rounded-xl bg-amber-500/10 text-amber-400 flex items-center justify-center">
+                  <Zap className="w-4 h-4" />
+                </div>
+                <h4 className="text-xs font-bold text-white uppercase tracking-wider font-mono">Instant Confirmation</h4>
+                <p className="text-[11px] text-zinc-400 leading-snug">Instant digital pass and verified roll number generation.</p>
+              </div>
+
+              <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/5 space-y-1.5">
+                <div className="w-8 h-8 rounded-xl bg-orange-500/10 text-orange-400 flex items-center justify-center">
+                  <QrCode className="w-4 h-4" />
+                </div>
+                <h4 className="text-xs font-bold text-white uppercase tracking-wider font-mono">Automated QR Passes</h4>
+                <p className="text-[11px] text-zinc-400 leading-snug">Direct e-ticket delivery to your phone and email.</p>
+              </div>
+
+              <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/5 space-y-1.5">
+                <div className="w-8 h-8 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center">
+                  <ShieldCheck className="w-4 h-4" />
+                </div>
+                <h4 className="text-xs font-bold text-white uppercase tracking-wider font-mono">Secured Gateway</h4>
+                <p className="text-[11px] text-zinc-400 leading-snug">Seamless bKash, Nagad, and Card payment integration.</p>
+              </div>
+            </div>
+
+            {/* Action CTA Area */}
+            <div className="pt-4 border-t border-white/10 space-y-4">
+              {tickifyUrl && tickifyUrl.trim().length > 0 ? (
+                <motion.a
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  href={tickifyUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full py-4 px-8 rounded-2xl bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 hover:from-amber-400 hover:to-orange-500 text-black font-black uppercase tracking-widest text-xs flex items-center justify-center gap-3 shadow-[0_0_30px_rgba(245,158,11,0.3)] transition-all cursor-pointer font-mono"
+                >
+                  <Ticket className="w-4 h-4" /> Proceed to Tickify Registration <ExternalLink className="w-4 h-4" />
+                </motion.a>
+              ) : (
+                <div className="space-y-2">
+                  <button
+                    disabled
+                    className="w-full py-4 px-8 rounded-2xl bg-zinc-900 border border-amber-500/30 text-amber-300 font-mono font-bold uppercase tracking-wider text-xs flex items-center justify-center gap-2 cursor-not-allowed opacity-90 shadow-inner"
+                  >
+                    <Sparkles className="w-4 h-4 text-amber-400 animate-pulse" /> Official Tickify Link Activating Shortly
+                  </button>
+                  <p className="text-[11px] text-zinc-500 font-mono">
+                    The direct Tickify registration portal link is being configured by the administration and will go live here shortly.
+                  </p>
+                </div>
+              )}
+
+              <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
+                <button
+                  onClick={() => router.push('/events')}
+                  className="px-5 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-mono font-bold uppercase tracking-wider text-zinc-300 hover:text-white transition-all cursor-pointer"
+                >
+                  Events Hub
+                </button>
+                <button
+                  onClick={() => router.push('/notices')}
+                  className="px-5 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-mono font-bold uppercase tracking-wider text-zinc-300 hover:text-white transition-all cursor-pointer"
+                >
+                  Official Notices
+                </button>
+                <button
+                  onClick={() => router.push('/about')}
+                  className="px-5 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-mono font-bold uppercase tracking-wider text-zinc-300 hover:text-white transition-all cursor-pointer"
+                >
+                  Contact Helpdesk
+                </button>
+              </div>
+            </div>
+
+            {/* Bottom Footer Note */}
+            <div className="text-[11px] text-zinc-500 font-mono pt-2">
+              For institutional bulk entries or technical inquiries, contact the <span className="text-zinc-400">Josephite Math Club Executive Committee</span>.
+            </div>
+          </motion.div>
+
         </div>
       </div>
     );
@@ -2680,28 +2891,132 @@ export default function InterEventRegister() {
                     </div>
                   )}
 
-                  {/* Selective CA Code Dropdown */}
-                  <div className="space-y-3">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500 flex items-center gap-2 font-mono">
-                      Campus Ambassador (CA) Code
-                    </label>
-                    <div className="relative">
-                      <Hash className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
-                      <select
-                        value={caCode}
-                        onChange={(e) => setCaCode(e.target.value)}
-                        disabled={isProxyRegistration && !proxyVerified}
-                        className="w-full bg-[#050508] border border-white/10 rounded-xl pl-12 pr-4 py-4 text-xs font-bold text-white focus:outline-none focus:border-pink-500/50 focus:ring-4 focus:ring-pink-500/5 transition-all cursor-pointer disabled:opacity-50"
-                      >
-                        <option value="N/A" className="text-zinc-400 bg-zinc-950">N/A</option>
-                        {caCodesList.filter(code => code !== "N/A").map((code) => (
-                          <option key={code} value={code} className="bg-zinc-950 text-white">{code}</option>
-                        ))}
-                      </select>
+                  {/* Campus Ambassador (CA) Code Selection / Typing with Manga Bubble */}
+                  <div className="space-y-3 relative" ref={caInputContainerRef}>
+                    <div className="flex items-center justify-between">
+                      <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500 flex items-center gap-2 font-mono">
+                        Campus Ambassador (CA) Code
+                        {caCodeInputMode === 'typing' && (
+                          <span className="px-1.5 py-0.5 rounded bg-pink-500/20 text-pink-400 text-[8px] font-mono font-bold uppercase tracking-wider border border-pink-500/30">
+                            Typeable
+                          </span>
+                        )}
+                      </label>
+                      {caCodeInputMode === 'typing' && (
+                        <button
+                          type="button"
+                          onClick={() => setShowCaMangaBubble(!showCaMangaBubble)}
+                          className="text-[10px] font-mono font-bold text-pink-400 hover:text-pink-300 flex items-center gap-1 transition-colors cursor-pointer"
+                        >
+                          <MessageSquare className="w-3 h-3" />
+                          <span>Guide</span>
+                        </button>
+                      )}
                     </div>
+
+                    {caCodeInputMode === 'typing' ? (
+                      <div className="relative">
+                        <Hash className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
+                        <input
+                          type="text"
+                          value={caCode === "N/A" ? "" : caCode}
+                          onChange={(e) => {
+                            const raw = e.target.value;
+                            const sanitized = raw.toLowerCase().replace(/\s+/g, '');
+                            setCaCode(sanitized || "N/A");
+                          }}
+                          onFocus={() => setShowCaMangaBubble(true)}
+                          onClick={() => setShowCaMangaBubble(true)}
+                          disabled={isProxyRegistration && !proxyVerified}
+                          placeholder="e.g. samintausif (all lowercase, no spaces)"
+                          className="w-full bg-[#050508] border border-white/10 rounded-xl pl-12 pr-4 py-4 text-xs font-bold text-white focus:outline-none focus:border-pink-500/50 focus:ring-4 focus:ring-pink-500/5 transition-all disabled:opacity-50 lowercase font-mono placeholder:normal-case placeholder:font-sans placeholder:text-zinc-600"
+                        />
+
+                        {/* Manga Conversation Bubble */}
+                        <AnimatePresence>
+                          {showCaMangaBubble && (
+                            <motion.div
+                              initial={{ opacity: 0, scale: 0.9, y: 12 }}
+                              animate={{ opacity: 1, scale: 1, y: 0 }}
+                              exit={{ opacity: 0, scale: 0.9, y: 8 }}
+                              transition={{ type: "spring", stiffness: 400, damping: 28 }}
+                              className="absolute z-50 left-0 right-0 -top-44 sm:-top-36"
+                            >
+                              {/* Manga Speech Balloon Body */}
+                              <div className="relative bg-white text-zinc-950 p-4 sm:p-5 rounded-2xl shadow-[0_20px_40px_rgba(0,0,0,0.8)] border-[3px] border-black">
+                                {/* Halftone Screen Tone Decorative Dots */}
+                                <div className="absolute top-2.5 right-10 flex items-center gap-1 opacity-25 pointer-events-none">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-black"></span>
+                                  <span className="w-1.5 h-1.5 rounded-full bg-black"></span>
+                                  <span className="w-1.5 h-1.5 rounded-full bg-black"></span>
+                                  <span className="w-1.5 h-1.5 rounded-full bg-black"></span>
+                                </div>
+
+                                {/* Manga Bubble Header */}
+                                <div className="flex items-center justify-between pb-2 mb-2.5 border-b-2 border-black/80">
+                                  <div className="flex items-center gap-2">
+                                    <span className="px-2 py-0.5 bg-black text-white text-[9px] font-black uppercase tracking-widest rounded font-mono">
+                                      🗯️ CA PROTOCOL
+                                    </span>
+                                  </div>
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setShowCaMangaBubble(false);
+                                    }}
+                                    className="p-1 rounded-md hover:bg-black/10 text-zinc-900 transition-colors cursor-pointer"
+                                    title="Close Guide"
+                                  >
+                                    <X className="w-3.5 h-3.5" />
+                                  </button>
+                                </div>
+
+                                {/* Manga Dialogue Instructions */}
+                                <div className="space-y-2 text-zinc-900 font-sans">
+                                  <div className="flex items-start gap-2">
+                                    <span className="text-sm shrink-0 mt-0.5">💬</span>
+                                    <p className="text-xs font-bold leading-snug tracking-tight">
+                                      CA's name will be <span className="bg-amber-300 px-1.5 py-0.5 rounded border border-black font-mono font-black text-black">all small</span> and <span className="bg-amber-300 px-1.5 py-0.5 rounded border border-black font-mono font-black text-black">without any spaces</span>.
+                                    </p>
+                                  </div>
+                                  <div className="flex items-start gap-2 pt-1 border-t border-dashed border-black/30">
+                                    <span className="text-sm shrink-0 mt-0.5">⚠️</span>
+                                    <p className="text-[11px] font-bold text-red-600 leading-snug tracking-tight">
+                                      Unregistered or unconfirmed CA's name will be <span className="underline font-black bg-red-100 px-1 text-red-700">voided</span>.
+                                    </p>
+                                  </div>
+                                </div>
+
+                                {/* Downward Comic Speech Pointer Tail */}
+                                <div className="absolute -bottom-3 left-8 w-0 h-0 border-l-[10px] border-l-transparent border-r-[10px] border-r-transparent border-t-[12px] border-t-black">
+                                  <div className="absolute -top-[14px] -left-[8px] w-0 h-0 border-l-[8px] border-l-transparent border-r-[8px] border-r-transparent border-t-[10px] border-t-white"></div>
+                                </div>
+                              </div>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                      </div>
+                    ) : (
+                      <div className="relative">
+                        <Hash className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
+                        <select
+                          value={caCode}
+                          onChange={(e) => setCaCode(e.target.value)}
+                          disabled={isProxyRegistration && !proxyVerified}
+                          className="w-full bg-[#050508] border border-white/10 rounded-xl pl-12 pr-4 py-4 text-xs font-bold text-white focus:outline-none focus:border-pink-500/50 focus:ring-4 focus:ring-pink-500/5 transition-all cursor-pointer disabled:opacity-50"
+                        >
+                          <option value="N/A" className="text-zinc-400 bg-zinc-950">N/A</option>
+                          {caCodesList.filter(code => code !== "N/A").map((code) => (
+                            <option key={code} value={code} className="bg-zinc-950 text-white">{code}</option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+
                     {caCode && caCode !== "N/A" && (
                       <p className="text-[9px] text-zinc-400 font-medium uppercase tracking-wider font-mono">
-                        ✨ CA Code Applied! Verification status will be tracked on your dashboard.
+                        ✨ CA Code Applied: <strong className="text-pink-400 font-mono">{caCode}</strong>
                       </p>
                     )}
                   </div>

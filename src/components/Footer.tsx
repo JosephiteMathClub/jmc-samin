@@ -73,7 +73,7 @@ const Footer = () => {
                Index
             </h4>
             <ul className="space-y-4">
-              {['Home', 'About', 'Panel', 'Events'].map((link) => (
+              {['Home', 'About', 'Panel', 'Events', 'Developers'].map((link) => (
                 <li key={link}>
                   <Link 
                     href={`/${link === 'Home' ? '' : link.toLowerCase()}`} 

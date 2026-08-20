@@ -13,6 +13,7 @@ import ErrorBoundary from "@/components/ErrorBoundary";
 import Footer from "@/components/Footer";
 import MaintenanceView from "@/components/MaintenanceView";
 import { SupportTrigger } from "@/components/SupportTrigger";
+import DeveloperGuideBubble from "@/components/DeveloperGuideBubble";
 import { usePerformance } from "@/hooks/usePerformance";
 import { useVersionCheck } from "@/hooks/useVersionCheck";
 
@@ -158,6 +159,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
 
           <Navbar />
           <FloatingSidebar />
+          <DeveloperGuideBubble />
           <main className="flex-grow relative">
             <ErrorBoundary>
               {children}

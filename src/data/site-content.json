@@ -1,4 +1,17 @@
 {
+  "site": {
+    "logoUrl": "/images/logo.png",
+    "clubName": "Josephite Math Club",
+    "established": "EST. 2015",
+    "announcements": [
+      "Welcome to Josephite Math Club!",
+      "Josephite Math Mania is on it's way.",
+      "Keep an eye on our facebook and instagram"
+    ],
+    "maintenanceMode": false,
+    "showAnnouncements": true,
+    "maintenanceMessage": "The site is currently under maintenance"
+  },
   "home": {
     "gallery": [
       "/images/gallery/gallery1.jpg",
@@ -81,19 +94,6 @@
     "agendaDescription": "We aim to bridge the gap between theoretical mathematics and practical innovation through a series of structured programs.",
     "testimonialsTitle": "People About JMC",
     "testimonialsTagline": "Voices of JMC"
-  },
-  "site": {
-    "logoUrl": "/images/logo.png",
-    "clubName": "Josephite Math Club",
-    "established": "EST. 2015",
-    "announcements": [
-      "Welcome to Josephite Math Club!",
-      "Josephite Math Mania is on it's way.",
-      "Keep an eye on our facebook and instagram"
-    ],
-    "maintenanceMode": false,
-    "showAnnouncements": true,
-    "maintenanceMessage": "The site is currently under maintenance"
   },
   "about": {
     "stats": [
@@ -1156,6 +1156,58 @@
     "executiveSubtitle": "The Core Leadership",
     "departmentsSubtitle": "Department Heads"
   },
+  "gallery_page": {
+    "images": [
+      "/images/gallery/gallery1.jpg",
+      "/images/gallery/gallery2.jpg",
+      "/images/gallery/gallery3.jpg",
+      "/images/gallery/gallery4.jpg",
+      "/images/gallery/gallery5.jpg",
+      "/images/gallery/gallery6.jpg"
+    ]
+  },
+  "notices": {
+    "title": "NOTICE BOARD",
+    "notices": [
+      {
+        "id": "notice-1779374210960",
+        "tag": "success",
+        "date": "5/21/2026",
+        "link": "",
+        "type": "General",
+        "title": "JMC Web launch",
+        "pdfUrl": "",
+        "content": "Thanks to all of your support, I, Samin Tausif was successfully able to launch the website into production. The website still undergoing various stages of debugging and development. If you find any issue, click \"Report Issue\" from the bottom right corner to reach out to us. Your cooperation is highly valuable and expected. Thank you very much",
+        "imageUrl": "https://ikciatrploqznijspyuk.supabase.co/storage/v1/object/public/images/1779374367176-olpep7sfv.jpeg",
+        "isPinned": false,
+        "linkText": ""
+      }
+    ],
+    "subtitle": "ANNOUNCEMENTS",
+    "categories": [
+      {
+        "id": "all",
+        "icon": "Bell",
+        "name": "All"
+      },
+      {
+        "id": "important",
+        "icon": "AlertTriangle",
+        "name": "Important"
+      },
+      {
+        "id": "general",
+        "icon": "Info",
+        "name": "General"
+      },
+      {
+        "id": "success",
+        "icon": "CheckCircle",
+        "name": "Success"
+      }
+    ],
+    "description": "Stay updated with the latest announcements, results, and important information from the Josephite Math Club."
+  },
   "events": {
     "title": "BEYOND NUMBERS",
     "events": [
@@ -1331,303 +1383,419 @@
     ],
     "description": "Join us for a series of challenging competitions, insightful workshops, and engaging seminars designed to push your mathematical boundaries."
   },
-  "contact": {
-    "email": "N/A",
-    "phone": "N/A",
-    "socials": {
-      "facebook": "https://www.facebook.com/2015JMC/",
-      "instagram": "https://www.instagram.com/jmc_.official/"
-    },
-    "location": "St. Joseph Higher Secondary School"
+  "members_list": {
+    "title": "OUR MEMBERS",
+    "members": [],
+    "subtitle": "COMMUNITY",
+    "description": "The heartbeat of Josephite Math Club - our diverse and passionate community of mathematicians."
   },
-  "gallery": {
-    "images": [
-      "/images/gallery/gallery1.jpg",
-      "/images/gallery/gallery2.jpg",
-      "/images/gallery/gallery3.jpg",
-      "/images/gallery/gallery4.jpg",
-      "/images/gallery/gallery5.jpg",
-      "/images/gallery/gallery6.jpg"
-    ]
+  "registration": {
+    "fee": "N/A",
+    "bkashNumber": "N/A",
+    "declaration": "I am willing to join the Josephite Math Club, I promise to perform my duties with honesty, respect the club values, and work for its development",
+    "instructions": [],
+    "cashInstructions": "Please pay your registration fee to the club treasurer.",
+    "registrationOpen": false,
+    "registrationClosedMessage": "Registration for the current intra-events is currently closed. Please stay tuned for future updates."
   },
-  "notices": {
-    "title": "NOTICE BOARD",
-    "notices": [
-      {
-        "id": "notice-1779374210960",
-        "tag": "success",
-        "date": "5/21/2026",
-        "link": "",
-        "type": "General",
-        "title": "JMC Web launch",
-        "pdfUrl": "",
-        "content": "Thanks to all of your support, I, Samin Tausif was successfully able to launch the website into production. The website still undergoing various stages of debugging and development. If you find any issue, click \"Report Issue\" from the bottom right corner to reach out to us. Your cooperation is highly valuable and expected. Thank you very much",
-        "imageUrl": "https://ikciatrploqznijspyuk.supabase.co/storage/v1/object/public/images/1779374367176-olpep7sfv.jpeg",
-        "isPinned": false,
-        "linkText": ""
-      }
-    ],
-    "subtitle": "ANNOUNCEMENTS",
-    "categories": [
-      {
-        "id": "all",
-        "icon": "Bell",
-        "name": "All"
-      },
-      {
-        "id": "important",
-        "icon": "AlertTriangle",
-        "name": "Important"
-      },
-      {
-        "id": "general",
-        "icon": "Info",
-        "name": "General"
-      },
-      {
-        "id": "success",
-        "icon": "CheckCircle",
-        "name": "Success"
-      }
-    ],
-    "description": "Stay updated with the latest announcements, results, and important information from the Josephite Math Club."
-  },
-  "articles": [
+  "interSegments": [
     {
-      "id": "article-1785164775893",
-      "date": "27 Jul 2026",
-      "slug": "new-math-article",
-      "title": "Worm Hole",
-      "author": "Tawhid Bin Omar",
-      "pdfUrl": "https://ikciatrploqznijspyuk.supabase.co/storage/v1/object/public/images/1785164982187-tiirrx6sx.pdf",
-      "content": "",
-      "excerpt": "Among the most astonishing hypothetical shortcuts in astrophysics, Wormholes challenge our very understanding of cosmic distance. What first appears as an impassable barrier of millions of light-years across the dark void becomes an immediate gateway when spacetime is folded upon itself.",
-      "category": "Mathematics",
-      "imageUrl": "",
-      "published": true
+      "id": "Math Olympiad (Find-based)",
+      "icon": "Trophy",
+      "name": "Math Olympiad (Find-based)",
+      "isFree": true,
+      "tagline": "Solve numeric mysteries and discover deep hidden structural patterns.",
+      "category": "Solo track",
+      "teamSize": 1,
+      "bannerUrl": "https://images.unsplash.com/photo-1509228468518-180dd4864904?auto=format&fit=crop&w=1200&q=80",
+      "description": "A rapid, high-intensity competition across all four categories. \n\nDuration: 1 Hour \n\nFormat: 8–12 numerical answer/find-based problems testing core areas: Number Theory, Algebra, Geometry, and Combinatorics. Difficulty matches BDMO Regional rounds. ",
+      "isTeamEvent": false,
+      "allowedCategories": [
+        "Primary",
+        "Junior",
+        "Secondary",
+        "Higher Secondary"
+      ]
     },
     {
-      "id": "article-1785164642677",
-      "date": "27 Jul 2026",
-      "slug": "new-math-article",
-      "title": "Functional Equations",
-      "author": "Tawhid Bin Omar",
-      "pdfUrl": "https://ikciatrploqznijspyuk.supabase.co/storage/v1/object/public/images/1785164728533-ik4xhybcv.pdf",
-      "content": "",
-      "excerpt": "Among the most profoundly foundational enigmas in algebra, **Functional Equations** invert our traditional understanding of variables to question the very nature of mathematical mappings. What first appears as a chaotic puzzle of unconstrained conditions and elusive expressions becomes beautifully orderly when subjected to the laws of symmetry, injectivity, and substitution. Instead of searching for a hidden number, we hunt for an entire steadfast mathematical identity.",
-      "category": "Mathematics",
-      "imageUrl": "",
-      "published": true
+      "id": "Math Olympiad (Proof-based)",
+      "icon": "FileText",
+      "name": "Math Olympiad (Proof-based)",
+      "isFree": true,
+      "tagline": "Draft elegant formal proofs and logically sound explanations.",
+      "category": "Solo track",
+      "teamSize": 1,
+      "bannerUrl": "https://images.unsplash.com/photo-1635070041078-e363dbe005cb?auto=format&fit=crop&w=1200&q=80",
+      "description": "Exclusively for Secondary and Higher Secondary categories. \n\nDuration: 1 Hours \n\nFormat: Proof-based mathematical problems requiring rigorous logical derivations and clear step-by-step proofs. \n",
+      "isTeamEvent": false,
+      "allowedCategories": [
+        "Secondary",
+        "Higher Secondary"
+      ]
     },
     {
-      "id": "article-1785164551708",
-      "date": "27 Jul 2026",
-      "slug": "new-math-article",
-      "title": "Permutations, Combinations and the Art of Counting",
-      "author": "Tawhid Bin Omar",
-      "pdfUrl": "https://ikciatrploqznijspyuk.supabase.co/storage/v1/object/public/images/1785164631439-pwyizwfil.pdf",
-      "content": "",
-      "excerpt": "Among the most astonishing hypothetical shortcuts in astrophysics, Wormholes challenge our very understanding of cosmic distance. What first appears as an impassable barrier of millions of light-years across the dark void becomes an immediate gateway when spacetime is folded upon itself.",
-      "category": "Mathematics",
-      "imageUrl": "",
-      "published": true
+      "id": "IQ Test",
+      "icon": "Brain",
+      "name": "IQ Test",
+      "isFree": false,
+      "tagline": "Race against the clock in analytical speed reasoning.",
+      "category": "Solo track",
+      "teamSize": 1,
+      "bannerUrl": "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=1200&q=80",
+      "description": "Open to all categories. \n\nFormat: 20 logic puzzles and pattern-recognition questions designed to test cognitive clarity and analytical depth. \n\nDuration: 40 Minutes. \n",
+      "isTeamEvent": false,
+      "allowedCategories": [
+        "Primary",
+        "Junior",
+        "Secondary",
+        "Higher Secondary"
+      ]
     },
     {
-      "id": "article-1785164425494",
-      "date": "27 Jul 2026",
-      "slug": "new-math-article",
-      "title": "Tensors.....",
-      "author": "Tawhid Bin Omar",
-      "pdfUrl": "https://ikciatrploqznijspyuk.supabase.co/storage/v1/object/public/images/1785164544162-q1fk2aen0.pdf",
-      "content": "",
-      "excerpt": "Among the most expressive languages in modern mathematics and physics, Tensors reveal the profound geometric truths that remain completely unchanged by our choice of perspective. What first appears as a terrifying maze of multi-dimensional arrays, upper and lower indices, and complex coordinate shifts becomes beautifully simple when viewed as a singular, invariant entity slicing through space and time.",
-      "category": "Mathematics",
-      "imageUrl": "",
-      "published": true
+      "id": "Human Calculator",
+      "icon": "Zap",
+      "name": "Human Calculator",
+      "isFree": false,
+      "tagline": "Unleash super-speed mental arithmetic and calculation loops.",
+      "category": "Solo track",
+      "teamSize": 1,
+      "bannerUrl": "https://images.unsplash.com/photo-1596495578065-6e0763fa1178?auto=format&fit=crop&w=1200&q=80",
+      "description": "Primary & Junior \n\nFormat: A 60-minute written test of raw mental arithmetic. Scratch paper is provided, but no electronic calculators are permitted. \n\n𝗚𝗲𝗻𝗲𝘀𝗶𝘀 (𝗠𝗮𝘁𝗵 𝗛𝗶𝘀𝘁𝗼𝗿𝘆 𝗤𝘂𝗶𝘇) Open to all categories. \n\nFormat: 30 multiple-choice questions covering historical developments, famous theorems, and breakthroughs from classical antiquity to modern mathematics. \n\nDuration: 30 Minutes. ",
+      "isTeamEvent": false,
+      "allowedCategories": [
+        "Primary",
+        "Junior"
+      ]
     },
     {
-      "id": "article-1785164316948",
-      "date": "27 Jul 2026",
-      "slug": "new-math-article",
-      "title": "Legendre Polynomials and Generating Funstions",
-      "author": "Tawhid Bin Omar",
-      "pdfUrl": "https://ikciatrploqznijspyuk.supabase.co/storage/v1/object/public/images/1785164418753-w9307ilvb.pdf",
-      "content": "",
-      "excerpt": "Among the most elegant constructs in mathematical physics, Legendre Polynomials and Generating Functions reveal the underlying symmetry of physical space. What first appears as a chaotic web of complex differential equations and intractable geometric potentials collapses into beautifully ordered orthogonal components when viewed through the lens of a single, masterful generating function. From the gravitational pull of planets to the quantum mechanics of the atom, these steadfast functions transform the geometry of the universe into an orchestra of perfect harmony.",
-      "category": "Mathematics",
-      "imageUrl": "",
-      "published": true
+      "id": "Genesis",
+      "icon": "Sparkles",
+      "name": "Genesis",
+      "isFree": false,
+      "tagline": "Interactive math design and scientific origin-based discovery.",
+      "category": "Solo track",
+      "teamSize": 1,
+      "bannerUrl": "https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=1200&q=80",
+      "description": "Explore the origin stories of fundamental mathematical constants, geometric theorems, and historical mathematical breakthroughs.",
+      "isTeamEvent": false,
+      "allowedCategories": [
+        "Primary",
+        "Junior",
+        "Secondary",
+        "Higher Secondary"
+      ]
     },
     {
-      "id": "article-1785164200667",
-      "date": "27 Jul 2026",
-      "slug": "new-math-article",
-      "title": "Analytic Continuation and the Limits of Generalization",
-      "author": "Tawhid Bin Omar",
-      "pdfUrl": "https://ikciatrploqznijspyuk.supabase.co/storage/v1/object/public/images/1785164309039-4xufv6a3r.pdf",
-      "content": "",
-      "excerpt": "Among the most revolutionary intellectual achievements in human history, General Relativity unveils the elegant tapestry binding space, time, and gravity. What first appears as a chaotic and mysterious cosmic force acting across empty voids is beautifully unmasked as the simple, dynamic geometry of the universe itself.",
-      "category": "Mathematics",
-      "imageUrl": "",
-      "published": true
+      "id": "Geometry Dash",
+      "icon": "Compass",
+      "name": "Geometry Dash",
+      "isFree": false,
+      "tagline": "Navigate space calculations, angle proofs, and vector mazes.",
+      "category": "Solo track",
+      "teamSize": 1,
+      "bannerUrl": "https://images.unsplash.com/photo-1509228627152-72ae946807b1?auto=format&fit=crop&w=1200&q=80",
+      "description": "Secondary & Higher Secondary \n\nFormat: 5–7 geometry-focused problems evaluating spatial intuition, angle chasing, and synthetic/analytic methods. Partial points awarded for partial progress. \n\nDuration: 45 Minutes. \n",
+      "isTeamEvent": false,
+      "allowedCategories": [
+        "Secondary",
+        "Higher Secondary"
+      ]
     },
     {
-      "id": "article-1785164122541",
-      "date": "27 Jul 2026",
-      "slug": "new-math-article",
-      "title": "General Relativity and Space Time",
-      "author": "Tawhid Bin Omar",
-      "pdfUrl": "https://ikciatrploqznijspyuk.supabase.co/storage/v1/object/public/images/1785164191695-d3c1d8cwy.pdf",
-      "content": "",
-      "excerpt": "Among the most revolutionary intellectual achievements in human history, General Relativity unveils the elegant tapestry binding space, time, and gravity. What first appears as a chaotic and mysterious cosmic force acting across empty voids is beautifully unmasked as the simple, dynamic geometry of the universe itself. the article...",
-      "category": "Mathematics",
-      "imageUrl": "",
-      "published": true
+      "id": "Probability Pressure",
+      "icon": "Timer",
+      "name": "Probability Pressure",
+      "isFree": false,
+      "tagline": "Calculate rapid-fire odds and stochastic outcomes under stress.",
+      "category": "Solo track",
+      "teamSize": 1,
+      "bannerUrl": "https://images.unsplash.com/photo-1518609878373-06d740f60d8b?auto=format&fit=crop&w=1200&q=80",
+      "description": "Secondary & Higher Secondary \n\nFormat: 7–8 challenging problems linking probability with combinatorics, geometric probability, and number theory. \n\nDuration: 45 Minutes. ",
+      "isTeamEvent": false,
+      "allowedCategories": [
+        "Secondary",
+        "Higher Secondary"
+      ]
     },
     {
-      "id": "article-1785164050858",
-      "date": "27 Jul 2026",
-      "slug": "new-math-article",
-      "title": "Jacobian Matrix",
-      "author": "Tawhid Bin Omar",
-      "pdfUrl": "https://ikciatrploqznijspyuk.supabase.co/storage/v1/object/public/images/1785164115722-mmu2teew5.pdf",
-      "content": "",
-      "excerpt": "Among the most transformative concepts in multivariable calculus, the Jacobian Matrix reveals the hidden linearity within local chaos. What first appears as a complex, non-linear web of warping coordinates and shifting multidimensional spaces becomes beautifully simple when zoomed in closely along these steadfast local derivatives. It serves as the ultimate mathematical magnifying glass, capturing the precise degree of stretching, rotating, and scaling that occurs when we distort one coordinate system into another.",
-      "category": "Mathematics",
-      "imageUrl": "",
-      "published": true
+      "id": "The Casebook",
+      "icon": "Eye",
+      "name": "Secret Event",
+      "isFree": false,
+      "tagline": "Deduce clues and crack mathematical murder mystery cases.",
+      "category": "Team / Solo track",
+      "teamSize": 3,
+      "bannerUrl": "https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?auto=format&fit=crop&w=1200&q=80",
+      "description": "Categories: Secondary & Higher Secondary \n\nFormat: A narrative-driven investigation where participants analyze witness statements, alibis, and numerical evidence to identify the culprit. \n\nDuration: 30 Minutes ",
+      "isTeamEvent": false,
+      "allowedCategories": [
+        "Primary",
+        "Junior",
+        "Secondary",
+        "Higher Secondary"
+      ]
     },
     {
-      "id": "article-1785163942610",
-      "date": "27 Jul 2026",
-      "slug": "new-math-article",
-      "title": "Graph Theory",
-      "author": "Tawhid Bin Omar",
-      "pdfUrl": "https://ikciatrploqznijspyuk.supabase.co/storage/v1/object/public/images/1785164038109-z0f8sagj3.pdf",
-      "content": "",
-      "excerpt": "Among the most profoundly interconnected fields of mathematics, Graph Theory maps the invisible architecture of relationships. What first appears as a chaotic web of tangled networks, sprawling data points, and isolated entities becomes beautifully simple when stripped down to its core elements: vertices and edges. It reveals that whether we are tracing the neural pathways of the brain, the vast infrastructure of the internet, or the delicate social bonds of humanity, the underlying geometry of connection obeys a steadfast, universal order.",
-      "category": "Mathematics",
-      "imageUrl": "",
-      "published": true
+      "id": "Crack the Code",
+      "icon": "Lock",
+      "name": "Crack the Code",
+      "isFree": false,
+      "tagline": "Deconstruct cryptographic ciphers and decode encrypted strings.",
+      "category": "Solo track",
+      "teamSize": 1,
+      "bannerUrl": "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=format&fit=crop&w=1200&q=80",
+      "description": "Open to all categories. \n\nFormat: Decipher substitution ciphers, binary codes, numeric bases, and modular encryption challenges. Reference charts provided where applicable. \n\nDuration: 45 Minutes. ",
+      "isTeamEvent": false,
+      "allowedCategories": [
+        "Primary",
+        "Junior",
+        "Secondary",
+        "Higher Secondary"
+      ]
     },
     {
-      "id": "article-1785163841720",
-      "date": "27 Jul 2026",
-      "slug": "new-math-article",
-      "title": "Wrap Drive and Faster than Light Travel",
-      "author": "Tawhid Bin Omar",
-      "pdfUrl": "https://ikciatrploqznijspyuk.supabase.co/storage/v1/object/public/images/1785163852040-82sfn8m04.pdf",
-      "content": "",
-      "excerpt": "Among the most breathtaking frontiers of theoretical physics is the Warp Drive, anchored by the mathematics of the Alcubierre metric. What first appears as a violation of nature’s absolute speed limit becomes a masterful dance with gravity when viewed through the lens of general relativity. Rather than moving through space faster than light, a warp drive dynamically compresses the fabric of spacetime ahead of a vessel while expanding it behind, allowing humanity to outrun photons by manipulating the geometry of the universe itself.",
-      "category": "Mathematics",
-      "imageUrl": "",
-      "published": true
+      "id": "Sudoku",
+      "icon": "Grid",
+      "name": "Sudoku",
+      "isFree": false,
+      "tagline": "Solve grid placement challenges with extreme speed precision.",
+      "category": "Solo track",
+      "teamSize": 1,
+      "bannerUrl": "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=1200&q=80",
+      "description": "Open to all categories. \n\nFormat: Solve standard 9×9 Sudoku grids under strict time pressure. Top finishers from each category win. \n\nDuration: 30 Minutes. ",
+      "isTeamEvent": false,
+      "allowedCategories": [
+        "Primary",
+        "Junior",
+        "Secondary",
+        "Higher Secondary"
+      ]
     },
     {
-      "id": "article-1779776879938",
-      "date": "26 May 2026",
-      "slug": "new-math-article",
-      "title": "Eigen Vectors",
-      "author": "Tawhid BIn Omar",
-      "pdfUrl": "https://ikciatrploqznijspyuk.supabase.co/storage/v1/object/public/images/1779776935673-fmmpxv35n.pdf",
-      "content": "",
-      "excerpt": "Eigenvalues and eigenvectors are fundamental concepts in linear algebra used to understand complex matrix transformations. An eigenvector is a special, non-zero vector that does not change direction when a linear transformation is applied. An eigenvalue is simply the scalar factor by which that eigenvector is scaled or stretched.",
-      "category": "Mathematics",
-      "imageUrl": "",
-      "published": true
+      "id": "Rubik’s Cube Showdown",
+      "icon": "Layers",
+      "name": "Rubik’s Cube Showdown",
+      "isFree": false,
+      "tagline": "Manipulate cubic modules and solve cubes in record times.",
+      "category": "Solo track",
+      "teamSize": 1,
+      "bannerUrl": "https://images.unsplash.com/photo-1563089145-599997674d42?auto=format&fit=crop&w=1200&q=80",
+      "description": "Open to all categories. \n\nRound 1: Speed trials (Best of N solves). Top 4 advances. \n\nRound 2: 1v1 direct head-to-head knockout duel using identical scrambles. \n",
+      "isTeamEvent": false,
+      "allowedCategories": [
+        "Primary",
+        "Junior",
+        "Secondary",
+        "Higher Secondary"
+      ]
     },
     {
-      "id": "article-1779374593078",
-      "date": "21 May 2026",
-      "slug": "new-math-article",
-      "title": "Power of a Point & Radical Axis",
-      "author": "Tawhid Bin Omar",
-      "pdfUrl": "https://ikciatrploqznijspyuk.supabase.co/storage/v1/object/public/images/1779374657663-d8kh30kqv.pdf",
-      "content": "",
-      "excerpt": "The Power of a Point is a value measuring the relative distance of a point to a circle. The Radical Axis is the straight line containing all points that have the exact same power with respect to two separate circles.",
-      "category": "Mathematics",
-      "imageUrl": "",
-      "published": true
+      "id": "5 min Professor",
+      "icon": "Award",
+      "name": "5 min Professor",
+      "isFree": false,
+      "tagline": "Deliver a lightning lecture explaining abstract concepts simply.",
+      "category": "Solo track",
+      "teamSize": 1,
+      "bannerUrl": "https://images.unsplash.com/photo-1524178232363-1fb2b075b655?auto=format&fit=crop&w=1200&q=80",
+      "description": "Categories: Secondary & Higher Secondary \n\nFormat: 5-minute oral presentation on an assigned mathematical topic evaluated clarity, rigor, and response to follow-up questions. ",
+      "isTeamEvent": false,
+      "allowedCategories": [
+        "Secondary",
+        "Higher Secondary"
+      ]
     },
     {
-      "id": "article-1779374532573",
-      "date": "21 May 2026",
-      "slug": "new-math-article",
-      "title": "Applications of Category Theory in Computer Science and Physics",
-      "author": "Tawhid Bin Omar",
-      "pdfUrl": "https://ikciatrploqznijspyuk.supabase.co/storage/v1/object/public/images/1779374588590-8ji8r49f3.pdf",
-      "content": "",
-      "excerpt": "Category theory unifies various fields of mathematics by stripping away complex details to reveal underlying structural patterns. The quote perfectly summarizes its power: by standardizing broad concepts, it reframes seemingly difficult, disconnected theorems as intuitive, mechanical consequences",
-      "category": "Mathematics",
-      "imageUrl": "",
-      "published": true
+      "id": "Calculus Bee",
+      "icon": "Activity",
+      "name": "Calculus Bee",
+      "isFree": false,
+      "tagline": "Solve derivatives and integral equations in real-time playoffs.",
+      "category": "Solo track",
+      "teamSize": 1,
+      "bannerUrl": "https://images.unsplash.com/photo-1635070041078-e363dbe005cb?auto=format&fit=crop&w=1200&q=80",
+      "description": "Categories: Secondary & Higher Secondary \n\nRound 1: 1 Hour written exam covering limits, derivatives, and integrals. \n\nRound 2: Live 1v1 outdoor knockout bracket. ",
+      "isTeamEvent": false,
+      "allowedCategories": [
+        "Secondary",
+        "Higher Secondary"
+      ]
     },
     {
-      "id": "article-1779374009630",
-      "date": "21 May 2026",
-      "slug": "new-math-article",
-      "title": "The Gamma Function",
-      "author": "SHARAN HAQUE SAKIN",
-      "pdfUrl": "https://ikciatrploqznijspyuk.supabase.co/storage/v1/object/public/images/1779374065103-n5pne4qm0.pdf",
-      "content": "",
-      "excerpt": "The Gamma Function (denoted by \\(\\Gamma(z)\\)) is a fundamental mathematical tool that extends the concept of the factorial to all real and complex numbers, except for zero and negative integers. For positive integers, it is essentially the factorial of the number minus one.",
-      "category": "Mathematics",
-      "imageUrl": "",
-      "published": true
+      "id": "Escape Room",
+      "icon": "Users",
+      "name": "Escape Room",
+      "isFree": false,
+      "tagline": "Team physical & mental escape room challenge.",
+      "category": "Team track",
+      "teamSize": 2,
+      "bannerUrl": "https://images.unsplash.com/photo-1519074069444-1ba4eff56022?auto=format&fit=crop&w=1200&q=80",
+      "description": "Categories: Secondary & Higher Secondary \n\nFormat: Team-based event. Solve mathematical locks and spatial puzzles within a timed room setup to unlock the exit. \n\n𝗖𝗼𝗺𝗯𝗶 𝗩𝗲𝗿𝘀𝗲 Categories: Secondary & Higher Secondary \n\nFormat: Advanced problem set focusing on pigeonhole principle, inclusion-exclusion, graph theory basics, and generating functions. \n\nDuration: 45 Minutes ",
+      "isTeamEvent": true,
+      "allowedCategories": [
+        "Secondary",
+        "Higher Secondary",
+        "Primary",
+        "Junior"
+      ]
     },
     {
-      "id": "article-1779373940551",
-      "date": "21 May 2026",
-      "slug": "new-math-article",
-      "title": "Statistical Physics-Where Worlds Collide",
-      "author": "Shuvro Anindya Bapari",
-      "pdfUrl": "https://ikciatrploqznijspyuk.supabase.co/storage/v1/object/public/images/1779373989209-0rgmppzmf.pdf",
-      "content": "",
-      "excerpt": "Statistical physics is the bridge between the microscopic world of atoms and the macroscopic world of observable phenomena. By applying probability and statistics, it explains how the collective, randomized behavior of billions of particles directly gives rise to everyday thermodynamic properties like temperature, pressure, and heat.",
-      "category": "Mathematics",
-      "imageUrl": "",
-      "published": true
+      "id": "Math Memes",
+      "icon": "Smile",
+      "name": "Math Memes",
+      "isFree": true,
+      "tagline": "Unleash your humor and witty mathematical intellect!",
+      "category": "Solo track",
+      "teamSize": 1,
+      "bannerUrl": "https://images.unsplash.com/photo-1531403009284-440f080d1e12?auto=format&fit=crop&w=1200&q=80",
+      "description": "Categories: All Categories \n\nFormat: Individual submission of up to 5 original math-related memes. 70% Judge Score, 30% Engagement Score. Caption must include #8thJMM_MathMeme. ",
+      "isTeamEvent": false,
+      "allowedCategories": [
+        "Primary",
+        "Junior",
+        "Secondary",
+        "Higher Secondary"
+      ]
     },
     {
-      "id": "article-1779373890660",
-      "date": "21 May 2026",
-      "slug": "new-math-article",
-      "title": "Projective Geometry",
-      "author": "Tawhid Bin Omar",
-      "pdfUrl": "https://ikciatrploqznijspyuk.supabase.co/storage/v1/object/public/images/1779373927520-7zs6nk3mq.pdf",
-      "content": "",
-      "excerpt": "Projective geometry is a branch of mathematics that studies geometric properties which remain unchanged (invariant) under projections, such as perspective or shadows. Unlike Euclidean geometry, it discards measurements like lengths and angles, focusing instead on concepts like collinearity (straight lines) and the intersection of lines.",
-      "category": "Mathematics",
-      "imageUrl": "",
-      "published": true
+      "id": "Math Article",
+      "icon": "FileText",
+      "name": "Math Article",
+      "isFree": true,
+      "tagline": "Write and submit an insightful research or expository paper.",
+      "category": "Solo track",
+      "teamSize": 1,
+      "bannerUrl": "https://images.unsplash.com/photo-1455390582262-044cdead277a?auto=format&fit=crop&w=1200&q=80",
+      "description": "Categories: All Categories \n\nFormat: PDF submission sent to mathclub@sjs.edu.bd named as Title_Name_Class_Institution.pdf. Group posts must include #8thJMM_article. ",
+      "isTeamEvent": false,
+      "allowedCategories": [
+        "Primary",
+        "Junior",
+        "Secondary",
+        "Higher Secondary"
+      ]
     },
     {
-      "id": "article-1779373719243",
-      "date": "21 May 2026",
-      "slug": "new-math-article",
-      "title": "Circles in Coordinate Geometry",
-      "author": "Tawhid Bin Omar",
-      "pdfUrl": "https://ikciatrploqznijspyuk.supabase.co/storage/v1/object/public/images/1779373803384-otk21kwhz.pdf",
-      "content": "",
-      "excerpt": "A circle in the coordinate system is the set of all points equidistant from a fixed center point, forming a perfectly round shape. Its size and position are defined by its radius and the coordinates of its center.",
-      "category": "Mathematics",
-      "imageUrl": "",
-      "published": true
+      "id": "Math Vision",
+      "icon": "ImageIcon",
+      "name": "Math Vision",
+      "isFree": true,
+      "tagline": "Digital graphic design competition.",
+      "category": "Solo track",
+      "teamSize": 1,
+      "bannerUrl": "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=1200&q=80",
+      "description": "Categories: All Categories \n\nFormat: Submit digital infographics, mathematical software visualizer output, or conceptual diagrams illustrating complex mathematical phenomena. ",
+      "isTeamEvent": false,
+      "allowedCategories": [
+        "Primary",
+        "Junior",
+        "Secondary",
+        "Higher Secondary"
+      ]
     },
     {
-      "id": "article-1778853653072",
-      "date": "15 May 2026",
-      "slug": "new-math-article",
-      "title": "Straight Lines: Basic to Best",
-      "author": "Sudipto Sen",
-      "pdfUrl": "https://ikciatrploqznijspyuk.supabase.co/storage/v1/object/public/images/1778853710297-xic85pvpc.pdf",
-      "content": "",
-      "excerpt": "A structured and enriched theory document on Straight Lines,\nspanning foundational coordinate geometry, engineering-level\nproblem solving, Olympiad extensions, transformations,\nprojective geometry, 3D lines, and applications in physics.",
-      "category": "Mathematics",
-      "imageUrl": "",
-      "published": true
+      "id": "Math Drawing",
+      "icon": "Edit",
+      "name": "Math Drawing",
+      "isFree": false,
+      "tagline": "Hand-drawn artistic competition.",
+      "category": "Solo track",
+      "teamSize": 1,
+      "bannerUrl": "https://images.unsplash.com/photo-1513364776144-60967b0f800f?auto=format&fit=crop&w=1200&q=80",
+      "description": "Categories: Primary & Junior \n\nFormat: Hand-drawn or digital artwork bringing mathematical concepts, tessellations, or geometric patterns to life. \n\n𝗧𝗿𝘂𝘀𝘀 𝗗𝗶𝘀𝗽𝗹𝗮𝘆 Categories: Secondary & Higher Secondary \n\nFormat: Engineering & structural display showcasing physical truss designs, load distribution models, and bridge geometries",
+      "isTeamEvent": false,
+      "allowedCategories": [
+        "Primary",
+        "Junior",
+        "Secondary",
+        "Higher Secondary"
+      ]
+    },
+    {
+      "id": "Truss",
+      "icon": "Construction",
+      "name": "Truss",
+      "isFree": false,
+      "tagline": "Engineering team competition! Build high-load bridge trusses.",
+      "category": "Team track",
+      "teamSize": 2,
+      "bannerUrl": "https://images.unsplash.com/photo-1541888946425-d0fbb186a5b3?auto=format&fit=crop&w=1200&q=80",
+      "description": "Engineering team competition! Build high-load structurally sound physical bridge trusses using popsicles and glue to withstand maximum mechanical weights.",
+      "isTeamEvent": true,
+      "allowedCategories": [
+        "Primary",
+        "Junior",
+        "Secondary",
+        "Higher Secondary"
+      ]
+    },
+    {
+      "id": "Wall Magazine Display",
+      "icon": "Layout",
+      "name": "Wall Magazine Display",
+      "isFree": false,
+      "tagline": "Design an informative physical wall poster/magazine.",
+      "category": "Exhibition track",
+      "teamSize": 1,
+      "bannerUrl": "https://images.unsplash.com/photo-1526721940322-10fb6e3ae94a?auto=format&fit=crop&w=1200&q=80",
+      "description": "Categories: All Categories \n\nFormat: Poster display covering a unified mathematical theme, history, or open conjecture.",
+      "isTeamEvent": false,
+      "allowedCategories": [
+        "Primary",
+        "Junior",
+        "Secondary",
+        "Higher Secondary"
+      ]
+    },
+    {
+      "id": "Tic-Tac-Toe",
+      "icon": "Trophy",
+      "name": "Tic-Tac-Toe",
+      "isFree": false,
+      "tagline": "Tic-tac-toe is a simple paper-and-pencil game for two players. Players take turns placing an X or an O on a 3x3 grid. The first player to get three of their marks in a row (up, down, across, or diagonal) wins the game.",
+      "category": "Team Track",
+      "teamSize": 3,
+      "bannerUrl": "https://images.unsplash.com/photo-1668901382969-8c73e450a1f5?q=80&w=880&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+      "description": "Tic-Tac-Toe is a head-to-head, team-based math competition where strategy meets problem-solving. Two teams face off on a standard $3 \\times 3$ grid. The objective is to claim three squares in a row—horizontally, vertically, or diagonally—or possess the most claimed squares when time runs out. To mark a cell, the team must successfully answer a primary-level math question assigned to that square before their opponents or within a set time limit.",
+      "isTeamEvent": true,
+      "allowedCategories": [
+        "Primary",
+        "Junior",
+        "Secondary",
+        "Higher Secondary"
+      ]
     }
   ],
+  "festivalCalendar": {
+    "title": "8th Josephite Math Mania",
+    "events": [
+      {
+        "day": "Day 1",
+        "title": "8th Josephite Math Mania",
+        "dateStr": "24 Sept 2026",
+        "isoDate": "2026-09-24",
+        "location": "St. Joseph Higher Secondary School, 97 Asad Avenue, Mohammadpur, Dhaka-1207",
+        "description": "TBA"
+      },
+      {
+        "day": "Day 2",
+        "title": "8th Josephite National Math Festival - Day 2 (Team Mania & Workshops)",
+        "dateStr": "25 Sept 2026",
+        "isoDate": "2026-09-25",
+        "location": "St. Joseph Higher Secondary School, 97 Asad Avenue, Mohammadpur, Dhaka-1207",
+        "description": "TBA"
+      },
+      {
+        "day": "Day 3",
+        "title": "8th Josephite National Math Festival - Grand Finale & Awards",
+        "dateStr": "26 Sept 2026",
+        "isoDate": "2026-09-26",
+        "location": "St. Joseph Higher Secondary School, 97 Asad Avenue, Mohammadpur, Dhaka-1207",
+        "description": "TBA"
+      }
+    ],
+    "location": "St. Joseph Higher Secondary School, 97 Asad Avenue, Mohammadpur, Dhaka-1207"
+  },
   "handouts": {
     "title": "Session Handouts",
     "sessions": [
@@ -2936,9 +3104,16 @@
       "description": "Textbook chapter covering formal statement, proof by characteristic functions, and applications of PIE."
     }
   ],
-  "lastUpdated": "2026-08-12T16:39:28.661Z",
-  "_instruction": "Update 'lastUpdated' whenever you manually edit this file to ensure changes take precedence over the admin panel.",
-  "gallery_page": {
+  "contact": {
+    "email": "N/A",
+    "phone": "N/A",
+    "socials": {
+      "facebook": "https://www.facebook.com/2015JMC/",
+      "instagram": "https://www.instagram.com/jmc_.official/"
+    },
+    "location": "St. Joseph Higher Secondary School"
+  },
+  "gallery": {
     "images": [
       "/images/gallery/gallery1.jpg",
       "/images/gallery/gallery2.jpg",
@@ -2948,443 +3123,281 @@
       "/images/gallery/gallery6.jpg"
     ]
   },
-  "members_list": {
-    "title": "OUR MEMBERS",
-    "members": [],
-    "subtitle": "COMMUNITY",
-    "description": "The heartbeat of Josephite Math Club - our diverse and passionate community of mathematicians."
-  },
-  "registration": {
-    "fee": "N/A",
-    "bkashNumber": "N/A",
-    "declaration": "I am willing to join the Josephite Math Club, I promise to perform my duties with honesty, respect the club values, and work for its development",
-    "instructions": [],
-    "cashInstructions": "Please pay your registration fee to the club treasurer.",
-    "registrationOpen": false,
-    "registrationClosedMessage": "Registration for the current intra-events is currently closed. Please stay tuned for future updates."
-  },
-  "interSegments": [
+  "articles": [
     {
-      "id": "Math Olympiad (Find-based)",
-      "icon": "Trophy",
-      "name": "Math Olympiad (Find-based)",
-      "isFree": true,
-      "tagline": "Solve numeric mysteries and discover deep hidden structural patterns.",
-      "category": "Solo track",
-      "teamSize": 1,
-      "bannerUrl": "https://images.unsplash.com/photo-1509228468518-180dd4864904?auto=format&fit=crop&w=1200&q=80",
-      "description": "A rapid, high-intensity competition across all four categories. \n\nDuration: 1 Hour \n\nFormat: 8–12 numerical answer/find-based problems testing core areas: Number Theory, Algebra, Geometry, and Combinatorics. Difficulty matches BDMO Regional rounds. ",
-      "isTeamEvent": false,
-      "allowedCategories": [
-        "Primary",
-        "Junior",
-        "Secondary",
-        "Higher Secondary"
-      ]
+      "id": "article-1787061513412",
+      "date": "18 Aug 2026",
+      "slug": "new-math-article",
+      "title": "Trivuj_Choturdoshi_(3rd-part)",
+      "author": "Maaz Deen Sanjid Kabir",
+      "pdfUrl": "https://ikciatrploqznijspyuk.supabase.co/storage/v1/object/public/images/1787061567078-feabkjxd0.pdf",
+      "content": "And just like that, we have reached the final destination of our geometric journey. Today marks the release of the third and final volume of the \"Triangle Fourteenth\" (Trivuj Choturdoshi) series, where all the foundational pieces we built earlier come together in perfect harmony.\n\nThis grand finale is an exploration of high-level, awe-inspiring theorems. We will witness how Napoleon’s Theorem unravels a hidden equilateral triangle from the chaos of any ordinary shape, how Desargues’ Theorem expands our vision into three-dimensional projective thinking, and how a magical Nine-Point Circle naturally emerges from a basic triangle. To complete the masterpiece, we also dive into the intricate structures of Orthic Triangles, Medial Triangles, Euler Lines, and Pedal Triangles.\n\nThis final part is the culmination of our geometric saga, passionately put together by our academic member, Maaz Deen Sanjid Kabir.",
+      "excerpt": "A short description of the article...",
+      "category": "Mathematics",
+      "imageUrl": "",
+      "published": true
     },
     {
-      "id": "Math Olympiad (Proof-based)",
-      "icon": "FileText",
-      "name": "Math Olympiad (Proof-based)",
-      "isFree": true,
-      "tagline": "Draft elegant formal proofs and logically sound explanations.",
-      "category": "Solo track",
-      "teamSize": 1,
-      "bannerUrl": "https://images.unsplash.com/photo-1635070041078-e363dbe005cb?auto=format&fit=crop&w=1200&q=80",
-      "description": "Exclusively for Secondary and Higher Secondary categories. \n\nDuration: 1 Hours \n\nFormat: Proof-based mathematical problems requiring rigorous logical derivations and clear step-by-step proofs. \n",
-      "isTeamEvent": false,
-      "allowedCategories": [
-        "Secondary",
-        "Higher Secondary"
-      ]
+      "id": "article-1787061493240",
+      "date": "18 Aug 2026",
+      "slug": "new-math-article",
+      "title": "Trivuj_Choturdoshi_(2nd-part)",
+      "author": "Maaz Deen Sanjid Kabir",
+      "pdfUrl": "https://ikciatrploqznijspyuk.supabase.co/storage/v1/object/public/images/1787061610307-jztyqdhvq.pdf",
+      "content": "After establishing some powerful foundational theorems in our first part, we are back with the second volume of our series, \"Triangle Fourteenth\" (Trivuj Choturdoshi). This time, we are stepping deeper into a mesmerizing world of circles, angles, and symmetry.\n\nThis second part explores theorems that elevate geometric beauty to a whole new level. We look at the harmony of Incircles and Excircles as they perfectly embrace the boundaries of a triangle, and the Steiner–Lehmus Theorem, which reveals a fascinating symmetry within angle bisectors. Furthermore, we unpack Menelaus's Theorem to unlock the secrets of collinear points, and the sheer magic of Morley’s Trisector Theorem, which divides angles to reveal a hidden equilateral triangle inside any given triangle.\n\nThis volume is a continuous journey into the symmetry and structure of advanced geometry, brought to you by our academic member, Maaz Deen Sanjid Kabir.",
+      "excerpt": "A short description of the article...",
+      "category": "Mathematics",
+      "imageUrl": "",
+      "published": true
     },
     {
-      "id": "IQ Test",
-      "icon": "Brain",
-      "name": "IQ Test",
-      "isFree": false,
-      "tagline": "Race against the clock in analytical speed reasoning.",
-      "category": "Solo track",
-      "teamSize": 1,
-      "bannerUrl": "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=1200&q=80",
-      "description": "Open to all categories. \n\nFormat: 20 logic puzzles and pattern-recognition questions designed to test cognitive clarity and analytical depth. \n\nDuration: 40 Minutes. \n",
-      "isTeamEvent": false,
-      "allowedCategories": [
-        "Primary",
-        "Junior",
-        "Secondary",
-        "Higher Secondary"
-      ]
+      "id": "article-1787061243388",
+      "date": "18 Aug 2026",
+      "slug": "new-math-article",
+      "title": "Trivuj_Choturdoshi_(1st-part)",
+      "author": "Maaz Deen Sanjid Kabir",
+      "pdfUrl": "https://ikciatrploqznijspyuk.supabase.co/storage/v1/object/public/images/1787061334949-cims6btzv.pdf",
+      "content": "Behind the hidden lines and equations of everyday geometry lies a world of pure elegance. What first appears to be a tangled web of lines and angles often unfolds into something beautifully simple once you apply the right principles.\n\nToday, we are excited to share the first part of our geometric series, \"Triangle Fourteenth\" (Trivuj Choturdoshi). This part is a journey beyond standard textbook problems into the heart of advanced geometric thinking.\n\nIn this first volume, we dive deep into the Extended Law of Sines, discovering how it forms a perfect bridge between a triangle and its circumcircle. We also explore the sheer elegance of Ceva's and Intersection theorems—proving the flawless confluence of concurrent lines—alongside a beautiful breakdown of area ratios through Routh's Theorem.\n\nThis article is a small exploration of the foundational elegance hidden inside triangle geometry, beautifully crafted by our academic member,  Maaz Deen Sanjid Kabir.",
+      "excerpt": "A short description of the article...",
+      "category": "Mathematics",
+      "imageUrl": "",
+      "published": true
     },
     {
-      "id": "Human Calculator",
-      "icon": "Zap",
-      "name": "Human Calculator",
-      "isFree": false,
-      "tagline": "Unleash super-speed mental arithmetic and calculation loops.",
-      "category": "Solo track",
-      "teamSize": 1,
-      "bannerUrl": "https://images.unsplash.com/photo-1596495578065-6e0763fa1178?auto=format&fit=crop&w=1200&q=80",
-      "description": "Primary & Junior \n\nFormat: A 60-minute written test of raw mental arithmetic. Scratch paper is provided, but no electronic calculators are permitted. \n\n𝗚𝗲𝗻𝗲𝘀𝗶𝘀 (𝗠𝗮𝘁𝗵 𝗛𝗶𝘀𝘁𝗼𝗿𝘆 𝗤𝘂𝗶𝘇) Open to all categories. \n\nFormat: 30 multiple-choice questions covering historical developments, famous theorems, and breakthroughs from classical antiquity to modern mathematics. \n\nDuration: 30 Minutes. ",
-      "isTeamEvent": false,
-      "allowedCategories": [
-        "Primary",
-        "Junior"
-      ]
+      "id": "article-1785164775893",
+      "date": "27 Jul 2026",
+      "slug": "new-math-article",
+      "title": "Worm Hole",
+      "author": "Tawhid Bin Omar",
+      "pdfUrl": "https://ikciatrploqznijspyuk.supabase.co/storage/v1/object/public/images/1785164982187-tiirrx6sx.pdf",
+      "content": "",
+      "excerpt": "Among the most astonishing hypothetical shortcuts in astrophysics, Wormholes challenge our very understanding of cosmic distance. What first appears as an impassable barrier of millions of light-years across the dark void becomes an immediate gateway when spacetime is folded upon itself.",
+      "category": "Mathematics",
+      "imageUrl": "",
+      "published": true
     },
     {
-      "id": "Genesis",
-      "icon": "Sparkles",
-      "name": "Genesis",
-      "isFree": false,
-      "tagline": "Interactive math design and scientific origin-based discovery.",
-      "category": "Solo track",
-      "teamSize": 1,
-      "bannerUrl": "https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=1200&q=80",
-      "description": "Explore the origin stories of fundamental mathematical constants, geometric theorems, and historical mathematical breakthroughs.",
-      "isTeamEvent": false,
-      "allowedCategories": [
-        "Primary",
-        "Junior",
-        "Secondary",
-        "Higher Secondary"
-      ]
+      "id": "article-1785164642677",
+      "date": "27 Jul 2026",
+      "slug": "new-math-article",
+      "title": "Functional Equations",
+      "author": "Tawhid Bin Omar",
+      "pdfUrl": "https://ikciatrploqznijspyuk.supabase.co/storage/v1/object/public/images/1785164728533-ik4xhybcv.pdf",
+      "content": "",
+      "excerpt": "Among the most profoundly foundational enigmas in algebra, **Functional Equations** invert our traditional understanding of variables to question the very nature of mathematical mappings. What first appears as a chaotic puzzle of unconstrained conditions and elusive expressions becomes beautifully orderly when subjected to the laws of symmetry, injectivity, and substitution. Instead of searching for a hidden number, we hunt for an entire steadfast mathematical identity.",
+      "category": "Mathematics",
+      "imageUrl": "",
+      "published": true
     },
     {
-      "id": "Geometry Dash",
-      "icon": "Compass",
-      "name": "Geometry Dash",
-      "isFree": false,
-      "tagline": "Navigate space calculations, angle proofs, and vector mazes.",
-      "category": "Solo track",
-      "teamSize": 1,
-      "bannerUrl": "https://images.unsplash.com/photo-1509228627152-72ae946807b1?auto=format&fit=crop&w=1200&q=80",
-      "description": "Secondary & Higher Secondary \n\nFormat: 5–7 geometry-focused problems evaluating spatial intuition, angle chasing, and synthetic/analytic methods. Partial points awarded for partial progress. \n\nDuration: 45 Minutes. \n",
-      "isTeamEvent": false,
-      "allowedCategories": [
-        "Secondary",
-        "Higher Secondary"
-      ]
+      "id": "article-1785164551708",
+      "date": "27 Jul 2026",
+      "slug": "new-math-article",
+      "title": "Permutations, Combinations and the Art of Counting",
+      "author": "Tawhid Bin Omar",
+      "pdfUrl": "https://ikciatrploqznijspyuk.supabase.co/storage/v1/object/public/images/1785164631439-pwyizwfil.pdf",
+      "content": "",
+      "excerpt": "Among the most astonishing hypothetical shortcuts in astrophysics, Wormholes challenge our very understanding of cosmic distance. What first appears as an impassable barrier of millions of light-years across the dark void becomes an immediate gateway when spacetime is folded upon itself.",
+      "category": "Mathematics",
+      "imageUrl": "",
+      "published": true
     },
     {
-      "id": "Probability Pressure",
-      "icon": "Timer",
-      "name": "Probability Pressure",
-      "isFree": false,
-      "tagline": "Calculate rapid-fire odds and stochastic outcomes under stress.",
-      "category": "Solo track",
-      "teamSize": 1,
-      "bannerUrl": "https://images.unsplash.com/photo-1518609878373-06d740f60d8b?auto=format&fit=crop&w=1200&q=80",
-      "description": "Secondary & Higher Secondary \n\nFormat: 7–8 challenging problems linking probability with combinatorics, geometric probability, and number theory. \n\nDuration: 45 Minutes. ",
-      "isTeamEvent": false,
-      "allowedCategories": [
-        "Secondary",
-        "Higher Secondary"
-      ]
+      "id": "article-1785164425494",
+      "date": "27 Jul 2026",
+      "slug": "new-math-article",
+      "title": "Tensors.....",
+      "author": "Tawhid Bin Omar",
+      "pdfUrl": "https://ikciatrploqznijspyuk.supabase.co/storage/v1/object/public/images/1785164544162-q1fk2aen0.pdf",
+      "content": "",
+      "excerpt": "Among the most expressive languages in modern mathematics and physics, Tensors reveal the profound geometric truths that remain completely unchanged by our choice of perspective. What first appears as a terrifying maze of multi-dimensional arrays, upper and lower indices, and complex coordinate shifts becomes beautifully simple when viewed as a singular, invariant entity slicing through space and time.",
+      "category": "Mathematics",
+      "imageUrl": "",
+      "published": true
     },
     {
-      "id": "The Casebook",
-      "icon": "Eye",
-      "name": "The Casebook",
-      "isFree": false,
-      "tagline": "Deduce clues and crack mathematical murder mystery cases.",
-      "category": "Team / Solo track",
-      "teamSize": 3,
-      "bannerUrl": "https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?auto=format&fit=crop&w=1200&q=80",
-      "description": "Categories: Secondary & Higher Secondary \n\nFormat: A narrative-driven investigation where participants analyze witness statements, alibis, and numerical evidence to identify the culprit. \n\nDuration: 30 Minutes ",
-      "isTeamEvent": false,
-      "allowedCategories": [
-        "Primary",
-        "Junior",
-        "Secondary",
-        "Higher Secondary"
-      ]
+      "id": "article-1785164316948",
+      "date": "27 Jul 2026",
+      "slug": "new-math-article",
+      "title": "Legendre Polynomials and Generating Funstions",
+      "author": "Tawhid Bin Omar",
+      "pdfUrl": "https://ikciatrploqznijspyuk.supabase.co/storage/v1/object/public/images/1785164418753-w9307ilvb.pdf",
+      "content": "",
+      "excerpt": "Among the most elegant constructs in mathematical physics, Legendre Polynomials and Generating Functions reveal the underlying symmetry of physical space. What first appears as a chaotic web of complex differential equations and intractable geometric potentials collapses into beautifully ordered orthogonal components when viewed through the lens of a single, masterful generating function. From the gravitational pull of planets to the quantum mechanics of the atom, these steadfast functions transform the geometry of the universe into an orchestra of perfect harmony.",
+      "category": "Mathematics",
+      "imageUrl": "",
+      "published": true
     },
     {
-      "id": "Crack the Code",
-      "icon": "Lock",
-      "name": "Crack the Code",
-      "isFree": false,
-      "tagline": "Deconstruct cryptographic ciphers and decode encrypted strings.",
-      "category": "Solo track",
-      "teamSize": 1,
-      "bannerUrl": "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=format&fit=crop&w=1200&q=80",
-      "description": "Open to all categories. \n\nFormat: Decipher substitution ciphers, binary codes, numeric bases, and modular encryption challenges. Reference charts provided where applicable. \n\nDuration: 45 Minutes. ",
-      "isTeamEvent": false,
-      "allowedCategories": [
-        "Primary",
-        "Junior",
-        "Secondary",
-        "Higher Secondary"
-      ]
+      "id": "article-1785164200667",
+      "date": "27 Jul 2026",
+      "slug": "new-math-article",
+      "title": "Analytic Continuation and the Limits of Generalization",
+      "author": "Tawhid Bin Omar",
+      "pdfUrl": "https://ikciatrploqznijspyuk.supabase.co/storage/v1/object/public/images/1785164309039-4xufv6a3r.pdf",
+      "content": "",
+      "excerpt": "Among the most revolutionary intellectual achievements in human history, General Relativity unveils the elegant tapestry binding space, time, and gravity. What first appears as a chaotic and mysterious cosmic force acting across empty voids is beautifully unmasked as the simple, dynamic geometry of the universe itself.",
+      "category": "Mathematics",
+      "imageUrl": "",
+      "published": true
     },
     {
-      "id": "Complex Calamity",
-      "icon": "HelpCircle",
-      "name": "Complex Calamity",
-      "isFree": false,
-      "tagline": "Grapple with complex numbers, imaginary axes, and fractals.",
-      "category": "Solo track",
-      "teamSize": 1,
-      "bannerUrl": "https://images.unsplash.com/photo-1509228468518-180dd4864904?auto=format&fit=crop&w=1200&q=80",
-      "description": "Categories: Secondary & Higher Secondary \n\nFormat: Focused exclusively on complex numbers, Argand plane geometry, roots of unity, and complex polynomial properties. \n\nDuration: 1 Hour \n",
-      "isTeamEvent": false,
-      "allowedCategories": [
-        "Secondary",
-        "Higher Secondary"
-      ]
+      "id": "article-1785164122541",
+      "date": "27 Jul 2026",
+      "slug": "new-math-article",
+      "title": "General Relativity and Space Time",
+      "author": "Tawhid Bin Omar",
+      "pdfUrl": "https://ikciatrploqznijspyuk.supabase.co/storage/v1/object/public/images/1785164191695-d3c1d8cwy.pdf",
+      "content": "",
+      "excerpt": "Among the most revolutionary intellectual achievements in human history, General Relativity unveils the elegant tapestry binding space, time, and gravity. What first appears as a chaotic and mysterious cosmic force acting across empty voids is beautifully unmasked as the simple, dynamic geometry of the universe itself. the article...",
+      "category": "Mathematics",
+      "imageUrl": "",
+      "published": true
     },
     {
-      "id": "Sudoku",
-      "icon": "Grid",
-      "name": "Sudoku",
-      "isFree": false,
-      "tagline": "Solve grid placement challenges with extreme speed precision.",
-      "category": "Solo track",
-      "teamSize": 1,
-      "bannerUrl": "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=1200&q=80",
-      "description": "Open to all categories. \n\nFormat: Solve standard 9×9 Sudoku grids under strict time pressure. Top finishers from each category win. \n\nDuration: 30 Minutes. ",
-      "isTeamEvent": false,
-      "allowedCategories": [
-        "Primary",
-        "Junior",
-        "Secondary",
-        "Higher Secondary"
-      ]
+      "id": "article-1785164050858",
+      "date": "27 Jul 2026",
+      "slug": "new-math-article",
+      "title": "Jacobian Matrix",
+      "author": "Tawhid Bin Omar",
+      "pdfUrl": "https://ikciatrploqznijspyuk.supabase.co/storage/v1/object/public/images/1785164115722-mmu2teew5.pdf",
+      "content": "",
+      "excerpt": "Among the most transformative concepts in multivariable calculus, the Jacobian Matrix reveals the hidden linearity within local chaos. What first appears as a complex, non-linear web of warping coordinates and shifting multidimensional spaces becomes beautifully simple when zoomed in closely along these steadfast local derivatives. It serves as the ultimate mathematical magnifying glass, capturing the precise degree of stretching, rotating, and scaling that occurs when we distort one coordinate system into another.",
+      "category": "Mathematics",
+      "imageUrl": "",
+      "published": true
     },
     {
-      "id": "Rubik’s Cube Showdown",
-      "icon": "Layers",
-      "name": "Rubik’s Cube Showdown",
-      "isFree": false,
-      "tagline": "Manipulate cubic modules and solve cubes in record times.",
-      "category": "Solo track",
-      "teamSize": 1,
-      "bannerUrl": "https://images.unsplash.com/photo-1563089145-599997674d42?auto=format&fit=crop&w=1200&q=80",
-      "description": "Open to all categories. \n\nRound 1: Speed trials (Best of N solves). Top 4 advances. \n\nRound 2: 1v1 direct head-to-head knockout duel using identical scrambles. \n",
-      "isTeamEvent": false,
-      "allowedCategories": [
-        "Primary",
-        "Junior",
-        "Secondary",
-        "Higher Secondary"
-      ]
+      "id": "article-1785163942610",
+      "date": "27 Jul 2026",
+      "slug": "new-math-article",
+      "title": "Graph Theory",
+      "author": "Tawhid Bin Omar",
+      "pdfUrl": "https://ikciatrploqznijspyuk.supabase.co/storage/v1/object/public/images/1785164038109-z0f8sagj3.pdf",
+      "content": "",
+      "excerpt": "Among the most profoundly interconnected fields of mathematics, Graph Theory maps the invisible architecture of relationships. What first appears as a chaotic web of tangled networks, sprawling data points, and isolated entities becomes beautifully simple when stripped down to its core elements: vertices and edges. It reveals that whether we are tracing the neural pathways of the brain, the vast infrastructure of the internet, or the delicate social bonds of humanity, the underlying geometry of connection obeys a steadfast, universal order.",
+      "category": "Mathematics",
+      "imageUrl": "",
+      "published": true
     },
     {
-      "id": "5 min Professor",
-      "icon": "Award",
-      "name": "5 min Professor",
-      "isFree": false,
-      "tagline": "Deliver a lightning lecture explaining abstract concepts simply.",
-      "category": "Solo track",
-      "teamSize": 1,
-      "bannerUrl": "https://images.unsplash.com/photo-1524178232363-1fb2b075b655?auto=format&fit=crop&w=1200&q=80",
-      "description": "Categories: Secondary & Higher Secondary \n\nFormat: 5-minute oral presentation on an assigned mathematical topic evaluated clarity, rigor, and response to follow-up questions. ",
-      "isTeamEvent": false,
-      "allowedCategories": [
-        "Secondary",
-        "Higher Secondary"
-      ]
+      "id": "article-1785163841720",
+      "date": "27 Jul 2026",
+      "slug": "new-math-article",
+      "title": "Wrap Drive and Faster than Light Travel",
+      "author": "Tawhid Bin Omar",
+      "pdfUrl": "https://ikciatrploqznijspyuk.supabase.co/storage/v1/object/public/images/1785163852040-82sfn8m04.pdf",
+      "content": "",
+      "excerpt": "Among the most breathtaking frontiers of theoretical physics is the Warp Drive, anchored by the mathematics of the Alcubierre metric. What first appears as a violation of nature’s absolute speed limit becomes a masterful dance with gravity when viewed through the lens of general relativity. Rather than moving through space faster than light, a warp drive dynamically compresses the fabric of spacetime ahead of a vessel while expanding it behind, allowing humanity to outrun photons by manipulating the geometry of the universe itself.",
+      "category": "Mathematics",
+      "imageUrl": "",
+      "published": true
     },
     {
-      "id": "Calculus Bee",
-      "icon": "Activity",
-      "name": "Calculus Bee",
-      "isFree": false,
-      "tagline": "Solve derivatives and integral equations in real-time playoffs.",
-      "category": "Solo track",
-      "teamSize": 1,
-      "bannerUrl": "https://images.unsplash.com/photo-1635070041078-e363dbe005cb?auto=format&fit=crop&w=1200&q=80",
-      "description": "Categories: Secondary & Higher Secondary \n\nRound 1: 1 Hour written exam covering limits, derivatives, and integrals. \n\nRound 2: Live 1v1 outdoor knockout bracket. ",
-      "isTeamEvent": false,
-      "allowedCategories": [
-        "Secondary",
-        "Higher Secondary"
-      ]
+      "id": "article-1779776879938",
+      "date": "26 May 2026",
+      "slug": "new-math-article",
+      "title": "Eigen Vectors",
+      "author": "Tawhid BIn Omar",
+      "pdfUrl": "https://ikciatrploqznijspyuk.supabase.co/storage/v1/object/public/images/1779776935673-fmmpxv35n.pdf",
+      "content": "",
+      "excerpt": "Eigenvalues and eigenvectors are fundamental concepts in linear algebra used to understand complex matrix transformations. An eigenvector is a special, non-zero vector that does not change direction when a linear transformation is applied. An eigenvalue is simply the scalar factor by which that eigenvector is scaled or stretched.",
+      "category": "Mathematics",
+      "imageUrl": "",
+      "published": true
     },
     {
-      "id": "Escape Room",
-      "icon": "Users",
-      "name": "Escape Room",
-      "isFree": false,
-      "tagline": "Team physical & mental escape room challenge.",
-      "category": "Team track",
-      "teamSize": 2,
-      "bannerUrl": "https://images.unsplash.com/photo-1519074069444-1ba4eff56022?auto=format&fit=crop&w=1200&q=80",
-      "description": "Categories: Secondary & Higher Secondary \n\nFormat: Team-based event. Solve mathematical locks and spatial puzzles within a timed room setup to unlock the exit. \n\n𝗖𝗼𝗺𝗯𝗶 𝗩𝗲𝗿𝘀𝗲 Categories: Secondary & Higher Secondary \n\nFormat: Advanced problem set focusing on pigeonhole principle, inclusion-exclusion, graph theory basics, and generating functions. \n\nDuration: 45 Minutes ",
-      "isTeamEvent": true,
-      "allowedCategories": [
-        "Secondary",
-        "Higher Secondary",
-        "Primary",
-        "Junior"
-      ]
+      "id": "article-1779374593078",
+      "date": "21 May 2026",
+      "slug": "new-math-article",
+      "title": "Power of a Point & Radical Axis",
+      "author": "Tawhid Bin Omar",
+      "pdfUrl": "https://ikciatrploqznijspyuk.supabase.co/storage/v1/object/public/images/1779374657663-d8kh30kqv.pdf",
+      "content": "",
+      "excerpt": "The Power of a Point is a value measuring the relative distance of a point to a circle. The Radical Axis is the straight line containing all points that have the exact same power with respect to two separate circles.",
+      "category": "Mathematics",
+      "imageUrl": "",
+      "published": true
     },
     {
-      "id": "Combi Verse",
-      "icon": "Layers",
-      "name": "Combi Verse",
-      "isFree": false,
-      "tagline": "Deep dive into graph theory networks, pigeonhole principle.",
-      "category": "Solo track",
-      "teamSize": 1,
-      "bannerUrl": "https://images.unsplash.com/photo-1509228627152-72ae946807b1?auto=format&fit=crop&w=1200&q=80",
-      "description": "Deep dive into graph theory networks, pigeonhole principle, recurrence relations, and combinatorial game strategy.",
-      "isTeamEvent": false,
-      "allowedCategories": [
-        "Secondary",
-        "Higher Secondary"
-      ]
+      "id": "article-1779374532573",
+      "date": "21 May 2026",
+      "slug": "new-math-article",
+      "title": "Applications of Category Theory in Computer Science and Physics",
+      "author": "Tawhid Bin Omar",
+      "pdfUrl": "https://ikciatrploqznijspyuk.supabase.co/storage/v1/object/public/images/1779374588590-8ji8r49f3.pdf",
+      "content": "",
+      "excerpt": "Category theory unifies various fields of mathematics by stripping away complex details to reveal underlying structural patterns. The quote perfectly summarizes its power: by standardizing broad concepts, it reframes seemingly difficult, disconnected theorems as intuitive, mechanical consequences",
+      "category": "Mathematics",
+      "imageUrl": "",
+      "published": true
     },
     {
-      "id": "Math Memes",
-      "icon": "Smile",
-      "name": "Math Memes",
-      "isFree": true,
-      "tagline": "Unleash your humor and witty mathematical intellect!",
-      "category": "Solo track",
-      "teamSize": 1,
-      "bannerUrl": "https://images.unsplash.com/photo-1531403009284-440f080d1e12?auto=format&fit=crop&w=1200&q=80",
-      "description": "Categories: All Categories \n\nFormat: Individual submission of up to 5 original math-related memes. 70% Judge Score, 30% Engagement Score. Caption must include #8thJMM_MathMeme. ",
-      "isTeamEvent": false,
-      "allowedCategories": [
-        "Primary",
-        "Junior",
-        "Secondary",
-        "Higher Secondary"
-      ]
+      "id": "article-1779374009630",
+      "date": "21 May 2026",
+      "slug": "new-math-article",
+      "title": "The Gamma Function",
+      "author": "SHARAN HAQUE SAKIN",
+      "pdfUrl": "https://ikciatrploqznijspyuk.supabase.co/storage/v1/object/public/images/1779374065103-n5pne4qm0.pdf",
+      "content": "",
+      "excerpt": "The Gamma Function (denoted by \\(\\Gamma(z)\\)) is a fundamental mathematical tool that extends the concept of the factorial to all real and complex numbers, except for zero and negative integers. For positive integers, it is essentially the factorial of the number minus one.",
+      "category": "Mathematics",
+      "imageUrl": "",
+      "published": true
     },
     {
-      "id": "Math Article",
-      "icon": "FileText",
-      "name": "Math Article",
-      "isFree": true,
-      "tagline": "Write and submit an insightful research or expository paper.",
-      "category": "Solo track",
-      "teamSize": 1,
-      "bannerUrl": "https://images.unsplash.com/photo-1455390582262-044cdead277a?auto=format&fit=crop&w=1200&q=80",
-      "description": "Categories: All Categories \n\nFormat: PDF submission sent to mathclub@sjs.edu.bd named as Title_Name_Class_Institution.pdf. Group posts must include #8thJMM_article. ",
-      "isTeamEvent": false,
-      "allowedCategories": [
-        "Primary",
-        "Junior",
-        "Secondary",
-        "Higher Secondary"
-      ]
+      "id": "article-1779373940551",
+      "date": "21 May 2026",
+      "slug": "new-math-article",
+      "title": "Statistical Physics-Where Worlds Collide",
+      "author": "Shuvro Anindya Bapari",
+      "pdfUrl": "https://ikciatrploqznijspyuk.supabase.co/storage/v1/object/public/images/1779373989209-0rgmppzmf.pdf",
+      "content": "",
+      "excerpt": "Statistical physics is the bridge between the microscopic world of atoms and the macroscopic world of observable phenomena. By applying probability and statistics, it explains how the collective, randomized behavior of billions of particles directly gives rise to everyday thermodynamic properties like temperature, pressure, and heat.",
+      "category": "Mathematics",
+      "imageUrl": "",
+      "published": true
     },
     {
-      "id": "Math Vision",
-      "icon": "ImageIcon",
-      "name": "Math Vision",
-      "isFree": true,
-      "tagline": "Digital graphic design competition.",
-      "category": "Solo track",
-      "teamSize": 1,
-      "bannerUrl": "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=1200&q=80",
-      "description": "Categories: All Categories \n\nFormat: Submit digital infographics, mathematical software visualizer output, or conceptual diagrams illustrating complex mathematical phenomena. ",
-      "isTeamEvent": false,
-      "allowedCategories": [
-        "Primary",
-        "Junior",
-        "Secondary",
-        "Higher Secondary"
-      ]
+      "id": "article-1779373890660",
+      "date": "21 May 2026",
+      "slug": "new-math-article",
+      "title": "Projective Geometry",
+      "author": "Tawhid Bin Omar",
+      "pdfUrl": "https://ikciatrploqznijspyuk.supabase.co/storage/v1/object/public/images/1779373927520-7zs6nk3mq.pdf",
+      "content": "",
+      "excerpt": "Projective geometry is a branch of mathematics that studies geometric properties which remain unchanged (invariant) under projections, such as perspective or shadows. Unlike Euclidean geometry, it discards measurements like lengths and angles, focusing instead on concepts like collinearity (straight lines) and the intersection of lines.",
+      "category": "Mathematics",
+      "imageUrl": "",
+      "published": true
     },
     {
-      "id": "Math Drawing",
-      "icon": "Edit",
-      "name": "Math Drawing",
-      "isFree": false,
-      "tagline": "Hand-drawn artistic competition.",
-      "category": "Solo track",
-      "teamSize": 1,
-      "bannerUrl": "https://images.unsplash.com/photo-1513364776144-60967b0f800f?auto=format&fit=crop&w=1200&q=80",
-      "description": "Categories: Primary & Junior \n\nFormat: Hand-drawn or digital artwork bringing mathematical concepts, tessellations, or geometric patterns to life. \n\n𝗧𝗿𝘂𝘀𝘀 𝗗𝗶𝘀𝗽𝗹𝗮𝘆 Categories: Secondary & Higher Secondary \n\nFormat: Engineering & structural display showcasing physical truss designs, load distribution models, and bridge geometries",
-      "isTeamEvent": false,
-      "allowedCategories": [
-        "Primary",
-        "Junior",
-        "Secondary",
-        "Higher Secondary"
-      ]
+      "id": "article-1779373719243",
+      "date": "21 May 2026",
+      "slug": "new-math-article",
+      "title": "Circles in Coordinate Geometry",
+      "author": "Tawhid Bin Omar",
+      "pdfUrl": "https://ikciatrploqznijspyuk.supabase.co/storage/v1/object/public/images/1779373803384-otk21kwhz.pdf",
+      "content": "",
+      "excerpt": "A circle in the coordinate system is the set of all points equidistant from a fixed center point, forming a perfectly round shape. Its size and position are defined by its radius and the coordinates of its center.",
+      "category": "Mathematics",
+      "imageUrl": "",
+      "published": true
     },
     {
-      "id": "Truss",
-      "icon": "Construction",
-      "name": "Truss",
-      "isFree": false,
-      "tagline": "Engineering team competition! Build high-load bridge trusses.",
-      "category": "Team track",
-      "teamSize": 2,
-      "bannerUrl": "https://images.unsplash.com/photo-1541888946425-d0fbb186a5b3?auto=format&fit=crop&w=1200&q=80",
-      "description": "Engineering team competition! Build high-load structurally sound physical bridge trusses using popsicles and glue to withstand maximum mechanical weights.",
-      "isTeamEvent": true,
-      "allowedCategories": [
-        "Primary",
-        "Junior",
-        "Secondary",
-        "Higher Secondary"
-      ]
-    },
-    {
-      "id": "Wall Magazine Display",
-      "icon": "Layout",
-      "name": "Wall Magazine Display",
-      "isFree": false,
-      "tagline": "Design an informative physical wall poster/magazine.",
-      "category": "Exhibition track",
-      "teamSize": 1,
-      "bannerUrl": "https://images.unsplash.com/photo-1526721940322-10fb6e3ae94a?auto=format&fit=crop&w=1200&q=80",
-      "description": "Categories: All Categories \n\nFormat: Poster display covering a unified mathematical theme, history, or open conjecture.",
-      "isTeamEvent": false,
-      "allowedCategories": [
-        "Primary",
-        "Junior",
-        "Secondary",
-        "Higher Secondary"
-      ]
-    },
-    {
-      "id": "Segment-1786207353546",
-      "icon": "Trophy",
-      "name": "Tic-Tac-Toe",
-      "isFree": false,
-      "tagline": "Tic-tac-toe is a simple paper-and-pencil game for two players. Players take turns placing an X or an O on a 3x3 grid. The first player to get three of their marks in a row (up, down, across, or diagonal) wins the game.",
-      "category": "Team Track",
-      "teamSize": 3,
-      "bannerUrl": "https://images.unsplash.com/photo-1668901382969-8c73e450a1f5?q=80&w=880&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-      "description": "Tic-Tac-Toe is a head-to-head, team-based math competition where strategy meets problem-solving. Two teams face off on a standard $3 \\times 3$ grid. The objective is to claim three squares in a row—horizontally, vertically, or diagonally—or possess the most claimed squares when time runs out. To mark a cell, the team must successfully answer a primary-level math question assigned to that square before their opponents or within a set time limit.",
-      "isTeamEvent": true
+      "id": "article-1778853653072",
+      "date": "15 May 2026",
+      "slug": "new-math-article",
+      "title": "Straight Lines: Basic to Best",
+      "author": "Sudipto Sen",
+      "pdfUrl": "https://ikciatrploqznijspyuk.supabase.co/storage/v1/object/public/images/1778853710297-xic85pvpc.pdf",
+      "content": "",
+      "excerpt": "A structured and enriched theory document on Straight Lines,\nspanning foundational coordinate geometry, engineering-level\nproblem solving, Olympiad extensions, transformations,\nprojective geometry, 3D lines, and applications in physics.",
+      "category": "Mathematics",
+      "imageUrl": "",
+      "published": true
     }
   ],
-  "festivalCalendar": {
-    "title": "8th Josephite Math Mania",
-    "events": [
-      {
-        "day": "Day 1",
-        "title": "8th Josephite Math Mania",
-        "dateStr": "24 Sept 2026",
-        "isoDate": "2026-09-24",
-        "location": "St. Joseph Higher Secondary School, 97 Asad Avenue, Mohammadpur, Dhaka-1207",
-        "description": "TBA"
-      },
-      {
-        "day": "Day 2",
-        "title": "8th Josephite National Math Festival - Day 2 (Team Mania & Workshops)",
-        "dateStr": "25 Sept 2026",
-        "isoDate": "2026-09-25",
-        "location": "St. Joseph Higher Secondary School, 97 Asad Avenue, Mohammadpur, Dhaka-1207",
-        "description": "TBA"
-      },
-      {
-        "day": "Day 3",
-        "title": "8th Josephite National Math Festival - Grand Finale & Awards",
-        "dateStr": "26 Sept 2026",
-        "isoDate": "2026-09-26",
-        "location": "St. Joseph Higher Secondary School, 97 Asad Avenue, Mohammadpur, Dhaka-1207",
-        "description": "TBA"
-      }
-    ],
-    "location": "St. Joseph Higher Secondary School, 97 Asad Avenue, Mohammadpur, Dhaka-1207"
-  }
+  "lastUpdated": "2026-08-20T11:44:33.210Z",
+  "_instruction": "Update 'lastUpdated' whenever you manually edit this file to ensure changes take precedence over the admin panel."
 }
