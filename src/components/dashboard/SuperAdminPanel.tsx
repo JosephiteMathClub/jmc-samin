@@ -53,6 +53,8 @@ import {
   Sparkles,
   Laptop,
   Ticket,
+  User,
+  ShieldCheck,
   Archive
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
@@ -81,6 +83,7 @@ export function RegistrationToggleControl() {
   const [isInterEnabled, setIsInterEnabled] = useState<boolean>(true);
   const [isInterRegEnabled, setIsInterRegEnabled] = useState<boolean>(true);
   const [primaryRegTarget, setPrimaryRegTarget] = useState<'intra' | 'inter'>('inter');
+  const [passDocumentType, setPassDocumentType] = useState<'ticket' | 'verification_slip'>('ticket');
   const [loading, setLoading] = useState<boolean>(true);
   const [updating, setUpdating] = useState<boolean>(false);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
@@ -100,12 +103,14 @@ export function RegistrationToggleControl() {
           const inter = data.find(item => item.key === 'visit_inter_enabled');
           const interReg = data.find(item => item.key === 'inter_registration_enabled');
           const targetItem = data.find(item => item.key === 'primary_registration_target');
+          const docTypeItem = data.find(item => item.key === 'registration_document_type');
 
           if (reg) setIsEnabled(reg.value === true);
           if (intra) setIsIntraEnabled(intra.value === true);
           if (inter) setIsInterEnabled(inter.value === true);
           if (interReg) setIsInterRegEnabled(interReg.value === true);
           if (targetItem) setPrimaryRegTarget(targetItem.value === 'intra' ? 'intra' : 'inter');
+          if (docTypeItem) setPassDocumentType(docTypeItem.value === 'verification_slip' ? 'verification_slip' : 'ticket');
 
           // Insert defaults if missing
           if (!intra) {
@@ -124,6 +129,10 @@ export function RegistrationToggleControl() {
             await supabase.from('system_settings').upsert({ key: 'primary_registration_target', value: 'inter' });
             setPrimaryRegTarget('inter');
           }
+          if (!docTypeItem) {
+            await supabase.from('system_settings').upsert({ key: 'registration_document_type', value: 'ticket' });
+            setPassDocumentType('ticket');
+          }
         } else {
           // Attempt to insert default values
           await supabase.from('system_settings').upsert({ key: 'event_registration_enabled', value: true });
@@ -131,6 +140,7 @@ export function RegistrationToggleControl() {
           await supabase.from('system_settings').upsert({ key: 'visit_inter_enabled', value: true });
           await supabase.from('system_settings').upsert({ key: 'inter_registration_enabled', value: true });
           await supabase.from('system_settings').upsert({ key: 'primary_registration_target', value: 'inter' });
+          await supabase.from('system_settings').upsert({ key: 'registration_document_type', value: 'ticket' });
         }
       } catch (err: any) {
         if (err?.code === '42P01') {
@@ -144,6 +154,42 @@ export function RegistrationToggleControl() {
     }
     fetchStatuses();
   }, []);
+
+  const handleToggleDocumentType = async (docType: 'ticket' | 'verification_slip') => {
+    setUpdating(true);
+    setStatusMessage(null);
+    try {
+      const { error } = await supabase
+        .from('system_settings')
+        .upsert({
+          key: 'registration_document_type',
+          value: docType,
+          updated_at: new Date().toISOString()
+        });
+
+      if (error) {
+        // Attempt admin API route fallback
+        const res = await fetch('/api/admin/system-settings', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ key: 'registration_document_type', value: docType })
+        });
+        if (!res.ok) {
+          if (error.message?.includes("relation") || error.code === '42P01') {
+            throw new Error("The settings table ('system_settings') is not yet created in Supabase.");
+          }
+          throw error;
+        }
+      }
+      setPassDocumentType(docType);
+      setStatusMessage(`Registration pass document format updated to: ${docType === 'ticket' ? 'ONLY TICKET (FOR INTRA)' : 'VERIFICATION SLIP (INTER)'}.`);
+    } catch (err: any) {
+      console.error('Failed to update registration_document_type status', err);
+      setStatusMessage(`Error: ${err.message || 'Could not update pass document mode.'}`);
+    } finally {
+      setUpdating(false);
+    }
+  };
 
   const handleToggleRegTarget = async (target: 'intra' | 'inter') => {
     setUpdating(true);
@@ -337,7 +383,7 @@ export function RegistrationToggleControl() {
       </div>
 
       {/* 5. Primary Registration Form Target Toggle (Intra vs Inter) */}
-      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 pb-6 border-b border-white/5">
         <div className="flex items-start gap-4">
           <div className="p-4 rounded-2xl flex items-center justify-center border bg-gradient-to-br from-pink-500/20 to-purple-500/20 border-pink-500/30 text-pink-400">
             <SlidersHorizontal className="w-7 h-7" />
@@ -379,6 +425,71 @@ export function RegistrationToggleControl() {
             } ${updating ? 'opacity-50 cursor-not-allowed' : ''}`}
           >
             🌐 Inter-School
+          </button>
+        </div>
+      </div>
+
+      {/* 6. Document Type Toggle: Only Ticket (for Intra) vs Verification Slip (Inter) */}
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+        <div className="flex items-start gap-4">
+          <div className={`p-4 rounded-2xl flex items-center justify-center border transition-all ${
+            passDocumentType === 'ticket' 
+              ? 'bg-amber-500/10 border-amber-500/30 text-amber-400' 
+              : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
+          }`}>
+            {passDocumentType === 'ticket' ? <Ticket className="w-7 h-7" /> : <FileText className="w-7 h-7" />}
+          </div>
+          <div>
+            <div className="flex flex-wrap items-center gap-2">
+              <h3 className="font-extrabold text-white text-lg uppercase tracking-tight">Pass Document Output Format</h3>
+              <span className={`text-[9px] font-mono font-black uppercase tracking-widest px-2.5 py-0.5 rounded border ${
+                passDocumentType === 'ticket'
+                  ? 'bg-amber-500/15 text-amber-300 border-amber-500/30'
+                  : 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
+              }`}>
+                ACTIVE: {passDocumentType === 'ticket' ? 'ONLY TICKET (INTRA)' : 'VERIFICATION SLIP (INTER)'}
+              </span>
+            </div>
+            <p className="text-xs text-zinc-400 mt-1 max-w-md leading-relaxed">
+              Switch between providing <strong>Only Ticket (for Intra-school)</strong> or full <strong>Verification Slip (for Inter-school)</strong> across post-registration and user profiles.
+            </p>
+            <div className="flex items-center gap-2 mt-2 text-[10px] font-mono text-zinc-500">
+              <span className="inline-block w-2 h-2 rounded-full bg-indigo-400"></span>
+              <span>
+                {passDocumentType === 'ticket' 
+                  ? 'Participants receive a streamlined entry ticket with category stub & ticket number.' 
+                  : 'Participants receive an official A4 Verification Slip PDF with embedded scannable QR.'}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2 bg-zinc-900/90 p-1.5 rounded-2xl border border-white/10 shadow-inner">
+          <button
+            type="button"
+            onClick={() => handleToggleDocumentType('ticket')}
+            disabled={updating}
+            className={`px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer flex items-center gap-2 select-none ${
+              passDocumentType === 'ticket' 
+                ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-black font-black shadow-lg shadow-amber-500/25 border border-amber-400/40' 
+                : 'text-zinc-400 hover:text-white bg-white/5 hover:bg-white/10 border border-transparent'
+            } ${updating ? 'opacity-50 cursor-not-allowed' : ''}`}
+          >
+            <Ticket className="w-3.5 h-3.5" />
+            🎟️ Only Ticket (Intra)
+          </button>
+          <button
+            type="button"
+            onClick={() => handleToggleDocumentType('verification_slip')}
+            disabled={updating}
+            className={`px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer flex items-center gap-2 select-none ${
+              passDocumentType === 'verification_slip' 
+                ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-black shadow-lg shadow-emerald-500/25 border border-emerald-400/40' 
+                : 'text-zinc-400 hover:text-white bg-white/5 hover:bg-white/10 border border-transparent'
+            } ${updating ? 'opacity-50 cursor-not-allowed' : ''}`}
+          >
+            <FileText className="w-3.5 h-3.5" />
+            📄 Verification Slip (Inter)
           </button>
         </div>
       </div>
@@ -2201,7 +2312,7 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ isSuperAdmin =
   const [loading, setLoading] = useState(true);
   const [promoting, setPromoting] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [activeSubTab, setActiveSubTab] = useState<'users' | 'database' | 'positions' | 'support' | 'email' | 'food' | 'cards' | 'transactions' | 'registration' | 'manual_announce' | 'bulk_name_notice' | 'resend_verification' | 'participant_history'>('users');
+  const [activeSubTab, setActiveSubTab] = useState<'users' | 'ticket_audit' | 'positions' | 'support' | 'email' | 'food' | 'cards' | 'transactions' | 'registration' | 'manual_announce' | 'bulk_name_notice' | 'resend_verification' | 'participant_history'>('users');
   
   // Resend Verification Pass State
   const [resendRegistrations, setResendRegistrations] = useState<any[]>([]);
@@ -2214,6 +2325,7 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ isSuperAdmin =
   const [resendingBulk, setResendingBulk] = useState(false);
   const [resendModalCandidate, setResendModalCandidate] = useState<PurchaseSlipCandidate | null>(null);
   const [showResendModal, setShowResendModal] = useState(false);
+  const [adminDocType, setAdminDocType] = useState<'ticket' | 'verification_slip'>('ticket');
   
   // Member ID Cards state
   const [members, setMembers] = useState<any[]>([]);
@@ -2499,23 +2611,41 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ isSuperAdmin =
     }
   };
 
-  // Database Explorer state
-  const [tables] = useState([
-    'profiles', 
-    'member', 
-    'ec_member', 
-    'primary_events', 
-    'junior_events', 
-    'secondary_events', 
-    'higher_secondary_events', 
-    'previous_year_participants',
-    'event_participation', 
-    'site_content', 
-    'support_tickets'
-  ]);
-  const [selectedTable, setSelectedTable] = useState('profiles');
-  const [tableData, setTableData] = useState<any[]>([]);
-  const [loadingTable, setLoadingTable] = useState(false);
+  // Ticket Registration Audit State
+  interface TicketAuditRecord {
+    id: string;
+    ticketId: string;
+    fullName: string;
+    email: string;
+    phone: string;
+    school: string;
+    class: string;
+    section: string;
+    roll: string;
+    candidateType: 'spot' | 'online' | 'member' | 'ec_member';
+    eventsList: string[];
+    teamName?: string;
+    confirmed: boolean;
+    confirmedAt?: string;
+    confirmedBy?: string;
+    confirmedByName?: string;
+    confirmedByEmail?: string;
+    validated: boolean;
+    validatedAt?: string;
+    validatedBy?: string;
+    validatedByName?: string;
+    validatedByEmail?: string;
+    snacks?: boolean;
+    certificate?: boolean;
+    souvenir?: boolean;
+  }
+
+  const [ticketAuditRecords, setTicketAuditRecords] = useState<TicketAuditRecord[]>([]);
+  const [loadingTicketAudit, setLoadingTicketAudit] = useState(false);
+  const [ticketAuditSearchTerm, setTicketAuditSearchTerm] = useState('');
+  const [ticketAuditTypeFilter, setTicketAuditTypeFilter] = useState<'all' | 'spot' | 'online'>('all');
+  const [ticketAuditValidationFilter, setTicketAuditValidationFilter] = useState<'all' | 'validated' | 'unvalidated'>('all');
+  const [ticketAuditAdminFilter, setTicketAuditAdminFilter] = useState<string>('all');
 
   // Position Management state
   const [participations, setParticipations] = useState<any[]>([]);
@@ -2575,20 +2705,152 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ isSuperAdmin =
     }
   }, [showToast]);
 
-  const fetchTableData = useCallback(async (tableName: string) => {
-    setLoadingTable(true);
+  const fetchTicketAuditRecords = useCallback(async () => {
+    setLoadingTicketAudit(true);
     try {
-      const { data, error } = await supabase
-        .from(tableName)
+      const list: TicketAuditRecord[] = [];
+
+      // 1. Load from site_content -> ticket_purchases
+      const { data: contentData } = await supabase
+        .from('site_content')
         .select('*')
-        .limit(100);
-      
-      if (error) throw error;
-      setTableData(data || []);
+        .eq('id', 'ticket_purchases')
+        .maybeSingle();
+
+      if (contentData?.data) {
+        const data = contentData.data;
+        const regularPurchases = data.purchases || {};
+        const spotTickets = data.spotTickets || {};
+
+        // Spot tickets
+        Object.entries(spotTickets).forEach(([spotId, item]: [string, any]) => {
+          const confEmail = item.confirmedByEmail || item.registeredByEmail || (item.confirmedBy?.includes('@') ? item.confirmedBy : '');
+          const confName = item.confirmedByName || item.registeredByName || (confEmail ? confEmail.split('@')[0] : (item.confirmedBy || 'Super Admin'));
+          const valEmail = item.validatedByEmail || (item.validatedBy?.includes('@') ? item.validatedBy : '');
+          const valName = item.validatedByName || (valEmail ? valEmail.split('@')[0] : (item.validatedBy || ''));
+
+          list.push({
+            id: `spot-${spotId}`,
+            ticketId: spotId.startsWith('#') ? spotId : `#SPOT-${spotId}`,
+            fullName: item.fullName || 'Anonymous Spot Registrant',
+            email: item.email || '',
+            phone: item.phone || '',
+            school: item.school || 'St. Joseph Higher Secondary School',
+            class: item.class || 'N/A',
+            section: item.section || 'N/A',
+            roll: item.roll || 'N/A',
+            candidateType: 'spot',
+            eventsList: Array.isArray(item.eventsList) ? item.eventsList : (item.events ? [item.events] : ['On-Spot Ticket Registration']),
+            teamName: item.teamName,
+            confirmed: true,
+            confirmedAt: item.confirmedAt || item.registeredAt,
+            confirmedBy: item.confirmedBy || item.registeredBy,
+            confirmedByName: confName,
+            confirmedByEmail: confEmail,
+            validated: Boolean(item.validated),
+            validatedAt: item.validatedAt,
+            validatedBy: item.validatedBy,
+            validatedByName: valName,
+            validatedByEmail: valEmail,
+            snacks: Boolean(item.snacks),
+            certificate: Boolean(item.certificate),
+            souvenir: Boolean(item.souvenir)
+          });
+        });
+
+        // Online & registered candidate purchases
+        Object.entries(regularPurchases).forEach(([candId, item]: [string, any]) => {
+          const confEmail = item.confirmedByEmail || (item.confirmedBy?.includes('@') ? item.confirmedBy : '');
+          const confName = item.confirmedByName || (confEmail ? confEmail.split('@')[0] : (item.confirmedBy || 'Admin'));
+          const valEmail = item.validatedByEmail || (item.validatedBy?.includes('@') ? item.validatedBy : '');
+          const valName = item.validatedByName || (valEmail ? valEmail.split('@')[0] : (item.validatedBy || ''));
+
+          list.push({
+            id: candId,
+            ticketId: item.memberId || candId.slice(0, 8).toUpperCase(),
+            fullName: item.fullName || 'Registered Participant',
+            email: item.email || '',
+            phone: item.phone || '',
+            school: item.school || 'St. Joseph Higher Secondary School',
+            class: item.class || 'N/A',
+            section: item.section || 'N/A',
+            roll: item.roll || 'N/A',
+            candidateType: item.candidateType || 'online',
+            eventsList: Array.isArray(item.eventsList) ? item.eventsList : ['Official Event Pass'],
+            teamName: item.teamName,
+            confirmed: Boolean(item.confirmed),
+            confirmedAt: item.confirmedAt,
+            confirmedBy: item.confirmedBy,
+            confirmedByName: confName,
+            confirmedByEmail: confEmail,
+            validated: Boolean(item.validated),
+            validatedAt: item.validatedAt,
+            validatedBy: item.validatedBy,
+            validatedByName: valName,
+            validatedByEmail: valEmail,
+            snacks: Boolean(item.snacks),
+            certificate: Boolean(item.certificate),
+            souvenir: Boolean(item.souvenir)
+          });
+        });
+      }
+
+      // 2. Cross-reference admin_audit_logs
+      try {
+        const { data: auditLogs } = await supabase
+          .from('admin_audit_logs')
+          .select('*')
+          .order('created_at', { ascending: false });
+
+        if (auditLogs && auditLogs.length > 0) {
+          auditLogs.forEach((log: any) => {
+            let details: any = {};
+            try {
+              details = typeof log.details === 'string' ? JSON.parse(log.details) : (log.details || {});
+            } catch (e) {
+              details = {};
+            }
+
+            const targetId = log.target || details.candidateId || details.id;
+            if (targetId) {
+              const existing = list.find(r => r.id === targetId || r.ticketId === targetId || r.id === `spot-${targetId}`);
+              if (existing) {
+                if (log.action_type && (log.action_type.includes('SPOT') || log.action_type.includes('CONFIRM') || log.action_type.includes('TICKET'))) {
+                  if ((!existing.confirmedByName || existing.confirmedByName === 'Admin') && log.admin_name) {
+                    existing.confirmedByName = log.admin_name;
+                  }
+                  if (!existing.confirmedByEmail && log.admin_email) {
+                    existing.confirmedByEmail = log.admin_email;
+                  }
+                }
+                if (log.action_type && log.action_type.includes('VALIDATE')) {
+                  if (!existing.validatedByName && log.admin_name) {
+                    existing.validatedByName = log.admin_name;
+                  }
+                  if (!existing.validatedByEmail && log.admin_email) {
+                    existing.validatedByEmail = log.admin_email;
+                  }
+                }
+              }
+            }
+          });
+        }
+      } catch (auditErr) {
+        console.warn("Audit logs non-critical check warning:", auditErr);
+      }
+
+      list.sort((a, b) => {
+        const timeA = a.confirmedAt ? new Date(a.confirmedAt).getTime() : 0;
+        const timeB = b.confirmedAt ? new Date(b.confirmedAt).getTime() : 0;
+        return timeB - timeA;
+      });
+
+      setTicketAuditRecords(list);
     } catch (err: any) {
-      showToast(err.message, 'error');
+      console.error("Failed to load ticket audit records:", err);
+      showToast(err.message || "Failed to load ticket audit data", "error");
     } finally {
-      setLoadingTable(false);
+      setLoadingTicketAudit(false);
     }
   }, [showToast]);
 
@@ -3367,6 +3629,21 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ isSuperAdmin =
         }
       }
 
+      // Also fetch current document type setting
+      try {
+        const { data: docTypeSetting } = await supabase
+          .from('system_settings')
+          .select('value')
+          .eq('key', 'registration_document_type')
+          .maybeSingle();
+
+        if (docTypeSetting && docTypeSetting.value) {
+          setAdminDocType(docTypeSetting.value === 'verification_slip' ? 'verification_slip' : 'ticket');
+        }
+      } catch (e) {
+        console.warn("Could not query system_settings in fetchResendRegistrations:", e);
+      }
+
       setResendRegistrations(mergedList);
     } catch (err) {
       console.error("Failed to fetch registrations for resend tab:", err);
@@ -3393,7 +3670,8 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ isSuperAdmin =
         roll: reg.roll || 'N/A',
         trxnid: reg.trxnid || 'VERIFIED',
         events: Array.isArray(reg.eventsList) && reg.eventsList.length > 0 ? reg.eventsList.join(', ') : (reg.selected_events || 'Josephite Math Club Event Pass'),
-        school: reg.school || reg.institution || 'St. Joseph Higher Secondary School'
+        school: reg.school || reg.institution || 'St. Joseph Higher Secondary School',
+        documentType: adminDocType
       };
 
       const res = await fetch('/api/admin/send-purchase-slip', {
@@ -3401,13 +3679,14 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ isSuperAdmin =
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           recipients: [payload],
+          documentType: adminDocType,
           verifiedBy: 'Super Admin'
         })
       });
 
       const data = await res.json();
       if (res.ok && data.success) {
-        showToast(`Verification PDF & QR pass email successfully sent to ${targetEmail}!`, "success");
+        showToast(`${adminDocType === 'ticket' ? 'Event Ticket' : 'Verification Slip'} email successfully sent to ${targetEmail}!`, "success");
       } else {
         throw new Error(data.error || 'Failed to dispatch email');
       }
@@ -3441,7 +3720,8 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ isSuperAdmin =
         roll: reg.roll,
         trxnid: reg.trxnid,
         events: Array.isArray(reg.eventsList) ? reg.eventsList.join(', ') : reg.selected_events,
-        school: reg.school
+        school: reg.school,
+        documentType: adminDocType
       })).filter(p => p.recipientEmail);
 
       if (payloads.length === 0) {
@@ -3454,13 +3734,14 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ isSuperAdmin =
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           recipients: payloads,
+          documentType: adminDocType,
           verifiedBy: 'Super Admin Bulk'
         })
       });
 
       const data = await res.json();
       if (res.ok && data.success) {
-        showToast(`Bulk verification emails sent to ${data.results?.filter((r: any) => r.success).length || payloads.length} candidates!`, "success");
+        showToast(`Bulk ${adminDocType === 'ticket' ? 'event ticket' : 'verification slip'} emails sent to ${data.results?.filter((r: any) => r.success).length || payloads.length} candidates!`, "success");
         setResendSelected({});
       } else {
         throw new Error(data.error || 'Bulk dispatch failed');
@@ -3475,7 +3756,7 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ isSuperAdmin =
 
   useEffect(() => {
     if (activeSubTab === 'users') fetchUsers();
-    if (activeSubTab === 'database') fetchTableData(selectedTable);
+    if (activeSubTab === 'ticket_audit') fetchTicketAuditRecords();
     if (activeSubTab === 'positions') fetchParticipations();
     if (activeSubTab === 'email') fetchEmailConfig();
     if (activeSubTab === 'food') fetchFoodConfig();
@@ -3485,9 +3766,8 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ isSuperAdmin =
     if (activeSubTab === 'resend_verification') fetchResendRegistrations();
   }, [
     activeSubTab, 
-    selectedTable, 
     fetchUsers, 
-    fetchTableData, 
+    fetchTicketAuditRecords, 
     fetchParticipations, 
     fetchEmailConfig, 
     fetchFoodConfig, 
@@ -3532,96 +3812,120 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ isSuperAdmin =
     }
   };
 
-  const deleteRow = async (tableName: string, rowId: any) => {
-    if (!isSuperAdmin) {
-      showToast('Only Super Admins can delete database records.', 'error');
-      return;
-    }
-    if (!window.confirm('Are you sure you want to delete this row? This action is irreversible.')) return;
-    try {
-      const liveTables = ['primary_events', 'junior_events', 'secondary_events', 'higher_secondary_events'];
-      
-      if (liveTables.includes(tableName)) {
-        // Automatically archive into previous_year_participants before deleting
-        const res = await fetch('/api/admin/participant-history', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            action: 'archive_and_delete_single',
-            tableName,
-            rowId
-          })
-        });
-        const data = await res.json();
-        if (res.ok && data.success) {
-          setTableData(prev => prev.filter(row => row.id !== rowId));
-          showToast('Row deleted from live table and preserved in previous_year_participants!', 'success');
-          return;
+  const availableTicketAdmins = React.useMemo(() => {
+    const adminSet = new Map<string, string>();
+    ticketAuditRecords.forEach(r => {
+      if (r.confirmedByEmail) {
+        adminSet.set(r.confirmedByEmail, r.confirmedByName ? `${r.confirmedByName} (${cleanDisplayEmail(r.confirmedByEmail)})` : cleanDisplayEmail(r.confirmedByEmail));
+      } else if (r.confirmedByName && r.confirmedByName !== 'Admin' && r.confirmedByName !== 'Super Admin') {
+        adminSet.set(r.confirmedByName, r.confirmedByName);
+      }
+      if (r.validatedByEmail) {
+        adminSet.set(r.validatedByEmail, r.validatedByName ? `${r.validatedByName} (${cleanDisplayEmail(r.validatedByEmail)})` : cleanDisplayEmail(r.validatedByEmail));
+      } else if (r.validatedByName && r.validatedByName !== 'Admin') {
+        adminSet.set(r.validatedByName, r.validatedByName);
+      }
+    });
+    return Array.from(adminSet.entries()).map(([key, label]) => ({ key, label }));
+  }, [ticketAuditRecords]);
+
+  const filteredTicketAuditRecords = React.useMemo(() => {
+    return ticketAuditRecords.filter(record => {
+      const search = ticketAuditSearchTerm.toLowerCase();
+      const matchesSearch = !search ||
+        record.fullName.toLowerCase().includes(search) ||
+        record.email.toLowerCase().includes(search) ||
+        record.phone.toLowerCase().includes(search) ||
+        record.ticketId.toLowerCase().includes(search) ||
+        record.school.toLowerCase().includes(search) ||
+        (record.confirmedByName && record.confirmedByName.toLowerCase().includes(search)) ||
+        (record.confirmedByEmail && record.confirmedByEmail.toLowerCase().includes(search)) ||
+        (record.validatedByName && record.validatedByName.toLowerCase().includes(search)) ||
+        (record.validatedByEmail && record.validatedByEmail.toLowerCase().includes(search));
+
+      if (!matchesSearch) return false;
+
+      if (ticketAuditTypeFilter === 'spot' && record.candidateType !== 'spot') return false;
+      if (ticketAuditTypeFilter === 'online' && record.candidateType === 'spot') return false;
+
+      if (ticketAuditValidationFilter === 'validated' && !record.validated) return false;
+      if (ticketAuditValidationFilter === 'unvalidated' && record.validated) return false;
+
+      if (ticketAuditAdminFilter !== 'all') {
+        const matchConfEmail = record.confirmedByEmail === ticketAuditAdminFilter;
+        const matchConfName = record.confirmedByName === ticketAuditAdminFilter;
+        const matchValEmail = record.validatedByEmail === ticketAuditAdminFilter;
+        const matchValName = record.validatedByName === ticketAuditAdminFilter;
+        if (!matchConfEmail && !matchConfName && !matchValEmail && !matchValName) {
+          return false;
         }
       }
 
-      // Handle different ID types (id for UUID, or specific key for site_content)
-      const idKey = tableName === 'site_content' ? 'id' : 'id';
-      const { error } = await supabase
-        .from(tableName)
-        .delete()
-        .eq(idKey, rowId);
-      
-      if (error) throw error;
-      
-      setTableData(prev => prev.filter(row => row[idKey] !== rowId));
-      showToast('Row deleted successfully', 'success');
-    } catch (err: any) {
-      showToast(err.message, 'error');
-    }
-  };
+      return true;
+    });
+  }, [ticketAuditRecords, ticketAuditSearchTerm, ticketAuditTypeFilter, ticketAuditValidationFilter, ticketAuditAdminFilter]);
 
-  const editRow = async (tableName: string, row: any) => {
-    if (!isSuperAdmin) {
-      showToast('Only Super Admins can edit database records.', 'error');
+  const exportTicketAuditCSV = () => {
+    if (filteredTicketAuditRecords.length === 0) {
+      showToast("No ticket audit records available to export.", "info");
       return;
     }
-    const field = window.prompt(`Enter column name to edit (Available: ${Object.keys(row).join(', ')}):`);
-    if (!field || !(field in row)) return;
-    
-    const newValue = window.prompt(`Enter new value for "${field}" (Current: ${row[field] !== undefined ? String(row[field]) : ''}):`);
-    if (newValue === null) return;
 
-    try {
-      const idKey = tableName === 'site_content' ? 'id' : 'id';
-      const updates = { [field]: newValue };
-      
-      const { error } = await supabase
-        .from(tableName)
-        .update(updates)
-        .eq(idKey, row[idKey]);
-      
-      if (error) throw error;
-      
-      setTableData(prev => prev.map(r => r[idKey] === row[idKey] ? { ...r, ...updates } : r));
-      showToast('Row updated successfully', 'success');
-    } catch (err: any) {
-      showToast(err.message, 'error');
-    }
-  };
+    const headers = [
+      "Ticket ID",
+      "Participant Name",
+      "Email",
+      "Phone",
+      "Institution",
+      "Class",
+      "Section",
+      "Roll",
+      "Type",
+      "Events",
+      "Registered / Confirmed By Admin Name",
+      "Registered / Confirmed By Admin Email",
+      "Registration Timestamp",
+      "Validated",
+      "Validated By Admin Name",
+      "Validated By Admin Email",
+      "Validation Timestamp",
+      "Snacks Claimed",
+      "Certificate Claimed",
+      "Souvenir Claimed"
+    ];
 
-  const addRow = async (tableName: string) => {
-    const dataStr = window.prompt('Enter JSON object for new row (e.g. {"email": "test@example.com", "full_name": "Test User"}):');
-    if (!dataStr) return;
+    const rows = filteredTicketAuditRecords.map(r => [
+      `"${r.ticketId}"`,
+      `"${(r.fullName || '').replace(/"/g, '""')}"`,
+      `"${r.email}"`,
+      `"${r.phone}"`,
+      `"${(r.school || '').replace(/"/g, '""')}"`,
+      `"${r.class}"`,
+      `"${r.section}"`,
+      `"${r.roll}"`,
+      `"${r.candidateType.toUpperCase()}"`,
+      `"${r.eventsList.join('; ').replace(/"/g, '""')}"`,
+      `"${(r.confirmedByName || 'N/A').replace(/"/g, '""')}"`,
+      `"${r.confirmedByEmail || 'N/A'}"`,
+      `"${r.confirmedAt ? new Date(r.confirmedAt).toLocaleString() : 'N/A'}"`,
+      `"${r.validated ? 'YES' : 'NO'}"`,
+      `"${(r.validatedByName || 'N/A').replace(/"/g, '""')}"`,
+      `"${r.validatedByEmail || 'N/A'}"`,
+      `"${r.validatedAt ? new Date(r.validatedAt).toLocaleString() : 'N/A'}"`,
+      `"${r.snacks ? 'YES' : 'NO'}"`,
+      `"${r.certificate ? 'YES' : 'NO'}"`,
+      `"${r.souvenir ? 'YES' : 'NO'}"`
+    ]);
 
-    try {
-      const data = JSON.parse(dataStr);
-      const { error } = await supabase
-        .from(tableName)
-        .insert(data);
-      
-      if (error) throw error;
-      
-      fetchTableData(tableName);
-      showToast('Row added successfully', 'success');
-    } catch (err: any) {
-      showToast(err.message, 'error');
-    }
+    const csvContent = "data:text/csv;charset=utf-8," + [headers.join(","), ...rows.map(e => e.join(","))].join("\n");
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `ticket_admin_registration_audit_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    showToast("Ticket admin audit spreadsheet exported successfully!", "success");
   };
 
   const filteredUsers = users.filter(u => 
@@ -3687,7 +3991,7 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ isSuperAdmin =
           { id: 'transactions', label: 'Verified Transactions', icon: CheckCircle2 },
           { id: 'resend_verification', label: 'Resend Verification Pass', icon: Mail },
           { id: 'registration', label: 'Registration Toggle', icon: ShieldAlert },
-          { id: 'database', label: 'Database Explorer', icon: DatabaseZap }
+          { id: 'ticket_audit', label: 'Ticket Admin Audit', icon: Ticket }
         ].map(tab => (
           <button
             key={tab.id}
@@ -4622,95 +4926,319 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ isSuperAdmin =
           </motion.div>
         )}
 
-        {activeSubTab === 'database' && (
+        {activeSubTab === 'ticket_audit' && (
           <motion.div
-            key="database"
+            key="ticket_audit"
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
+            className="space-y-6"
           >
             <DashboardSection 
-              title="Database Explorer" 
-              description="Directly view and monitor database records. Critical operations only."
-              icon={DatabaseZap}
+              title="Ticket Registration & Issuance Audit" 
+              description="Monitor and verify which admin (full name & email address) registered, issued, or validated each user's ticket from the Ticket Purchase section."
+              icon={Ticket}
               actions={
-                <div className="flex items-center gap-3">
-                  <DashboardButton 
-                    label="Add Row" 
-                    onClick={() => addRow(selectedTable)}
-                    icon={Plus}
-                    className="h-9 px-4 text-[10px]"
-                    variant="secondary"
-                  />
+                <div className="flex flex-wrap items-center gap-3">
+                  <div className="relative min-w-[220px]">
+                    <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
+                    <input
+                      type="text"
+                      placeholder="Search participant, admin, or ticket..."
+                      value={ticketAuditSearchTerm}
+                      onChange={(e) => setTicketAuditSearchTerm(e.target.value)}
+                      className="w-full pl-10 pr-4 py-2 bg-white/5 border border-white/10 rounded-xl text-xs text-white outline-none focus:border-amber-500/50 transition-all placeholder:text-zinc-500"
+                    />
+                  </div>
+
                   <select 
-                    value={selectedTable}
-                    onChange={(e) => setSelectedTable(e.target.value)}
-                    className="px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-[10px] font-bold text-white outline-none focus:border-amber-500/30 uppercase tracking-widest cursor-pointer"
+                    value={ticketAuditTypeFilter}
+                    onChange={(e) => setTicketAuditTypeFilter(e.target.value as any)}
+                    className="px-3.5 py-2 bg-white/5 border border-white/10 rounded-xl text-[10.5px] font-bold text-zinc-300 outline-none focus:border-amber-500/40 uppercase tracking-wider cursor-pointer"
                   >
-                    {tables.map(t => <option key={t} value={t} className="bg-zinc-900">{t}</option>)}
+                    <option value="all" className="bg-zinc-900">All Ticket Types</option>
+                    <option value="spot" className="bg-zinc-900">On-Spot Tickets Only</option>
+                    <option value="online" className="bg-zinc-900">Online Passes Only</option>
                   </select>
+
+                  <select 
+                    value={ticketAuditValidationFilter}
+                    onChange={(e) => setTicketAuditValidationFilter(e.target.value as any)}
+                    className="px-3.5 py-2 bg-white/5 border border-white/10 rounded-xl text-[10.5px] font-bold text-zinc-300 outline-none focus:border-amber-500/40 uppercase tracking-wider cursor-pointer"
+                  >
+                    <option value="all" className="bg-zinc-900">All Validation States</option>
+                    <option value="validated" className="bg-zinc-900">Validated Only</option>
+                    <option value="unvalidated" className="bg-zinc-900">Unvalidated Only</option>
+                  </select>
+
+                  {availableTicketAdmins.length > 0 && (
+                    <select 
+                      value={ticketAuditAdminFilter}
+                      onChange={(e) => setTicketAuditAdminFilter(e.target.value)}
+                      className="px-3.5 py-2 bg-white/5 border border-white/10 rounded-xl text-[10.5px] font-bold text-zinc-300 outline-none focus:border-amber-500/40 uppercase tracking-wider cursor-pointer max-w-[200px] truncate"
+                    >
+                      <option value="all" className="bg-zinc-900">All Admin Operators</option>
+                      {availableTicketAdmins.map(adm => (
+                        <option key={adm.key} value={adm.key} className="bg-zinc-900 truncate">
+                          {adm.label}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+
+                  <DashboardButton 
+                    label="Refresh" 
+                    onClick={fetchTicketAuditRecords}
+                    icon={RefreshCw}
+                    className="h-9 px-3.5 text-[10px]"
+                    variant="secondary"
+                    disabled={loadingTicketAudit}
+                  />
+
+                  <DashboardButton 
+                    label="Export CSV" 
+                    onClick={exportTicketAuditCSV}
+                    icon={FileText}
+                    className="h-9 px-3.5 text-[10px]"
+                    variant="primary"
+                  />
                 </div>
               }
             >
-              <div className="p-4 bg-amber-500/5 border border-amber-500/10 rounded-2xl flex items-center gap-4 mb-6">
-                <AlertCircle className="w-5 h-5 text-amber-500 flex-shrink-0" />
-                <p className="text-[10px] text-amber-500 font-medium leading-relaxed uppercase tracking-widest">
-                  Direct database manipulation can cause site-wide instability. Any deletion here will affect live users.
-                </p>
+              {/* Summary Metric Cards */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
+                <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/5 flex flex-col">
+                  <span className="text-[10px] uppercase font-bold tracking-widest text-zinc-500">Total Audited Tickets</span>
+                  <span className="text-2xl font-black text-white mt-1">{ticketAuditRecords.length}</span>
+                  <span className="text-[9px] text-zinc-500 mt-1">Confirmed or Registered</span>
+                </div>
+
+                <div className="p-4 rounded-2xl bg-amber-500/5 border border-amber-500/10 flex flex-col">
+                  <span className="text-[10px] uppercase font-bold tracking-widest text-amber-500/80">On-Spot Registrations</span>
+                  <span className="text-2xl font-black text-amber-400 mt-1">
+                    {ticketAuditRecords.filter(r => r.candidateType === 'spot').length}
+                  </span>
+                  <span className="text-[9px] text-amber-500/60 mt-1">Directly issued at desk</span>
+                </div>
+
+                <div className="p-4 rounded-2xl bg-green-500/5 border border-green-500/10 flex flex-col">
+                  <span className="text-[10px] uppercase font-bold tracking-widest text-green-500/80">Validated Passes</span>
+                  <span className="text-2xl font-black text-green-400 mt-1">
+                    {ticketAuditRecords.filter(r => r.validated).length}
+                  </span>
+                  <span className="text-[9px] text-green-500/60 mt-1">Gate verified entries</span>
+                </div>
+
+                <div className="p-4 rounded-2xl bg-blue-500/5 border border-blue-500/10 flex flex-col">
+                  <span className="text-[10px] uppercase font-bold tracking-widest text-blue-400/80">Active Admin Issuers</span>
+                  <span className="text-2xl font-black text-blue-400 mt-1">
+                    {availableTicketAdmins.length}
+                  </span>
+                  <span className="text-[9px] text-blue-400/60 mt-1">Staff operating registrations</span>
+                </div>
               </div>
 
+              {/* Table / Records View */}
               <div className="overflow-x-auto min-h-[400px]">
-                {loadingTable ? (
-                  <div className="flex items-center justify-center py-20">
+                {loadingTicketAudit ? (
+                  <div className="flex flex-col items-center justify-center py-24 gap-3">
                     <Loader2 className="w-8 h-8 text-amber-500 animate-spin" />
+                    <p className="text-xs text-zinc-500 uppercase tracking-widest font-bold">Loading Ticket Admin Audit Records...</p>
+                  </div>
+                ) : filteredTicketAuditRecords.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-20 text-center space-y-3">
+                    <div className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-zinc-500">
+                      <Ticket className="w-6 h-6" />
+                    </div>
+                    <h4 className="text-sm font-bold text-white uppercase tracking-wider">No matching ticket records found</h4>
+                    <p className="text-xs text-zinc-500 max-w-sm">
+                      {ticketAuditSearchTerm || ticketAuditTypeFilter !== 'all' || ticketAuditValidationFilter !== 'all' || ticketAuditAdminFilter !== 'all'
+                        ? 'Try clearing or modifying your search filters above.'
+                        : 'No ticket registration entries exist in the system yet.'}
+                    </p>
+                    {(ticketAuditSearchTerm || ticketAuditTypeFilter !== 'all' || ticketAuditValidationFilter !== 'all' || ticketAuditAdminFilter !== 'all') && (
+                      <button
+                        onClick={() => {
+                          setTicketAuditSearchTerm('');
+                          setTicketAuditTypeFilter('all');
+                          setTicketAuditValidationFilter('all');
+                          setTicketAuditAdminFilter('all');
+                        }}
+                        className="px-4 py-2 bg-white/5 border border-white/10 hover:bg-white/10 text-white rounded-xl text-xs font-bold uppercase tracking-wider transition-all"
+                      >
+                        Reset All Filters
+                      </button>
+                    )}
                   </div>
                 ) : (
-                  <table className="w-full text-left border-collapse table-fixed">
+                  <table className="w-full text-left border-collapse">
                     <thead>
-                      <tr className="border-b border-white/5">
-                        {tableData.length > 0 && Object.keys(tableData[0]).slice(0, 6).map(key => (
-                          <th key={key} className="py-4 px-6 text-[10px] uppercase tracking-widest text-zinc-500 font-black">{key}</th>
-                        ))}
-                        <th className="py-4 px-6 w-24 text-[10px] uppercase tracking-widest text-zinc-500 font-black text-right">Admin</th>
+                      <tr className="border-b border-white/5 text-[10px] uppercase tracking-widest text-zinc-500 font-black">
+                        <th className="py-4 px-5">Ticket / Participant</th>
+                        <th className="py-4 px-5">Events & Institution</th>
+                        <th className="py-4 px-5 bg-amber-500/[0.02]">Registered / Confirmed By Admin</th>
+                        <th className="py-4 px-5">Gate Validation</th>
+                        <th className="py-4 px-5 text-right">Perks Claimed</th>
                       </tr>
                     </thead>
-                    <tbody>
-                      {tableData.map((row, i) => (
-                        <tr key={i} className="border-b border-white/5 group hover:bg-white/[0.01]">
-                          {Object.entries(row).slice(0, 6).map(([key, val]: any, j) => (
-                            <td key={j} className="py-4 px-6 overflow-hidden truncate whitespace-nowrap text-[10px] font-mono text-zinc-400 group-hover:text-zinc-200 transition-colors" title={val !== null && val !== undefined ? String(val) : ''}>
-                              {val === null || val === undefined 
-                                ? '' 
-                                : typeof val === 'object' 
-                                  ? (React.isValidElement(val) ? val : '[Object]') 
-                                  : String(val)}
-                            </td>
-                          ))}
-                          <td className="py-4 px-6 text-right">
-                             <div className="flex justify-end gap-1">
-                               <button 
-                                 onClick={() => editRow(selectedTable, row)}
-                                 className="p-2 text-zinc-600 hover:text-amber-500 transition-colors"
-                                 title="Edit row"
-                               >
-                                 <Plus className="w-3.5 h-3.5 rotate-45" />
-                               </button>
-                               <button 
-                                 onClick={() => deleteRow(selectedTable, row.id || row.email || row.member_id)}
-                                 className="p-2 text-zinc-600 hover:text-red-500 transition-colors"
-                                 title="Delete row"
-                               >
-                                 <Trash2 className="w-3.5 h-3.5" />
-                               </button>
-                             </div>
+                    <tbody className="divide-y divide-white/5">
+                      {filteredTicketAuditRecords.map((record) => (
+                        <tr key={record.id} className="group hover:bg-white/[0.015] transition-colors">
+                          {/* Participant / Ticket Info */}
+                          <td className="py-4 px-5 align-top">
+                            <div className="space-y-1.5">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="font-mono text-xs font-black text-white bg-white/10 px-2 py-0.5 rounded-md border border-white/10">
+                                  {record.ticketId}
+                                </span>
+                                {record.candidateType === 'spot' ? (
+                                  <span className="text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                                    Spot Ticket
+                                  </span>
+                                ) : (
+                                  <span className="text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20">
+                                    Online Pass
+                                  </span>
+                                )}
+                              </div>
+                              <p className="text-sm font-bold text-white group-hover:text-amber-400 transition-colors">
+                                {record.fullName}
+                              </p>
+                              <div className="text-[10px] text-zinc-400 space-y-0.5">
+                                {record.email && <p className="truncate font-mono max-w-[220px]" title={record.email}>{cleanDisplayEmail(record.email)}</p>}
+                                {record.phone && <p className="font-mono text-zinc-500">{record.phone}</p>}
+                              </div>
+                            </div>
+                          </td>
+
+                          {/* Events & School */}
+                          <td className="py-4 px-5 align-top">
+                            <div className="space-y-1.5 max-w-xs">
+                              <p className="text-xs font-semibold text-zinc-300 line-clamp-1" title={record.school}>
+                                {record.school || 'St. Joseph Higher Secondary School'}
+                              </p>
+                              <p className="text-[10px] text-zinc-500 font-mono">
+                                Class {record.class} • Sec {record.section} • Roll {record.roll}
+                              </p>
+                              <div className="flex flex-wrap gap-1 mt-1">
+                                {record.eventsList.slice(0, 3).map((ev, idx) => (
+                                  <span key={idx} className="text-[8.5px] px-2 py-0.5 rounded-full bg-white/5 border border-white/5 text-zinc-400 font-medium">
+                                    {ev}
+                                  </span>
+                                ))}
+                                {record.eventsList.length > 3 && (
+                                  <span className="text-[8.5px] px-1.5 py-0.5 rounded-full bg-white/5 border border-white/5 text-zinc-500">
+                                    +{record.eventsList.length - 3} more
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </td>
+
+                          {/* Registered / Confirmed By Admin (Core requirement) */}
+                          <td className="py-4 px-5 align-top bg-amber-500/[0.02] border-x border-amber-500/5">
+                            <div className="space-y-1.5">
+                              <div className="flex items-center gap-1.5">
+                                <div className="w-5 h-5 rounded-full bg-amber-500/10 border border-amber-500/20 flex items-center justify-center flex-shrink-0">
+                                  <Shield className="w-3 h-3 text-amber-500" />
+                                </div>
+                                <span className="text-xs font-bold text-amber-300">
+                                  {record.confirmedByName || 'Admin Desk'}
+                                </span>
+                              </div>
+
+                              <div className="pl-6.5 space-y-1">
+                                {record.confirmedByEmail ? (
+                                  <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-zinc-900 border border-amber-500/20 text-amber-400 font-mono text-[10px]">
+                                    <Mail className="w-3 h-3 text-amber-500/70" />
+                                    <span>{cleanDisplayEmail(record.confirmedByEmail)}</span>
+                                  </div>
+                                ) : (
+                                  <p className="text-[10px] text-zinc-500 italic">No admin email recorded</p>
+                                )}
+
+                                {record.confirmedAt && (
+                                  <p className="text-[9.5px] text-zinc-500">
+                                    {new Date(record.confirmedAt).toLocaleDateString('en-US', {
+                                      month: 'short',
+                                      day: 'numeric',
+                                      year: 'numeric',
+                                      hour: '2-digit',
+                                      minute: '2-digit'
+                                    })}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                          </td>
+
+                          {/* Gate Validation Info */}
+                          <td className="py-4 px-5 align-top">
+                            {record.validated ? (
+                              <div className="space-y-1.5">
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-green-500/10 border border-green-500/20 text-green-400 text-[9.5px] font-black uppercase tracking-wider">
+                                  <CheckCircle2 className="w-3 h-3 text-green-400" />
+                                  Validated Entry
+                                </span>
+                                {(record.validatedByName || record.validatedByEmail) && (
+                                  <div className="space-y-0.5">
+                                    <p className="text-[10px] font-bold text-zinc-300">
+                                      By: {record.validatedByName || 'Validator Admin'}
+                                    </p>
+                                    {record.validatedByEmail && (
+                                      <p className="text-[9px] font-mono text-zinc-500 truncate max-w-[180px]">
+                                        {cleanDisplayEmail(record.validatedByEmail)}
+                                      </p>
+                                    )}
+                                  </div>
+                                )}
+                                {record.validatedAt && (
+                                  <p className="text-[9px] text-zinc-500">
+                                    {new Date(record.validatedAt).toLocaleDateString('en-US', {
+                                      month: 'short',
+                                      day: 'numeric',
+                                      hour: '2-digit',
+                                      minute: '2-digit'
+                                    })}
+                                  </p>
+                                )}
+                              </div>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-zinc-800/60 border border-white/5 text-zinc-500 text-[9.5px] font-semibold uppercase tracking-wider">
+                                <XCircle className="w-3 h-3 text-zinc-600" />
+                                Pending Gate Scan
+                              </span>
+                            )}
+                          </td>
+
+                          {/* Perks Claimed */}
+                          <td className="py-4 px-5 align-top text-right">
+                            <div className="flex flex-col items-end gap-1 text-[9.5px] font-mono">
+                              <span className={`px-2 py-0.5 rounded border ${
+                                record.snacks 
+                                  ? 'bg-amber-500/10 border-amber-500/20 text-amber-400 font-bold' 
+                                  : 'bg-white/[0.02] border-white/5 text-zinc-600'
+                              }`}>
+                                Snacks: {record.snacks ? 'CLAIMED' : 'UNCLAIMED'}
+                              </span>
+                              <span className={`px-2 py-0.5 rounded border ${
+                                record.certificate 
+                                  ? 'bg-green-500/10 border-green-500/20 text-green-400 font-bold' 
+                                  : 'bg-white/[0.02] border-white/5 text-zinc-600'
+                              }`}>
+                                Certificate: {record.certificate ? 'ISSUED' : 'UNISSUED'}
+                              </span>
+                              <span className={`px-2 py-0.5 rounded border ${
+                                record.souvenir 
+                                  ? 'bg-purple-500/10 border-purple-500/20 text-purple-400 font-bold' 
+                                  : 'bg-white/[0.02] border-white/5 text-zinc-600'
+                              }`}>
+                                Souvenir: {record.souvenir ? 'ISSUED' : 'UNISSUED'}
+                              </span>
+                            </div>
                           </td>
                         </tr>
                       ))}
-                      {tableData.length === 0 && (
-                        <tr>
-                          <td colSpan={7} className="py-20 text-center text-zinc-600 text-xs italic">Table is empty.</td>
-                        </tr>
-                      )}
                     </tbody>
                   </table>
                 )}
@@ -5506,6 +6034,7 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ isSuperAdmin =
       <PurchaseSlipModal 
         candidate={resendModalCandidate} 
         isOpen={showResendModal} 
+        documentType={adminDocType}
         onClose={() => setShowResendModal(false)} 
       />
 

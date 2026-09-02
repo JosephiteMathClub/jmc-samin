@@ -29,6 +29,8 @@ import {
 } from 'lucide-react';
 import ScrollReveal from '@/components/ScrollReveal';
 import { usePerformance } from '@/hooks/usePerformance';
+import { useContent } from '@/context/ContentContext';
+import { resolveImageUrl } from '@/lib/utils';
 
 // Samin Tausif's Key Contributions & Features
 const saminContributions = [
@@ -135,11 +137,11 @@ const supportingDevelopers = [
     }
   },
   {
-    name: "Sharan Haque Shakin",
+    name: "Sharafi Ahmed",
     alias: "Idea & Debugging",
     role: "Idea Representer & Debugger",
     bio: "Played an essential role in creative feature ideation, testing interactive layouts, and debugging user experience inconsistencies to elevate the website to its current high visual standard.",
-    image: "/images/members/sharan.jpg",
+    image: "/images/members/sharafi.jpg",
     skills: ["Feature Ideation", "UI Debugging", "Visual Quality Assurance", "Concept Design"],
     color: "from-rose-500/20 to-purple-600/20",
     accent: "text-rose-400",
@@ -149,7 +151,7 @@ const supportingDevelopers = [
       github: "https://github.com",
       linkedin: "https://linkedin.com",
       website: "https://jmc.edu.bd",
-      email: "mailto:sharan@jmc.edu.bd"
+      email: "mailto:sharafi@jmc.edu.bd"
     }
   },
   {
@@ -402,10 +404,24 @@ const FlashlightCard: React.FC<{
 };
 
 export default function DevelopersView() {
+  const { content } = useContent();
   const { shouldReduceGfx } = usePerformance();
   const { scrollYProgress } = useScroll();
   const yParallax = useTransform(scrollYProgress, [0, 1], [0, -140]);
   const opacityHero = useTransform(scrollYProgress, [0, 0.4], [1, 0.3]);
+
+  // Dynamic Image resolution from ContentContext (Admin Dashboard manageable)
+  const saminImage = content?.developers?.samin?.image
+    ? resolveImageUrl(content.developers.samin.image)
+    : "/images/members/samin.jpg";
+
+  const dynamicSupportingDevelopers = supportingDevelopers.map((dev, idx) => {
+    const overrideImage = content?.developers?.supporting?.[idx]?.image;
+    return {
+      ...dev,
+      image: overrideImage ? resolveImageUrl(overrideImage) : dev.image
+    };
+  });
 
   // Subtle interactive mouse tracker for ambient workspace lighting
   const mouseX = useMotionValue(0);
@@ -613,7 +629,7 @@ export default function DevelopersView() {
                     <div className="relative w-full h-full">
                       {/* Photo or Fallback Frame */}
                       <Image 
-                        src="/images/members/samin.jpg" 
+                        src={saminImage} 
                         alt="Samin Tausif"
                         fill
                         className="object-cover transition-all duration-700 group-hover:scale-105"
@@ -856,7 +872,7 @@ export default function DevelopersView() {
             viewport={{ once: true, margin: "-50px" }}
             className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto"
           >
-            {supportingDevelopers.map((dev, index) => (
+            {dynamicSupportingDevelopers.map((dev, index) => (
               <motion.div 
                 key={index}
                 variants={podCardVariants}

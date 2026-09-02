@@ -18,7 +18,9 @@ import {
   User,
   BookOpen,
   Award,
-  Download
+  Download,
+  Users,
+  Crown
 } from 'lucide-react';
 import QRCode from '../QRCode';
 import { toPng } from 'html-to-image';
@@ -39,6 +41,8 @@ export interface PurchaseSlipCandidate {
   trxnid?: string;
   candidateType?: string;
   eventsList?: string[];
+  teamName?: string;
+  teamMembers?: Array<{ role?: string; name: string; class?: string; institute?: string; roll?: string; section?: string; email?: string; phone?: string }>;
   verified?: boolean | string;
   confirmed?: boolean;
 }
@@ -49,13 +53,23 @@ interface PurchaseSlipModalProps {
   onClose: () => void;
   onEmailSent?: () => void;
   autoDownload?: boolean;
+  documentType?: 'ticket' | 'verification_slip';
 }
 
-export function PurchaseSlipModal({ candidate, isOpen, onClose, onEmailSent, autoDownload = false }: PurchaseSlipModalProps) {
+export function PurchaseSlipModal({ 
+  candidate, 
+  isOpen, 
+  onClose, 
+  onEmailSent, 
+  autoDownload = false,
+  documentType = 'verification_slip'
+}: PurchaseSlipModalProps) {
   const [sendingEmail, setSendingEmail] = useState(false);
   const [downloadingPdf, setDownloadingPdf] = useState(false);
   const [emailStatus, setEmailStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [copied, setCopied] = useState(false);
+
+  const isTicketMode = documentType === 'ticket';
 
   useEffect(() => {
     if (isOpen && candidate && autoDownload) {
@@ -90,7 +104,7 @@ export function PurchaseSlipModal({ candidate, isOpen, onClose, onEmailSent, aut
     roll: displayRoll,
     trxnid: displayTrxn,
     events: displayEvents,
-    type: 'ticket_slip',
+    type: isTicketMode ? 'event_ticket' : 'verification_slip',
     v: '1.0'
   });
 
@@ -122,7 +136,7 @@ export function PurchaseSlipModal({ candidate, isOpen, onClose, onEmailSent, aut
       const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
 
       pdf.addImage(dataUrl, 'PNG', 10, 15, pdfWidth, pdfHeight);
-      pdf.save(`JMC-Verification-Slip-${displayId}.pdf`);
+      pdf.save(isTicketMode ? `JMC-Event-Ticket-${displayId}.pdf` : `JMC-Verification-Slip-${displayId}.pdf`);
     } catch (err) {
       console.error('Failed to generate PDF:', err);
     } finally {
@@ -159,6 +173,9 @@ export function PurchaseSlipModal({ candidate, isOpen, onClose, onEmailSent, aut
           trxnid: displayTrxn,
           events: displayEvents,
           school: displaySchool,
+          teamName: candidate.teamName,
+          teamMembers: candidate.teamMembers,
+          documentType: isTicketMode ? 'ticket' : 'verification_slip',
           verifiedBy: 'Super Admin'
         })
       });
@@ -168,7 +185,10 @@ export function PurchaseSlipModal({ candidate, isOpen, onClose, onEmailSent, aut
         throw new Error(data.error || 'Failed to dispatch email');
       }
 
-      setEmailStatus({ type: 'success', message: `Purchase slip emailed successfully to ${candidate.email}!` });
+      setEmailStatus({ 
+        type: 'success', 
+        message: `${isTicketMode ? 'Event ticket pass' : 'Verification slip'} emailed successfully to ${candidate.email}!` 
+      });
       if (onEmailSent) onEmailSent();
     } catch (err: any) {
       console.error('Failed to send purchase slip email:', err);
@@ -233,13 +253,21 @@ export function PurchaseSlipModal({ candidate, isOpen, onClose, onEmailSent, aut
             <div className="flex justify-between items-start pb-4 border-b border-white/10 print:border-black/20">
               <div>
                 <p className="text-[10px] font-bold text-emerald-400 tracking-widest uppercase print:text-emerald-700">Josephite Math Club</p>
-                <h2 className="text-xl font-black text-white tracking-tight font-display mt-0.5 print:text-black">OFFICIAL PURCHASE SLIP</h2>
-                <p className="text-[10px] text-zinc-400 mt-0.5 print:text-zinc-600">Issued for Annual Math Festival & Event Participation</p>
+                <h2 className="text-xl font-black text-white tracking-tight font-display mt-0.5 print:text-black">
+                  {isTicketMode ? 'OFFICIAL EVENT TICKET & ENTRY PASS' : 'OFFICIAL PURCHASE SLIP'}
+                </h2>
+                <p className="text-[10px] text-zinc-400 mt-0.5 print:text-zinc-600">
+                  {isTicketMode ? 'Issued for Intra-School Math Festival • Official Participant Pass' : 'Issued for Annual Math Festival & Event Participation'}
+                </p>
               </div>
 
               <div className="flex flex-col items-end">
-                <span className="px-3 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 flex items-center gap-1 print:bg-emerald-100 print:text-emerald-800 print:border-emerald-300">
-                  <ShieldCheck className="w-3 h-3" /> VERIFIED PASS
+                <span className={`px-3 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider flex items-center gap-1 border ${
+                  isTicketMode 
+                    ? 'bg-amber-500/20 text-amber-300 border-amber-500/30 print:bg-amber-100 print:text-amber-800 print:border-amber-300' 
+                    : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30 print:bg-emerald-100 print:text-emerald-800 print:border-emerald-300'
+                }`}>
+                  <ShieldCheck className="w-3 h-3" /> {isTicketMode ? 'OFFICIAL TICKET' : 'VERIFIED PASS'}
                 </span>
                 <span className="text-[9px] font-mono text-zinc-500 mt-1 print:text-zinc-500">Ref: {Date.now().toString().slice(-6)}</span>
               </div>
@@ -302,7 +330,9 @@ export function PurchaseSlipModal({ candidate, isOpen, onClose, onEmailSent, aut
                 <QRCode value={qrPayload} size={140} level="M" />
                 <div>
                   <span className="text-[10px] font-black font-mono text-black block tracking-wider">{displayId}</span>
-                  <span className="text-[8px] font-bold text-zinc-500 uppercase block tracking-widest mt-0.5">Scannable Ticket QR</span>
+                  <span className="text-[8px] font-bold text-zinc-500 uppercase block tracking-widest mt-0.5">
+                    {isTicketMode ? 'Entry Ticket QR' : 'Scannable Ticket QR'}
+                  </span>
                 </div>
               </div>
             </div>
@@ -314,6 +344,43 @@ export function PurchaseSlipModal({ candidate, isOpen, onClose, onEmailSent, aut
                 {displayEvents}
               </div>
             </div>
+
+            {/* Team Event & Team Members Section */}
+            {((candidate.teamMembers && candidate.teamMembers.length > 0) || candidate.teamName) && (
+              <div className="pt-4 border-t border-white/10 print:border-black/20 space-y-2">
+                <div className="flex items-center justify-between">
+                  <p className="text-[9px] font-bold text-amber-400 uppercase tracking-wider flex items-center gap-1 print:text-amber-800">
+                    <Users className="w-3 h-3" /> Team Event Roster & Members
+                  </p>
+                  {candidate.teamName && (
+                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-amber-500/20 text-amber-300 border border-amber-500/30 print:bg-amber-100 print:text-amber-900 print:border-amber-400">
+                      Team: {candidate.teamName}
+                    </span>
+                  )}
+                </div>
+
+                {candidate.teamMembers && candidate.teamMembers.length > 0 ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
+                    {candidate.teamMembers.map((m: any, mIdx: number) => (
+                      <div key={mIdx} className="p-2.5 bg-black/40 rounded-xl border border-white/5 text-[11px] print:bg-zinc-100 print:text-black print:border-zinc-300">
+                        <div className="flex items-center gap-1 text-[9px] font-bold text-zinc-400 uppercase print:text-zinc-600">
+                          {mIdx === 0 ? <Crown className="w-3 h-3 text-amber-400 print:text-amber-700" /> : <User className="w-3 h-3 text-zinc-400 print:text-zinc-600" />}
+                          <span>{m.role || (mIdx === 0 ? 'Team Captain' : `Member ${mIdx + 1}`)}</span>
+                        </div>
+                        <p className="font-bold text-white mt-0.5 print:text-black truncate">{m.name || 'Member'}</p>
+                        <p className="text-[9px] text-zinc-400 truncate print:text-zinc-600">
+                          {m.class ? `Class ${m.class}` : ''} {m.institute ? `• ${m.institute}` : ''}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="p-2.5 bg-black/40 rounded-xl border border-white/5 text-xs text-zinc-300 print:bg-zinc-100 print:text-black">
+                    Registered under Team: <strong className="text-white print:text-black">{candidate.teamName}</strong>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Perks Included Checklist */}
             <div className="p-3 bg-emerald-500/5 rounded-xl border border-emerald-500/10 text-[10px] font-medium text-zinc-300 flex justify-between items-center print:border-zinc-300 print:text-black">
@@ -332,14 +399,18 @@ export function PurchaseSlipModal({ candidate, isOpen, onClose, onEmailSent, aut
             <button
               onClick={handleDownloadPdf}
               disabled={downloadingPdf}
-              className="flex-1 min-w-[140px] flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 text-xs font-black text-black transition-all cursor-pointer shadow-lg shadow-emerald-500/10 active:scale-95"
+              className={`flex-1 min-w-[140px] flex items-center justify-center gap-2 px-5 py-3 rounded-2xl disabled:opacity-50 text-xs font-black text-black transition-all cursor-pointer shadow-lg active:scale-95 ${
+                isTicketMode 
+                  ? 'bg-amber-400 hover:bg-amber-300 shadow-amber-500/10' 
+                  : 'bg-emerald-500 hover:bg-emerald-400 shadow-emerald-500/10'
+              }`}
             >
               {downloadingPdf ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
               ) : (
                 <Download className="w-4 h-4" />
               )}
-              {downloadingPdf ? 'Generating PDF...' : 'Download PDF Slip'}
+              {downloadingPdf ? 'Generating PDF...' : isTicketMode ? 'Download Ticket PDF' : 'Download PDF Slip'}
             </button>
 
             <button
@@ -347,7 +418,7 @@ export function PurchaseSlipModal({ candidate, isOpen, onClose, onEmailSent, aut
               className="flex-1 min-w-[130px] flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-white/10 hover:bg-white/15 text-xs font-bold text-white transition-all cursor-pointer border border-white/10 active:scale-95"
             >
               <Printer className="w-4 h-4 text-emerald-400" />
-              Print Slip
+              {isTicketMode ? 'Print Ticket' : 'Print Slip'}
             </button>
 
             {candidate.email && (

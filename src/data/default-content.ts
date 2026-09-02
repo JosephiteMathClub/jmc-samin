@@ -357,9 +357,9 @@ export const DEFAULT_CONTENT = {
     { id: "Combi Verse", name: "Combi Verse", tagline: "Deep dive into graph theory networks, pigeonhole principle.", category: "Solo track", icon: "Layers", isTeamEvent: false, teamSize: 1, isFree: false, allowedCategories: ["Secondary", "Higher Secondary"], bannerUrl: "https://images.unsplash.com/photo-1509228627152-72ae946807b1?auto=format&fit=crop&w=1200&q=80", description: "Deep dive into graph theory networks, pigeonhole principle, recurrence relations, and combinatorial game strategy." },
     { id: "Singularity", name: "Singularity", tagline: "Explore boundary-pushing mathematical paradoxes and theoretical models.", category: "Solo track", icon: "Sparkles", isTeamEvent: false, teamSize: 1, isFree: false, allowedCategories: ["Secondary", "Higher Secondary"], bannerUrl: "https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=1200&q=80", description: "Tackle advanced mathematical paradoxes, black hole topology math models, and high-dimensional singularity equations." },
     { id: "Escape Room", name: "Escape Room", tagline: "Team physical & mental escape room challenge (2 members).", category: "Team track", icon: "Users", isTeamEvent: true, teamSize: 2, isFree: false, allowedCategories: ["Primary", "Junior", "Secondary", "Higher Secondary"], bannerUrl: "https://images.unsplash.com/photo-1519074069444-1ba4eff56022?auto=format&fit=crop&w=1200&q=80", description: "Team physical & mental escape room challenge. Solve locked chests, hidden mathematical ciphers, and physical puzzle locks to escape within 30 minutes." },
-    { id: "Truss", name: "Truss", tagline: "Engineering team competition! Build high-load bridge trusses (2 members).", category: "Team track", icon: "Construction", isTeamEvent: true, teamSize: 2, isFree: false, allowedCategories: ["Primary", "Junior", "Secondary", "Higher Secondary"], bannerUrl: "https://images.unsplash.com/photo-1541888946425-d0fbb186a5b3?auto=format&fit=crop&w=1200&q=80", description: "Engineering team competition! Build high-load structurally sound physical bridge trusses using popsicles and glue to withstand maximum mechanical weights." },
-    { id: "Wall Magazine Display", name: "Wall Magazine Display", tagline: "Design an informative physical wall poster/magazine (2 members).", category: "Team track", icon: "Layout", isTeamEvent: true, teamSize: 2, isFree: false, allowedCategories: ["Primary", "Junior", "Secondary", "Higher Secondary"], bannerUrl: "https://images.unsplash.com/photo-1526721940322-10fb6e3ae94a?auto=format&fit=crop&w=1200&q=80", description: "Design an informative, visually captivating physical wall poster/magazine showcasing mathematical discoveries, history, or modern research." },
-    { id: "Tic-Tac-Toe", name: "Tic-Tac-Toe", tagline: "Strategic mathematical Tic-Tac-Toe grid playoffs (3 members).", category: "Team track", icon: "Grid", isTeamEvent: true, teamSize: 3, isFree: false, allowedCategories: ["Primary", "Secondary", "Higher Secondary"], bannerUrl: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=1200&q=80", description: "3-member team strategic tic-tac-toe battle requiring tactical mathematical matrix plays." },
+    { id: "Truss", name: "Truss", tagline: "Engineering team competition! Build high-load bridge trusses (3 members).", category: "Team track", icon: "Construction", isTeamEvent: true, teamSize: 3, isFree: false, allowedCategories: ["Primary", "Junior", "Secondary", "Higher Secondary"], bannerUrl: "https://images.unsplash.com/photo-1541888946425-d0fbb186a5b3?auto=format&fit=crop&w=1200&q=80", description: "Engineering team competition! Build high-load structurally sound physical bridge trusses using popsicles and glue to withstand maximum mechanical weights." },
+    { id: "Wall Magazine Display", name: "Wall Magazine Display", tagline: "Design an informative physical wall poster/magazine (3 members).", category: "Team track", icon: "Layout", isTeamEvent: true, teamSize: 3, isFree: false, allowedCategories: ["Primary", "Junior", "Secondary", "Higher Secondary"], bannerUrl: "https://images.unsplash.com/photo-1526721940322-10fb6e3ae94a?auto=format&fit=crop&w=1200&q=80", description: "Design an informative, visually captivating physical wall poster/magazine showcasing mathematical discoveries, history, or modern research." },
+    { id: "Tic-Tac-Toe", name: "Tic-Tac-Toe", tagline: "Strategic mathematical Tic-Tac-Toe grid playoffs (3 members, Primary & Junior).", category: "Team track", icon: "Grid", isTeamEvent: true, teamSize: 3, isFree: false, allowedCategories: ["Primary", "Junior"], bannerUrl: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=1200&q=80", description: "3-member team strategic tic-tac-toe battle requiring tactical mathematical matrix plays (Primary & Junior only)." },
     { id: "Math Memes", name: "Math Memes", tagline: "Unleash your humor and witty mathematical intellect!", category: "Solo track", icon: "Smile", isTeamEvent: false, teamSize: 1, isFree: true, allowedCategories: ["Primary", "Junior", "Secondary", "Higher Secondary"], bannerUrl: "https://images.unsplash.com/photo-1531403009284-440f080d1e12?auto=format&fit=crop&w=1200&q=80", description: "Unleash your humor and witty mathematical intellect! Create hilarious, high-concept memes blending popular culture with mathematical theory." },
     { id: "Math Article", name: "Math Article", tagline: "Write and submit an insightful research or expository paper.", category: "Solo track", icon: "FileText", isTeamEvent: false, teamSize: 1, isFree: true, allowedCategories: ["Primary", "Junior", "Secondary", "Higher Secondary"], bannerUrl: "https://images.unsplash.com/photo-1455390582262-044cdead277a?auto=format&fit=crop&w=1200&q=80", description: "Write and submit an insightful research or expository paper highlighting a fascinating mathematical application or historical theorem." },
     { id: "Math Vision", name: "Math Vision", tagline: "Digital graphic design competition.", category: "Solo track", icon: "ImageIcon", isTeamEvent: false, teamSize: 1, isFree: true, allowedCategories: ["Primary", "Junior", "Secondary", "Higher Secondary"], bannerUrl: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=1200&q=80", description: "Digital graphic design competition. Create stunning digital artwork illustrating mathematical fractals, golden spirals, or geometric art." },
@@ -384,6 +384,37 @@ export const DEFAULT_CONTENT = {
         description: "Introduction to basic problem-solving, arithmetic principles, and club orientation details.",
         fileUrl: "",
         date: "July 19, 2026"
+      }
+    ]
+  },
+  developers: {
+    samin: {
+      name: "Samin Tausif",
+      role: "Lead Developer & Architect",
+      alias: "Chief Platform Creator",
+      image: "/images/members/samin.jpg"
+    },
+    supporting: [
+      {
+        id: "tawhid",
+        name: "Tawhid Bin Omar",
+        role: "Idea Representer & Debugger",
+        alias: "Idea & Debugging",
+        image: "/images/members/tawhid.jpg"
+      },
+      {
+        id: "sharafi",
+        name: "Sharafi Ahmed",
+        role: "Idea Representer & Debugger",
+        alias: "Idea & Debugging",
+        image: "/images/members/sharafi.jpg"
+      },
+      {
+        id: "sanjid",
+        name: "Sanjid Kabir",
+        role: "Idea Representer & Debugger",
+        alias: "Idea & Debugging",
+        image: "/images/members/sanjid.jpg"
       }
     ]
   },

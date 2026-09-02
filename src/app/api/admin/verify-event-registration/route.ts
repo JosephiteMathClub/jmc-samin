@@ -414,6 +414,24 @@ export async function POST(req: Request) {
 
         // Send confirmation email asynchronously (non-blocking) with full Verification Slip & QR Code
         if (linkedEmail) {
+          // Determine document format from system settings
+          let docType: 'ticket' | 'verification_slip' = 'ticket';
+          try {
+            const { data: docTypeSetting } = await supabaseAdmin
+              .from('system_settings')
+              .select('value')
+              .eq('key', 'registration_document_type')
+              .maybeSingle();
+
+            if (docTypeSetting && docTypeSetting.value) {
+              docType = docTypeSetting.value === 'verification_slip' ? 'verification_slip' : 'ticket';
+            }
+          } catch (e) {
+            console.warn("Could not query system_settings for registration_document_type:", e);
+          }
+
+          const isTicket = docType === 'ticket';
+
           const qrPayload = JSON.stringify({
             id: memberIdToUse,
             member_id: memberIdToUse,
@@ -423,28 +441,54 @@ export async function POST(req: Request) {
             roll: String(linkedRec.roll || 'N/A'),
             trxnid: linkedRec.trxnid || 'VERIFIED',
             events: cleanEventNames(linkedRec.selected_events),
-            type: 'ticket_slip',
+            type: isTicket ? 'event_ticket' : 'verification_slip',
             v: '1.0'
           });
 
           const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(qrPayload)}&color=000000&bgcolor=ffffff&margin=10`;
           const profileLink = `${process.env.NEXT_PUBLIC_APP_URL || 'https://jmc-mathfest.vercel.app'}/profile`;
 
+          const emailSubject = isTicket
+            ? `🎟️ Official Event Entry Ticket [ID: ${memberIdToUse}] - Josephite Math Club`
+            : `📄 Official Verification Slip & Event Pass [ID: ${memberIdToUse}] - Josephite Math Club`;
+
+          const headerGradient = isTicket
+            ? 'linear-gradient(135deg, #d97706 0%, #b45309 100%)'
+            : 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)';
+
+          const headerSubtitleColor = isTicket ? '#fef3c7' : '#e0f2fe';
+          const headerPillColor = isTicket ? '#fde68a' : '#bae6fd';
+          const documentTitle = isTicket ? 'OFFICIAL EVENT ENTRY TICKET' : 'OFFICIAL VERIFICATION SLIP & ENTRY PASS';
+          const documentSubtitle = isTicket 
+            ? 'Intra-School Math Festival • Official Participant Pass' 
+            : 'Annual Math Festival & Event Participation Verification Slip';
+
+          const badgeBg = isTicket ? '#fef3c7' : '#dcfce7';
+          const badgeText = isTicket ? '#92400e' : '#15803d';
+          const badgeBorder = isTicket ? '#fde68a' : '#86efac';
+          const badgeLabel = isTicket ? '🎟️ OFFICIAL TICKET PASS' : '✓ VERIFIED & APPROVED PASS';
+          const qrLabel = isTicket ? 'Entry Ticket QR' : 'Scannable Verification QR';
+          const buttonBg = isTicket ? '#d97706' : '#0284c7';
+          const buttonText = isTicket ? '📥 View & Download Ticket on Profile' : '📥 View & Download Slip on Profile';
+          const noticeText = isTicket
+            ? 'Please keep this entry ticket saved or present your Ticket QR Code at the festival entry booth.'
+            : 'Please keep this verification slip saved or present your QR Code at the festival entry booth.';
+
           sendEmail({
             to: linkedEmail,
-            subject: `🎟️ Official Verification Slip & Event Ticket Pass [ID: ${memberIdToUse}] - Josephite Math Club`,
+            subject: emailSubject,
             html: `
               <div style="font-family: Arial, sans-serif; max-width: 650px; margin: 0 auto; color: #0f172a; padding: 0; background-color: #f8fafc; border-radius: 16px; overflow: hidden; border: 1px solid #e2e8f0;">
-                <div style="background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); padding: 30px; text-align: center; color: #ffffff;">
-                  <p style="font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 2px; margin: 0 0 6px 0; color: #bae6fd;">Josephite Math Club</p>
-                  <h1 style="font-size: 24px; font-weight: 900; margin: 0; letter-spacing: -0.5px;">OFFICIAL VERIFICATION SLIP & ENTRY PASS</h1>
-                  <p style="font-size: 13px; margin: 6px 0 0 0; color: #e0f2fe;">Annual Math Festival & Event Participation Ticket</p>
+                <div style="background: ${headerGradient}; padding: 30px; text-align: center; color: #ffffff;">
+                  <p style="font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 2px; margin: 0 0 6px 0; color: ${headerPillColor};">Josephite Math Club</p>
+                  <h1 style="font-size: 24px; font-weight: 900; margin: 0; letter-spacing: -0.5px;">${documentTitle}</h1>
+                  <p style="font-size: 13px; margin: 6px 0 0 0; color: ${headerSubtitleColor};">${documentSubtitle}</p>
                 </div>
 
                 <div style="padding: 30px;">
                   <div style="text-align: center; margin-bottom: 24px;">
-                    <span style="display: inline-block; background-color: #dcfce7; color: #15803d; border: 1px solid #86efac; font-size: 12px; font-weight: 800; padding: 6px 16px; border-radius: 20px; text-transform: uppercase; letter-spacing: 1px;">
-                      ✓ VERIFIED & APPROVED PASS
+                    <span style="display: inline-block; background-color: ${badgeBg}; color: ${badgeText}; border: 1px solid ${badgeBorder}; font-size: 12px; font-weight: 800; padding: 6px 16px; border-radius: 20px; text-transform: uppercase; letter-spacing: 1px;">
+                      ${badgeLabel}
                     </span>
                   </div>
 
@@ -458,7 +502,7 @@ export async function POST(req: Request) {
                           <tr>
                             <td width="50%" valign="top">
                               <p style="font-size: 10px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 1px; margin: 0 0 4px 0;">Unique Entry ID</p>
-                              <p style="font-size: 15px; font-family: monospace; font-weight: 900; color: #0284c7; margin: 0;">${memberIdToUse}</p>
+                              <p style="font-size: 15px; font-family: monospace; font-weight: 900; color: ${isTicket ? '#d97706' : '#0284c7'}; margin: 0;">${memberIdToUse}</p>
                             </td>
                             <td width="50%" valign="top">
                               <p style="font-size: 10px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 1px; margin: 0 0 4px 0;">Transaction ID</p>
@@ -480,14 +524,14 @@ export async function POST(req: Request) {
                       <td width="160" valign="top" align="center" style="background-color: #ffffff; padding: 16px; border-radius: 16px; border: 1px solid #e2e8f0;">
                         <img src="${qrImageUrl}" alt="Verification Ticket QR Code" width="140" height="140" style="display: block; width: 140px; height: 140px; border: 0;" />
                         <p style="font-size: 11px; font-family: monospace; font-weight: 800; color: #0f172a; margin: 10px 0 2px 0;">${memberIdToUse}</p>
-                        <p style="font-size: 9px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 1px; margin: 0;">Scannable Ticket QR</p>
+                        <p style="font-size: 9px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 1px; margin: 0;">${qrLabel}</p>
                       </td>
                     </tr>
                   </table>
 
                   <div style="background-color: #ffffff; padding: 16px; border-radius: 12px; border: 1px solid #e2e8f0; margin-bottom: 20px;">
                     <p style="font-size: 10px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 1px; margin: 0 0 8px 0;">Registered Event Segments</p>
-                    <p style="font-size: 14px; font-weight: 700; color: #0284c7; margin: 0; font-family: monospace;">${cleanEventNames(linkedRec.selected_events)}</p>
+                    <p style="font-size: 14px; font-weight: 700; color: ${isTicket ? '#d97706' : '#0284c7'}; margin: 0; font-family: monospace;">${cleanEventNames(linkedRec.selected_events)}</p>
                   </div>
 
                   <div style="background-color: #f0fdf4; padding: 14px; border-radius: 12px; border: 1px solid #bbf7d0; margin-bottom: 24px;">
@@ -502,14 +546,14 @@ export async function POST(req: Request) {
                   </div>
 
                   <div style="text-align: center; margin-bottom: 24px;">
-                    <a href="${profileLink}" style="display: inline-block; background-color: #0284c7; color: #ffffff; text-decoration: none; font-size: 14px; font-weight: 800; padding: 14px 28px; border-radius: 12px; text-transform: uppercase; letter-spacing: 0.5px; box-shadow: 0 4px 12px rgba(2,132,199,0.3);">
-                      📥 View & Download Slip on Profile
+                    <a href="${profileLink}" style="display: inline-block; background-color: ${buttonBg}; color: #ffffff; text-decoration: none; font-size: 14px; font-weight: 800; padding: 14px 28px; border-radius: 12px; text-transform: uppercase; letter-spacing: 0.5px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
+                      ${buttonText}
                     </a>
                   </div>
 
                   <p style="font-size: 12px; color: #64748b; text-align: center; margin: 0; line-height: 1.5;">
-                    Please keep this verification slip saved or present your QR Code at the festival entry booth.<br/>
-                    Registered using mobile/phone? Access your verification slip anytime on your <a href="${profileLink}" style="color: #0284c7; text-decoration: underline;">Profile Page</a>.
+                    ${noticeText}<br/>
+                    Registered using mobile/phone? Access your ${isTicket ? 'ticket pass' : 'verification slip'} anytime on your <a href="${profileLink}" style="color: ${buttonBg}; text-decoration: underline;">Profile Page</a>.
                   </p>
                 </div>
 

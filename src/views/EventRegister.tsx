@@ -25,7 +25,8 @@ import {
   RefreshCw,
   UserPlus,
   FileText,
-  Download
+  Download,
+  Ticket
 } from 'lucide-react';
 import { PurchaseSlipModal, PurchaseSlipCandidate } from '../components/dashboard/PurchaseSlipModal';
 import { 
@@ -69,8 +70,22 @@ const DEFAULT_TEAM_EVENTS = [
     name: "Escape Room",
     price: 200,
     memberCount: 2,
-    eligibleCategories: "secondary_higher_secondary",
-    description: "Class 9 to 12 (Secondary & Higher Secondary) strategic room puzzles. Includes 2 members."
+    eligibleCategories: "all",
+    description: "All Categories (Class 3 to 12) strategic room puzzles. Includes 2 members."
+  },
+  {
+    name: "Truss",
+    price: 300,
+    memberCount: 3,
+    eligibleCategories: "all",
+    description: "All Categories (Class 3 to 12) structural engineering bridge challenge. Includes 3 members."
+  },
+  {
+    name: "Wall Magazine Display",
+    price: 300,
+    memberCount: 3,
+    eligibleCategories: "all",
+    description: "All Categories (Class 3 to 12) historical & research wall exhibition. Includes 3 members."
   }
 ];
 
@@ -208,6 +223,7 @@ const EventRegister = () => {
   const [submitting, setSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [showSlipModal, setShowSlipModal] = useState(false);
+  const [regDocType, setRegDocType] = useState<'ticket' | 'verification_slip'>('ticket');
   const [guestEmail, setGuestEmail] = useState('');
   const [registerMethod, setRegisterMethod] = useState<'both' | 'phone_only'>('both');
   const [wasGuestRegistered, setWasGuestRegistered] = useState(false);
@@ -443,6 +459,17 @@ const EventRegister = () => {
           setIsFormOpen(true);
         } else if (data) {
           setIsFormOpen(data.value === true);
+        }
+
+        // Fetch document output type setting
+        const { data: docTypeData } = await supabase
+          .from('system_settings')
+          .select('value')
+          .eq('key', 'registration_document_type')
+          .maybeSingle();
+        
+        if (docTypeData && docTypeData.value) {
+          setRegDocType(docTypeData.value === 'verification_slip' ? 'verification_slip' : 'ticket');
         }
 
         // Fetch custom event/pricing configurations
@@ -1701,36 +1728,60 @@ const EventRegister = () => {
               )}
             </p>
 
-            {/* Verification Slip Auto-Download & Pass Notice */}
-            <div className="p-6 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl text-left space-y-4 w-full mb-8">
-              <div className="flex items-center justify-between border-b border-emerald-500/20 pb-3">
+            {/* Verification Slip / Ticket Pass Auto-Download Notice */}
+            <div className={`p-6 border rounded-2xl text-left space-y-4 w-full mb-8 ${
+              regDocType === 'ticket' 
+                ? 'bg-amber-500/10 border-amber-500/20' 
+                : 'bg-emerald-500/10 border-emerald-500/20'
+            }`}>
+              <div className={`flex items-center justify-between border-b pb-3 ${
+                regDocType === 'ticket' ? 'border-amber-500/20' : 'border-emerald-500/20'
+              }`}>
                 <div className="flex items-center gap-2">
-                  <FileText className="w-5 h-5 text-emerald-400" />
+                  {regDocType === 'ticket' ? (
+                    <Ticket className="w-5 h-5 text-amber-400" />
+                  ) : (
+                    <FileText className="w-5 h-5 text-emerald-400" />
+                  )}
                   <div>
-                    <h4 className="text-xs font-black uppercase tracking-wider text-white">Official Verification Slip (PDF)</h4>
-                    <p className="text-[10px] text-emerald-400 font-bold uppercase tracking-widest mt-0.5">✓ Scannable Pass & QR Code Generated</p>
+                    <h4 className="text-xs font-black uppercase tracking-wider text-white">
+                      {regDocType === 'ticket' ? 'Official Event Entry Ticket (Pass)' : 'Official Verification Slip (PDF)'}
+                    </h4>
+                    <p className={`text-[10px] font-bold uppercase tracking-widest mt-0.5 ${
+                      regDocType === 'ticket' ? 'text-amber-400' : 'text-emerald-400'
+                    }`}>
+                      {regDocType === 'ticket' ? '✓ Intra Festival Entry Pass & Scannable QR Issued' : '✓ Scannable Pass & QR Code Generated'}
+                    </p>
                   </div>
                 </div>
-                <span className="px-2.5 py-1 bg-emerald-500/20 text-emerald-300 text-[9px] font-black uppercase tracking-wider rounded-full">
+                <span className={`px-2.5 py-1 text-[9px] font-black uppercase tracking-wider rounded-full ${
+                  regDocType === 'ticket' ? 'bg-amber-500/20 text-amber-300' : 'bg-emerald-500/20 text-emerald-300'
+                }`}>
                   Auto-Downloaded
                 </span>
               </div>
               
               <p className="text-xs text-zinc-300 leading-relaxed font-sans">
-                Your official <strong>Verification Slip PDF with QR Code</strong> has been generated and auto-downloaded to your device.
+                {regDocType === 'ticket' 
+                  ? 'Your official Intra-School Event Entry Ticket with unique verification QR Code has been generated and auto-downloaded to your device.'
+                  : 'Your official Verification Slip PDF with QR Code has been generated and auto-downloaded to your device.'}
               </p>
 
               <div className="p-3.5 bg-black/50 rounded-xl text-[11px] text-amber-300 border border-amber-500/20 leading-relaxed font-medium">
-                ℹ️ <strong>Notice:</strong> You can also log in anytime using your required credentials (registered phone number / email) to download this verification slip PDF again from your <strong>Profile Page</strong>.
+                ℹ️ <strong>Notice:</strong> You can also log in anytime using your required credentials (registered phone number / email) to download this {regDocType === 'ticket' ? 'ticket pass' : 'verification slip PDF'} again from your <strong>Profile Page</strong>.
               </div>
 
               <div className="flex gap-3 pt-1">
                 <button
                   type="button"
                   onClick={() => setShowSlipModal(true)}
-                  className="flex-1 py-3 px-4 bg-emerald-500 hover:bg-emerald-400 text-black font-black text-xs uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-emerald-500/20"
+                  className={`flex-1 py-3 px-4 text-black font-black text-xs uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer shadow-lg active:scale-95 ${
+                    regDocType === 'ticket' 
+                      ? 'bg-amber-400 hover:bg-amber-300 shadow-amber-500/20' 
+                      : 'bg-emerald-500 hover:bg-emerald-400 shadow-emerald-500/20'
+                  }`}
                 >
-                  <Download className="w-4 h-4" /> Download Verification PDF Pass Again
+                  <Download className="w-4 h-4" /> {regDocType === 'ticket' ? 'Download Ticket Pass Again' : 'Download Verification PDF Pass Again'}
                 </button>
               </div>
             </div>
@@ -1752,6 +1803,7 @@ const EventRegister = () => {
               }}
               isOpen={showSlipModal}
               autoDownload={true}
+              documentType={regDocType}
               onClose={() => setShowSlipModal(false)}
             />
 

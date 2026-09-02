@@ -25,7 +25,8 @@ import {
   Ticket,
   Tag,
   SlidersHorizontal,
-  Clock
+  Clock,
+  Code2
 } from 'lucide-react';
 import { useContent } from '../context/ContentContext';
 import { useAuth } from '../context/AuthContext';
@@ -66,6 +67,7 @@ import { StatisticsSection } from '../components/dashboard/sections/StatisticsSe
 import { TicketPurchaseSection } from '../components/dashboard/sections/TicketPurchaseSection';
 import { DashboardHandoutsSection } from '../components/dashboard/sections/DashboardHandoutsSection';
 import { DashboardResourcesSection } from '../components/dashboard/sections/DashboardResourcesSection';
+import { DashboardDevelopersSection } from '../components/dashboard/sections/DashboardDevelopersSection';
 
 import ConfirmModal from '../components/ConfirmModal';
 import Image from 'next/image';
@@ -963,6 +965,9 @@ const AdminDashboard = () => {
       if (!cloned.resources || !Array.isArray(cloned.resources) || cloned.resources.length === 0) {
         cloned.resources = DEFAULT_CONTENT.resources || [];
       }
+      if (!cloned.developers) {
+        cloned.developers = DEFAULT_CONTENT.developers;
+      }
       setLocalContent(cloned);
     }
   }, [content]);
@@ -1179,6 +1184,7 @@ const AdminDashboard = () => {
       { id: 'home', label: 'Home', icon: LayoutDashboard },
       { id: 'about', label: 'About', icon: FileText },
       { id: 'panel', label: 'Panel', icon: Users },
+      { id: 'developers', label: 'Developers Page', icon: Code2 },
       { id: 'support', label: 'Support', icon: ShieldAlert },
       { id: 'super_admin', label: 'Super Admin', icon: Shield },
       { id: 'audit_logs', label: 'Audit Logs', icon: History },
@@ -1438,7 +1444,7 @@ const AdminDashboard = () => {
         )}
 
         {activeTab === 'ticket_purchase' && (
-          <TicketPurchaseSection />
+          <TicketPurchaseSection isSuperAdmin={isSuperAdmin} />
         )}
 
         {activeTab === 'statistics' && (
@@ -1472,6 +1478,35 @@ const AdminDashboard = () => {
         {activeTab === 'audit_logs' && isSuperAdmin && (
           <DashboardAuditLogsSection 
             supabase={supabase}
+            shouldReduceGfx={shouldReduceGfx}
+          />
+        )}
+
+        {activeTab === 'developers' && (
+          <DashboardDevelopersSection 
+            data={localContent?.developers || DEFAULT_CONTENT.developers}
+            updateSaminField={(field, val) => updateNestedField('developers', 'samin', field, val)}
+            updateSupportingField={(index, field, val) => {
+              setLocalContent((prev: any) => {
+                const currentDevs = prev?.developers || DEFAULT_CONTENT.developers || {};
+                const currentSupporting = [...(currentDevs.supporting || DEFAULT_CONTENT.developers.supporting)];
+                if (currentSupporting[index]) {
+                  currentSupporting[index] = {
+                    ...currentSupporting[index],
+                    [field]: val
+                  };
+                }
+                return {
+                  ...prev,
+                  developers: {
+                    ...currentDevs,
+                    supporting: currentSupporting
+                  }
+                };
+              });
+            }}
+            uploading={uploading}
+            handleFileUpload={handleFileUpload}
             shouldReduceGfx={shouldReduceGfx}
           />
         )}

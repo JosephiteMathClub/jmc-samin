@@ -204,9 +204,9 @@ const DEFAULT_INTER_SEGMENTS = [
   { id: "Combi Verse", name: "Combi Verse", tagline: "Navigate combinatorics, permutations, graph theory networks.", category: "Solo track", icon: Share2, color: "from-cyan-500/10 to-blue-500/10 text-cyan-400 border-cyan-500/20", allowedCategories: ["Secondary", "Higher Secondary"], isTeamEvent: false, teamSize: 1 },
   { id: "Singularity", name: "Singularity", tagline: "Explore boundary-pushing theoretical physics & abstract math problems.", category: "Solo track", icon: Sparkles, color: "from-purple-500/10 to-indigo-500/10 text-purple-400 border-purple-500/20", allowedCategories: ["Secondary", "Higher Secondary"], isTeamEvent: false, teamSize: 1 },
   { id: "Escape Room", name: "Escape Room", tagline: "Decrypt physical room locks and spatial logic systems (2 members).", category: "Team track", icon: Home, color: "from-violet-500/10 to-fuchsia-500/10 text-violet-400 border-violet-500/20", allowedCategories: ["Primary", "Junior", "Secondary", "Higher Secondary"], isTeamEvent: true, teamSize: 2 },
-  { id: "Truss", name: "Truss", tagline: "Build high-load structurally sound physical bridge trusses (2 members).", category: "Team track", icon: Construction, color: "from-amber-500/10 to-orange-500/10 text-amber-400 border-amber-500/20", allowedCategories: ["Primary", "Junior", "Secondary", "Higher Secondary"], isTeamEvent: true, teamSize: 2 },
-  { id: "Wall Magazine Display", name: "Wall Magazine Display", tagline: "Design physical wall posters mapping historical math breakthroughs (2 members).", category: "Team track", icon: Layout, color: "from-emerald-500/10 to-green-500/10 text-emerald-400 border-emerald-500/20", allowedCategories: ["Primary", "Junior", "Secondary", "Higher Secondary"], isTeamEvent: true, teamSize: 2 },
-  { id: "Tic-Tac-Toe", name: "Tic-Tac-Toe", tagline: "Strategic mathematical Tic-Tac-Toe grid playoffs (3 members).", category: "Team track", icon: Grid, color: "from-blue-500/10 to-cyan-500/10 text-blue-400 border-blue-500/20", allowedCategories: ["Primary", "Junior", "Secondary", "Higher Secondary"], isTeamEvent: true, teamSize: 3 },
+  { id: "Truss", name: "Truss", tagline: "Build high-load structurally sound physical bridge trusses (3 members).", category: "Team track", icon: Construction, color: "from-amber-500/10 to-orange-500/10 text-amber-400 border-amber-500/20", allowedCategories: ["Primary", "Junior", "Secondary", "Higher Secondary"], isTeamEvent: true, teamSize: 3 },
+  { id: "Wall Magazine Display", name: "Wall Magazine Display", tagline: "Design physical wall posters mapping historical math breakthroughs (3 members).", category: "Team track", icon: Layout, color: "from-emerald-500/10 to-green-500/10 text-emerald-400 border-emerald-500/20", allowedCategories: ["Primary", "Junior", "Secondary", "Higher Secondary"], isTeamEvent: true, teamSize: 3 },
+  { id: "Tic-Tac-Toe", name: "Tic-Tac-Toe", tagline: "Strategic mathematical Tic-Tac-Toe grid playoffs (3 members, Primary & Junior).", category: "Team track", icon: Grid, color: "from-blue-500/10 to-cyan-500/10 text-blue-400 border-blue-500/20", allowedCategories: ["Primary", "Junior"], isTeamEvent: true, teamSize: 3 },
   { id: "Math Memes", name: "Math Memes", tagline: "Design humorous and intellectually witty math memes.", category: "Creative track", icon: Smile, color: "from-yellow-500/10 to-green-500/10 text-yellow-400 border-yellow-500/20", allowedCategories: ["Primary", "Junior", "Secondary", "Higher Secondary"], isTeamEvent: false, teamSize: 1 },
   { id: "Math Article", name: "Math Article", tagline: "Draft a well-researched article on advanced mathematical theories.", category: "Writing track", icon: BookOpen, color: "from-zinc-500/10 to-slate-500/10 text-zinc-400 border-zinc-500/20", allowedCategories: ["Primary", "Junior", "Secondary", "Higher Secondary"], isTeamEvent: false, teamSize: 1 },
   { id: "Math Vision", name: "Math Vision", tagline: "Design digital graphic art illustrating geometric formulas.", category: "Creative track", icon: ImageIcon, color: "from-pink-500/10 to-purple-500/10 text-pink-400 border-pink-500/20", allowedCategories: ["Primary", "Junior", "Secondary", "Higher Secondary"], isTeamEvent: false, teamSize: 1 },
@@ -233,16 +233,16 @@ export function isTeamSegment(id: string, segmentList?: any[]): boolean {
 export function getSegmentTeamSize(id: string, segmentList?: any[]): number {
   if (!id) return 1;
   const norm = id.trim().toLowerCase();
-  if (norm.includes("tic-tac-toe") || norm.includes("tic tac toe") || norm.includes("tictactoe")) {
+  if (norm.includes("tic-tac-toe") || norm.includes("tic tac toe") || norm.includes("tictactoe") || norm.includes("truss") || norm.includes("wall magazine")) {
     return 3;
   }
-  if (norm.includes("escape room") || norm.includes("truss") || norm.includes("wall magazine")) {
+  if (norm.includes("escape room")) {
     return 2;
   }
   const list = (segmentList && Array.isArray(segmentList) && segmentList.length > 0) ? segmentList : DEFAULT_INTER_SEGMENTS;
   const seg = list.find((s: any) => (s.id || s.name) === id);
   if (seg && seg.isTeamEvent) {
-    return seg.teamSize || 2;
+    return seg.teamSize || 3;
   }
   return 1;
 }
@@ -287,7 +287,7 @@ export default function InterEventRegister() {
 
       let teamSize = 1;
       if (isTeam) {
-        if (norm.includes("tic-tac-toe") || norm.includes("tic tac toe") || norm.includes("tictactoe")) {
+        if (norm.includes("tic-tac-toe") || norm.includes("tic tac toe") || norm.includes("tictactoe") || norm.includes("truss") || norm.includes("wall magazine")) {
           teamSize = 3;
         } else {
           teamSize = 2;
@@ -318,6 +318,7 @@ export default function InterEventRegister() {
   // Gatekeeper status & configurations
   const [checkingStatuses, setCheckingStatuses] = useState(true);
   const [isLocked, setIsLocked] = useState(false);
+  const [regDocType, setRegDocType] = useState<'ticket' | 'verification_slip'>('verification_slip');
   
   // Settings values fetched from system settings
   const [bkashTarget, setBkashTarget] = useState("01789456123");
@@ -428,7 +429,9 @@ export default function InterEventRegister() {
       norm.includes("tic") ||
       norm.includes("toe") ||
       norm.includes("tac") ||
-      norm.includes("tictactoe")
+      norm.includes("tictactoe") ||
+      norm.includes("truss") ||
+      norm.includes("wall magazine")
     ) {
       return true;
     }
@@ -438,7 +441,7 @@ export default function InterEventRegister() {
     );
     if (seg) {
       const segNorm = (String(seg.id) + " " + String(seg.name)).toLowerCase();
-      if (segNorm.includes("tic") || segNorm.includes("toe") || segNorm.includes("tac") || seg.teamSize === 3 || seg.teamSize >= 3) {
+      if (segNorm.includes("tic") || segNorm.includes("toe") || segNorm.includes("tac") || segNorm.includes("truss") || segNorm.includes("wall magazine") || seg.teamSize === 3 || seg.teamSize >= 3) {
         return true;
       }
     }
@@ -505,20 +508,11 @@ export default function InterEventRegister() {
     const numClass = parseInt(classVal, 10);
     const norm = (segmentId || "").toLowerCase();
 
-    if (norm.includes("escape room")) {
-      if (isNaN(numClass) || (studentCat !== "Secondary" && studentCat !== "Higher Secondary")) {
-        return {
-          eligible: false,
-          reason: "Escape Room is restricted to Secondary (Class 9-10) & Higher Secondary (Class 11-12)."
-        };
-      }
-    }
-
-    if (norm.includes("truss")) {
+    if (norm.includes("tic-tac-toe") || norm.includes("tic tac toe")) {
       if (isNaN(numClass) || (studentCat !== "Primary" && studentCat !== "Junior")) {
         return {
           eligible: false,
-          reason: "Truss is restricted to Primary (Class 3-5) & Junior (Class 6-8)."
+          reason: "Tic-Tac-Toe is restricted to Primary (Class 3-5) & Junior (Class 6-8)."
         };
       }
     }
@@ -646,6 +640,11 @@ export default function InterEventRegister() {
         const isGlobalOn = globalToggle !== false;
         const isInterOn = interToggle !== false;
         setIsLocked(!isGlobalOn || !isInterOn);
+
+        const docTypeSetting = settingsMap['registration_document_type'];
+        if (docTypeSetting) {
+          setRegDocType(docTypeSetting === 'ticket' ? 'ticket' : 'verification_slip');
+        }
 
         let configVal = settingsMap['inter_registration_config'];
 
@@ -1398,7 +1397,7 @@ export default function InterEventRegister() {
       if (is3MemberTeamSegment) {
         const tm3Inst = teamMember3Institute.trim() || institute.trim();
         if (!teamMember3Name.trim() || !teamMember3Class || !tm3Inst || !teamMember3Gender) {
-          setErrorMessage("Please fill all required details (Name, Class, Institute, and Gender) for Teammate 2 (Required for Tic-Tac-Toe).");
+          setErrorMessage("Please fill all required details (Name, Class, Institute, and Gender) for Teammate 2 (Required for 3-member team events: Tic-Tac-Toe, Truss, Wall Magazine).");
           return;
         }
       }
@@ -1993,7 +1992,13 @@ export default function InterEventRegister() {
                             </div>
                             <div className="bg-white/5 p-2 rounded-lg border border-white/5">
                               <span className="text-zinc-500 block uppercase font-bold text-[8px]">Eligibility</span>
-                              <span className="text-pink-400 font-bold">{seg.id === "Escape Room" ? "Class 9 - 12" : seg.id === "Truss" ? "Class 3 - 8" : "Class 3 - 12"}</span>
+                              <span className="text-pink-400 font-bold">
+                                {seg.id === "Tic-Tac-Toe"
+                                  ? "Class 3 - 8 (Primary & Junior)"
+                                  : seg.allowedCategories && seg.allowedCategories.length < 4
+                                    ? getCategoryClassRange(seg.allowedCategories)
+                                    : "Class 3 - 12 (All Categories)"}
+                              </span>
                             </div>
                           </div>
                         </div>
@@ -2314,36 +2319,60 @@ export default function InterEventRegister() {
                 </div>
               )}
 
-              {/* Verification Slip Auto-Download & Pass Notice */}
-              <div className="p-6 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl text-left space-y-4 w-full">
-                <div className="flex items-center justify-between border-b border-emerald-500/20 pb-3">
+              {/* Verification Slip / Ticket Pass Auto-Download Notice */}
+              <div className={`p-6 border rounded-2xl text-left space-y-4 w-full ${
+                regDocType === 'ticket' 
+                  ? 'bg-amber-500/10 border-amber-500/20' 
+                  : 'bg-emerald-500/10 border-emerald-500/20'
+              }`}>
+                <div className={`flex items-center justify-between border-b pb-3 ${
+                  regDocType === 'ticket' ? 'border-amber-500/20' : 'border-emerald-500/20'
+                }`}>
                   <div className="flex items-center gap-2">
-                    <FileText className="w-5 h-5 text-emerald-400" />
+                    {regDocType === 'ticket' ? (
+                      <Ticket className="w-5 h-5 text-amber-400" />
+                    ) : (
+                      <FileText className="w-5 h-5 text-emerald-400" />
+                    )}
                     <div>
-                      <h4 className="text-xs font-black uppercase tracking-wider text-white">Official Verification Slip (PDF)</h4>
-                      <p className="text-[10px] text-emerald-400 font-bold uppercase tracking-widest mt-0.5">✓ Scannable Pass & QR Code Generated</p>
+                      <h4 className="text-xs font-black uppercase tracking-wider text-white">
+                        {regDocType === 'ticket' ? 'Official Event Entry Ticket (Pass)' : 'Official Verification Slip (PDF)'}
+                      </h4>
+                      <p className={`text-[10px] font-bold uppercase tracking-widest mt-0.5 ${
+                        regDocType === 'ticket' ? 'text-amber-400' : 'text-emerald-400'
+                      }`}>
+                        {regDocType === 'ticket' ? '✓ Festival Entry Pass & Scannable QR Issued' : '✓ Scannable Pass & QR Code Generated'}
+                      </p>
                     </div>
                   </div>
-                  <span className="px-2.5 py-1 bg-emerald-500/20 text-emerald-300 text-[9px] font-black uppercase tracking-wider rounded-full">
+                  <span className={`px-2.5 py-1 text-[9px] font-black uppercase tracking-wider rounded-full ${
+                    regDocType === 'ticket' ? 'bg-amber-500/20 text-amber-300' : 'bg-emerald-500/20 text-emerald-300'
+                  }`}>
                     Auto-Downloaded
                   </span>
                 </div>
                 
                 <p className="text-xs text-zinc-300 leading-relaxed font-sans">
-                  Your official <strong>Verification Slip PDF with QR Code</strong> has been generated and auto-downloaded to your device.
+                  {regDocType === 'ticket' 
+                    ? 'Your official Event Entry Ticket with unique verification QR Code has been generated and auto-downloaded to your device.'
+                    : 'Your official Verification Slip PDF with QR Code has been generated and auto-downloaded to your device.'}
                 </p>
 
                 <div className="p-3.5 bg-black/50 rounded-xl text-[11px] text-amber-300 border border-amber-500/20 leading-relaxed font-medium">
-                  ℹ️ <strong>Notice:</strong> You can also log in anytime using your required credentials (registered phone number / email) to download this verification slip PDF again from your <strong>Profile Page</strong>.
+                  ℹ️ <strong>Notice:</strong> You can also log in anytime using your required credentials (registered phone number / email) to download this {regDocType === 'ticket' ? 'ticket pass' : 'verification slip PDF'} again from your <strong>Profile Page</strong>.
                 </div>
 
                 <div className="flex gap-3 pt-1">
                   <button
                     type="button"
                     onClick={() => setShowSlipModal(true)}
-                    className="flex-1 py-3 px-4 bg-emerald-500 hover:bg-emerald-400 text-black font-black text-xs uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-emerald-500/20"
+                    className={`flex-1 py-3 px-4 text-black font-black text-xs uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer shadow-lg active:scale-95 ${
+                      regDocType === 'ticket' 
+                        ? 'bg-amber-400 hover:bg-amber-300 shadow-amber-500/20' 
+                        : 'bg-emerald-500 hover:bg-emerald-400 shadow-emerald-500/20'
+                    }`}
                   >
-                    <Download className="w-4 h-4" /> Download Verification PDF Pass Again
+                    <Download className="w-4 h-4" /> {regDocType === 'ticket' ? 'Download Ticket Pass Again' : 'Download Verification PDF Pass Again'}
                   </button>
                 </div>
               </div>
@@ -2365,6 +2394,7 @@ export default function InterEventRegister() {
                 }}
                 isOpen={showSlipModal}
                 autoDownload={true}
+                documentType={regDocType}
                 onClose={() => setShowSlipModal(false)}
               />
 
@@ -2417,7 +2447,7 @@ export default function InterEventRegister() {
                 </p>
                 <div className="flex gap-4">
                   <button
-                    onClick={() => router.push('/auth?mode=login')}
+                    onClick={() => router.push('/login')}
                     className="flex-1 py-4 bg-gradient-to-r from-pink-500 to-indigo-600 text-white font-black text-xs uppercase tracking-widest rounded-xl hover:opacity-90 transition-all cursor-pointer shadow-lg shadow-pink-500/20"
                   >
                     Go To Login
@@ -3447,7 +3477,7 @@ export default function InterEventRegister() {
                       </div>
                     </div>
 
-                    {/* TEAM MEMBER 3 - Kept for Tic-Tac-Toe */}
+                    {/* TEAM MEMBER 3 - For 3-Member Team Events (Tic-Tac-Toe, Truss, Wall Magazine) */}
                     {is3MemberTeamSegment && (
                       <div className="p-5 bg-purple-950/20 border border-purple-500/30 rounded-2xl space-y-4">
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
@@ -3457,8 +3487,8 @@ export default function InterEventRegister() {
                           </h4>
                           <span className="text-[9px] font-black uppercase tracking-wider bg-purple-500/20 text-purple-300 border border-purple-500/40 px-2.5 py-0.5 rounded-full font-mono w-fit">
                             {hasOtherTeamSegment
-                              ? "Required specifically for Tic-Tac-Toe (3-member team)"
-                              : "Required for Tic-Tac-Toe"
+                              ? "Required for 3-member team events (Tic-Tac-Toe, Truss, Wall Magazine)"
+                              : "Required for 3-member teams"
                             }
                           </span>
                         </div>

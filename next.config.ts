@@ -32,6 +32,36 @@ const nextConfig: NextConfig = {
         destination: '/events/register?type=inter',
         permanent: false,
       },
+      {
+        source: '/registration',
+        destination: '/events/register',
+        permanent: false,
+      },
+      {
+        source: '/register',
+        destination: '/register-member',
+        permanent: false,
+      },
+      {
+        source: '/signup',
+        destination: '/login?mode=signup',
+        permanent: false,
+      },
+      {
+        source: '/dashboard',
+        destination: '/profile',
+        permanent: false,
+      },
+      {
+        source: '/event-register',
+        destination: '/events/register',
+        permanent: false,
+      },
+      {
+        source: '/inter-register',
+        destination: '/events/register?type=inter',
+        permanent: false,
+      },
     ];
   },
 };

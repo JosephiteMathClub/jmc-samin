@@ -11,7 +11,7 @@ export const metadata: Metadata = {
     "Josephite Math Club Developers",
     "Staff Web Engineers SJS",
     "Tawhid Bin Omar",
-    "Sharan Haque Shakin",
+    "Sharafi Ahmed",
     "Sanjid Kabir",
     "JMC Web Platform Credits",
   ],

@@ -805,6 +805,21 @@ body.theme-contrast-amber [class*="bg-white/"] {
   backdrop-filter: blur(4px) !important;
 }
 
+@keyframes scanLaser {
+  0% {
+    top: 5%;
+    opacity: 0.8;
+  }
+  50% {
+    top: 90%;
+    opacity: 1;
+  }
+  100% {
+    top: 5%;
+    opacity: 0.8;
+  }
+}
+
 
 
 
