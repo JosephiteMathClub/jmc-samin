@@ -2358,8 +2358,13 @@ export default function InterEventRegister() {
                     : 'Your official Verification Slip PDF with QR Code has been generated and auto-downloaded to your device.'}
                 </p>
 
-                <div className="p-3.5 bg-black/50 rounded-xl text-[11px] text-amber-300 border border-amber-500/20 leading-relaxed font-medium">
-                  ℹ️ <strong>Notice:</strong> You can also log in anytime using your required credentials (registered phone number / email) to download this {regDocType === 'ticket' ? 'ticket pass' : 'verification slip PDF'} again from your <strong>Profile Page</strong>.
+                <div className="p-3.5 bg-black/50 rounded-xl text-[11px] text-amber-300 border border-amber-500/20 leading-relaxed font-medium space-y-1">
+                  <p>
+                    ℹ️ <strong>Account Access:</strong> You can log in anytime using your <strong>registered email address</strong> and your <strong>phone number as password</strong> to access your profile and download this {regDocType === 'ticket' ? 'ticket pass' : 'verification slip PDF'} again.
+                  </p>
+                  <p className="text-zinc-300 text-[10.5px]">
+                    🔄 You can also reset or change your password as you wish at any time from the login page or within your profile.
+                  </p>
                 </div>
 
                 <div className="flex gap-3 pt-1">

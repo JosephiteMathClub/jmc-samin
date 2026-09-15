@@ -570,7 +570,7 @@ const PanelView = () => {
                                  <ExecutiveRow 
                                    key={`js-${i}`}
                                    {...p} 
-                                   role="Joint Secretary"
+                                   role={p.role || "Joint Secretary"}
                                    isAdmin={isAdmin}
                                    onUpload={(url: string) => handleMemberUpdate(getMemberPath('secretaries.jointSecretary', i), url)}
                                  />
@@ -586,7 +586,7 @@ const PanelView = () => {
                                  <ExecutiveRow 
                                    key={`os-${i}`}
                                    {...p} 
-                                   role="Organizing Secretary"
+                                   role={p.role || "Organizing Secretary"}
                                    isAdmin={isAdmin}
                                    onUpload={(url: string) => handleMemberUpdate(getMemberPath('secretaries.organizingSecretary', i), url)}
                                  />
@@ -602,7 +602,7 @@ const PanelView = () => {
                                  <ExecutiveRow 
                                    key={`ags-${i}`}
                                    {...p} 
-                                   role="Assistant General Secretary"
+                                   role={p.role || "Assistant General Secretary"}
                                    isAdmin={isAdmin}
                                    onUpload={(url: string) => handleMemberUpdate(getMemberPath('secretaries.asstGeneralSecretary', i), url)}
                                  />
@@ -618,7 +618,7 @@ const PanelView = () => {
                                  <ExecutiveRow 
                                    key={`cs-${i}`}
                                    {...p} 
-                                   role="Corresponding Secretary"
+                                   role={p.role || "Corresponding Secretary"}
                                    isAdmin={isAdmin}
                                    onUpload={(url: string) => handleMemberUpdate(getMemberPath('secretaries.correspondingSecretary', i), url)}
                                  />

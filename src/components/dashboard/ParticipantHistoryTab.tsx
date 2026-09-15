@@ -32,6 +32,7 @@ import {
   Smartphone,
   CheckSquare,
   Square,
+  Edit,
   X
 } from 'lucide-react';
 
@@ -257,14 +258,21 @@ export const ParticipantHistoryTab: React.FC<ParticipantHistoryTabProps> = ({
     junior_events: 0,
     secondary_events: 0,
     higher_secondary_events: 0,
+    spot_ticket_participants: 0,
     total_live: 0
   });
   const [stats, setStats] = useState({
     totalArchived: 0,
     totalWithEmail: 0,
     totalWithPhone: 0,
+    totalSpotParticipants: 0,
     availableYears: [] as string[]
   });
+
+  // Edit Participant Modal States
+  const [editingRecord, setEditingRecord] = useState<ParticipantRecord | null>(null);
+  const [editRecordForm, setEditRecordForm] = useState<Partial<ParticipantRecord>>({});
+  const [savingRecordEdit, setSavingRecordEdit] = useState(false);
 
   // Filters & Search
   const [searchTerm, setSearchTerm] = useState('');
@@ -354,6 +362,8 @@ export const ParticipantHistoryTab: React.FC<ParticipantHistoryTabProps> = ({
           (p.bkash_number || '').includes(q) ||
           (p.school || '').toLowerCase().includes(q) ||
           (p.trxnid || '').toLowerCase().includes(q) ||
+          (p.original_id || '').toLowerCase().includes(q) ||
+          (p.selected_events || '').toLowerCase().includes(q) ||
           (p.academic_class || '').toLowerCase().includes(q);
         if (!matches) return false;
       }
@@ -364,8 +374,16 @@ export const ParticipantHistoryTab: React.FC<ParticipantHistoryTabProps> = ({
       }
 
       // Category Filter
-      if (categoryFilter !== 'all' && p.source_table !== categoryFilter) {
-        return false;
+      if (categoryFilter !== 'all') {
+        if (categoryFilter === 'spot_registration') {
+          const isSpot = p.source_table === 'spot_registration' || 
+                         p.source_table === 'spot_ticket' || 
+                         (p.original_id && p.original_id.startsWith('SPOT-')) ||
+                         p.metadata?.registered_from?.startsWith('spot_');
+          if (!isSpot) return false;
+        } else if (p.source_table !== categoryFilter) {
+          return false;
+        }
       }
 
       return true;
@@ -676,6 +694,46 @@ export const ParticipantHistoryTab: React.FC<ParticipantHistoryTabProps> = ({
     }
   };
 
+  // Edit Participant Handlers
+  const handleOpenEdit = (p: ParticipantRecord) => {
+    setEditingRecord(p);
+    setEditRecordForm({ ...p });
+  };
+
+  const handleSaveParticipantEdit = async () => {
+    if (!editingRecord) return;
+    if (!editRecordForm.full_name?.trim() || !editRecordForm.email?.trim()) {
+      showToast('Participant full name and email are mandatory.', 'error');
+      return;
+    }
+
+    setSavingRecordEdit(true);
+    try {
+      const res = await fetch('/api/admin/participant-history', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'update_participant',
+          id: editingRecord.id,
+          ...editRecordForm
+        })
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to update participant');
+      }
+
+      showToast(`Updated record for ${editRecordForm.full_name}`, 'success');
+      setEditingRecord(null);
+      fetchData();
+    } catch (err: any) {
+      showToast(err.message || 'Error updating participant record', 'error');
+    } finally {
+      setSavingRecordEdit(false);
+    }
+  };
+
   // Helper Category Formatter
   const getCategoryLabel = (src?: string) => {
     switch (src) {
@@ -683,6 +741,9 @@ export const ParticipantHistoryTab: React.FC<ParticipantHistoryTabProps> = ({
       case 'junior_events': return 'Junior (6-8)';
       case 'secondary_events': return 'Secondary (9-10)';
       case 'higher_secondary_events': return 'Higher Secondary (11-12)';
+      case 'spot_registration':
+      case 'spot_ticket':
+      case 'spot_ticket_participants': return 'On-Spot Ticket Purchase';
       case 'manual': return 'Manual Entry';
       default: return src || 'General';
     }
@@ -909,6 +970,10 @@ CREATE POLICY "Allow service role full access to previous_year_participants" ON 
                 <div className="flex justify-between p-2 rounded-lg bg-white/[0.02]">
                   <span>higher_secondary_events:</span>
                   <span className="text-white font-bold">{liveCounts.higher_secondary_events}</span>
+                </div>
+                <div className="flex justify-between p-2 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-300">
+                  <span className="font-bold">spot_ticket_participants:</span>
+                  <span className="text-amber-400 font-bold">{liveCounts.spot_ticket_participants || 0}</span>
                 </div>
               </div>
             </div>
@@ -1389,6 +1454,7 @@ CREATE POLICY "Allow service role full access to previous_year_participants" ON 
               <option value="junior_events">Junior (Classes 6-8)</option>
               <option value="secondary_events">Secondary (Classes 9-10)</option>
               <option value="higher_secondary_events">Higher Secondary (Classes 11-12)</option>
+              <option value="spot_registration">On-Spot Ticket Purchases</option>
               <option value="manual">Manual Entry</option>
             </select>
           </div>
@@ -1539,6 +1605,15 @@ CREATE POLICY "Allow service role full access to previous_year_participants" ON 
                             title="Quick Email"
                           >
                             <Mail className="w-3.5 h-3.5" />
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => handleOpenEdit(p)}
+                            className="p-1.5 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 hover:text-amber-300 transition-all cursor-pointer"
+                            title="Edit Participant Info"
+                          >
+                            <Edit className="w-3.5 h-3.5" />
                           </button>
 
                           <button
@@ -1766,6 +1841,163 @@ CREATE POLICY "Allow service role full access to previous_year_participants" ON 
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* EDIT PARTICIPANT MODAL */}
+      {editingRecord && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+          <div className="relative w-full max-w-xl max-h-[90vh] overflow-y-auto rounded-3xl bg-zinc-950 border border-amber-500/30 p-6 md:p-8 space-y-6 shadow-2xl">
+            <div className="flex items-center justify-between border-b border-white/10 pb-4">
+              <div className="flex items-center gap-3 text-amber-400 font-black text-sm uppercase tracking-wider">
+                <Edit className="w-5 h-5" />
+                <span>Edit Participant Details</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setEditingRecord(null)}
+                className="p-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+              <div className="sm:col-span-2">
+                <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 block mb-1">
+                  Full Name *
+                </label>
+                <input
+                  type="text"
+                  value={editRecordForm.full_name || ''}
+                  onChange={(e) => setEditRecordForm({ ...editRecordForm, full_name: e.target.value })}
+                  placeholder="Participant Full Name"
+                  className="w-full px-3.5 py-2.5 bg-zinc-900 border border-white/10 rounded-xl text-white outline-none focus:border-amber-500"
+                />
+              </div>
+
+              <div>
+                <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 block mb-1">
+                  Email Address *
+                </label>
+                <input
+                  type="email"
+                  value={editRecordForm.email || ''}
+                  onChange={(e) => setEditRecordForm({ ...editRecordForm, email: e.target.value })}
+                  placeholder="participant@example.com"
+                  className="w-full px-3.5 py-2.5 bg-zinc-900 border border-white/10 rounded-xl text-white outline-none focus:border-amber-500"
+                />
+              </div>
+
+              <div>
+                <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 block mb-1">
+                  Phone Number
+                </label>
+                <input
+                  type="text"
+                  value={editRecordForm.phone || ''}
+                  onChange={(e) => setEditRecordForm({ ...editRecordForm, phone: e.target.value })}
+                  placeholder="01XXXXXXXXX"
+                  className="w-full px-3.5 py-2.5 bg-zinc-900 border border-white/10 rounded-xl text-white outline-none focus:border-amber-500"
+                />
+              </div>
+
+              <div className="sm:col-span-2">
+                <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 block mb-1">
+                  School / Institution
+                </label>
+                <input
+                  type="text"
+                  value={editRecordForm.school || ''}
+                  onChange={(e) => setEditRecordForm({ ...editRecordForm, school: e.target.value })}
+                  placeholder="School / College Name"
+                  className="w-full px-3.5 py-2.5 bg-zinc-900 border border-white/10 rounded-xl text-white outline-none focus:border-amber-500"
+                />
+              </div>
+
+              <div>
+                <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 block mb-1">
+                  Class
+                </label>
+                <input
+                  type="text"
+                  value={editRecordForm.academic_class || ''}
+                  onChange={(e) => setEditRecordForm({ ...editRecordForm, academic_class: e.target.value })}
+                  placeholder="Class"
+                  className="w-full px-3.5 py-2.5 bg-zinc-900 border border-white/10 rounded-xl text-white outline-none focus:border-amber-500"
+                />
+              </div>
+
+              <div>
+                <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 block mb-1">
+                  Academic Year
+                </label>
+                <input
+                  type="text"
+                  value={editRecordForm.academic_year || ''}
+                  onChange={(e) => setEditRecordForm({ ...editRecordForm, academic_year: e.target.value })}
+                  placeholder="2025-2026"
+                  className="w-full px-3.5 py-2.5 bg-zinc-900 border border-white/10 rounded-xl text-white outline-none focus:border-amber-500"
+                />
+              </div>
+
+              <div className="sm:col-span-2">
+                <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 block mb-1">
+                  Selected Events
+                </label>
+                <input
+                  type="text"
+                  value={editRecordForm.selected_events || ''}
+                  onChange={(e) => setEditRecordForm({ ...editRecordForm, selected_events: e.target.value })}
+                  placeholder="e.g. Math Olympiad, Rubik's Cube"
+                  className="w-full px-3.5 py-2.5 bg-zinc-900 border border-white/10 rounded-xl text-white outline-none focus:border-amber-500"
+                />
+              </div>
+
+              <div>
+                <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 block mb-1">
+                  Amount Paid (BDT)
+                </label>
+                <input
+                  type="number"
+                  value={editRecordForm.amount ?? 0}
+                  onChange={(e) => setEditRecordForm({ ...editRecordForm, amount: Number(e.target.value) })}
+                  className="w-full px-3.5 py-2.5 bg-zinc-900 border border-white/10 rounded-xl text-white outline-none focus:border-amber-500"
+                />
+              </div>
+
+              <div>
+                <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 block mb-1">
+                  Transaction / Ticket ID
+                </label>
+                <input
+                  type="text"
+                  value={editRecordForm.trxnid || ''}
+                  onChange={(e) => setEditRecordForm({ ...editRecordForm, trxnid: e.target.value })}
+                  className="w-full px-3.5 py-2.5 bg-zinc-900 border border-white/10 rounded-xl text-white outline-none focus:border-amber-500"
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-4 border-t border-white/10">
+              <button
+                type="button"
+                onClick={() => setEditingRecord(null)}
+                className="px-4 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-xs font-bold text-zinc-400 hover:text-white"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveParticipantEdit}
+                disabled={savingRecordEdit}
+                className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-black text-xs font-bold transition-all shadow-lg shadow-amber-500/20"
+              >
+                {savingRecordEdit ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                Save Changes
+              </button>
+            </div>
           </div>
         </div>
       )}

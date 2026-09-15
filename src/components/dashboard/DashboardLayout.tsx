@@ -1,7 +1,6 @@
 "use client";
 import React from 'react';
 import Image from 'next/image';
-import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Save, 
   Loader2, 
@@ -13,7 +12,7 @@ import {
   LogOut
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { usePerformance } from '../../hooks/usePerformance';
+import Link from 'next/link';
 import { resolveImageUrl } from '../../lib/utils';
 
 interface DashboardLayoutProps {
@@ -44,37 +43,27 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
   children
 }) => {
   const router = useRouter();
-  const { shouldReduceGfx: performanceReduceGfx } = usePerformance();
-  const shouldReduceGfx = true; // Force reduced animations in dashboard to eliminate lag and ensure total responsiveness
   const [isSidebarOpen, setIsSidebarOpen] = React.useState(false);
 
   return (
     <div className="flex min-h-screen bg-transparent selection:bg-amber-500/30 selection:text-amber-200 overflow-x-hidden">
       {/* Mobile Sidebar Overlay */}
-      <AnimatePresence>
-        {isSidebarOpen && (
-          <motion.div 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={() => setIsSidebarOpen(false)}
-            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] lg:hidden"
-          />
-        )}
-      </AnimatePresence>
+      {isSidebarOpen && (
+        <div 
+          onClick={() => setIsSidebarOpen(false)}
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] lg:hidden"
+        />
+      )}
 
       {/* Sidebar */}
       <div 
         data-lenis-prevent
         className={`
-          fixed inset-y-0 left-0 z-[70] w-72 lg:w-80 border-r border-white/5 bg-[#080808] flex flex-col transition-transform duration-500 lg:translate-x-0 lg:h-screen
+          fixed inset-y-0 left-0 z-[70] w-72 lg:w-80 border-r border-white/5 bg-[#080808] flex flex-col lg:translate-x-0 lg:h-screen
           ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}
         `}
       >
         <div className="p-6 lg:p-8 border-b border-white/5 flex items-center justify-between relative overflow-hidden group">
-          {!shouldReduceGfx && (
-            <div className="absolute inset-0 bg-gradient-to-r from-amber-500/0 via-amber-500/5 to-amber-500/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
-          )}
           <div className="flex items-center gap-4 relative z-10">
             <div className="w-20 lg:w-24 h-10 relative">
               <Image 
@@ -90,7 +79,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
                 {isSuperAdmin ? "JMC Root" : "JMC Admin"}
               </h2>
               <p className="text-[9px] lg:text-[10px] text-zinc-500 font-bold uppercase tracking-[0.2em] flex items-center gap-2">
-                <span className={`w-1 h-1 rounded-full ${isSuperAdmin ? 'bg-purple-500 shadow-[0_0_8px_rgba(168,85,247,0.8)]' : 'bg-amber-500'} animate-pulse`} />
+                <span className={`w-1 h-1 rounded-full ${isSuperAdmin ? 'bg-purple-500 shadow-[0_0_8px_rgba(168,85,247,0.8)]' : 'bg-amber-500'}`} />
                 {isSuperAdmin ? "Root Access" : "Control Center"}
               </p>
             </div>
@@ -107,13 +96,8 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
           data-lenis-prevent
           className="flex-1 p-6 overflow-y-auto space-y-8 custom-scrollbar relative"
         >
-          {/* Subtle noise pattern for background */}
-          {!shouldReduceGfx && <div className="absolute inset-0 opacity-[0.02] pointer-events-none bg-[url('https://grainy-gradients.vercel.app/noise.svg')]" />}
-          
           {!isSupabaseConfigured && (
-            <motion.div 
-              initial={shouldReduceGfx ? { opacity: 0 } : { opacity: 0, scale: 0.95 }}
-              animate={shouldReduceGfx ? { opacity: 1 } : { opacity: 1, scale: 1 }}
+            <div 
               className="p-5 bg-amber-500/5 border border-amber-500/10 rounded-3xl text-amber-500 text-[11px] leading-relaxed shadow-inner relative z-10"
             >
               <div className="flex items-center gap-2 font-bold mb-2 uppercase tracking-widest">
@@ -121,7 +105,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
                 Database Offline
               </div>
               Persistence is currently disabled. Changes will not be saved to the cloud.
-            </motion.div>
+            </div>
           )}
 
           <div className="relative z-10">
@@ -132,33 +116,33 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
               </div>
             </div>
             <nav className="space-y-1">
-              {tabs.map((tab) => (
-                <button
-                  key={tab.id}
-                  onClick={() => onTabChange(tab.id)}
-                  className={`w-full group flex items-center justify-between px-5 py-3.5 rounded-2xl transition-all duration-500 relative overflow-hidden ${
-                    activeTab === tab.id 
-                      ? 'text-black translate-x-1' 
-                      : 'text-zinc-500 hover:bg-white/[0.02] hover:text-zinc-200'
-                  }`}
-                >
-                  {activeTab === tab.id && !shouldReduceGfx && (
-                    <motion.div 
-                      layoutId="activeTab"
-                      className="absolute inset-0 bg-amber-500 z-0 shadow-2xl shadow-amber-500/50"
-                      transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
-                    />
-                  )}
-                  {activeTab === tab.id && shouldReduceGfx && (
-                    <div className="absolute inset-0 bg-amber-500 z-0" />
-                  )}
-                  <div className="flex items-center gap-4 relative z-10">
-                    <tab.icon className={`w-4 h-4 transition-colors duration-300 ${activeTab === tab.id ? 'text-black' : 'text-zinc-600 group-hover:text-amber-500'}`} />
-                    <span className="text-xs font-bold tracking-tight uppercase group-hover:tracking-widest transition-all duration-500">{tab.label}</span>
-                  </div>
-                  {activeTab === tab.id && <div className="w-1 h-1 bg-black rounded-full relative z-10" />}
-                </button>
-              ))}
+              {tabs.map((tab) => {
+                const isActive = activeTab === tab.id;
+                return (
+                  <Link
+                    key={tab.id}
+                    href={`/admin/${tab.id}`}
+                    onClick={() => {
+                      onTabChange(tab.id);
+                      setIsSidebarOpen(false);
+                    }}
+                    className={`w-full group flex items-center justify-between px-5 py-3.5 rounded-2xl relative overflow-hidden transition-colors ${
+                      isActive 
+                        ? 'text-black translate-x-1' 
+                        : 'text-zinc-500 hover:bg-white/[0.02] hover:text-zinc-200'
+                    }`}
+                  >
+                    {isActive && (
+                      <div className="absolute inset-0 bg-amber-500 z-0 shadow-2xl shadow-amber-500/50" />
+                    )}
+                    <div className="flex items-center gap-4 relative z-10">
+                      <tab.icon className={`w-4 h-4 ${isActive ? 'text-black' : 'text-zinc-600 group-hover:text-amber-500'}`} />
+                      <span className="text-xs font-bold tracking-tight uppercase group-hover:tracking-widest">{tab.label}</span>
+                    </div>
+                    {isActive && <div className="w-1 h-1 bg-black rounded-full relative z-10" />}
+                  </Link>
+                );
+              })}
             </nav>
           </div>
         </div>
@@ -172,10 +156,10 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
             </div>
             <span className="text-[8px] font-mono text-zinc-600 tracking-tighter">V4.0.2_STABLE</span>
           </div>
-          <div className={`flex items-center gap-4 p-4 rounded-3xl border transition-colors ${
+          <div className={`flex items-center gap-4 p-4 rounded-3xl border ${
             isSuperAdmin ? 'bg-purple-500/5 border-purple-500/10 group hover:border-purple-500/20' : 'bg-white/[0.03] border-white/5 group hover:border-white/10'
           }`}>
-            <div className={`w-10 h-10 rounded-full flex items-center justify-center border transition-colors ${
+            <div className={`w-10 h-10 rounded-full flex items-center justify-center border ${
               isSuperAdmin ? 'bg-zinc-900 text-purple-500 border-purple-500/20' : 'bg-zinc-900 text-zinc-600 border-white/5 group-hover:text-amber-500'
             }`}>
               <Shield className="w-5 h-5" />
@@ -185,7 +169,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
                 {isSuperAdmin ? "Master_Root" : "Administrator"}
               </p>
               <p className="text-[10px] text-zinc-600 font-medium truncate uppercase tracking-widest flex items-center gap-1.5">
-                <span className={`w-1 h-1 rounded-full animate-pulse ${isSuperAdmin ? 'bg-purple-500' : 'bg-emerald-500'}`} />
+                <span className={`w-1 h-1 rounded-full ${isSuperAdmin ? 'bg-purple-500' : 'bg-emerald-500'}`} />
                 {isSuperAdmin ? 'Kernel_Verified' : 'Identity_Verified'}
               </p>
             </div>
@@ -193,7 +177,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
           
           <button 
             onClick={() => router.push('/')}
-            className="w-full flex items-center justify-center gap-2 px-4 py-3 text-zinc-600 hover:text-white transition-colors text-[10px] font-bold uppercase tracking-widest border border-transparent hover:border-white/5 rounded-2xl"
+            className="w-full flex items-center justify-center gap-2 px-4 py-3 text-zinc-600 hover:text-white text-[10px] font-bold uppercase tracking-widest border border-transparent hover:border-white/5 rounded-2xl"
           >
             <LogOut className="w-3.5 h-3.5" />
             Terminal_Exit
@@ -216,7 +200,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
                 <div className="w-5 h-0.5 bg-current" />
               </button>
               <div className="flex items-center gap-3">
-                <div className={`w-1.5 h-1.5 rounded-full bg-amber-500 ${shouldReduceGfx ? '' : 'animate-pulse'}`} />
+                <div className="w-1.5 h-1.5 rounded-full bg-amber-500" />
                 <span className="text-[9px] lg:text-[10px] font-bold text-zinc-500 uppercase tracking-[0.4em] hidden sm:inline">Live Editor</span>
               </div>
             </div>
@@ -228,20 +212,18 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
                     onReset();
                   }}
                   disabled={saving}
-                  className="relative z-[9999] pointer-events-auto px-3 lg:px-6 py-2 lg:py-3.5 rounded-xl lg:rounded-2xl font-bold text-zinc-500 hover:text-white hover:bg-white/5 transition-all text-[10px] lg:text-sm tracking-tight disabled:opacity-30"
+                  className="relative z-[9999] pointer-events-auto px-3 lg:px-6 py-2 lg:py-3.5 rounded-xl lg:rounded-2xl font-bold text-zinc-500 hover:text-white hover:bg-white/5 text-[10px] lg:text-sm tracking-tight disabled:opacity-30"
                 >
                   Discard
                 </button>
               )}
               
-              <motion.button
-                whileHover={shouldReduceGfx ? {} : { scale: 1.02 }}
-                whileTap={shouldReduceGfx ? {} : { scale: 0.98 }}
+              <button
                 onClick={() => {
                   onSave();
                 }}
                 disabled={saving || saveSuccess}
-                className={`relative z-[9999] pointer-events-auto flex items-center gap-2 lg:gap-3 px-4 lg:px-10 py-2 lg:py-3.5 rounded-xl lg:rounded-2xl font-bold transition-all shadow-2xl disabled:opacity-50 disabled:cursor-not-allowed text-[10px] lg:text-sm tracking-tight ${
+                className={`relative z-[9999] pointer-events-auto flex items-center gap-2 lg:gap-3 px-4 lg:px-10 py-2 lg:py-3.5 rounded-xl lg:rounded-2xl font-bold shadow-2xl disabled:opacity-50 disabled:cursor-not-allowed text-[10px] lg:text-sm tracking-tight ${
                   saveSuccess 
                     ? 'bg-emerald-500 text-white shadow-emerald-500/20' 
                     : 'bg-amber-500 text-black shadow-amber-500/20 hover:bg-amber-400'
@@ -249,7 +231,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
               >
                 {saving ? (
                   <>
-                    <Loader2 className={`w-4 h-4 lg:w-5 lg:h-5 ${shouldReduceGfx ? '' : 'animate-spin'}`} />
+                    <Loader2 className="w-4 h-4 lg:w-5 lg:h-5 animate-spin" />
                     <span className="hidden sm:inline">Processing...</span>
                     <span className="sm:hidden">...</span>
                   </>
@@ -266,35 +248,27 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
                     <span className="sm:hidden">Update</span>
                   </>
                 )}
-              </motion.button>
+              </button>
             </div>
           </div>
         </div>
 
         {/* Content Container */}
         <div className="max-w-6xl mx-auto p-6 lg:p-12 pb-32">
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={activeTab}
-              initial={shouldReduceGfx ? { opacity: 1 } : { opacity: 0, x: 20 }}
-              animate={shouldReduceGfx ? { opacity: 1 } : { opacity: 1, x: 0 }}
-              exit={shouldReduceGfx ? { opacity: 1 } : { opacity: 0, x: -20 }}
-              transition={shouldReduceGfx ? { duration: 0.1 } : { duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-            >
-              <div className="mb-8 lg:mb-16">
-                <h1 className="text-4xl lg:text-7xl font-bold text-white font-display tracking-tight mb-4 capitalize">
-                  {activeTab.replace('_', ' ')}
-                </h1>
-                <p className="text-zinc-500 text-sm lg:text-lg font-medium leading-relaxed max-w-2xl">
-                  Configure and manage the {activeTab.replace('_', ' ')} section of your website. All changes are reflected in real-time.
-                </p>
-              </div>
+          <div key={activeTab}>
+            <div className="mb-8 lg:mb-16">
+              <h1 className="text-4xl lg:text-7xl font-bold text-white font-display tracking-tight mb-4 capitalize">
+                {activeTab.replace('_', ' ')}
+              </h1>
+              <p className="text-zinc-500 text-sm lg:text-lg font-medium leading-relaxed max-w-2xl">
+                Configure and manage the {activeTab.replace('_', ' ')} section of your website. All changes are reflected in real-time.
+              </p>
+            </div>
 
-              <div className="space-y-8 lg:space-y-12">
-                {children}
-              </div>
-            </motion.div>
-          </AnimatePresence>
+            <div className="space-y-8 lg:space-y-12">
+              {children}
+            </div>
+          </div>
         </div>
       </div>
     </div>

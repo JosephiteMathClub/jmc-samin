@@ -121,6 +121,17 @@ export async function GET() {
       }
     }
 
+    try {
+      const { count: spotCount } = await supabaseAdmin
+        .from('spot_ticket_participants')
+        .select('*', { count: 'exact', head: true });
+      if (typeof spotCount === 'number') {
+        liveCounts.spot_ticket_participants = spotCount;
+      }
+    } catch (sErr) {
+      // spot_ticket_participants optional count
+    }
+
     // 2. Fetch archived participants from previous_year_participants
     let participants: any[] = [];
     let tableExists = true;
@@ -149,11 +160,15 @@ export async function GET() {
     const yearsSet = new Set<string>();
     let totalWithEmail = 0;
     let totalWithPhone = 0;
+    let totalSpot = 0;
 
     participants.forEach((p) => {
       if (p.academic_year) yearsSet.add(p.academic_year);
       if (p.email && p.email.trim() && p.email.includes('@')) totalWithEmail++;
       if (p.phone && p.phone.trim()) totalWithPhone++;
+      if (p.source_table === 'spot_registration' || p.source_table === 'spot_ticket' || (p.original_id && p.original_id.startsWith('SPOT-'))) {
+        totalSpot++;
+      }
     });
 
     return NextResponse.json({
@@ -165,6 +180,7 @@ export async function GET() {
         totalArchived: participants.length,
         totalWithEmail,
         totalWithPhone,
+        totalSpotParticipants: totalSpot,
         availableYears: Array.from(yearsSet).sort().reverse(),
       }
     });
@@ -602,6 +618,64 @@ export async function POST(req: Request) {
 
       if (error) return NextResponse.json({ error: error.message }, { status: 500 });
       return NextResponse.json({ success: true, message: 'Participant record deleted.' });
+    }
+
+    // ----------------------------------------------------
+    // ACTION: UPDATE INDIVIDUAL HISTORICAL PARTICIPANT
+    // ----------------------------------------------------
+    if (action === 'update_participant') {
+      const { id, full_name, email, phone, academic_class, section, roll, school, academic_year, selected_events, amount, trxnid } = body;
+      if (!id) return NextResponse.json({ error: 'Participant ID is required.' }, { status: 400 });
+      if (!full_name || !email) return NextResponse.json({ error: 'Full name and email are required.' }, { status: 400 });
+
+      const updatePayload: any = {
+        full_name: full_name.trim(),
+        email: email.trim().toLowerCase(),
+        phone: (phone || '').trim(),
+        academic_class: (academic_class || '').trim(),
+        section: (section || '').trim(),
+        roll: (roll || '').trim(),
+        school: (school || '').trim(),
+        academic_year: (academic_year || '').trim(),
+        selected_events: (selected_events || '').trim(),
+        amount: Number(amount || 0),
+        trxnid: (trxnid || '').trim()
+      };
+
+      const { data, error } = await supabaseAdmin
+        .from('previous_year_participants')
+        .update(updatePayload)
+        .eq('id', id)
+        .select()
+        .maybeSingle();
+
+      if (error) {
+        return NextResponse.json({ error: error.message }, { status: 500 });
+      }
+
+      // If this record corresponds to an on-spot ticket (original_id starts with SPOT-), sync back to spot_ticket_participants
+      if (data?.original_id && data.original_id.startsWith('SPOT-')) {
+        try {
+          await supabaseAdmin
+            .from('spot_ticket_participants')
+            .update({
+              full_name: updatePayload.full_name,
+              email: updatePayload.email,
+              phone: updatePayload.phone,
+              academic_class: updatePayload.academic_class,
+              section: updatePayload.section,
+              roll: updatePayload.roll,
+              school: updatePayload.school,
+              selected_events: updatePayload.selected_events,
+              amount: updatePayload.amount
+            })
+            .eq('ticket_id', data.original_id);
+        } catch (sErr) {
+          console.warn('Could not sync update to spot_ticket_participants:', sErr);
+        }
+      }
+
+      return NextResponse.json({ success: true, participant: data });
     }
 
     // ----------------------------------------------------

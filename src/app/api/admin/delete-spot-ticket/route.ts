@@ -140,6 +140,42 @@ export async function POST(req: Request) {
       }
     }
 
+    // 3. Remove from spot_ticket_participants table
+    try {
+      if (cleanMemberId) {
+        await supabaseAdmin
+          .from('spot_ticket_participants')
+          .delete()
+          .or(`ticket_id.eq.SPOT-${cleanMemberId},ticket_id.eq.${cleanMemberId}`);
+      }
+      if (targetTicketId) {
+        await supabaseAdmin
+          .from('spot_ticket_participants')
+          .delete()
+          .eq('ticket_id', targetTicketId);
+      }
+      if (cleanTrxnid) {
+        await supabaseAdmin
+          .from('spot_ticket_participants')
+          .delete()
+          .eq('trxnid', cleanTrxnid);
+      }
+    } catch (spotErr) {
+      console.warn('Could not delete from spot_ticket_participants:', spotErr);
+    }
+
+    // 4. Remove from previous_year_participants (history)
+    try {
+      if (cleanMemberId) {
+        await supabaseAdmin
+          .from('previous_year_participants')
+          .delete()
+          .or(`original_id.eq.SPOT-${cleanMemberId},original_id.ilike.SPOT-${cleanMemberId}-%`);
+      }
+    } catch (histErr) {
+      console.warn('Could not delete from previous_year_participants:', histErr);
+    }
+
     return NextResponse.json({
       success: true,
       message: `On-spot ticket and registration for ${fullName || cleanMemberId} deleted successfully.`

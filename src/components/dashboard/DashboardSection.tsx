@@ -1,9 +1,6 @@
 "use client";
 import React from 'react';
-import { motion } from 'framer-motion';
 import { LucideIcon } from 'lucide-react';
-import { usePerformance } from '../../hooks/usePerformance';
-
 import { Skeleton } from '../Skeleton';
 
 interface DashboardSectionProps {
@@ -23,19 +20,10 @@ export const DashboardSection: React.FC<DashboardSectionProps> = ({
   actions,
   loading
 }) => {
-  const { shouldReduceGfx } = usePerformance();
-
   return (
-    <motion.section 
-      initial={shouldReduceGfx ? { opacity: 0 } : { opacity: 0, y: 20 }}
-      animate={shouldReduceGfx ? { opacity: 1 } : { opacity: 1, y: 0 }}
+    <section 
       className="glass-card p-6 lg:p-10 border-white/5 relative overflow-hidden group/section"
     >
-      {/* Background Glow */}
-      {!shouldReduceGfx && (
-        <div className="absolute -top-24 -right-24 w-64 h-64 bg-amber-500/5 blur-[100px] rounded-full group-hover/section:bg-amber-500/10 transition-colors duration-700 pointer-events-none" />
-      )}
-      
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-10 relative z-10">
         <div className="flex items-center gap-4">
           <div className="w-12 h-12 rounded-2xl bg-amber-500/10 flex items-center justify-center border border-amber-500/10 shadow-lg shadow-amber-500/5">
@@ -66,6 +54,6 @@ export const DashboardSection: React.FC<DashboardSectionProps> = ({
           </div>
         ) : children}
       </div>
-    </motion.section>
+    </section>
   );
 };

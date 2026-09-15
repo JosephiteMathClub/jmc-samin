@@ -19,7 +19,8 @@ import {
   Award,
   Calendar,
   XCircle,
-  KeyRound
+  KeyRound,
+  ShieldAlert
 } from 'lucide-react';
 import { supabase, isSupabaseConfigured } from '../../../lib/supabase';
 import { useAuth } from '../../../context/AuthContext';
@@ -102,17 +103,15 @@ const cleanToUniqueCode = (input: string): string => {
   // Extract digits only!
   const digitsOnly = code.replace(/\D/g, "");
 
-  // If we have mapped a 3-digit, 5-digit, or 6-digit number, return it!
-  if (digitsOnly.length === 3 || digitsOnly.length === 5 || digitsOnly.length === 6) {
+  // If 1, 2, or 3 digits (e.g. "54" or "054" for EC unique ID), return digits
+  if (digitsOnly.length >= 1 && digitsOnly.length <= 3) {
     return digitsOnly;
   }
 
-  // Fallback: match largest group of digits
-  const match6 = digitsOnly.match(/\d{6}/);
-  if (match6) return match6[0];
-
-  const match5 = digitsOnly.match(/\d{5}/);
-  if (match5) return match5[0];
+  // If 5 or 6 digits, return so validation can explicitly catch and reject non-EC IDs
+  if (digitsOnly.length === 5 || digitsOnly.length === 6) {
+    return digitsOnly;
+  }
 
   const match3 = digitsOnly.match(/\d{3}/);
   if (match3) return match3[0];
@@ -169,49 +168,31 @@ export const FoodManagementSection: React.FC<FoodManagementSectionProps> = ({
   const [newSlotName, setNewSlotName] = useState('');
   const [newSlotMaxServings, setNewSlotMaxServings] = useState(1);
 
-  // Active members list used for calculations and query matching (falls back to props, strictly filtered to general and EC members)
+  // Active members list strictly restricted to EC members (3-digit unique IDs)
   const activeMembersList = useMemo(() => {
     const baseList = localMembers.length > 0 ? localMembers : (members || []);
     return baseList.filter(m => {
       const cleanId = cleanToUniqueCode(m.member_id || '');
-      return /^\d{3}$/.test(cleanId) || /^\d{6}$/.test(cleanId);
+      const isThreeDigit = /^\d{1,3}$/.test(cleanId);
+      return (m.is_ec === true || isThreeDigit) && !/^\d{6}$/.test(cleanId);
     });
   }, [localMembers, members]);
 
-  // Responsive Search Filtering for Manual Lookup Fallback
+  // Responsive Search Filtering for Manual Lookup (EC Unique IDs Only)
   const matchingMembers = useMemo(() => {
     const query = manualId.trim().toLowerCase();
     if (!query) return [];
 
     return (activeMembersList || []).filter(m => {
       const cleanId = cleanToUniqueCode(m.member_id || '');
-      const isThreeDigit = /^\d{3}$/.test(cleanId);
-      const isSixDigit = /^\d{6}$/.test(cleanId);
-      
-      // Food distribution should only work on general members (6-digit ID) and EC members (3-digit ID)
-      if (!isThreeDigit && !isSixDigit) {
-        return false;
-      }
+      const isThreeDigit = /^\d{1,3}$/.test(cleanId);
+      if (!isThreeDigit && !m.is_ec) return false;
 
       const mId = (m.member_id || '').toLowerCase();
       const fullName = (m.full_name || '').toLowerCase();
 
-      // Match full_name or member_id
-      const matchesId = mId.includes(query) || cleanId.includes(query);
-      const matchesName = fullName.includes(query);
-
-      if (!matchesId && !matchesName) return false;
-
-      // Determine if they are EC members
-      const isEcMember = m.is_ec === true || isThreeDigit;
-
-      // Rule: If query length <= 3, show both EC and general members.
-      // If query length > 3, isolate only to general members (i.e., do not show EC members).
-      if (query.length > 3) {
-        return !isEcMember;
-      }
-
-      return true;
+      // Match full_name or member_id or cleanId
+      return mId.includes(query) || cleanId.includes(query) || fullName.includes(query);
     });
   }, [manualId, activeMembersList]);
 
@@ -280,14 +261,8 @@ export const FoodManagementSection: React.FC<FoodManagementSectionProps> = ({
         if (seedError) console.warn("Failed seeding food distribution data store:", seedError);
       }
 
-      // 2. Refresh members list locally to ensure metrics are not 0 under any tabs
+      // 2. Refresh EC members list locally to ensure metrics are strictly accurate
       try {
-        const { data: standardData, error: standardError } = await supabase
-          .from('member')
-          .select('*');
-        
-        let standardMembers = standardData || [];
-
         let ecMembers: any[] = [];
         const { data: ecRes, error: ecError } = await supabase
           .from('ec_member')
@@ -296,30 +271,16 @@ export const FoodManagementSection: React.FC<FoodManagementSectionProps> = ({
           ecMembers = ecRes.map(m => ({ ...m, is_ec: true }));
         }
 
-        // Deduplicate and filter standard members (must be 6-digit ID)
-        const ecIds = new Set(ecMembers.map(m => (m.id || '').toLowerCase()));
-        const ecMemberIds = new Set(ecMembers.map(m => (m.member_id || '').toLowerCase()));
-        const filteredStandard = standardMembers.filter(m => {
-          const cleanId = cleanToUniqueCode(m.member_id || '');
-          const isSixDigit = /^\d{6}$/.test(cleanId);
-          if (!isSixDigit) return false;
-
-          const idLower = (m.id || '').toLowerCase();
-          const mIdLower = (m.member_id || '').toLowerCase();
-          return !ecIds.has(idLower) && !ecMemberIds.has(mIdLower);
-        });
-
-        // Filter ec members (must be 3-digit ID)
+        // Filter ec members (must be 1-3 digit ID or marked is_ec)
         const filteredEc = ecMembers.filter(m => {
           const cleanId = cleanToUniqueCode(m.member_id || '');
-          const isThreeDigit = /^\d{3}$/.test(cleanId);
-          return isThreeDigit;
+          const isThreeDigit = /^\d{1,3}$/.test(cleanId);
+          return isThreeDigit || m.is_ec === true;
         });
 
-        const combined = [...filteredStandard, ...filteredEc];
-        setLocalMembers(combined);
+        setLocalMembers(filteredEc);
       } catch (memErr) {
-        console.error("Failed to query members list locally inside food management:", memErr);
+        console.error("Failed to query ec members list locally inside food management:", memErr);
       }
 
     } catch (err) {
@@ -378,31 +339,32 @@ export const FoodManagementSection: React.FC<FoodManagementSectionProps> = ({
       return;
     }
     
-    const formattedId = cleanToUniqueCode(decodedText);
+    const rawCleaned = cleanToUniqueCode(decodedText);
+    // Standardize 1-3 digits into 3-digit format (e.g. "54" -> "054")
+    const formattedId = /^\d{1,3}$/.test(rawCleaned) ? rawCleaned.padStart(3, '0') : rawCleaned;
 
     const isThreeDigit = /^\d{3}$/.test(formattedId);
-    const isSixDigit = /^\d{6}$/.test(formattedId);
 
-    // Food distribution is strictly for General Members (6-digit ID) and EC Officers (3-digit ID)
-    if (!isThreeDigit && !isSixDigit) {
+    // Food distribution strictly accepts EC Unique IDs (3-digit ID) only
+    if (!isThreeDigit) {
       setScanFeedback({
         status: 'error',
-        title: 'Invalid ID Format',
-        message: `The scanned ID "${formattedId}" is invalid for food distribution. Food distribution is strictly limited to verified General Members (6-digit ID) and EC Officers (3-digit ID). Event registrants without a 6-digit General Member ID are not eligible.`,
-        memberId: formattedId
+        title: 'Only EC Unique ID Accepted',
+        message: `The scanned ID "${rawCleaned}" was rejected. Food distribution is strictly restricted to EC members with a 3-digit EC Unique ID (e.g. 054). General members (6-digit ID) and event registrants are not eligible for food distribution.`,
+        memberId: rawCleaned
       });
       setIsProcessing(false);
       return;
     }
 
     try {
-      // 1. Fetch matching member (try direct, JMC prefix, or suffix match in both member and ec_member tables)
-      let member = null;
+      // 1. Fetch matching EC member (query ec_member table first, then member table only if is_ec: true)
+      let member: any = null;
       
-      const lookupId = async (tableName: 'member' | 'ec_member') => {
+      const lookupId = async (tableName: 'ec_member' | 'member') => {
         let { data, error } = await supabase
           .from(tableName)
-          .select('id, full_name, verified, member_id')
+          .select('id, full_name, verified, member_id, is_ec')
           .eq('member_id', formattedId)
           .maybeSingle();
 
@@ -412,36 +374,43 @@ export const FoodManagementSection: React.FC<FoodManagementSectionProps> = ({
         const prependedId = `JMC-${formattedId}`;
         let { data: prependedData, error: prependedError } = await supabase
           .from(tableName)
-          .select('id, full_name, verified, member_id')
+          .select('id, full_name, verified, member_id, is_ec')
           .eq('member_id', prependedId)
           .maybeSingle();
 
         if (prependedError) throw prependedError;
         if (prependedData) return prependedData;
 
-        if (formattedId.length >= 3) {
-          const { data: suffixMatches, error: suffixError } = await supabase
+        if (rawCleaned !== formattedId) {
+          let { data: rawData, error: rawError } = await supabase
             .from(tableName)
-            .select('id, full_name, verified, member_id')
-            .ilike('member_id', `%${formattedId}`);
+            .select('id, full_name, verified, member_id, is_ec')
+            .eq('member_id', rawCleaned)
+            .maybeSingle();
 
-          if (suffixError) throw suffixError;
-
-          if (suffixMatches && suffixMatches.length > 0) {
-            const perfectSub = suffixMatches.find(m => (m.member_id || '').toUpperCase().endsWith(`-${formattedId}`));
-            return perfectSub || suffixMatches[0];
-          }
+          if (!rawError && rawData) return rawData;
         }
+
+        const { data: suffixMatches, error: suffixError } = await supabase
+          .from(tableName)
+          .select('id, full_name, verified, member_id, is_ec')
+          .ilike('member_id', `%${formattedId}`);
+
+        if (!suffixError && suffixMatches && suffixMatches.length > 0) {
+          const perfectSub = suffixMatches.find(m => (m.member_id || '').toUpperCase().endsWith(`-${formattedId}`));
+          return perfectSub || suffixMatches[0];
+        }
+
         return null;
       };
 
-      const memData = await lookupId('member');
-      if (memData) {
-        member = { ...memData, is_ec: false };
+      const ecData = await lookupId('ec_member');
+      if (ecData) {
+        member = { ...ecData, is_ec: true };
       } else {
-        const ecData = await lookupId('ec_member');
-        if (ecData) {
-          member = { ...ecData, is_ec: true };
+        const memData = await lookupId('member');
+        if (memData && memData.is_ec === true) {
+          member = { ...memData, is_ec: true };
         }
       }
 
@@ -449,21 +418,22 @@ export const FoodManagementSection: React.FC<FoodManagementSectionProps> = ({
         setLastScannedId(formattedId);
         setScanFeedback({
           status: 'error',
-          title: 'Not Found',
-          message: `The scanned ID "${formattedId}" does not exist in the client registry. Please confirm they have registered.`,
+          title: 'EC Member Not Found',
+          message: `The scanned ID "${formattedId}" was not found in the EC member registry. Food distribution is strictly restricted to verified EC officers with an EC Unique ID.`,
           memberId: formattedId
         });
         setIsProcessing(false);
         return;
       }
 
-      // Block resolved non-conforming IDs from redeeming food
+      // Block resolved non-conforming or non-EC IDs from redeeming food
       const cleanResolvedId = cleanToUniqueCode(member.member_id || '');
-      if (!/^\d{3}$/.test(cleanResolvedId) && !/^\d{6}$/.test(cleanResolvedId)) {
+      const isResolvedThreeDigit = /^\d{1,3}$/.test(cleanResolvedId);
+      if (!isResolvedThreeDigit && !member.is_ec) {
         setScanFeedback({
           status: 'error',
-          title: 'Invalid ID Format',
-          message: `${member.full_name} has an invalid or Event-Only ID ("${member.member_id}"). Food distribution is strictly limited to verified General Members (6-digit ID) and EC Officers (3-digit ID).`,
+          title: 'Only EC Unique ID Accepted',
+          message: `${member.full_name} is not an authorized EC member ("${member.member_id}"). Food distribution strictly accepts EC Unique IDs only.`,
           memberName: member.full_name,
           memberId: member.member_id
         });
@@ -636,12 +606,9 @@ export const FoodManagementSection: React.FC<FoodManagementSectionProps> = ({
     showToast("Portions claims reset. Ready for a new day of scans!", "success");
   };
 
-  // Counts
-  const totalRegularScanned = logs.filter(l => l.slot_id === activeSlotId && !l.is_ec).length;
+  // Counts - EC Exclusive distribution
   const totalEcScanned = logs.filter(l => l.slot_id === activeSlotId && l.is_ec).length;
-
-  const totalMembersCount = activeMembersList.filter(m => !(m.is_ec === true || (m.member_id && /^\d{3}$/.test(m.member_id)))).length;
-  const totalEcMembersCount = activeMembersList.filter(m => m.is_ec === true || (m.member_id && /^\d{3}$/.test(m.member_id))).length;
+  const totalEcMembersCount = activeMembersList.length;
 
   // Filter logs for the table
   const filteredLogs = logs.filter(l => {
@@ -665,7 +632,7 @@ export const FoodManagementSection: React.FC<FoodManagementSectionProps> = ({
             Food Management Services
           </h2>
           <p className="text-xs text-zinc-500 font-bold uppercase tracking-wider">
-            Distribute food packs, verify member QR integrity, and block double claims
+            Distribute food packs exclusively to EC members using 3-digit EC unique IDs
           </p>
         </div>
 
@@ -698,52 +665,65 @@ export const FoodManagementSection: React.FC<FoodManagementSectionProps> = ({
         </div>
       </div>
 
+      {/* EC Exclusive Notice Banner */}
+      <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="flex items-center gap-2.5">
+          <div className="w-2 h-2 rounded-full bg-amber-400 animate-ping" />
+          <span className="text-xs font-mono font-bold uppercase tracking-wider text-amber-300">
+            EC Exclusive Food Distribution
+          </span>
+        </div>
+        <span className="text-[11px] font-mono text-zinc-400">
+          Only verified 3-digit EC Unique IDs (e.g. 054, 123) are accepted for food claims.
+        </span>
+      </div>
+
       {/* Stats Board */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Dynamic Registered Totals */}
-        <div className="p-5 rounded-2xl bg-zinc-950/40 border border-white/5 space-y-2">
+        <div className="p-5 rounded-2xl bg-zinc-950/40 border border-amber-500/20 space-y-2">
           <div className="flex justify-between items-start">
-            <span className="text-[9px] text-zinc-500 font-bold uppercase tracking-widest block">Total Club members</span>
-            <Users className="w-4 h-4 text-zinc-500" />
-          </div>
-          <p className="text-2xl font-black text-white tracking-tight">{totalMembersCount}</p>
-          <div className="text-[9px] text-zinc-500 font-medium uppercase tracking-wider">verified in database</div>
-        </div>
-
-        <div className="p-5 rounded-2xl bg-zinc-950/40 border border-white/5 space-y-2">
-          <div className="flex justify-between items-start">
-            <span className="text-[9px] text-amber-500/80 font-bold uppercase tracking-widest block">EC members</span>
-            <Award className="w-4 h-4 text-amber-500/80" />
+            <span className="text-[9px] text-amber-500/90 font-bold uppercase tracking-widest block">Eligible EC Members</span>
+            <Award className="w-4 h-4 text-amber-500" />
           </div>
           <p className="text-2xl font-black text-amber-500 tracking-tight">{totalEcMembersCount}</p>
-          <div className="text-[9px] text-zinc-500 font-medium uppercase tracking-wider">unique 3-digit identifiers</div>
+          <div className="text-[9px] text-zinc-400 font-medium uppercase tracking-wider">3-digit EC unique IDs</div>
         </div>
 
-        {/* Current Scan Metrics - General */}
+        <div className="p-5 rounded-2xl bg-zinc-950/40 border border-white/5 space-y-2">
+          <div className="flex justify-between items-start">
+            <span className="text-[9px] text-zinc-400 font-bold uppercase tracking-widest block">Distribution Mode</span>
+            <ShieldAlert className="w-4 h-4 text-amber-400" />
+          </div>
+          <p className="text-xl font-black text-white tracking-tight uppercase">EC Only</p>
+          <div className="text-[9px] text-amber-400/90 font-mono font-bold uppercase tracking-wider">Restricted Access</div>
+        </div>
+
+        {/* Current Scan Metrics - EC */}
         <div className="p-5 rounded-2xl bg-zinc-950/40 border border-zinc-800 space-y-2">
           <div className="flex justify-between items-start">
-            <span className="text-[9px] text-zinc-400 font-bold uppercase tracking-widest block">General Claimed (Active Slot)</span>
+            <span className="text-[9px] text-zinc-400 font-bold uppercase tracking-widest block">EC Portions Claimed</span>
             <Cookie className="w-4 h-4 text-zinc-400" />
           </div>
           <p className="text-2xl font-black text-white tracking-tight">
-            {totalRegularScanned} <span className="text-xs font-semibold text-zinc-500">Regular</span>
+            {totalEcScanned} <span className="text-xs font-semibold text-amber-400">EC Servings</span>
           </p>
           <p className="text-[9px] text-green-500/80 font-bold uppercase tracking-wider">
             Slot: {slots.find(s => s.id === activeSlotId)?.name || 'None'}
           </p>
         </div>
 
-        {/* Current Scan Metrics - EC */}
+        {/* Current Scan Metrics - EC Limit */}
         <div className="p-5 rounded-2xl bg-zinc-950/40 border border-amber-500/10 space-y-2">
           <div className="flex justify-between items-start">
-            <span className="text-[9px] text-amber-400 font-bold uppercase tracking-widest block">EC Claimed (Active Slot)</span>
+            <span className="text-[9px] text-amber-400 font-bold uppercase tracking-widest block">Serving Quota</span>
             <Coffee className="w-4 h-4 text-amber-400" />
           </div>
           <p className="text-2xl font-black text-amber-500 tracking-tight">
-            {totalEcScanned} <span className="text-xs font-semibold text-amber-700">EC Users</span>
+            {slots.find(s => s.id === activeSlotId)?.max_servings || 1} <span className="text-xs font-semibold text-zinc-500">Max / EC</span>
           </p>
           <p className="text-[9px] text-zinc-500 font-bold uppercase tracking-wider">
-            Lim: {slots.find(s => s.id === activeSlotId)?.max_servings} serving(s) max
+            Double feeding blocked
           </p>
         </div>
       </div>
@@ -957,7 +937,7 @@ export const FoodManagementSection: React.FC<FoodManagementSectionProps> = ({
  
               {/* Manual ID Input Fallback */}
               <div className="border-t border-white/5 pt-5 space-y-3 relative">
-                <p className="text-[9px] text-zinc-500 font-bold uppercase tracking-widest text-center">Manual QR ID Lookup Fallback</p>
+                <p className="text-[9px] text-amber-500/90 font-bold uppercase tracking-widest text-center">Manual EC Unique ID Lookup (3-Digit)</p>
                 
                 <form onSubmit={handleManualLookupSubmit} className="flex gap-2">
                   <input 
@@ -966,7 +946,7 @@ export const FoodManagementSection: React.FC<FoodManagementSectionProps> = ({
                     disabled={!isSuperAdmin && !distributionEnabled && !availableSlots.includes(activeSlotId)}
                     value={manualId}
                     onChange={(e) => setManualId(e.target.value)}
-                    placeholder={(!isSuperAdmin && !distributionEnabled && !availableSlots.includes(activeSlotId)) ? "DISTRIBUTION LOCKED" : "e.g. 054 or JMC-123456"}
+                    placeholder={(!isSuperAdmin && !distributionEnabled && !availableSlots.includes(activeSlotId)) ? "DISTRIBUTION LOCKED" : "e.g. 054 or 123"}
                     className="flex-1 px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white font-mono font-bold text-xs uppercase focus:outline-none focus:border-amber-500/50 transition-all placeholder:text-zinc-700 text-center disabled:opacity-40 disabled:cursor-not-allowed"
                   />
                   <button 
@@ -992,8 +972,7 @@ export const FoodManagementSection: React.FC<FoodManagementSectionProps> = ({
                     ) : (
                       <div className="space-y-1 pt-1 max-h-44 overflow-y-auto">
                         {matchingMembers.map(m => {
-                          const isEcMember = m.is_ec === true || (m.member_id && /^\d{3}$/.test(m.member_id));
-                          const uniqueKey = `${m.id || ''}-${m.member_id || ''}-${isEcMember ? 'ec' : 'member'}`;
+                          const uniqueKey = `${m.id || ''}-${m.member_id || ''}-ec`;
                           return (
                             <button
                               key={uniqueKey}
@@ -1008,15 +987,9 @@ export const FoodManagementSection: React.FC<FoodManagementSectionProps> = ({
                                 <span className="text-[10.5px] font-black text-white uppercase truncate group-hover:text-amber-400 transition-colors">
                                   {m.full_name}
                                 </span>
-                                {isEcMember ? (
-                                  <span className="text-[7.5px] bg-amber-500/10 border border-amber-500/20 text-amber-500 px-1.5 py-0.5 rounded font-black tracking-widest uppercase shrink-0">
-                                    EC
-                                  </span>
-                                ) : (
-                                  <span className="text-[7.5px] bg-sky-500/10 border border-sky-500/20 text-sky-450 px-1.5 py-0.5 rounded font-black tracking-widest uppercase shrink-0">
-                                    General
-                                  </span>
-                                )}
+                                <span className="text-[7.5px] bg-amber-500/10 border border-amber-500/20 text-amber-500 px-1.5 py-0.5 rounded font-black tracking-widest uppercase shrink-0">
+                                  EC MEMBER
+                                </span>
                               </div>
                               <span className="text-[9.5px] font-mono font-bold text-zinc-400 tracking-wider">
                                 {m.member_id}

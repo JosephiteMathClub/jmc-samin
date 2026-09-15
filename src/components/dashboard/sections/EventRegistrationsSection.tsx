@@ -22,7 +22,9 @@ import {
   ArrowUpDown,
   Mail,
   Send,
-  Ticket
+  Ticket,
+  CircleDollarSign,
+  Check
 } from "lucide-react";
 import { supabase, isSupabaseConfigured } from "../../../lib/supabase";
 import { matchesSearchWithFuzzy, resolveEventNames } from "../../../lib/utils";
@@ -74,6 +76,83 @@ export function EventRegistrationsSection() {
   const [isSlipModalOpen, setIsSlipModalOpen] = useState(false);
   const [bulkDispatching, setBulkDispatching] = useState(false);
   const [dispatchNotice, setDispatchNotice] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [verifyingRecordId, setVerifyingRecordId] = useState<string | null>(null);
+
+  const handleVerifyRecord = async (
+    record: EventRegistrationRow,
+    action: "approve" | "reject"
+  ) => {
+    setVerifyingRecordId(record.id);
+    try {
+      let verifiedBy = "Admin";
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user?.email) {
+          verifiedBy = user.email;
+        }
+      } catch (e) {
+        console.warn("Could not get current admin user", e);
+      }
+
+      const res = await fetch("/api/admin/verify-event-registration", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          recordId: record.id,
+          tableName: record.tableName,
+          action,
+          emailAddress: record.email,
+          verifiedBy
+        })
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || "Failed to update verification status");
+      }
+
+      // Optimistic local update for this record and linked team members
+      const newStatus = action === "approve" ? "yes" : "rejected";
+      const baseTrx = (record.trxnid || "").replace(/-T\d+$/i, "").trim().toUpperCase();
+
+      setRegistrations(prev =>
+        prev.map(r => {
+          const rBase = (r.trxnid || "").replace(/-T\d+$/i, "").trim().toUpperCase();
+          if (baseTrx && rBase && baseTrx === rBase) {
+            return { ...r, verified: newStatus, verified_by: verifiedBy };
+          }
+          if (r.id === record.id) {
+            return { ...r, verified: newStatus, verified_by: verifiedBy };
+          }
+          return r;
+        })
+      );
+
+      if (selectedRegistrant && (selectedRegistrant.id === record.id || (baseTrx && (selectedRegistrant.trxnid || "").replace(/-T\d+$/i, "").trim().toUpperCase() === baseTrx))) {
+        setSelectedRegistrant(prev => prev ? {
+          ...prev,
+          verified: newStatus,
+          verified_by: verifiedBy
+        } : null);
+      }
+
+      setDispatchNotice({
+        type: "success",
+        message: data.message || `Transaction ${record.trxnid || ""} successfully ${action === "approve" ? "verified and approved" : "rejected"}.`
+      });
+
+      // Refetch database silently to sync audit logs and member tables
+      fetchAllRegistrations(true);
+    } catch (err: any) {
+      console.error("Verification error:", err);
+      setDispatchNotice({
+        type: "error",
+        message: err.message || "Failed to verify transaction"
+      });
+    } finally {
+      setVerifyingRecordId(null);
+    }
+  };
 
   const handleBulkDispatchSlips = async () => {
     // Find all verified registrants with email address
@@ -675,6 +754,86 @@ export function EventRegistrationsSection() {
     }
   }, [eventTypeFilter, sortedSoloRegistrants, individualTeamRegistrants]);
 
+  // Helper to compute verified revenue from unique transactions (excluding free registrations)
+  const computeRevenueMetrics = useCallback((dataset: EventRegistrationRow[]) => {
+    // Deduplicated map of base transaction ID -> verified transaction details
+    const verifiedTransactionsMap = new Map<string, {
+      amount: number;
+      trxnid: string;
+      full_name: string;
+      tableName: string;
+    }>();
+
+    // Deduplicated map of base transaction ID -> pending transaction details
+    const pendingTransactionsMap = new Map<string, {
+      amount: number;
+      trxnid: string;
+    }>();
+
+    let freeRegistrationsCount = 0;
+    let verifiedFreeCount = 0;
+
+    dataset.forEach((reg) => {
+      const amt = typeof reg.amount === "number" ? reg.amount : parseFloat(String(reg.amount || 0)) || 0;
+      const isVerified = reg.verified === "yes";
+      const isPending = reg.verified === "no";
+
+      // FREE ONES EXCLUDED: Any registration with amount <= 0 does not contribute to revenue
+      if (amt <= 0) {
+        freeRegistrationsCount++;
+        if (isVerified) verifiedFreeCount++;
+        return;
+      }
+
+      // Base TrxID to deduplicate team members and duplicate form submissions with the same payment token
+      const rawTrx = (reg.trxnid || "").trim().toUpperCase();
+      const baseTrx = rawTrx ? rawTrx.replace(/-T\d+$/i, "").trim() : "";
+      const isGeneric = !baseTrx || baseTrx === "N/A" || baseTrx === "NONE" || baseTrx === "FREE";
+
+      // Use base transaction ID if available, otherwise unique record ID
+      const trxKey = !isGeneric ? baseTrx : `ID_${reg.id}`;
+
+      if (isVerified) {
+        const existing = verifiedTransactionsMap.get(trxKey);
+        if (!existing || amt > existing.amount) {
+          verifiedTransactionsMap.set(trxKey, {
+            amount: amt,
+            trxnid: baseTrx || reg.trxnid || reg.id,
+            full_name: reg.full_name,
+            tableName: reg.tableName,
+          });
+        }
+      } else if (isPending) {
+        const existingPending = pendingTransactionsMap.get(trxKey);
+        if (!existingPending || amt > existingPending.amount) {
+          pendingTransactionsMap.set(trxKey, {
+            amount: amt,
+            trxnid: baseTrx || reg.trxnid || reg.id,
+          });
+        }
+      }
+    });
+
+    let totalVerifiedRevenue = 0;
+    verifiedTransactionsMap.forEach((tx) => {
+      totalVerifiedRevenue += tx.amount;
+    });
+
+    let totalPendingRevenue = 0;
+    pendingTransactionsMap.forEach((tx) => {
+      totalPendingRevenue += tx.amount;
+    });
+
+    return {
+      totalVerifiedRevenue,
+      verifiedPaidTransactionsCount: verifiedTransactionsMap.size,
+      totalPendingRevenue,
+      pendingPaidTransactionsCount: pendingTransactionsMap.size,
+      freeRegistrationsCount,
+      verifiedFreeCount
+    };
+  }, []);
+
   // Metric Summaries
   const metrics = useMemo(() => {
     const totalForms = registrations.length;
@@ -684,15 +843,29 @@ export function EventRegistrationsSection() {
     const ticTacToeUnique = uniquePeopleList.filter(p => isTicTacToeEvent(p.selected_events)).length;
     const ticTacToeTotal = registrations.filter(p => isTicTacToeEvent(p.selected_events)).length;
 
+    // Financial revenue calculations (FREE ONES EXCLUDED)
+    const globalRevenue = computeRevenueMetrics(registrations);
+    const filteredRevenue = computeRevenueMetrics(filteredRegistrants);
+
     return {
       totalForms,
       uniquePeople,
       verifiedUnique,
       pendingForms,
       ticTacToeUnique,
-      ticTacToeTotal
+      ticTacToeTotal,
+      // Total revenue collected from verifying the transaction (FREE ONES EXCLUDED)
+      totalVerifiedRevenue: globalRevenue.totalVerifiedRevenue,
+      verifiedPaidTransactionsCount: globalRevenue.verifiedPaidTransactionsCount,
+      totalPendingRevenue: globalRevenue.totalPendingRevenue,
+      pendingPaidTransactionsCount: globalRevenue.pendingPaidTransactionsCount,
+      freeRegistrationsCount: globalRevenue.freeRegistrationsCount,
+      verifiedFreeCount: globalRevenue.verifiedFreeCount,
+      // Revenue for active filtered view
+      filteredVerifiedRevenue: filteredRevenue.totalVerifiedRevenue,
+      filteredPaidTransactionsCount: filteredRevenue.verifiedPaidTransactionsCount,
     };
-  }, [registrations, uniquePeopleList, isTicTacToeEvent]);
+  }, [registrations, uniquePeopleList, filteredRegistrants, isTicTacToeEvent, computeRevenueMetrics]);
 
   // Export Filtered Table to CSV File
   const handleExportCSV = () => {
@@ -821,53 +994,113 @@ export function EventRegistrationsSection() {
         </div>
       </div>
 
+      {/* Notice Banner */}
+      {dispatchNotice && (
+        <div className={`p-4 rounded-2xl border flex items-center justify-between gap-4 text-xs font-bold ${
+          dispatchNotice.type === 'success' 
+            ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300' 
+            : 'bg-red-500/10 border-red-500/30 text-red-300'
+        }`}>
+          <div className="flex items-center gap-2.5">
+            {dispatchNotice.type === 'success' ? (
+              <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+            ) : (
+              <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
+            )}
+            <span>{dispatchNotice.message}</span>
+          </div>
+          <button
+            onClick={() => setDispatchNotice(null)}
+            className="text-zinc-400 hover:text-white text-xs px-2 py-1 rounded-lg bg-white/5 hover:bg-white/10 transition-all cursor-pointer"
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
       {/* KPI Cards Row */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        {/* KPI 1 */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-5">
+        {/* KPI: Total Verified Revenue (FREE ONES EXCLUDED) */}
+        <div className="bg-gradient-to-br from-emerald-500/10 via-white/[0.02] to-emerald-500/5 border border-emerald-500/30 p-6 rounded-3xl flex items-center gap-5 relative overflow-hidden group shadow-lg shadow-emerald-500/5 transition-all">
+          <div className="absolute top-0 right-0 w-28 h-28 bg-emerald-500/10 rounded-full blur-2xl group-hover:bg-emerald-500/20 transition-all duration-500" />
+          <div className="w-12 h-12 bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 rounded-2xl flex items-center justify-center shrink-0">
+            <CircleDollarSign className="w-6 h-6" />
+          </div>
+          <div className="min-w-0">
+            <div className="text-[9px] font-black text-emerald-400 uppercase tracking-widest flex items-center gap-1.5">
+              Verified Revenue
+              <span className="text-[7.5px] bg-emerald-500/20 text-emerald-300 px-1.5 py-0.5 rounded uppercase font-bold tracking-wider">
+                Excl. Free
+              </span>
+            </div>
+            <div className="text-2xl font-black text-white mt-1 tracking-tight">
+              ৳ {metrics.totalVerifiedRevenue.toLocaleString()} <span className="text-xs text-emerald-400 font-bold">BDT</span>
+            </div>
+            <div className="text-[9px] font-medium text-zinc-400 mt-1 flex flex-wrap items-center gap-1.5">
+              <span className="text-emerald-400 font-bold">{metrics.verifiedPaidTransactionsCount}</span> verified paid trx
+              {metrics.freeRegistrationsCount > 0 && (
+                <span className="text-zinc-500">({metrics.freeRegistrationsCount} free excluded)</span>
+              )}
+            </div>
+            {hasActiveFilters && metrics.filteredVerifiedRevenue !== metrics.totalVerifiedRevenue && (
+              <div className="text-[8.5px] text-amber-300 font-bold mt-1.5 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-md inline-block">
+                Filtered: ৳ {metrics.filteredVerifiedRevenue.toLocaleString()} BDT
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* KPI 2: Total Form Submissions */}
         <div className="bg-white/[0.02] border border-white/5 p-6 rounded-3xl flex items-center gap-5 relative overflow-hidden group">
           <div className="absolute top-0 right-0 w-24 h-24 bg-amber-500/5 rounded-full blur-2xl group-hover:bg-amber-500/10 transition-all duration-500" />
-          <div className="w-12 h-12 bg-amber-500/10 border border-amber-500/20 text-amber-500 rounded-2xl flex items-center justify-center">
+          <div className="w-12 h-12 bg-amber-500/10 border border-amber-500/20 text-amber-500 rounded-2xl flex items-center justify-center shrink-0">
             <FileText className="w-5 h-5" />
           </div>
           <div>
-            <div className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">Total Form Submissions</div>
+            <div className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">Total Submissions</div>
             <div className="text-2xl font-black text-white mt-1">{metrics.totalForms}</div>
+            <div className="text-[9px] font-medium text-zinc-400 mt-1">Raw table logs</div>
           </div>
         </div>
 
-        {/* KPI 2 */}
+        {/* KPI 3: Unique People Submitter */}
         <div className="bg-white/[0.02] border border-white/5 p-6 rounded-3xl flex items-center gap-5 relative overflow-hidden group">
           <div className="absolute top-0 right-0 w-24 h-24 bg-purple-500/5 rounded-full blur-2xl group-hover:bg-purple-500/10 transition-all duration-500" />
-          <div className="w-12 h-12 bg-purple-500/10 border border-purple-500/20 text-purple-400 rounded-2xl flex items-center justify-center">
+          <div className="w-12 h-12 bg-purple-500/10 border border-purple-500/20 text-purple-400 rounded-2xl flex items-center justify-center shrink-0">
             <Users className="w-5 h-5" />
           </div>
           <div>
-            <div className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">Unique People Submitter</div>
+            <div className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">Unique People</div>
             <div className="text-2xl font-black text-purple-400 mt-1">{metrics.uniquePeople}</div>
+            <div className="text-[9px] font-medium text-zinc-400 mt-1">Deduplicated submitters</div>
           </div>
         </div>
 
-        {/* KPI 3 */}
+        {/* KPI 4: Unique Done / Verified */}
         <div className="bg-white/[0.02] border border-white/5 p-6 rounded-3xl flex items-center gap-5 relative overflow-hidden group">
           <div className="absolute top-0 right-0 w-24 h-24 bg-green-500/5 rounded-full blur-2xl group-hover:bg-green-500/10 transition-all duration-500" />
-          <div className="w-12 h-12 bg-green-500/10 border border-green-500/20 text-green-400 rounded-2xl flex items-center justify-center">
+          <div className="w-12 h-12 bg-green-500/10 border border-green-500/20 text-green-400 rounded-2xl flex items-center justify-center shrink-0">
             <CheckCircle2 className="w-5 h-5" />
           </div>
           <div>
-            <div className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">Unique Done / Verified</div>
+            <div className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">Done / Verified</div>
             <div className="text-2xl font-black text-green-400 mt-1">{metrics.verifiedUnique}</div>
+            <div className="text-[9px] font-medium text-zinc-400 mt-1">Confirmed participants</div>
           </div>
         </div>
 
-        {/* KPI 4 */}
+        {/* KPI 5: Pending Verification */}
         <div className="bg-white/[0.02] border border-white/5 p-6 rounded-3xl flex items-center gap-5 relative overflow-hidden group">
           <div className="absolute top-0 right-0 w-24 h-24 bg-red-500/5 rounded-full blur-2xl group-hover:bg-red-500/10 transition-all duration-500" />
-          <div className="w-12 h-12 bg-red-500/10 border border-red-500/20 text-red-400 rounded-2xl flex items-center justify-center">
+          <div className="w-12 h-12 bg-red-500/10 border border-red-500/20 text-red-400 rounded-2xl flex items-center justify-center shrink-0">
             <AlertCircle className="w-5 h-5 animate-pulse" />
           </div>
           <div>
             <div className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">Pending Verification</div>
             <div className="text-2xl font-black text-red-400 mt-1">{metrics.pendingForms}</div>
+            <div className="text-[9px] font-medium text-amber-400/90 mt-1 font-mono">
+              ৳ {metrics.totalPendingRevenue.toLocaleString()} unverified
+            </div>
           </div>
         </div>
       </div>
@@ -882,6 +1115,11 @@ export function EventRegistrationsSection() {
             <div>
               <h4 className="text-sm font-black text-white uppercase tracking-wider font-mono">
                 {metrics.pendingForms} Pending Registration{metrics.pendingForms > 1 ? "s" : ""} Awaiting Verification
+                {metrics.totalPendingRevenue > 0 && (
+                  <span className="text-amber-400 text-xs ml-2 font-mono font-bold">
+                    (৳ {metrics.totalPendingRevenue.toLocaleString()} BDT Unverified)
+                  </span>
+                )}
               </h4>
               <p className="text-xs text-zinc-400 mt-0.5">
                 Participants have submitted payment details for event registration. Instant live sync is active.
@@ -1253,9 +1491,13 @@ export function EventRegistrationsSection() {
               )}
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-3">
               <span className="text-[10px] font-bold text-zinc-400">
                 Showing {filteredRegistrants.length} matching registrants
+              </span>
+              <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1 rounded-xl flex items-center gap-1.5 font-mono">
+                <CircleDollarSign className="w-3.5 h-3.5 text-emerald-400" />
+                Verified Revenue: ৳ {metrics.filteredVerifiedRevenue.toLocaleString()} BDT (Excl. Free)
               </span>
               <button
                 onClick={handleResetFilters}
@@ -1416,9 +1658,15 @@ export function EventRegistrationsSection() {
 
                           {/* Amount money */}
                           <td className="p-5">
-                            <span className="text-xs font-black text-white bg-green-500/10 border border-green-500/20 px-2.5 py-1 rounded">
-                              ৳ {reg.amount}
-                            </span>
+                            {Number(reg.amount) > 0 ? (
+                              <span className="text-xs font-black text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1 rounded-lg inline-flex items-center gap-1 font-mono">
+                                ৳ {reg.amount}
+                              </span>
+                            ) : (
+                              <span className="text-[10px] font-bold text-zinc-400 bg-white/5 border border-white/10 px-2.5 py-1 rounded-lg inline-flex items-center gap-1 font-mono">
+                                FREE (৳ 0)
+                              </span>
+                            )}
                           </td>
 
                           {/* Verified/No/Rejected with clean indicators */}
@@ -1443,13 +1691,30 @@ export function EventRegistrationsSection() {
 
                           {/* Action button */}
                           <td className="p-5 text-right">
-                            <button
-                              onClick={() => setSelectedRegistrant(reg)}
-                              className="px-3 py-2 rounded-xl bg-zinc-900 border border-white/5 text-zinc-400 hover:text-white hover:bg-zinc-800 hover:border-white/10 transition-all font-bold text-[9px] uppercase tracking-widest cursor-pointer inline-flex items-center gap-1.5 ml-auto"
-                            >
-                              <Eye className="w-3.5 h-3.5 text-amber-500" />
-                              Inspect
-                            </button>
+                            <div className="flex items-center justify-end gap-2">
+                              {reg.verified !== "yes" && (
+                                <button
+                                  onClick={() => handleVerifyRecord(reg, "approve")}
+                                  disabled={verifyingRecordId === reg.id}
+                                  title="Verify & Approve Transaction"
+                                  className="px-2.5 py-2 rounded-xl bg-emerald-500/10 hover:bg-emerald-500 text-emerald-400 hover:text-black border border-emerald-500/30 transition-all font-black text-[9px] uppercase tracking-wider cursor-pointer inline-flex items-center gap-1 shrink-0"
+                                >
+                                  {verifyingRecordId === reg.id ? (
+                                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                  ) : (
+                                    <Check className="w-3.5 h-3.5" />
+                                  )}
+                                  Verify
+                                </button>
+                              )}
+                              <button
+                                onClick={() => setSelectedRegistrant(reg)}
+                                className="px-3 py-2 rounded-xl bg-zinc-900 border border-white/5 text-zinc-400 hover:text-white hover:bg-zinc-800 hover:border-white/10 transition-all font-bold text-[9px] uppercase tracking-widest cursor-pointer inline-flex items-center gap-1.5"
+                              >
+                                <Eye className="w-3.5 h-3.5 text-amber-500" />
+                                Inspect
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       );
@@ -1510,8 +1775,23 @@ export function EventRegistrationsSection() {
 
                         <div className="flex items-center gap-3">
                           <span className="text-xs font-black text-white bg-emerald-500/10 border border-emerald-500/30 px-3 py-1.5 rounded-xl font-mono">
-                            ৳ {team.amount} BDT
+                            {Number(team.amount) > 0 ? `৳ ${team.amount} BDT` : "FREE (৳ 0)"}
                           </span>
+                          {!isApproved && (
+                            <button
+                              onClick={() => handleVerifyRecord(leader, "approve")}
+                              disabled={verifyingRecordId === leader.id}
+                              title="Verify & Approve Entire Team"
+                              className="px-3 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 text-black font-black text-[10px] uppercase tracking-wider transition-all flex items-center gap-1 cursor-pointer shrink-0 shadow-md shadow-emerald-500/10"
+                            >
+                              {verifyingRecordId === leader.id ? (
+                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                              ) : (
+                                <Check className="w-3.5 h-3.5" />
+                              )}
+                              Approve Team
+                            </button>
+                          )}
                           {isApproved ? (
                             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-green-500/10 text-green-400 text-[10px] font-extrabold border border-green-500/30 font-mono">
                               <span className="w-1.5 h-1.5 rounded-full bg-green-400" />
@@ -1744,7 +2024,15 @@ export function EventRegistrationsSection() {
                 </div>
                 <div className="bg-white/[0.01] p-4 rounded-xl border border-white/5">
                   <p className="text-zinc-500 text-[9px] font-black uppercase tracking-wider">Amount Paid</p>
-                  <p className="text-green-400 font-black mt-1">৳ {selectedRegistrant.amount}</p>
+                  {Number(selectedRegistrant.amount) > 0 ? (
+                    <p className="text-emerald-400 font-black mt-1 font-mono">
+                      ৳ {selectedRegistrant.amount} <span className="text-[9px] text-zinc-400 font-medium">(Paid Transaction)</span>
+                    </p>
+                  ) : (
+                    <p className="text-zinc-400 font-bold mt-1 font-mono">
+                      FREE (৳ 0) <span className="text-[9px] text-zinc-500 font-medium">(Excluded from Revenue)</span>
+                    </p>
+                  )}
                 </div>
               </div>
 
@@ -1777,35 +2065,62 @@ export function EventRegistrationsSection() {
             </div>
 
             {/* Footer */}
-            <div className="flex justify-between items-center pt-2 border-t border-white/5">
-              {selectedRegistrant.verified === "yes" && (
-                <button
-                  onClick={() => {
-                    setSelectedSlipCandidate({
-                      id: selectedRegistrant.id,
-                      fullName: selectedRegistrant.full_name,
-                      email: selectedRegistrant.email,
-                      phone: selectedRegistrant.phone,
-                      memberId: selectedRegistrant.member_id || selectedRegistrant.user_id || selectedRegistrant.id,
-                      class: selectedRegistrant.class,
-                      section: selectedRegistrant.section,
-                      roll: selectedRegistrant.roll,
-                      school: 'St. Joseph Higher Secondary School',
-                      trxnid: selectedRegistrant.trxnid,
-                      eventsList: [resolveEventNames(selectedRegistrant.selected_events)],
-                      verified: true
-                    });
-                    setIsSlipModalOpen(true);
-                  }}
-                  className="px-5 py-3 bg-emerald-500 hover:bg-emerald-400 text-black text-xs font-black uppercase tracking-wider rounded-xl transition-all shadow-lg shadow-emerald-500/10 flex items-center gap-2 cursor-pointer"
-                >
-                  <Ticket className="w-4 h-4" /> View Purchase Slip & QR
-                </button>
-              )}
+            <div className="flex flex-wrap justify-between items-center gap-3 pt-3 border-t border-white/5">
+              <div className="flex flex-wrap items-center gap-2">
+                {selectedRegistrant.verified !== "yes" && (
+                  <button
+                    onClick={() => handleVerifyRecord(selectedRegistrant, "approve")}
+                    disabled={verifyingRecordId === selectedRegistrant.id}
+                    className="px-5 py-3 bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 text-black text-xs font-black uppercase tracking-wider rounded-xl transition-all shadow-lg shadow-emerald-500/10 flex items-center gap-2 cursor-pointer"
+                  >
+                    {verifyingRecordId === selectedRegistrant.id ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <CheckCircle2 className="w-4 h-4" />
+                    )}
+                    Verify & Approve Transaction
+                  </button>
+                )}
+
+                {selectedRegistrant.verified !== "rejected" && (
+                  <button
+                    onClick={() => handleVerifyRecord(selectedRegistrant, "reject")}
+                    disabled={verifyingRecordId === selectedRegistrant.id}
+                    className="px-4 py-3 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 text-xs font-black uppercase tracking-wider rounded-xl transition-all flex items-center gap-2 cursor-pointer"
+                  >
+                    Reject Transaction
+                  </button>
+                )}
+
+                {selectedRegistrant.verified === "yes" && (
+                  <button
+                    onClick={() => {
+                      setSelectedSlipCandidate({
+                        id: selectedRegistrant.id,
+                        fullName: selectedRegistrant.full_name,
+                        email: selectedRegistrant.email,
+                        phone: selectedRegistrant.phone,
+                        memberId: selectedRegistrant.member_id || selectedRegistrant.user_id || selectedRegistrant.id,
+                        class: selectedRegistrant.class,
+                        section: selectedRegistrant.section,
+                        roll: selectedRegistrant.roll,
+                        school: 'St. Joseph Higher Secondary School',
+                        trxnid: selectedRegistrant.trxnid,
+                        eventsList: [resolveEventNames(selectedRegistrant.selected_events)],
+                        verified: true
+                      });
+                      setIsSlipModalOpen(true);
+                    }}
+                    className="px-5 py-3 bg-emerald-500 hover:bg-emerald-400 text-black text-xs font-black uppercase tracking-wider rounded-xl transition-all shadow-lg shadow-emerald-500/10 flex items-center gap-2 cursor-pointer"
+                  >
+                    <Ticket className="w-4 h-4" /> View Purchase Slip & QR
+                  </button>
+                )}
+              </div>
 
               <button
                 onClick={() => setSelectedRegistrant(null)}
-                className="px-6 py-3 cursor-pointer bg-amber-500 hover:bg-amber-400 text-black text-xs font-black uppercase tracking-wider rounded-xl transition-all shadow-lg shadow-amber-500/10"
+                className="px-6 py-3 cursor-pointer bg-zinc-800 hover:bg-zinc-700 text-white text-xs font-black uppercase tracking-wider rounded-xl transition-all"
               >
                 Close Inspect Window
               </button>

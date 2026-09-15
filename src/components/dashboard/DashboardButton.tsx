@@ -1,8 +1,6 @@
 "use client";
 import React from 'react';
-import { motion } from 'framer-motion';
 import { LucideIcon } from 'lucide-react';
-import { usePerformance } from '../../hooks/usePerformance';
 
 interface DashboardButtonProps {
   onClick: (e: React.MouseEvent) => void;
@@ -25,8 +23,6 @@ export const DashboardButton: React.FC<DashboardButtonProps> = ({
   disabled = false,
   loading = false
 }) => {
-  const { shouldReduceGfx } = usePerformance();
-
   const variants = {
     primary: 'bg-gradient-to-b from-[#00B4DB] to-[#162E65] text-white shadow-lg shadow-[#00B4DB]/20 border border-white/10',
     secondary: 'bg-white/5 text-white hover:bg-white/10 border border-white/5',
@@ -42,13 +38,11 @@ export const DashboardButton: React.FC<DashboardButtonProps> = ({
   };
 
   return (
-    <motion.button
-      whileHover={shouldReduceGfx || disabled || loading ? {} : { scale: 1.02 }}
-      whileTap={shouldReduceGfx || disabled || loading ? {} : { scale: 0.98 }}
+    <button
       onClick={onClick}
       disabled={disabled || loading}
       className={`
-        flex items-center justify-center gap-2 rounded-xl font-bold uppercase tracking-widest transition-all duration-300
+        flex items-center justify-center gap-2 rounded-xl font-bold uppercase tracking-widest
         disabled:opacity-50 disabled:cursor-not-allowed
         ${variants[variant]}
         ${sizes[size]}
@@ -61,6 +55,6 @@ export const DashboardButton: React.FC<DashboardButtonProps> = ({
         Icon && <Icon className={`${size === 'sm' ? 'w-3.5 h-3.5' : 'w-4 h-4'}`} />
       )}
       {label}
-    </motion.button>
+    </button>
   );
 };

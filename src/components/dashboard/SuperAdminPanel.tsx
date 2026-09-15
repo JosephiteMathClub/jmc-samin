@@ -67,6 +67,7 @@ import { DashboardFormField } from './DashboardFormField';
 import { SupportManagement } from './SupportManagement';
 import { PurchaseSlipModal, PurchaseSlipCandidate } from './PurchaseSlipModal';
 import { ParticipantHistoryTab } from './ParticipantHistoryTab';
+import { SpotParticipantsTab } from './SpotParticipantsTab';
 import Image from 'next/image';
 import dynamic from 'next/dynamic';
 import { cleanDisplayEmail } from '../../lib/utils';
@@ -2312,7 +2313,7 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ isSuperAdmin =
   const [loading, setLoading] = useState(true);
   const [promoting, setPromoting] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [activeSubTab, setActiveSubTab] = useState<'users' | 'ticket_audit' | 'positions' | 'support' | 'email' | 'food' | 'cards' | 'transactions' | 'registration' | 'manual_announce' | 'bulk_name_notice' | 'resend_verification' | 'participant_history'>('users');
+  const [activeSubTab, setActiveSubTab] = useState<'users' | 'ticket_audit' | 'positions' | 'support' | 'email' | 'food' | 'cards' | 'transactions' | 'registration' | 'manual_announce' | 'bulk_name_notice' | 'resend_verification' | 'participant_history' | 'spot_participants'>('users');
   
   // Resend Verification Pass State
   const [resendRegistrations, setResendRegistrations] = useState<any[]>([]);
@@ -3985,6 +3986,7 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ isSuperAdmin =
           { id: 'email', label: 'Email Status', icon: Mail },
           { id: 'manual_announce', label: 'Email Announcements Manually', icon: Mail },
           { id: 'bulk_name_notice', label: 'Phone Broadcast Notice', icon: PhoneCall },
+          { id: 'spot_participants', label: 'On-Spot Ticket Participants', icon: Ticket },
           { id: 'participant_history', label: 'Updating History of Participants Email', icon: Archive },
           { id: 'food', label: 'Food Management', icon: Utensils },
           { id: 'cards', label: 'Member ID Cards', icon: QrCode },
@@ -4008,7 +4010,7 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ isSuperAdmin =
         ))}
       </div>
 
-      <AnimatePresence mode="wait">
+      <div>
         {activeSubTab === 'users' && (
           <motion.div
             key="users"
@@ -4684,6 +4686,17 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ isSuperAdmin =
                 </div>
               </div>
             </DashboardSection>
+          </motion.div>
+        )}
+
+        {activeSubTab === 'spot_participants' && (
+          <motion.div
+            key="spot_participants"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+          >
+            <SpotParticipantsTab showToast={showToast} isSuperAdmin={isSuperAdmin} />
           </motion.div>
         )}
 
@@ -5998,7 +6011,7 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ isSuperAdmin =
                                           id: reg.memberId,
                                           fullName: reg.fullName,
                                           email: reg.email,
-                                          phone: reg.bkash_number || '',
+                                          phone: reg.bkash_number || reg.phone || '',
                                           memberId: reg.memberId,
                                           class: reg.className,
                                           section: reg.section,
@@ -6029,7 +6042,7 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ isSuperAdmin =
             </DashboardSection>
           </motion.div>
         )}
-      </AnimatePresence>
+      </div>
 
       <PurchaseSlipModal 
         candidate={resendModalCandidate} 

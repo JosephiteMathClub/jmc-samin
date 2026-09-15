@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { MotionConfig } from 'framer-motion';
 import { produce } from 'immer';
 import { 
   LayoutDashboard, 
@@ -31,43 +31,128 @@ import {
 import { useContent } from '../context/ContentContext';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
-import { useRouter } from 'next/navigation';
+import { useRouter, useParams } from 'next/navigation';
+import dynamic from 'next/dynamic';
 import { isSupabaseConfigured, supabase } from '../lib/supabase';
 import { DEFAULT_CONTENT } from '@/data/default-content';
 import { MATH_RESOURCES } from '@/data/resourcesData';
 import { DashboardLayout } from '../components/dashboard/DashboardLayout';
 import { DashboardSection } from '../components/dashboard/DashboardSection';
-import { DashboardFormField } from '../components/dashboard/DashboardFormField';
 import { DashboardButton } from '../components/dashboard/DashboardButton';
-import { DashboardFileUpload } from '../components/dashboard/DashboardFileUpload';
-import { EventParticipation } from '../components/dashboard/EventParticipation';
-import { SuperAdminPanel, InterEventRegistrationConfigEditor } from '../components/dashboard/SuperAdminPanel';
-import { SupportManagement } from '../components/dashboard/SupportManagement';
 import { deleteFileFromStorage } from '../lib/storage';
 import { safeJsonClone } from '../lib/utils';
 import { cleanDisplayEmail } from '../lib/utils';
+import { normalizeSection, SUPER_ADMIN_TABS } from '../lib/adminConfig';
 
-import { DashboardHomeSection } from '../components/dashboard/sections/DashboardHomeSection';
-import { DashboardAboutSection } from '../components/dashboard/sections/DashboardAboutSection';
-import { DashboardEventsSection } from '../components/dashboard/sections/DashboardEventsSection';
-import { DashboardNoticesSection } from '../components/dashboard/sections/DashboardNoticesSection';
-import { DashboardPanelSection } from '../components/dashboard/sections/DashboardPanelSection';
-import { DashboardGallerySection } from '../components/dashboard/sections/DashboardGallerySection';
-import DashboardArticlesSection from '../components/dashboard/sections/DashboardArticlesSection';
-import { DashboardSiteSection } from '../components/dashboard/sections/DashboardSiteSection';
-import { DashboardMemberManagementSection } from '../components/dashboard/sections/DashboardMemberManagementSection';
-import { DashboardEcMemberManagementSection } from '../components/dashboard/sections/DashboardEcMemberManagementSection';
-import { FoodManagementSection } from '../components/dashboard/sections/FoodManagementSection';
-import { ChallengeManagementSection } from '../components/dashboard/sections/ChallengeManagementSection';
-import { DashboardAuditLogsSection } from '../components/dashboard/sections/DashboardAuditLogsSection';
-import { EmailConfirmationsSection } from '../components/dashboard/sections/EmailConfirmationsSection';
-import { EventRegistrationsSection } from '../components/dashboard/sections/EventRegistrationsSection';
-import { CaParticipantsSection } from '../components/dashboard/sections/CaParticipantsSection';
-import { StatisticsSection } from '../components/dashboard/sections/StatisticsSection';
-import { TicketPurchaseSection } from '../components/dashboard/sections/TicketPurchaseSection';
-import { DashboardHandoutsSection } from '../components/dashboard/sections/DashboardHandoutsSection';
-import { DashboardResourcesSection } from '../components/dashboard/sections/DashboardResourcesSection';
-import { DashboardDevelopersSection } from '../components/dashboard/sections/DashboardDevelopersSection';
+const SectionLoader = ({ title }: { title: string }) => (
+  <div className="min-h-[350px] flex flex-col items-center justify-center gap-4 p-8 rounded-3xl bg-white/[0.01] border border-white/5">
+    <div className="w-8 h-8 rounded-full border-2 border-amber-500/20 border-t-amber-500 animate-spin" />
+    <span className="text-[11px] font-mono font-bold text-zinc-500 uppercase tracking-widest">
+      Loading {title}...
+    </span>
+  </div>
+);
+
+const DashboardHomeSection = dynamic(
+  () => import('../components/dashboard/sections/DashboardHomeSection').then(m => m.DashboardHomeSection),
+  { loading: () => <SectionLoader title="Home Section" />, ssr: false }
+);
+const DashboardAboutSection = dynamic(
+  () => import('../components/dashboard/sections/DashboardAboutSection').then(m => m.DashboardAboutSection),
+  { loading: () => <SectionLoader title="About Section" />, ssr: false }
+);
+const DashboardEventsSection = dynamic(
+  () => import('../components/dashboard/sections/DashboardEventsSection').then(m => m.DashboardEventsSection),
+  { loading: () => <SectionLoader title="Events Section" />, ssr: false }
+);
+const DashboardNoticesSection = dynamic(
+  () => import('../components/dashboard/sections/DashboardNoticesSection').then(m => m.DashboardNoticesSection),
+  { loading: () => <SectionLoader title="Notices Section" />, ssr: false }
+);
+const DashboardPanelSection = dynamic(
+  () => import('../components/dashboard/sections/DashboardPanelSection').then(m => m.DashboardPanelSection),
+  { loading: () => <SectionLoader title="Panel Section" />, ssr: false }
+);
+const DashboardGallerySection = dynamic(
+  () => import('../components/dashboard/sections/DashboardGallerySection').then(m => m.DashboardGallerySection),
+  { loading: () => <SectionLoader title="Gallery Section" />, ssr: false }
+);
+const DashboardArticlesSection = dynamic(
+  () => import('../components/dashboard/sections/DashboardArticlesSection'),
+  { loading: () => <SectionLoader title="Articles Section" />, ssr: false }
+);
+const DashboardSiteSection = dynamic(
+  () => import('../components/dashboard/sections/DashboardSiteSection').then(m => m.DashboardSiteSection),
+  { loading: () => <SectionLoader title="Site Config Section" />, ssr: false }
+);
+const DashboardMemberManagementSection = dynamic(
+  () => import('../components/dashboard/sections/DashboardMemberManagementSection').then(m => m.DashboardMemberManagementSection),
+  { loading: () => <SectionLoader title="Members Section" />, ssr: false }
+);
+const DashboardEcMemberManagementSection = dynamic(
+  () => import('../components/dashboard/sections/DashboardEcMemberManagementSection').then(m => m.DashboardEcMemberManagementSection),
+  { loading: () => <SectionLoader title="EC Members Section" />, ssr: false }
+);
+const FoodManagementSection = dynamic(
+  () => import('../components/dashboard/sections/FoodManagementSection').then(m => m.FoodManagementSection),
+  { loading: () => <SectionLoader title="Food Management" />, ssr: false }
+);
+const ChallengeManagementSection = dynamic(
+  () => import('../components/dashboard/sections/ChallengeManagementSection').then(m => m.ChallengeManagementSection),
+  { loading: () => <SectionLoader title="Challenge Problems" />, ssr: false }
+);
+const DashboardAuditLogsSection = dynamic(
+  () => import('../components/dashboard/sections/DashboardAuditLogsSection').then(m => m.DashboardAuditLogsSection),
+  { loading: () => <SectionLoader title="Audit Logs" />, ssr: false }
+);
+const EmailConfirmationsSection = dynamic(
+  () => import('../components/dashboard/sections/EmailConfirmationsSection').then(m => m.EmailConfirmationsSection),
+  { loading: () => <SectionLoader title="Email Logs" />, ssr: false }
+);
+const EventRegistrationsSection = dynamic(
+  () => import('../components/dashboard/sections/EventRegistrationsSection').then(m => m.EventRegistrationsSection),
+  { loading: () => <SectionLoader title="Event Registrations" />, ssr: false }
+);
+const CaParticipantsSection = dynamic(
+  () => import('../components/dashboard/sections/CaParticipantsSection').then(m => m.CaParticipantsSection),
+  { loading: () => <SectionLoader title="CA Participants" />, ssr: false }
+);
+const StatisticsSection = dynamic(
+  () => import('../components/dashboard/sections/StatisticsSection').then(m => m.StatisticsSection),
+  { loading: () => <SectionLoader title="Statistics" />, ssr: false }
+);
+const TicketPurchaseSection = dynamic(
+  () => import('../components/dashboard/sections/TicketPurchaseSection').then(m => m.TicketPurchaseSection),
+  { loading: () => <SectionLoader title="Ticket Purchase" />, ssr: false }
+);
+const DashboardHandoutsSection = dynamic(
+  () => import('../components/dashboard/sections/DashboardHandoutsSection').then(m => m.DashboardHandoutsSection),
+  { loading: () => <SectionLoader title="Session Handouts" />, ssr: false }
+);
+const DashboardResourcesSection = dynamic(
+  () => import('../components/dashboard/sections/DashboardResourcesSection').then(m => m.DashboardResourcesSection),
+  { loading: () => <SectionLoader title="Resources Library" />, ssr: false }
+);
+const DashboardDevelopersSection = dynamic(
+  () => import('../components/dashboard/sections/DashboardDevelopersSection').then(m => m.DashboardDevelopersSection),
+  { loading: () => <SectionLoader title="Developers Section" />, ssr: false }
+);
+const EventParticipation = dynamic(
+  () => import('../components/dashboard/EventParticipation').then(m => m.EventParticipation),
+  { loading: () => <SectionLoader title="Event Participation" />, ssr: false }
+);
+const SuperAdminPanel = dynamic(
+  () => import('../components/dashboard/SuperAdminPanel').then(m => m.SuperAdminPanel),
+  { loading: () => <SectionLoader title="Super Admin Panel" />, ssr: false }
+);
+const InterEventRegistrationConfigEditor = dynamic(
+  () => import('../components/dashboard/SuperAdminPanel').then(m => m.InterEventRegistrationConfigEditor),
+  { loading: () => <SectionLoader title="Inter-School Config" />, ssr: false }
+);
+const SupportManagement = dynamic(
+  () => import('../components/dashboard/SupportManagement').then(m => m.SupportManagement),
+  { loading: () => <SectionLoader title="Support Management" />, ssr: false }
+);
 
 import ConfirmModal from '../components/ConfirmModal';
 import Image from 'next/image';
@@ -98,22 +183,46 @@ const AdminSkeleton = () => (
   </div>
 );
 
-const AdminDashboard = () => {
+interface AdminDashboardProps {
+  initialSection?: string;
+}
+
+const AdminDashboard: React.FC<AdminDashboardProps> = ({ initialSection }) => {
   const { content, loading: contentLoading, saveAllContent, seedDatabase } = useContent();
   const { user, isAdmin, isSuperAdmin, loading: authLoading } = useAuth();
   const { showToast } = useToast();
   const router = useRouter();
+  const params = useParams();
   const { shouldReduceGfx: performanceGfx } = usePerformance();
   const shouldReduceGfx = true; // Force-disable animations within admin screens
   
-  const [activeTab, setActiveTab] = useState('events');
+  const routeSection = (params?.section as string) || initialSection;
+  const initialNormalized = normalizeSection(routeSection);
+
+  const [activeTab, setActiveTab] = useState<string>(() => {
+    if (initialNormalized) return initialNormalized;
+    return 'events';
+  });
+
+  // Synchronize activeTab if route changes
+  useEffect(() => {
+    const norm = normalizeSection((params?.section as string) || initialSection);
+    if (norm && norm !== activeTab) {
+      setActiveTab(norm);
+    }
+  }, [params?.section, initialSection, activeTab]);
 
   useEffect(() => {
-    if (!authLoading && isSuperAdmin && activeTab === 'events') {
-       setActiveTab('home');
+    if (!authLoading && !params?.section && !initialSection) {
+      const defaultTab = isSuperAdmin ? 'home' : 'events';
+      setActiveTab(defaultTab);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authLoading, isSuperAdmin]);
+  }, [authLoading, isSuperAdmin, params?.section, initialSection]);
+
+  const handleTabChange = useCallback((tabId: string) => {
+    setActiveTab(tabId);
+    router.push(`/admin/${tabId}`, { scroll: false });
+  }, [router]);
   const [localContent, setLocalContent] = useState<any>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'success' | 'error'>('idle');
@@ -980,9 +1089,7 @@ const AdminDashboard = () => {
     return (
       <div className="min-h-screen bg-transparent flex items-center justify-center p-4">
         <div className="atmospheric-glow w-[600px] h-[600px] bg-red-500/5 -top-48 -left-24" />
-        <motion.div 
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
+        <div 
           className="max-w-md w-full p-12 rounded-[3rem] bg-white/[0.02] border border-white/10 backdrop-blur-3xl text-center space-y-8 relative z-10"
         >
           <div className="w-20 h-20 bg-red-500/10 border border-red-500/20 rounded-full flex items-center justify-center mx-auto">
@@ -1020,7 +1127,7 @@ const AdminDashboard = () => {
               />
             )}
           </div>
-        </motion.div>
+        </div>
       </div>
     );
   }
@@ -1193,45 +1300,84 @@ const AdminDashboard = () => {
   ];
 
   return (
-    <DashboardLayout 
-      activeTab={activeTab}
-      onTabChange={setActiveTab}
-      onSave={handleSave}
-      onReset={() => setLocalContent(content)}
-      saving={isSaving}
-      saveSuccess={saveStatus === 'success'}
-      isSupabaseConfigured={isSupabaseConfigured}
-      logoUrl={localContent?.site?.logoUrl}
-      isSuperAdmin={isSuperAdmin}
-      tabs={tabs}
-    >
-      <AnimatePresence mode="wait">
-        {activeTab === 'home' && (
-          <DashboardHomeSection 
-            data={localContent?.home}
-            updateField={(field, val) => updateField('home', field, val)}
-            updateListItem={(field, index, val) => updateListItem('home', field, index, val)}
-            addListItem={(field, newItem) => addListItem('home', field, newItem)}
-            removeListItem={(field, index) => removeListItem('home', field, index)}
-            uploading={uploading}
-            handleFileUpload={handleFileUpload}
-            shouldReduceGfx={shouldReduceGfx}
-          />
-        )}
+    <MotionConfig reducedMotion="always" transition={{ duration: 0 }}>
+      <div className="admin-dashboard-no-anim min-h-screen">
+        <style dangerouslySetInnerHTML={{ __html: `
+          .admin-dashboard-no-anim,
+          .admin-dashboard-no-anim *:not(.animate-spin),
+          .admin-dashboard-no-anim *:not(.animate-spin)::before,
+          .admin-dashboard-no-anim *:not(.animate-spin)::after {
+            animation: none !important;
+            animation-duration: 0s !important;
+            animation-delay: 0s !important;
+            transition: none !important;
+            transition-duration: 0s !important;
+            transition-delay: 0s !important;
+          }
+        `}} />
+        <DashboardLayout 
+          activeTab={activeTab}
+          onTabChange={handleTabChange}
+          onSave={handleSave}
+          onReset={() => setLocalContent(content)}
+          saving={isSaving}
+          saveSuccess={saveStatus === 'success'}
+          isSupabaseConfigured={isSupabaseConfigured}
+          logoUrl={localContent?.site?.logoUrl}
+          isSuperAdmin={isSuperAdmin}
+          tabs={tabs}
+        >
+          {SUPER_ADMIN_TABS.has(activeTab) && !isSuperAdmin ? (
+            <div className="min-h-[480px] flex items-center justify-center p-4">
+              <div className="max-w-md w-full p-8 lg:p-10 rounded-3xl bg-zinc-950/90 border border-purple-500/20 text-center space-y-6 shadow-2xl">
+                <div className="w-16 h-16 bg-purple-500/10 border border-purple-500/30 rounded-2xl flex items-center justify-center mx-auto text-purple-400">
+                  <Shield className="w-8 h-8" />
+                </div>
+                <div>
+                  <span className="text-[10px] font-mono font-bold uppercase tracking-[0.25em] text-purple-400 bg-purple-500/10 border border-purple-500/20 px-3 py-1 rounded-full inline-block mb-3">
+                    Super Admin Only
+                  </span>
+                  <h2 className="text-2xl font-bold text-white tracking-tight mb-2">Super Admin Access Denied</h2>
+                  <p className="text-zinc-400 text-xs sm:text-sm leading-relaxed">
+                    Only verified Super Administrators can access the Super Admin Dashboard and system configuration pages.
+                  </p>
+                </div>
+                <div className="flex flex-col sm:flex-row gap-3 pt-2">
+                  <DashboardButton 
+                    label="Back to Admin Dashboard" 
+                    onClick={() => handleTabChange('events')}
+                    variant="primary"
+                  />
+                  <DashboardButton 
+                    label="Return Home" 
+                    onClick={() => router.push('/')}
+                    variant="secondary"
+                  />
+                </div>
+              </div>
+            </div>
+          ) : (
+            <>
+              {activeTab === 'home' && isSuperAdmin && (
+                <DashboardHomeSection 
+                  data={localContent?.home}
+                  updateField={(field, val) => updateField('home', field, val)}
+                  updateListItem={(field, index, val) => updateListItem('home', field, index, val)}
+                  addListItem={(field, newItem) => addListItem('home', field, newItem)}
+                  removeListItem={(field, index) => removeListItem('home', field, index)}
+                  uploading={uploading}
+                  handleFileUpload={handleFileUpload}
+                  shouldReduceGfx={shouldReduceGfx}
+                />
+              )}
 
-        {activeTab === 'participation' && (
-          <motion.div
-            key="participation"
-            initial={shouldReduceGfx ? { opacity: 0 } : { opacity: 0, x: 20 }}
-            animate={shouldReduceGfx ? { opacity: 1 } : { opacity: 1, x: 0 }}
-            exit={shouldReduceGfx ? { opacity: 0 } : { opacity: 0, x: -20 }}
-            className="space-y-8"
-          >
-            <EventParticipation isSuperAdmin={isSuperAdmin} />
-          </motion.div>
-        )}
+          {activeTab === 'participation' && (
+            <div key="participation" className="space-y-8">
+              <EventParticipation isSuperAdmin={isSuperAdmin} />
+            </div>
+          )}
 
-        {activeTab === 'about' && (
+        {activeTab === 'about' && isSuperAdmin && (
           <DashboardAboutSection 
             data={localContent?.about}
             updateField={(field, val) => updateField('about', field, val)}
@@ -1322,7 +1468,7 @@ const AdminDashboard = () => {
           />
         )}
 
-        {activeTab === 'panel' && (
+        {activeTab === 'panel' && isSuperAdmin && (
           <DashboardPanelSection 
             data={localContent?.panel}
             updateField={(field, val) => updateField('panel', field, val)}
@@ -1426,11 +1572,8 @@ const AdminDashboard = () => {
         )}
 
         {activeTab === 'inter_reg_config' && (
-          <motion.div
+          <div
             key="inter_reg_config"
-            initial={shouldReduceGfx ? { opacity: 0 } : { opacity: 0, x: 20 }}
-            animate={shouldReduceGfx ? { opacity: 1 } : { opacity: 1, x: 0 }}
-            exit={shouldReduceGfx ? { opacity: 0 } : { opacity: 0, x: -20 }}
             className="space-y-8"
           >
             <DashboardSection
@@ -1440,7 +1583,7 @@ const AdminDashboard = () => {
             >
               <InterEventRegistrationConfigEditor showToast={showToast} />
             </DashboardSection>
-          </motion.div>
+          </div>
         )}
 
         {activeTab === 'ticket_purchase' && (
@@ -1451,28 +1594,22 @@ const AdminDashboard = () => {
           <StatisticsSection />
         )}
 
-        {activeTab === 'support' && (
-          <motion.div
+        {activeTab === 'support' && isSuperAdmin && (
+          <div
             key="support"
-            initial={shouldReduceGfx ? { opacity: 0 } : { opacity: 0, x: 20 }}
-            animate={shouldReduceGfx ? { opacity: 1 } : { opacity: 1, x: 0 }}
-            exit={shouldReduceGfx ? { opacity: 0 } : { opacity: 0, x: -20 }}
             className="space-y-8"
           >
             <SupportManagement />
-          </motion.div>
+          </div>
         )}
 
-        {activeTab === 'super_admin' && (
-          <motion.div
+        {(activeTab === 'super_admin' || activeTab === 'super-admin') && isSuperAdmin && (
+          <div
             key="super_admin"
-            initial={shouldReduceGfx ? { opacity: 0 } : { opacity: 0, x: 20 }}
-            animate={shouldReduceGfx ? { opacity: 1 } : { opacity: 1, x: 0 }}
-            exit={shouldReduceGfx ? { opacity: 0 } : { opacity: 0, x: -20 }}
             className="space-y-8"
           >
             <SuperAdminPanel isSuperAdmin={isSuperAdmin} />
-          </motion.div>
+          </div>
         )}
 
         {activeTab === 'audit_logs' && isSuperAdmin && (
@@ -1482,7 +1619,7 @@ const AdminDashboard = () => {
           />
         )}
 
-        {activeTab === 'developers' && (
+        {activeTab === 'developers' && isSuperAdmin && (
           <DashboardDevelopersSection 
             data={localContent?.developers || DEFAULT_CONTENT.developers}
             updateSaminField={(field, val) => updateNestedField('developers', 'samin', field, val)}
@@ -1511,7 +1648,7 @@ const AdminDashboard = () => {
           />
         )}
 
-        {activeTab === 'site' && (
+        {activeTab === 'site' && isSuperAdmin && (
           <DashboardSiteSection 
             data={localContent?.site}
             contactData={localContent?.contact}
@@ -1527,19 +1664,21 @@ const AdminDashboard = () => {
             supabase={supabase}
           />
         )}
-      </AnimatePresence>
+            </>
+          )}
 
-
-      <ConfirmModal
-        isOpen={confirmDelete.isOpen}
-        title="Confirm Deletion"
-        message="Are you sure you want to remove this item? This action cannot be undone."
-        onConfirm={executeDelete}
-        onCancel={() => setConfirmDelete(prev => ({ ...prev, isOpen: false }))}
-        confirmLabel="Delete"
-        type="danger"
-      />
-    </DashboardLayout>
+        <ConfirmModal
+          isOpen={confirmDelete.isOpen}
+          title="Confirm Deletion"
+          message="Are you sure you want to remove this item? This action cannot be undone."
+          onConfirm={executeDelete}
+          onCancel={() => setConfirmDelete(prev => ({ ...prev, isOpen: false }))}
+          confirmLabel="Delete"
+          type="danger"
+        />
+      </DashboardLayout>
+      </div>
+    </MotionConfig>
   );
 };
 

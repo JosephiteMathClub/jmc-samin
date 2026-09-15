@@ -545,6 +545,31 @@ export async function POST(req: Request) {
                     </table>
                   </div>
 
+                  <!-- Participant Portal Login & Password Notice -->
+                  <div style="background-color: #f8fafc; padding: 14px 16px; border-radius: 12px; border: 1px solid #e2e8f0; margin-bottom: 24px; text-align: left;">
+                    <p style="margin: 0 0 6px 0; font-size: 11px; font-weight: 800; color: #0284c7; text-transform: uppercase; letter-spacing: 0.5px;">
+                      🔐 Participant Portal Login & Account Credentials
+                    </p>
+                    <table width="100%" border="0" cellspacing="0" cellpadding="0" style="font-size: 12px; margin-bottom: 8px;">
+                      <tr>
+                        <td style="color: #64748b; font-weight: 700; width: 140px; padding: 4px 0;">Login Email:</td>
+                        <td><strong style="color: #0f172a;">${linkedEmail}</strong></td>
+                      </tr>
+                      <tr>
+                        <td style="color: #64748b; font-weight: 700; width: 140px; padding: 4px 0;">Login Password:</td>
+                        <td><strong style="color: #0f172a;">${linkedRec.bkash_number || linkedRec.phone || 'Your Registered Phone Number'}</strong> (Your Registered Phone Number)</td>
+                      </tr>
+                    </table>
+                    <div style="background-color: #ffffff; padding: 8px 12px; border-radius: 8px; border: 1px solid #e2e8f0; font-size: 11px; color: #334155; line-height: 1.45;">
+                      <p style="margin: 0 0 4px 0;">
+                        🔑 <strong>How to Log In:</strong> You can log into your account using your registered <strong>email address</strong> and your <strong>phone number as your password</strong>.
+                      </p>
+                      <p style="margin: 0; color: #0284c7;">
+                        🔄 <strong>Password Reset:</strong> You can also reset or change your password as you wish at any time by clicking <em>&quot;Forgot Password&quot;</em> on the login screen or updating it directly from your Profile settings.
+                      </p>
+                    </div>
+                  </div>
+
                   <div style="text-align: center; margin-bottom: 24px;">
                     <a href="${profileLink}" style="display: inline-block; background-color: ${buttonBg}; color: #ffffff; text-decoration: none; font-size: 14px; font-weight: 800; padding: 14px 28px; border-radius: 12px; text-transform: uppercase; letter-spacing: 0.5px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
                       ${buttonText}

@@ -56,7 +56,8 @@ import {
   Table as TableIcon,
   LayoutGrid,
   ExternalLink,
-  Copy
+  Copy,
+  Printer
 } from 'lucide-react';
 import { supabase, isSupabaseConfigured } from '../../../lib/supabase';
 import { useAuth } from '../../../context/AuthContext';
@@ -913,6 +914,7 @@ export function TicketPurchaseSection({ isSuperAdmin: propIsSuperAdmin }: Ticket
 
   const [spotError, setSpotError] = useState<string | null>(null);
   const [spotSuccess, setSpotSuccess] = useState<string | null>(null);
+  const [lastCreatedCandidate, setLastCreatedCandidate] = useState<PurchaseSlipCandidate | null>(null);
   const [spotSubmitting, setSpotSubmitting] = useState(false);
 
   // Selected team events
@@ -1304,8 +1306,25 @@ export function TicketPurchaseSection({ isSuperAdmin: propIsSuperAdmin }: Ticket
         ? `✅ Verification slip linked & forwarded to ${cleanName}'s existing account profile.`
         : '';
 
+      const createdCand: PurchaseSlipCandidate = {
+        id: apiData.ticketId || `SPOT-${apiData.memberId || autoSpotId}`,
+        fullName: cleanName,
+        email: cleanEmail,
+        phone: cleanPhone,
+        memberId: `SPOT-${apiData.memberId || autoSpotId}`,
+        class: cleanClass,
+        section: 'N/A',
+        roll: 'Spot Reg',
+        school: cleanInstitute,
+        candidateType: 'spot',
+        eventsList: spotSelectedEvents,
+        teamName: isTeamSelected ? (spotTeamName.trim() || undefined) : undefined,
+        teamMembers: isTeamSelected ? teamMembersList : undefined,
+      };
+      setLastCreatedCandidate(createdCand);
+
       setSpotSuccess(
-        `Spot Ticket registered successfully! Generated Ticket ID: #SPOT-${apiData.memberId || autoSpotId}${teamMsg}. Events: ${spotSelectedEvents.join(', ')}. ${accountStatusMsg} The verification slip & QR pass has been emailed to ${cleanEmail} and synced to the profile.`
+        `Spot Ticket registered successfully! Pass ID: #SPOT-${apiData.memberId || autoSpotId}${teamMsg}. Events: ${spotSelectedEvents.join(', ')}. ${accountStatusMsg} The official Verification Slip (Online Copy) with QR pass has been emailed to ${cleanEmail}.`
       );
       
       // Reset form
@@ -1348,7 +1367,55 @@ export function TicketPurchaseSection({ isSuperAdmin: propIsSuperAdmin }: Ticket
       }
 
       const existingPurchases: Record<string, TicketPurchase> = ticketData?.data?.purchases || {};
-      const existingSpotTickets = ticketData?.data?.spotTickets || {};
+      const existingSpotTickets: Record<string, any> = { ...(ticketData?.data?.spotTickets || {}) };
+
+      // 1.1 CRITICAL: ALSO FETCH DIRECTLY FROM spot_ticket_participants TABLE
+      // This ensures any registration, edit, or sync is immediately reflected in the On-Spot Ticket Purchase section
+      try {
+        const { data: spotTableRows, error: spotTableErr } = await supabase
+          .from('spot_ticket_participants')
+          .select('*');
+
+        if (!spotTableErr && spotTableRows && spotTableRows.length > 0) {
+          spotTableRows.forEach((row: any) => {
+            const rawId = (row.ticket_id || '').replace(/^SPOT-/i, '').replace(/^#/i, '').trim();
+            if (rawId) {
+              existingSpotTickets[rawId] = {
+                id: `spot-${rawId}`,
+                userId: row.user_id,
+                fullName: row.full_name,
+                email: row.email,
+                phone: row.phone,
+                memberId: rawId,
+                class: row.academic_class,
+                section: row.section,
+                roll: row.roll,
+                school: row.school,
+                confirmed: row.verified === 'yes',
+                confirmedAt: row.created_at,
+                confirmedBy: row.verified_by,
+                confirmedByName: row.verified_by_name,
+                confirmedByEmail: row.verified_by_email,
+                validated: Boolean(row.validated),
+                validatedAt: row.validated_at,
+                validatedBy: row.validated_by,
+                snacks: Boolean(row.snacks_collected),
+                certificate: Boolean(row.certificate_collected),
+                souvenir: Boolean(row.souvenir_collected),
+                candidateType: 'spot',
+                category: row.category || 'Secondary',
+                eventsList: row.selected_events ? row.selected_events.split(',').map((s: string) => s.trim()).filter(Boolean) : ['Spot Ticket Registration'],
+                teamName: row.team_name,
+                teamMembers: row.team_members,
+                amount: row.amount,
+                trxnid: row.trxnid
+              };
+            }
+          });
+        }
+      } catch (dbErr) {
+        console.warn('Note reading spot_ticket_participants in loadData:', dbErr);
+      }
 
       const mergedPurchases = { ...existingPurchases };
       Object.entries(existingSpotTickets).forEach(([spotId, ticket]: [string, any]) => {
@@ -1549,8 +1616,8 @@ export function TicketPurchaseSection({ isSuperAdmin: propIsSuperAdmin }: Ticket
 
     if (!isSupabaseConfigured) return;
 
-    // Listen to real-time changes on ticket_purchases row in site_content
-    const channel = supabase
+    // 1. Listen to real-time changes on ticket_purchases row in site_content
+    const scChannel = supabase
       .channel('ticket_purchases_realtime')
       .on(
         'postgres_changes',
@@ -1570,14 +1637,31 @@ export function TicketPurchaseSection({ isSuperAdmin: propIsSuperAdmin }: Ticket
             Object.entries(spotTickets).forEach(([spotId, ticket]: [string, any]) => {
               mergedPurchases[`spot-${spotId}`] = ticket;
             });
-            setPurchases(mergedPurchases);
+            setPurchases(prev => ({ ...prev, ...mergedPurchases }));
           }
         }
       )
       .subscribe();
 
+    // 2. Listen to real-time changes directly on spot_ticket_participants table
+    const spotChannel = supabase
+      .channel('spot_ticket_participants_realtime')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'spot_ticket_participants'
+        },
+        () => {
+          loadData(true);
+        }
+      )
+      .subscribe();
+
     return () => {
-      supabase.removeChannel(channel);
+      supabase.removeChannel(scChannel);
+      supabase.removeChannel(spotChannel);
     };
   }, [loadData]);
 
@@ -1601,6 +1685,7 @@ export function TicketPurchaseSection({ isSuperAdmin: propIsSuperAdmin }: Ticket
         }
       });
 
+      // 1. Save to site_content
       const { error: upsertErr } = await supabase
         .from('site_content')
         .upsert({
@@ -1614,6 +1699,73 @@ export function TicketPurchaseSection({ isSuperAdmin: propIsSuperAdmin }: Ticket
 
       if (upsertErr) throw upsertErr;
       setPurchases(updatedPurchases);
+
+      // 2. CRITICAL: DIRECTLY PERSIST SPOT TICKETS TO spot_ticket_participants TABLE
+      // This ensures that all current data from the On-Spot Ticket Purchase section
+      // goes into the spot_ticket_participants table and previous_year_participants
+      if (Object.keys(spotTickets).length > 0) {
+        try {
+          const session = (await supabase.auth.getSession()).data.session;
+          await fetch('/api/admin/spot-participants', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              ...(session?.access_token ? { 'Authorization': `Bearer ${session.access_token}` } : {})
+            },
+            body: JSON.stringify({
+              action: 'sync_spot_purchases',
+              spotTickets: spotTickets
+            })
+          });
+        } catch (syncApiErr) {
+          console.warn('Could not sync spot tickets to /api/admin/spot-participants:', syncApiErr);
+        }
+
+        // Direct client upsert backup
+        try {
+          for (const [spotId, ticket] of Object.entries(spotTickets) as [string, any][]) {
+            const rawId = spotId.replace(/^spot-/i, '').replace(/^#/i, '').trim();
+            if (!rawId) continue;
+            const fullTicketId = `SPOT-${rawId}`;
+
+            await supabase
+              .from('spot_ticket_participants')
+              .upsert({
+                ticket_id: fullTicketId,
+                user_id: ticket.userId || null,
+                full_name: (ticket.fullName || 'Spot Registrant').trim(),
+                email: (ticket.email || '').trim().toLowerCase(),
+                phone: (ticket.phone || '').trim(),
+                academic_class: (ticket.class || 'N/A').trim(),
+                section: (ticket.section || 'N/A').trim(),
+                roll: (ticket.roll || 'Spot Reg').trim(),
+                school: (ticket.school || 'St. Joseph Higher Secondary School').trim(),
+                category: ticket.category || 'Secondary',
+                selected_events: Array.isArray(ticket.eventsList) ? ticket.eventsList.join(', ') : (ticket.events || 'Spot Ticket Registration'),
+                is_team: Boolean(ticket.teamName || (ticket.teamMembers && ticket.teamMembers.length > 0)),
+                team_name: ticket.teamName || null,
+                team_members: ticket.teamMembers || [],
+                amount: Number(ticket.amount || 0),
+                trxnid: ticket.trxnid || `SPOT-TICKET-${rawId}`,
+                payment_method: 'cash',
+                verified: ticket.confirmed ? 'yes' : 'no',
+                verified_by: ticket.confirmedBy || currentAdminEmail || 'Admin',
+                verified_by_name: ticket.confirmedByName || currentAdminName || 'Admin',
+                verified_by_email: ticket.confirmedByEmail || currentAdminEmail || null,
+                validated: Boolean(ticket.validated),
+                validated_at: ticket.validatedAt || null,
+                validated_by: ticket.validatedBy || null,
+                snacks_collected: Boolean(ticket.snacks),
+                certificate_collected: Boolean(ticket.certificate),
+                souvenir_collected: Boolean(ticket.souvenir),
+                academic_year: '2025-2026',
+                updated_at: new Date().toISOString()
+              }, { onConflict: 'ticket_id' });
+          }
+        } catch (directErr) {
+          console.warn('Note direct client upsert to spot_ticket_participants:', directErr);
+        }
+      }
     } catch (err: any) {
       console.error('Failed to save ticket purchase state:', err);
       setError('Failed to sync ticket update with database. Try again.');
@@ -2353,9 +2505,38 @@ export function TicketPurchaseSection({ isSuperAdmin: propIsSuperAdmin }: Ticket
           )}
 
           {spotSuccess && (
-            <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-start gap-3">
-              <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
-              <div className="text-sm text-emerald-200 leading-relaxed">{spotSuccess}</div>
+            <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 space-y-3">
+              <div className="flex items-start gap-3">
+                <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
+                <div className="text-sm text-emerald-200 leading-relaxed">{spotSuccess}</div>
+              </div>
+
+              {lastCreatedCandidate && (
+                <div className="flex flex-wrap items-center gap-2.5 pt-2.5 border-t border-emerald-500/20">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedSlipCandidate(lastCreatedCandidate);
+                      setIsSlipModalOpen(true);
+                    }}
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-500 text-zinc-950 font-bold text-xs hover:bg-emerald-400 transition-all shadow-md cursor-pointer"
+                  >
+                    <FileText className="w-3.5 h-3.5" />
+                    View Verification Slip (Online Copy)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedSlipCandidate(lastCreatedCandidate);
+                      setIsSlipModalOpen(true);
+                    }}
+                    className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/15 text-white font-medium text-xs transition-all cursor-pointer"
+                  >
+                    <Printer className="w-3.5 h-3.5" />
+                    Print / Download Pass PDF
+                  </button>
+                </div>
+              )}
             </div>
           )}
 

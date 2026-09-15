@@ -932,3 +932,62 @@ DROP POLICY IF EXISTS "Allow service role full access to previous_year_participa
 CREATE POLICY "Allow service role full access to previous_year_participants" ON public.previous_year_participants FOR ALL TO service_role USING (true) WITH CHECK (true);
 
 
+-- ==========================================
+-- 14. On-Spot Ticket Participants Table
+-- ==========================================
+
+CREATE TABLE IF NOT EXISTS public.spot_ticket_participants (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    ticket_id TEXT UNIQUE NOT NULL,
+    user_id UUID,
+    full_name TEXT NOT NULL,
+    email TEXT NOT NULL,
+    phone TEXT NOT NULL,
+    academic_class TEXT DEFAULT 'N/A',
+    section TEXT DEFAULT 'N/A',
+    roll TEXT DEFAULT 'Spot Reg',
+    school TEXT DEFAULT 'St. Joseph Higher Secondary School',
+    category TEXT DEFAULT 'Secondary',
+    selected_events TEXT,
+    is_team BOOLEAN DEFAULT FALSE,
+    team_name TEXT,
+    team_members JSONB DEFAULT '[]'::jsonb,
+    amount NUMERIC DEFAULT 0,
+    trxnid TEXT,
+    payment_method TEXT DEFAULT 'cash',
+    verified TEXT DEFAULT 'yes',
+    verified_by TEXT,
+    verified_by_name TEXT,
+    verified_by_email TEXT,
+    validated BOOLEAN DEFAULT FALSE,
+    validated_at TIMESTAMP WITH TIME ZONE,
+    validated_by TEXT,
+    snacks_collected BOOLEAN DEFAULT FALSE,
+    certificate_collected BOOLEAN DEFAULT FALSE,
+    souvenir_collected BOOLEAN DEFAULT FALSE,
+    academic_year TEXT DEFAULT '2025-2026',
+    metadata JSONB DEFAULT '{}'::jsonb,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Indices for fast lookups
+CREATE INDEX IF NOT EXISTS idx_spot_participants_ticket_id ON public.spot_ticket_participants(ticket_id);
+CREATE INDEX IF NOT EXISTS idx_spot_participants_email ON public.spot_ticket_participants(email);
+CREATE INDEX IF NOT EXISTS idx_spot_participants_phone ON public.spot_ticket_participants(phone);
+CREATE INDEX IF NOT EXISTS idx_spot_participants_category ON public.spot_ticket_participants(category);
+CREATE INDEX IF NOT EXISTS idx_spot_participants_created_at ON public.spot_ticket_participants(created_at DESC);
+
+-- Enable RLS
+ALTER TABLE public.spot_ticket_participants ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Allow super admins full access to spot_ticket_participants" ON public.spot_ticket_participants;
+CREATE POLICY "Allow super admins full access to spot_ticket_participants" ON public.spot_ticket_participants FOR ALL TO authenticated USING (public.is_super_admin()) WITH CHECK (public.is_super_admin());
+
+DROP POLICY IF EXISTS "Allow service role full access to spot_ticket_participants" ON public.spot_ticket_participants;
+CREATE POLICY "Allow service role full access to spot_ticket_participants" ON public.spot_ticket_participants FOR ALL TO service_role USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Allow admins read access to spot_ticket_participants" ON public.spot_ticket_participants;
+CREATE POLICY "Allow admins read access to spot_ticket_participants" ON public.spot_ticket_participants FOR SELECT TO authenticated USING (public.is_admin());
+
+
