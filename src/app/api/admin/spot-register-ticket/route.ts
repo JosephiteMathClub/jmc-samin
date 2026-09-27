@@ -48,8 +48,11 @@ export async function POST(req: Request) {
       verifiedBy = 'Admin',
       verifiedByName,
       verifiedByEmail,
-      documentType = 'verification_slip'
+      documentType = 'verification_slip',
+      autoValidate = true
     } = body;
+
+    const shouldAutoValidate = Boolean(autoValidate);
 
     const cleanName = (fullName || '').trim();
     const cleanEmail = (email || '').trim().toLowerCase();
@@ -306,7 +309,7 @@ export async function POST(req: Request) {
       confirmedBy: verifiedByEmail || verifiedBy || 'Admin',
       confirmedByName: verifiedByName,
       confirmedByEmail: verifiedByEmail,
-      validated: false,
+      validated: shouldAutoValidate,
       snacks: false,
       certificate: false,
       souvenir: false,
@@ -372,7 +375,7 @@ export async function POST(req: Request) {
       verified_by: verifiedBy || 'Admin',
       verified_by_name: verifiedByName || 'Admin',
       verified_by_email: verifiedByEmail || null,
-      validated: false,
+      validated: shouldAutoValidate,
       snacks_collected: false,
       certificate_collected: false,
       souvenir_collected: false,

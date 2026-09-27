@@ -325,7 +325,18 @@ const PanelView = () => {
   const filteredPresidents = React.useMemo(() => activePanelData.president?.filter(shouldRenderMember) || [], [activePanelData.president, shouldRenderMember]);
   const filteredDeputyPresidents = React.useMemo(() => activePanelData.deputyPresidents?.filter(shouldRenderMember) || [], [activePanelData.deputyPresidents, shouldRenderMember]);
   const filteredGeneralSecretary = React.useMemo(() => activePanelData.generalSecretary?.filter(shouldRenderMember) || [], [activePanelData.generalSecretary, shouldRenderMember]);
-  const filteredVicePresidents = React.useMemo(() => activePanelData.vicePresidents?.filter(shouldRenderMember) || [], [activePanelData.vicePresidents, shouldRenderMember]);
+  
+  const filteredVicePresidents = React.useMemo(() => {
+    const list = activePanelData.vicePresidents?.filter(shouldRenderMember) || [];
+    return list.filter((m: any) => !m.role?.toLowerCase().includes('assistant vice'));
+  }, [activePanelData.vicePresidents, shouldRenderMember]);
+
+  const filteredAssistantVicePresidents = React.useMemo(() => {
+    const directList = activePanelData.assistantVicePresidents?.filter(shouldRenderMember) || [];
+    const legacyList = (activePanelData.vicePresidents?.filter(shouldRenderMember) || [])
+      .filter((m: any) => m.role?.toLowerCase().includes('assistant vice'));
+    return [...directList, ...legacyList];
+  }, [activePanelData.assistantVicePresidents, activePanelData.vicePresidents, shouldRenderMember]);
   
   const filteredJointSecretary = React.useMemo(() => activePanelData.secretaries?.jointSecretary?.filter(shouldRenderMember) || [], [activePanelData.secretaries?.jointSecretary, shouldRenderMember]);
   const filteredOrganizingSecretary = React.useMemo(() => activePanelData.secretaries?.organizingSecretary?.filter(shouldRenderMember) || [], [activePanelData.secretaries?.organizingSecretary, shouldRenderMember]);
@@ -339,6 +350,7 @@ const PanelView = () => {
            filteredDeputyPresidents.length === 0 &&
            filteredGeneralSecretary.length === 0 &&
            filteredVicePresidents.length === 0 &&
+           filteredAssistantVicePresidents.length === 0 &&
            filteredJointSecretary.length === 0 &&
            filteredOrganizingSecretary.length === 0 &&
            filteredAsstGeneralSecretary.length === 0 &&
@@ -346,7 +358,7 @@ const PanelView = () => {
            filteredDepartments.length === 0;
   }, [
     filteredPresidents, filteredDeputyPresidents, filteredGeneralSecretary,
-    filteredVicePresidents, filteredJointSecretary, filteredOrganizingSecretary,
+    filteredVicePresidents, filteredAssistantVicePresidents, filteredJointSecretary, filteredOrganizingSecretary,
     filteredAsstGeneralSecretary, filteredCorrespondingSecretary, filteredDepartments
   ]);
 
@@ -503,53 +515,97 @@ const PanelView = () => {
                   </div>
                 ) : (
                   <>
-                    {/* Core Leadership Row */}
-                    {(filteredPresidents.length > 0 || filteredDeputyPresidents.length > 0 || filteredGeneralSecretary.length > 0) && (
-                      <div className="space-y-12">
-                        <SubHeader>CORE LEADERSHIP</SubHeader>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+                    {/* Line 1: President */}
+                    {filteredPresidents.length > 0 && (
+                      <div className="space-y-8">
+                        <SubHeader>PRESIDENT</SubHeader>
+                        <div className="flex flex-wrap justify-center gap-8">
                           {filteredPresidents.map((p: any, i: number) => (
-                            <Flashcard 
-                              key={`pres-${i}`} 
-                              {...p} 
-                              icon={Star} 
-                              isAdmin={isAdmin}
-                              onUpload={(url: string) => handleMemberUpdate(getMemberPath('president', i), url)}
-                            />
+                            <div key={`pres-${i}`} className="w-full max-w-xs sm:max-w-sm">
+                              <Flashcard 
+                                {...p} 
+                                role={p.role || "President"}
+                                icon={Star} 
+                                isAdmin={isAdmin}
+                                onUpload={(url: string) => handleMemberUpdate(getMemberPath('president', i), url)}
+                              />
+                            </div>
                           ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Line 2: General Secretary */}
+                    {filteredGeneralSecretary.length > 0 && (
+                      <div className="space-y-8">
+                        <SubHeader>GENERAL SECRETARY</SubHeader>
+                        <div className="flex flex-wrap justify-center gap-8">
+                          {filteredGeneralSecretary.map((p: any, i: number) => (
+                            <div key={`gs-${i}`} className="w-full max-w-xs sm:max-w-sm">
+                              <Flashcard 
+                                {...p} 
+                                role={p.role || "General Secretary"}
+                                icon={Briefcase} 
+                                isAdmin={isAdmin}
+                                onUpload={(url: string) => handleMemberUpdate(getMemberPath('generalSecretary', i), url)}
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Line 3: Deputy Presidents */}
+                    {filteredDeputyPresidents.length > 0 && (
+                      <div className="space-y-8">
+                        <SubHeader>DEPUTY PRESIDENTS</SubHeader>
+                        <div className="flex flex-wrap justify-center gap-8">
                           {filteredDeputyPresidents.map((p: any, i: number) => (
+                            <div key={`dp-${i}`} className="w-full max-w-xs sm:max-w-sm">
+                              <Flashcard 
+                                {...p} 
+                                role={p.role || "Deputy President"}
+                                icon={Award} 
+                                isAdmin={isAdmin}
+                                onUpload={(url: string) => handleMemberUpdate(getMemberPath('deputyPresidents', i), url)}
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Vice Presidents: In rounded square boxes (Flashcard) */}
+                    {filteredVicePresidents.length > 0 && (
+                      <div className="space-y-12">
+                        <SubHeader>VICE PRESIDENTS</SubHeader>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
+                          {filteredVicePresidents.map((p: any, i: number) => (
                             <Flashcard 
-                              key={`dp-${i}`} 
+                              key={`vp-${i}`} 
                               {...p} 
+                              role={p.role || "Vice President"}
                               icon={Award} 
                               isAdmin={isAdmin}
-                              onUpload={(url: string) => handleMemberUpdate(getMemberPath('deputyPresidents', i), url)}
-                            />
-                          ))}
-                          {filteredGeneralSecretary.map((p: any, i: number) => (
-                            <Flashcard 
-                              key={`gs-${i}`} 
-                              {...p} 
-                              icon={Briefcase} 
-                              isAdmin={isAdmin}
-                              onUpload={(url: string) => handleMemberUpdate(getMemberPath('generalSecretary', i), url)}
+                              onUpload={(url: string) => handleMemberUpdate(getMemberPath('vicePresidents', i), url)}
                             />
                           ))}
                         </div>
                       </div>
                     )}
 
-                    {/* VP Grid */}
-                    {filteredVicePresidents.length > 0 && (
+                    {/* Assistant Vice Presidents: In list format (ExecutiveRow) */}
+                    {filteredAssistantVicePresidents.length > 0 && (
                       <div className="space-y-12">
-                        <SubHeader>VICE PRESIDENT</SubHeader>
+                        <SubHeader>ASSISTANT VICE PRESIDENTS</SubHeader>
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-                          {filteredVicePresidents.map((p: any, i: number) => (
+                          {filteredAssistantVicePresidents.map((p: any, i: number) => (
                             <ExecutiveRow 
-                              key={i}
+                              key={`avp-${i}`} 
                               {...p} 
+                              role={p.role || "Assistant Vice President"}
                               isAdmin={isAdmin}
-                              onUpload={(url: string) => handleMemberUpdate(getMemberPath('vicePresidents', i), url)}
+                              onUpload={(url: string) => handleMemberUpdate(getMemberPath('assistantVicePresidents', i), url)}
                             />
                           ))}
                         </div>

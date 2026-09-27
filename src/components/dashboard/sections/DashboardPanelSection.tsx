@@ -93,6 +93,7 @@ const DashboardPanelSectionComponent: React.FC<DashboardPanelSectionProps> = ({
     count += (cur.deputyPresidents?.length || 0);
     count += (cur.generalSecretary?.length || 0);
     count += (cur.vicePresidents?.length || 0);
+    count += (cur.assistantVicePresidents?.length || 0);
     count += (cur.departments?.length || 0);
     const secs = cur.secretaries || {};
     count += (secs.asstGeneralSecretary?.length || 0);
@@ -165,6 +166,7 @@ const DashboardPanelSectionComponent: React.FC<DashboardPanelSectionProps> = ({
       deputyPresidents: Array.isArray(currentPanel.deputyPresidents) ? JSON.parse(JSON.stringify(currentPanel.deputyPresidents)) : [],
       generalSecretary: Array.isArray(currentPanel.generalSecretary) ? JSON.parse(JSON.stringify(currentPanel.generalSecretary)) : [],
       vicePresidents: Array.isArray(currentPanel.vicePresidents) ? JSON.parse(JSON.stringify(currentPanel.vicePresidents)) : [],
+      assistantVicePresidents: Array.isArray(currentPanel.assistantVicePresidents) ? JSON.parse(JSON.stringify(currentPanel.assistantVicePresidents)) : [],
       departments: Array.isArray(currentPanel.departments) ? JSON.parse(JSON.stringify(currentPanel.departments)) : [],
       secretaries: {
         asstGeneralSecretary: Array.isArray(currentPanel.secretaries?.asstGeneralSecretary) ? JSON.parse(JSON.stringify(currentPanel.secretaries.asstGeneralSecretary)) : [],
@@ -182,6 +184,7 @@ const DashboardPanelSectionComponent: React.FC<DashboardPanelSectionProps> = ({
         deputyPresidents: [],
         generalSecretary: [],
         vicePresidents: [],
+        assistantVicePresidents: [],
         departments: [],
         secretaries: {
           asstGeneralSecretary: [],
@@ -222,6 +225,7 @@ const DashboardPanelSectionComponent: React.FC<DashboardPanelSectionProps> = ({
       deputyPresidents: [],
       generalSecretary: [],
       vicePresidents: [],
+      assistantVicePresidents: [],
       departments: [],
       secretaries: {
         asstGeneralSecretary: [],
@@ -284,6 +288,7 @@ const DashboardPanelSectionComponent: React.FC<DashboardPanelSectionProps> = ({
     if (!Array.isArray(target.generalSecretary)) target.generalSecretary = [];
     if (!Array.isArray(target.deputyPresidents)) target.deputyPresidents = [];
     if (!Array.isArray(target.vicePresidents)) target.vicePresidents = [];
+    if (!Array.isArray(target.assistantVicePresidents)) target.assistantVicePresidents = [];
     if (!Array.isArray(target.departments)) target.departments = [];
     if (!target.secretaries) target.secretaries = {};
     if (!Array.isArray(target.secretaries.asstGeneralSecretary)) target.secretaries.asstGeneralSecretary = [];
@@ -307,6 +312,11 @@ const DashboardPanelSectionComponent: React.FC<DashboardPanelSectionProps> = ({
     if (target.vicePresidents.length === 0) {
       target.vicePresidents.push({ name: '', role: 'Vice President', imageUrl: '' });
       target.vicePresidents.push({ name: '', role: 'Vice President', imageUrl: '' });
+    }
+    // Add 2 blank Assistant VPs if empty
+    if (target.assistantVicePresidents.length === 0) {
+      target.assistantVicePresidents.push({ name: '', role: 'Assistant Vice President', imageUrl: '' });
+      target.assistantVicePresidents.push({ name: '', role: 'Assistant Vice President', imageUrl: '' });
     }
     // Add standard departments if empty
     if (target.departments.length === 0) {
@@ -392,6 +402,7 @@ const DashboardPanelSectionComponent: React.FC<DashboardPanelSectionProps> = ({
       deputyPresidents: [],
       generalSecretary: [],
       vicePresidents: [],
+      assistantVicePresidents: [],
       departments: [],
       secretaries: {
         asstGeneralSecretary: [],
@@ -701,10 +712,11 @@ const DashboardPanelSectionComponent: React.FC<DashboardPanelSectionProps> = ({
 
               {/* Core Executive Categories */}
               {[
-                { id: 'president', label: 'President', icon: Star, defaultRole: 'President' },
-                { id: 'generalSecretary', label: 'General Secretary', icon: Briefcase, defaultRole: 'General Secretary' },
-                { id: 'deputyPresidents', label: 'Deputy Presidents', icon: Award, defaultRole: 'Deputy President' },
-                { id: 'vicePresidents', label: 'Vice Presidents', icon: Award, defaultRole: 'Vice President' },
+                { id: 'president', label: 'President', icon: Star, defaultRole: 'President', note: 'Single line layout on panel page' },
+                { id: 'generalSecretary', label: 'General Secretary', icon: Briefcase, defaultRole: 'General Secretary', note: 'Single line layout on panel page' },
+                { id: 'deputyPresidents', label: 'Deputy Presidents', icon: Award, defaultRole: 'Deputy President', note: 'Single line layout on panel page' },
+                { id: 'vicePresidents', label: 'Vice Presidents', icon: Award, defaultRole: 'Vice President', note: 'Displayed in rounded square boxes (cards)' },
+                { id: 'assistantVicePresidents', label: 'Assistant Vice Presidents', icon: Users, defaultRole: 'Assistant Vice President', note: 'Separate section (displayed in list format on panel page)' },
                 { id: 'departments', label: 'Department Heads', icon: Users, isDept: true, defaultRole: 'Head of Department' },
               ].map((category) => {
                 const list = (executiveTab === 'current' 
@@ -712,13 +724,23 @@ const DashboardPanelSectionComponent: React.FC<DashboardPanelSectionProps> = ({
                   : data?.executive?.former?.[activeIndex]?.[category.id]) || [];
                 return (
                   <div key={category.id} className="space-y-4">
-                    <div className="flex items-center justify-between pb-2 border-b border-white/5">
-                      <div className="flex items-center gap-2.5">
-                        <category.icon className="w-4 h-4 text-amber-400" />
-                        <h4 className="text-xs font-mono font-bold uppercase tracking-widest text-white">{category.label}</h4>
-                        <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-white/5 text-zinc-400 border border-white/5">
-                          {list.length}
-                        </span>
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-2 border-b border-white/5 gap-2">
+                      <div>
+                        <div className="flex items-center gap-2.5">
+                          <category.icon className="w-4 h-4 text-amber-400" />
+                          <h4 className="text-xs font-mono font-bold uppercase tracking-widest text-white">{category.label}</h4>
+                          <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-white/5 text-zinc-400 border border-white/5">
+                            {list.length}
+                          </span>
+                          {category.id === 'assistantVicePresidents' && (
+                            <span className="text-[9px] font-mono px-2 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20 uppercase font-bold tracking-wider">
+                              Separate Section
+                            </span>
+                          )}
+                        </div>
+                        {category.note && (
+                          <p className="text-[11px] text-zinc-500 font-mono mt-0.5">{category.note}</p>
+                        )}
                       </div>
                       
                       <button 
@@ -728,7 +750,7 @@ const DashboardPanelSectionComponent: React.FC<DashboardPanelSectionProps> = ({
                             ? { dept: 'Internal Affairs', name: '', role: 'Head of Internal Affairs', imageUrl: '' } 
                             : { name: '', role: category.defaultRole, imageUrl: '' }
                         )}
-                        className="px-3 py-1.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/20 rounded-lg text-xs font-mono font-bold uppercase tracking-wider transition-all flex items-center gap-1.5 cursor-pointer"
+                        className="px-3 py-1.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/20 rounded-lg text-xs font-mono font-bold uppercase tracking-wider transition-all flex items-center gap-1.5 cursor-pointer self-start sm:self-auto"
                         title={`Add ${category.label} member`}
                       >
                         <Plus className="w-3.5 h-3.5" />
@@ -1255,6 +1277,7 @@ const DashboardPanelSectionComponent: React.FC<DashboardPanelSectionProps> = ({
                       else if (cat === 'generalSecretary') setPlaceRole('General Secretary');
                       else if (cat === 'deputyPresidents') setPlaceRole('Deputy President');
                       else if (cat === 'vicePresidents') setPlaceRole('Vice President');
+                      else if (cat === 'assistantVicePresidents') setPlaceRole('Assistant Vice President');
                       else if (cat === 'departments') setPlaceRole('Head of ' + placeDept);
                       else if (cat === 'secretaries.jointSecretary') setPlaceRole('Joint Secretary');
                       else if (cat === 'secretaries.organizingSecretary') setPlaceRole('Organizing Secretary');
@@ -1267,6 +1290,7 @@ const DashboardPanelSectionComponent: React.FC<DashboardPanelSectionProps> = ({
                     <option value="generalSecretary" className="bg-zinc-900 text-white">General Secretary</option>
                     <option value="deputyPresidents" className="bg-zinc-900 text-white">Deputy President</option>
                     <option value="vicePresidents" className="bg-zinc-900 text-white">Vice President</option>
+                    <option value="assistantVicePresidents" className="bg-zinc-900 text-white">Assistant Vice President</option>
                     <option value="departments" className="bg-zinc-900 text-white">Department Head</option>
                     <option value="secretaries.jointSecretary" className="bg-zinc-900 text-white">Joint Secretary</option>
                     <option value="secretaries.organizingSecretary" className="bg-zinc-900 text-white">Organizing Secretary</option>

@@ -573,6 +573,166 @@ export async function POST(req: Request) {
     }
 
     // ----------------------------------------------------
+    // ACTION: IMPORT PARTICIPANTS FROM CSV
+    // ----------------------------------------------------
+    if (action === 'import_csv') {
+      const { 
+        records, 
+        academicYear, 
+        skipExistingInDb = true, 
+        fileName = 'participants_import.csv' 
+      } = body;
+
+      if (!records || !Array.isArray(records) || records.length === 0) {
+        return NextResponse.json({ error: 'No participant records provided to import.' }, { status: 400 });
+      }
+
+      const defaultYear = (academicYear || `${new Date().getFullYear() - 1}-${new Date().getFullYear()}`).trim();
+
+      // Email regex for validation
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+      // Filter and validate emails, and deduplicate within batch
+      const seenEmailsInBatch = new Set<string>();
+      const validRecords: any[] = [];
+      let invalidCount = 0;
+      let duplicateInBatchCount = 0;
+
+      for (const rec of records) {
+        const rawEmail = (rec.email || '').trim().toLowerCase();
+        if (!rawEmail || !emailRegex.test(rawEmail)) {
+          invalidCount++;
+          continue;
+        }
+
+        if (seenEmailsInBatch.has(rawEmail)) {
+          duplicateInBatchCount++;
+          continue;
+        }
+
+        seenEmailsInBatch.add(rawEmail);
+        validRecords.push({
+          full_name: (rec.full_name || rec.name || 'Participant').trim(),
+          email: rawEmail,
+          phone: (rec.phone || rec.contact || rec.mobile || '').trim() || null,
+          academic_class: (rec.academic_class || rec.class || '').trim() || null,
+          section: (rec.section || '').trim() || null,
+          roll: (rec.roll || '').trim() || null,
+          school: (rec.school || rec.institution || '').trim() || null,
+          selected_events: (rec.selected_events || rec.events || '').trim() || null,
+          academic_year: (rec.academic_year || defaultYear).trim(),
+          source_table: 'csv_import',
+          verified: 'yes',
+          metadata: {
+            imported_at: new Date().toISOString(),
+            imported_by: auth.email,
+            file_name: String(fileName).slice(0, 100),
+            imported_via: 'admin_csv_importer'
+          }
+        });
+      }
+
+      if (validRecords.length === 0) {
+        return NextResponse.json({ 
+          error: 'No valid records with legitimate email addresses were found in the uploaded data.',
+          invalidCount
+        }, { status: 400 });
+      }
+
+      // Check for existing records in DB if skipExistingInDb is true
+      let recordsToInsert = validRecords;
+      let existingInDbCount = 0;
+
+      if (skipExistingInDb) {
+        const existingEmails = new Set<string>();
+        const batchEmails = validRecords.map(r => r.email);
+        
+        for (let i = 0; i < batchEmails.length; i += 500) {
+          const chunk = batchEmails.slice(i, i + 500);
+          const { data: existingRows, error: exErr } = await supabaseAdmin
+            .from('previous_year_participants')
+            .select('email')
+            .in('email', chunk);
+
+          if (!exErr && existingRows) {
+            existingRows.forEach(row => {
+              if (row.email) existingEmails.add(row.email.trim().toLowerCase());
+            });
+          }
+        }
+
+        recordsToInsert = validRecords.filter(r => !existingEmails.has(r.email));
+        existingInDbCount = validRecords.length - recordsToInsert.length;
+      }
+
+      if (recordsToInsert.length === 0) {
+        return NextResponse.json({
+          success: true,
+          message: `All ${validRecords.length} participants with valid emails already exist in previous_year_participants. No duplicate records were added.`,
+          importedCount: 0,
+          existingInDbCount,
+          duplicateInBatchCount,
+          invalidCount,
+          totalSubmitted: records.length
+        });
+      }
+
+      // Insert in chunks of 100
+      const BATCH_SIZE = 100;
+      let totalInserted = 0;
+
+      for (let i = 0; i < recordsToInsert.length; i += BATCH_SIZE) {
+        const batch = recordsToInsert.slice(i, i + BATCH_SIZE);
+        const { error: insErr } = await supabaseAdmin
+          .from('previous_year_participants')
+          .insert(batch);
+
+        if (insErr) {
+          console.error('Error inserting CSV batch into previous_year_participants:', insErr);
+          if (insErr.code === '42P01' || insErr.message?.includes('does not exist')) {
+            return NextResponse.json({
+              error: 'The "previous_year_participants" table has not been created in Supabase yet. Please run the migration in SUPABASE_SETUP.sql.',
+              needsSqlSetup: true
+            }, { status: 400 });
+          }
+          throw new Error(`Failed to insert participants: ${insErr.message}`);
+        }
+        totalInserted += batch.length;
+      }
+
+      // Log into admin_audit_logs
+      try {
+        await supabaseAdmin.from('admin_audit_logs').insert({
+          admin_name: auth.adminName || 'Super Admin',
+          admin_email: auth.email,
+          action_type: 'CSV_IMPORT_PREVIOUS_YEAR_PARTICIPANTS',
+          target: `${totalInserted} participants`,
+          details: JSON.stringify({
+            fileName,
+            academicYear: defaultYear,
+            totalSubmitted: records.length,
+            totalInserted,
+            existingInDbCount,
+            duplicateInBatchCount,
+            invalidCount
+          })
+        });
+      } catch (e) {
+        // ignore audit fail
+      }
+
+      return NextResponse.json({
+        success: true,
+        message: `Successfully saved ${totalInserted} participant emails into previous_year_participants.`,
+        importedCount: totalInserted,
+        existingInDbCount,
+        duplicateInBatchCount,
+        invalidCount,
+        totalSubmitted: records.length
+      });
+    }
+
+    // ----------------------------------------------------
     // ACTION: ADD INDIVIDUAL HISTORICAL PARTICIPANT
     // ----------------------------------------------------
     if (action === 'add_participant') {

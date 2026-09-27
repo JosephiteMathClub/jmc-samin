@@ -916,6 +916,7 @@ export function TicketPurchaseSection({ isSuperAdmin: propIsSuperAdmin }: Ticket
   const [spotSuccess, setSpotSuccess] = useState<string | null>(null);
   const [lastCreatedCandidate, setLastCreatedCandidate] = useState<PurchaseSlipCandidate | null>(null);
   const [spotSubmitting, setSpotSubmitting] = useState(false);
+  const [spotAutoValidate, setSpotAutoValidate] = useState(true);
 
   // Selected team events
   const selectedTeamEvents = useMemo(() => {
@@ -1233,7 +1234,8 @@ export function TicketPurchaseSection({ isSuperAdmin: propIsSuperAdmin }: Ticket
           verifiedBy: currentAdminEmail || 'Admin',
           verifiedByName: currentAdminName,
           verifiedByEmail: currentAdminEmail,
-          documentType: 'verification_slip'
+          documentType: 'verification_slip',
+          autoValidate: spotAutoValidate
         })
       });
 
@@ -1257,7 +1259,7 @@ export function TicketPurchaseSection({ isSuperAdmin: propIsSuperAdmin }: Ticket
         confirmedBy: currentAdminEmail || 'Admin',
         confirmedByName: currentAdminName,
         confirmedByEmail: currentAdminEmail,
-        validated: false,
+        validated: spotAutoValidate,
         snacks: false,
         certificate: false,
         souvenir: false,

@@ -33,8 +33,163 @@ import {
   CheckSquare,
   Square,
   Edit,
-  X
+  X,
+  Upload,
+  FileSpreadsheet,
+  FileCheck,
+  ArrowRight
 } from 'lucide-react';
+
+// Helper to parse CSV data respecting quotes and delimiters
+function parseCSV(text: string): { headers: string[]; rows: string[][] } {
+  const cleanText = text.replace(/^\uFEFF/, '');
+  if (!cleanText.trim()) return { headers: [], rows: [] };
+
+  const firstLine = cleanText.split(/\r\n|\n|\r/)[0] || '';
+  let delimiter = ',';
+  const commaCount = (firstLine.match(/,/g) || []).length;
+  const semicolonCount = (firstLine.match(/;/g) || []).length;
+  const tabCount = (firstLine.match(/\t/g) || []).length;
+  if (semicolonCount > commaCount && semicolonCount > tabCount) {
+    delimiter = ';';
+  } else if (tabCount > commaCount && tabCount > semicolonCount) {
+    delimiter = '\t';
+  }
+
+  const result: string[][] = [];
+  let currentRow: string[] = [];
+  let currentField = '';
+  let inQuotes = false;
+  let i = 0;
+
+  while (i < cleanText.length) {
+    const char = cleanText[i];
+    const nextChar = cleanText[i + 1];
+
+    if (inQuotes) {
+      if (char === '"') {
+        if (nextChar === '"') {
+          currentField += '"';
+          i += 2;
+          continue;
+        } else {
+          inQuotes = false;
+          i++;
+          continue;
+        }
+      } else {
+        currentField += char;
+        i++;
+        continue;
+      }
+    } else {
+      if (char === '"') {
+        inQuotes = true;
+        i++;
+        continue;
+      } else if (char === delimiter) {
+        currentRow.push(currentField.trim());
+        currentField = '';
+        i++;
+        continue;
+      } else if (char === '\r' || char === '\n') {
+        currentRow.push(currentField.trim());
+        currentField = '';
+        if (currentRow.some(val => val.length > 0)) {
+          result.push(currentRow);
+        }
+        currentRow = [];
+        if (char === '\r' && nextChar === '\n') {
+          i += 2;
+        } else {
+          i++;
+        }
+        continue;
+      } else {
+        currentField += char;
+        i++;
+        continue;
+      }
+    }
+  }
+
+  if (currentField || currentRow.length > 0) {
+    currentRow.push(currentField.trim());
+    if (currentRow.some(val => val.length > 0)) {
+      result.push(currentRow);
+    }
+  }
+
+  if (result.length === 0) return { headers: [], rows: [] };
+
+  const rawHeaders = result[0];
+  const headers = rawHeaders.map((h, idx) => (h && h.trim()) || `Column_${idx + 1}`);
+  const rows = result.slice(1);
+
+  return { headers, rows };
+}
+
+const EMAIL_DETECTION_REGEX = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)+$/;
+
+function detectEmailColumn(headers: string[], rows: string[][]): { index: number; name: string; matchType: 'header' | 'content' | 'none'; validEmailCount: number } {
+  const emailKeywords = ['email', 'e-mail', 'mail', 'e_mail', 'electronic mail', 'student email', 'participant email', 'contact email', 'user email', 'registered email'];
+  
+  // Pass 1: Header names matching
+  for (let i = 0; i < headers.length; i++) {
+    const cleanHeader = headers[i].toLowerCase().trim().replace(/[^a-z0-9]/g, '');
+    for (const kw of emailKeywords) {
+      const cleanKw = kw.replace(/[^a-z0-9]/g, '');
+      if (cleanHeader === cleanKw || cleanHeader.includes(cleanKw)) {
+        let validCount = 0;
+        rows.forEach(r => {
+          if (r[i] && EMAIL_DETECTION_REGEX.test(r[i].trim())) validCount++;
+        });
+        return { index: i, name: headers[i], matchType: 'header', validEmailCount: validCount };
+      }
+    }
+  }
+
+  // Pass 2: Content scan
+  let bestColIndex = -1;
+  let maxValidCount = 0;
+
+  for (let colIdx = 0; colIdx < headers.length; colIdx++) {
+    let count = 0;
+    for (let rowIdx = 0; rowIdx < Math.min(rows.length, 100); rowIdx++) {
+      const val = rows[rowIdx]?.[colIdx]?.trim();
+      if (val && EMAIL_DETECTION_REGEX.test(val)) {
+        count++;
+      }
+    }
+    if (count > maxValidCount) {
+      maxValidCount = count;
+      bestColIndex = colIdx;
+    }
+  }
+
+  if (bestColIndex !== -1 && maxValidCount > 0) {
+    let totalValid = 0;
+    rows.forEach(r => {
+      if (r[bestColIndex] && EMAIL_DETECTION_REGEX.test(r[bestColIndex].trim())) totalValid++;
+    });
+    return { index: bestColIndex, name: headers[bestColIndex], matchType: 'content', validEmailCount: totalValid };
+  }
+
+  return { index: -1, name: '', matchType: 'none', validEmailCount: 0 };
+}
+
+function detectColumn(headers: string[], keywords: string[]): number {
+  for (let i = 0; i < headers.length; i++) {
+    const clean = headers[i].toLowerCase().trim().replace(/[^a-z0-9]/g, '');
+    for (const kw of keywords) {
+      const cleanKw = kw.replace(/[^a-z0-9]/g, '');
+      if (clean === cleanKw || clean.includes(cleanKw)) {
+        return i;
+      }
+    }
+  }
+  return -1;
+}
 
 interface ParticipantRecord {
   id: string;
@@ -321,6 +476,34 @@ export const ParticipantHistoryTab: React.FC<ParticipantHistoryTabProps> = ({
     selected_events: ''
   });
   const [addingParticipant, setAddingParticipant] = useState(false);
+
+  // CSV Import States
+  const [showCsvModal, setShowCsvModal] = useState(false);
+  const [csvFile, setCsvFile] = useState<File | null>(null);
+  const [csvHeaders, setCsvHeaders] = useState<string[]>([]);
+  const [csvRawRows, setCsvRawRows] = useState<string[][]>([]);
+  const [selectedEmailCol, setSelectedEmailCol] = useState<string>('');
+  const [selectedNameCol, setSelectedNameCol] = useState<string>('');
+  const [selectedPhoneCol, setSelectedPhoneCol] = useState<string>('');
+  const [selectedSchoolCol, setSelectedSchoolCol] = useState<string>('');
+  const [selectedClassCol, setSelectedClassCol] = useState<string>('');
+  const [csvAcademicYear, setCsvAcademicYear] = useState<string>(`${new Date().getFullYear() - 1}-${new Date().getFullYear()}`);
+  const [deduplicateInFile, setDeduplicateInFile] = useState(true);
+  const [skipDbDuplicates, setSkipDbDuplicates] = useState(true);
+  const [csvDetectionResult, setCsvDetectionResult] = useState<{
+    detectedEmailIndex: number;
+    detectedEmailHeader: string;
+    validEmailCount: number;
+    matchType: 'header' | 'content' | 'none';
+  } | null>(null);
+  const [importingCsv, setImportingCsv] = useState(false);
+  const [importResult, setImportResult] = useState<{
+    importedCount: number;
+    existingInDbCount: number;
+    duplicateInBatchCount: number;
+    invalidCount: number;
+    totalSubmitted: number;
+  } | null>(null);
 
   // Fetch Participant History data
   const fetchData = useCallback(async () => {
@@ -694,6 +877,189 @@ export const ParticipantHistoryTab: React.FC<ParticipantHistoryTabProps> = ({
     }
   };
 
+  // Reset CSV Import Modal State
+  const handleResetCsvModal = () => {
+    setCsvFile(null);
+    setCsvHeaders([]);
+    setCsvRawRows([]);
+    setSelectedEmailCol('');
+    setSelectedNameCol('');
+    setSelectedPhoneCol('');
+    setSelectedSchoolCol('');
+    setSelectedClassCol('');
+    setCsvDetectionResult(null);
+    setImportResult(null);
+  };
+
+  // CSV File Handler with Auto-Detection for Email and details
+  const handleCsvFileSelect = (file: File) => {
+    if (!file) return;
+    setCsvFile(file);
+    setImportResult(null);
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const content = e.target?.result as string;
+      if (!content) {
+        showToast('Empty file or unable to read file contents.', 'error');
+        return;
+      }
+
+      const { headers, rows } = parseCSV(content);
+      if (headers.length === 0 || rows.length === 0) {
+        showToast('No valid CSV rows could be extracted from this file.', 'error');
+        return;
+      }
+
+      setCsvHeaders(headers);
+      setCsvRawRows(rows);
+
+      // Search through CSV and find the email field!
+      const detection = detectEmailColumn(headers, rows);
+      setCsvDetectionResult({
+        detectedEmailIndex: detection.index,
+        detectedEmailHeader: detection.name,
+        validEmailCount: detection.validEmailCount,
+        matchType: detection.matchType
+      });
+
+      if (detection.index !== -1) {
+        setSelectedEmailCol(headers[detection.index]);
+      } else {
+        setSelectedEmailCol('');
+      }
+
+      // Auto-detect other fields
+      const nameIdx = detectColumn(headers, ['fullname', 'full name', 'name', 'participant name', 'student name', 'student', 'attendee']);
+      if (nameIdx !== -1 && nameIdx !== detection.index) {
+        setSelectedNameCol(headers[nameIdx]);
+      } else {
+        setSelectedNameCol('');
+      }
+
+      const phoneIdx = detectColumn(headers, ['phone', 'mobile', 'contact', 'cell', 'whatsapp', 'bkash']);
+      if (phoneIdx !== -1 && phoneIdx !== detection.index) {
+        setSelectedPhoneCol(headers[phoneIdx]);
+      } else {
+        setSelectedPhoneCol('');
+      }
+
+      const schoolIdx = detectColumn(headers, ['school', 'institution', 'institute', 'college', 'organization', 'academy']);
+      if (schoolIdx !== -1 && schoolIdx !== detection.index) {
+        setSelectedSchoolCol(headers[schoolIdx]);
+      } else {
+        setSelectedSchoolCol('');
+      }
+
+      const classIdx = detectColumn(headers, ['class', 'grade', 'academic class', 'standard', 'batch']);
+      if (classIdx !== -1 && classIdx !== detection.index) {
+        setSelectedClassCol(headers[classIdx]);
+      } else {
+        setSelectedClassCol('');
+      }
+    };
+
+    reader.onerror = () => {
+      showToast('Error reading the selected CSV file.', 'error');
+    };
+
+    reader.readAsText(file);
+  };
+
+  // Memoized parsed preview records based on current column mappings
+  const parsedRecords = useMemo(() => {
+    if (!selectedEmailCol || csvRawRows.length === 0) return [];
+    const emailIdx = csvHeaders.indexOf(selectedEmailCol);
+    if (emailIdx === -1) return [];
+
+    const nameIdx = selectedNameCol ? csvHeaders.indexOf(selectedNameCol) : -1;
+    const phoneIdx = selectedPhoneCol ? csvHeaders.indexOf(selectedPhoneCol) : -1;
+    const schoolIdx = selectedSchoolCol ? csvHeaders.indexOf(selectedSchoolCol) : -1;
+    const classIdx = selectedClassCol ? csvHeaders.indexOf(selectedClassCol) : -1;
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const records: Array<{
+      full_name: string;
+      email: string;
+      phone: string;
+      school: string;
+      academic_class: string;
+      academic_year: string;
+      source_table: string;
+    }> = [];
+
+    const seen = new Set<string>();
+
+    for (const row of csvRawRows) {
+      const rawEmail = (row[emailIdx] || '').trim().toLowerCase();
+      const isValid = emailRegex.test(rawEmail);
+      if (!isValid) continue;
+
+      if (deduplicateInFile && seen.has(rawEmail)) continue;
+      seen.add(rawEmail);
+
+      const rawName = nameIdx !== -1 ? (row[nameIdx] || '').trim() : '';
+      const rawPhone = phoneIdx !== -1 ? (row[phoneIdx] || '').trim() : '';
+      const rawSchool = schoolIdx !== -1 ? (row[schoolIdx] || '').trim() : '';
+      const rawClass = classIdx !== -1 ? (row[classIdx] || '').trim() : '';
+
+      records.push({
+        full_name: rawName || 'Participant',
+        email: rawEmail,
+        phone: rawPhone,
+        school: rawSchool,
+        academic_class: rawClass,
+        academic_year: csvAcademicYear,
+        source_table: 'csv_import'
+      });
+    }
+
+    return records;
+  }, [csvRawRows, csvHeaders, selectedEmailCol, selectedNameCol, selectedPhoneCol, selectedSchoolCol, selectedClassCol, csvAcademicYear, deduplicateInFile]);
+
+  // Execute Save to previous_year_participants
+  const handleSaveCsvToPreviousYearParticipants = async () => {
+    if (!parsedRecords || parsedRecords.length === 0) {
+      showToast('No valid participant records with emails to save.', 'error');
+      return;
+    }
+
+    setImportingCsv(true);
+    try {
+      const res = await fetch('/api/admin/participant-history', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'import_csv',
+          records: parsedRecords,
+          academicYear: csvAcademicYear,
+          skipExistingInDb: skipDbDuplicates,
+          fileName: csvFile?.name || 'participants_import.csv'
+        })
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to import CSV into previous_year_participants');
+      }
+
+      setImportResult({
+        importedCount: data.importedCount ?? 0,
+        existingInDbCount: data.existingInDbCount ?? 0,
+        duplicateInBatchCount: data.duplicateInBatchCount ?? 0,
+        invalidCount: data.invalidCount ?? 0,
+        totalSubmitted: data.totalSubmitted ?? parsedRecords.length
+      });
+
+      showToast(data.message || `Saved ${data.importedCount} participant records to previous_year_participants.`, 'success');
+      fetchData();
+    } catch (err: any) {
+      showToast(err.message || 'Failed to save CSV to previous_year_participants', 'error');
+    } finally {
+      setImportingCsv(false);
+    }
+  };
+
   // Edit Participant Handlers
   const handleOpenEdit = (p: ParticipantRecord) => {
     setEditingRecord(p);
@@ -777,6 +1143,18 @@ export const ParticipantHistoryTab: React.FC<ParticipantHistoryTabProps> = ({
             </div>
 
             <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  handleResetCsvModal();
+                  setShowCsvModal(true);
+                }}
+                className="px-4 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-black text-xs uppercase tracking-wider flex items-center gap-2 shadow-lg shadow-purple-600/25 transition-all cursor-pointer"
+              >
+                <FileSpreadsheet className="w-3.5 h-3.5" />
+                <span>Import from CSV</span>
+              </button>
+
               <button
                 type="button"
                 onClick={fetchData}
@@ -1405,6 +1783,18 @@ CREATE POLICY "Allow service role full access to previous_year_participants" ON 
           <div className="flex flex-wrap items-center gap-3">
             <button
               type="button"
+              onClick={() => {
+                handleResetCsvModal();
+                setShowCsvModal(true);
+              }}
+              className="px-4 py-2 rounded-xl bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/40 text-purple-200 hover:text-white text-[10px] font-heavy uppercase tracking-widest flex items-center gap-1.5 transition-all cursor-pointer"
+            >
+              <Upload className="w-3.5 h-3.5" />
+              <span>Import CSV</span>
+            </button>
+
+            <button
+              type="button"
               onClick={handleExportCSV}
               className="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white text-[10px] font-heavy uppercase tracking-widest flex items-center gap-1.5 transition-all cursor-pointer"
             >
@@ -1701,6 +2091,413 @@ CREATE POLICY "Allow service role full access to previous_year_participants" ON 
                 <span>Execute Archival &amp; Reset</span>
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL FOR IMPORTING PARTICIPANTS FROM CSV */}
+      {showCsvModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md overflow-y-auto">
+          <div className="relative w-full max-w-3xl rounded-3xl bg-zinc-950 border border-purple-500/30 p-6 md:p-8 space-y-6 shadow-2xl my-8">
+            {/* Header */}
+            <div className="flex items-center justify-between pb-4 border-b border-white/10">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-purple-500/20 border border-purple-500/40 flex items-center justify-center text-purple-400">
+                  <FileSpreadsheet className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest bg-purple-500 text-white">
+                      Auto-Detect &amp; Save
+                    </span>
+                    <span className="text-[10px] font-mono text-zinc-400">
+                      Table: previous_year_participants
+                    </span>
+                  </div>
+                  <h3 className="text-base font-black text-white uppercase tracking-tight mt-0.5">
+                    Import Participants from CSV
+                  </h3>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowCsvModal(false)}
+                className="p-2 rounded-xl text-zinc-500 hover:text-white bg-white/5 transition-colors cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* If import already succeeded */}
+            {importResult ? (
+              <div className="space-y-6 py-4 text-center">
+                <div className="w-16 h-16 rounded-full bg-emerald-500/20 border border-emerald-500/40 mx-auto flex items-center justify-center text-emerald-400 shadow-xl shadow-emerald-500/10">
+                  <CheckCircle2 className="w-8 h-8" />
+                </div>
+
+                <div className="space-y-2">
+                  <h4 className="text-lg font-black text-white uppercase tracking-tight">
+                    Import Completed Successfully!
+                  </h4>
+                  <p className="text-xs text-zinc-300 max-w-md mx-auto">
+                    {importResult.importedCount > 0 ? (
+                      <>
+                        Successfully saved <strong className="text-emerald-400 font-bold">{importResult.importedCount}</strong> new participant records into <code className="text-purple-300 font-mono">previous_year_participants</code>.
+                      </>
+                    ) : (
+                      <>
+                        No new records were added because all submitted valid email addresses already exist in the archive.
+                      </>
+                    )}
+                  </p>
+                </div>
+
+                {/* Stat pills */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 max-w-xl mx-auto text-left">
+                  <div className="p-3 rounded-xl bg-white/[0.03] border border-white/5">
+                    <span className="text-[10px] uppercase font-bold text-zinc-400 block">Total Submitted</span>
+                    <span className="text-sm font-black text-white font-mono">{importResult.totalSubmitted}</span>
+                  </div>
+                  <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30">
+                    <span className="text-[10px] uppercase font-bold text-emerald-300 block">Saved to Vault</span>
+                    <span className="text-sm font-black text-emerald-400 font-mono">{importResult.importedCount}</span>
+                  </div>
+                  <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30">
+                    <span className="text-[10px] uppercase font-bold text-amber-300 block">Existing In Vault</span>
+                    <span className="text-sm font-black text-amber-400 font-mono">{importResult.existingInDbCount}</span>
+                  </div>
+                  <div className="p-3 rounded-xl bg-white/[0.03] border border-white/5">
+                    <span className="text-[10px] uppercase font-bold text-zinc-400 block">File Duplicates</span>
+                    <span className="text-sm font-black text-zinc-300 font-mono">{importResult.duplicateInBatchCount}</span>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-center gap-3 pt-4">
+                  <button
+                    type="button"
+                    onClick={handleResetCsvModal}
+                    className="px-5 py-2.5 rounded-xl bg-white/10 hover:bg-white/15 text-white text-xs font-bold transition-all cursor-pointer"
+                  >
+                    Import Another CSV File
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowCsvModal(false)}
+                    className="px-6 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-black uppercase tracking-wider shadow-lg shadow-purple-600/30 transition-all cursor-pointer"
+                  >
+                    Done &amp; View Vault
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-6">
+                {/* 1. File Upload / Dropzone */}
+                {!csvFile ? (
+                  <div className="space-y-3">
+                    <label 
+                      htmlFor="csv-upload-input"
+                      className="border-2 border-dashed border-purple-500/40 hover:border-purple-400/80 rounded-2xl p-8 flex flex-col items-center justify-center gap-3 bg-purple-500/[0.03] hover:bg-purple-500/[0.06] transition-all cursor-pointer group"
+                    >
+                      <div className="w-14 h-14 rounded-2xl bg-purple-500/10 border border-purple-500/30 flex items-center justify-center text-purple-400 group-hover:scale-105 transition-transform">
+                        <Upload className="w-7 h-7" />
+                      </div>
+                      <div className="text-center space-y-1">
+                        <span className="text-sm font-bold text-white block">
+                          Upload CSV Participant Spreadsheet
+                        </span>
+                        <span className="text-xs text-zinc-400 block">
+                          Drag and drop your file here, or click to browse (.csv)
+                        </span>
+                      </div>
+                      <span className="px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest bg-white/5 text-zinc-400 border border-white/5">
+                        Accepts standard CSV files (Google Forms, Excel, School registration)
+                      </span>
+                    </label>
+                    <input
+                      id="csv-upload-input"
+                      type="file"
+                      accept=".csv,text/csv,application/vnd.ms-excel"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) handleCsvFileSelect(file);
+                      }}
+                    />
+                  </div>
+                ) : (
+                  <div className="space-y-5">
+                    {/* File Info Bar */}
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 rounded-2xl bg-white/[0.03] border border-white/10">
+                      <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-xl bg-purple-500/20 border border-purple-500/40 flex items-center justify-center text-purple-400">
+                          <FileCheck className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <span className="text-xs font-bold text-white block truncate max-w-xs sm:max-w-md">
+                            {csvFile.name}
+                          </span>
+                          <span className="text-[10px] text-zinc-400 font-mono">
+                            {(csvFile.size / 1024).toFixed(1)} KB • {csvRawRows.length} data rows parsed • {csvHeaders.length} columns
+                          </span>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleResetCsvModal}
+                        className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 hover:text-white px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 transition-colors w-fit cursor-pointer"
+                      >
+                        Change File
+                      </button>
+                    </div>
+
+                    {/* Email Field Auto-Detection Result Banner */}
+                    {csvDetectionResult?.matchType !== 'none' ? (
+                      <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-start gap-3 text-xs text-emerald-200">
+                        <CheckCircle2 className="w-5 h-5 text-emerald-400 flex-shrink-0 mt-0.5" />
+                        <div className="space-y-0.5">
+                          <div className="font-black uppercase tracking-wider text-emerald-300 flex items-center gap-2">
+                            <span>Email Field Auto-Discovered</span>
+                            <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
+                              via {csvDetectionResult?.matchType === 'header' ? 'Header Match' : 'Data Pattern Recognition'}
+                            </span>
+                          </div>
+                          <p className="text-emerald-100/90 text-xs">
+                            Identified column <strong className="text-white font-mono px-1.5 py-0.5 rounded bg-emerald-950/60 border border-emerald-500/30 font-bold">{selectedEmailCol}</strong> with <strong className="text-white font-bold">{csvDetectionResult?.validEmailCount}</strong> valid email addresses detected.
+                          </p>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-start gap-3 text-xs text-amber-200">
+                        <AlertCircle className="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5" />
+                        <div>
+                          <span className="font-bold uppercase tracking-wider text-amber-300 block">
+                            Manual Column Selection Needed
+                          </span>
+                          <p className="text-amber-100/90 text-xs mt-0.5">
+                            Could not automatically match an email column with high certainty. Please choose the email column from the dropdown below.
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Column Mappings Form */}
+                    <div className="p-5 rounded-2xl bg-black/40 border border-white/10 space-y-4">
+                      <div className="text-xs font-black uppercase tracking-wider text-white flex items-center gap-2">
+                        <Search className="w-3.5 h-3.5 text-purple-400" />
+                        <span>Column Search &amp; Field Mapping</span>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+                        {/* 1. Email Field (REQUIRED) */}
+                        <div className="space-y-1.5 sm:col-span-2 p-3.5 rounded-xl bg-purple-500/10 border border-purple-500/30">
+                          <div className="flex items-center justify-between">
+                            <label className="text-[10px] font-black uppercase tracking-widest text-purple-300 flex items-center gap-1.5">
+                              <Mail className="w-3.5 h-3.5" />
+                              <span>Email Address Field (Required) *</span>
+                            </label>
+                            {selectedEmailCol && (
+                              <span className="text-[10px] font-mono text-purple-300">
+                                {parsedRecords.length} valid emails mapped
+                              </span>
+                            )}
+                          </div>
+                          <select
+                            value={selectedEmailCol}
+                            onChange={(e) => setSelectedEmailCol(e.target.value)}
+                            className="w-full px-3 py-2.5 bg-black/80 border border-purple-500/40 rounded-xl text-white font-mono text-xs font-bold outline-none focus:border-purple-400"
+                          >
+                            <option value="">-- Select Email Column --</option>
+                            {csvHeaders.map(header => (
+                              <option key={header} value={header}>
+                                {header} {header === csvDetectionResult?.detectedEmailHeader ? '(Auto-Detected)' : ''}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                        {/* 2. Full Name Field (Optional) */}
+                        <div className="space-y-1.5">
+                          <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 flex items-center gap-1.5">
+                            <Users className="w-3 h-3 text-zinc-500" />
+                            <span>Participant Name Column</span>
+                          </label>
+                          <select
+                            value={selectedNameCol}
+                            onChange={(e) => setSelectedNameCol(e.target.value)}
+                            className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-xl text-white text-xs outline-none focus:border-purple-500"
+                          >
+                            <option value="">-- Leave Blank (Defaults to &quot;Participant&quot;) --</option>
+                            {csvHeaders.map(header => (
+                              <option key={header} value={header}>{header}</option>
+                            ))}
+                          </select>
+                        </div>
+
+                        {/* 3. Phone Field (Optional) */}
+                        <div className="space-y-1.5">
+                          <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 flex items-center gap-1.5">
+                            <PhoneCall className="w-3 h-3 text-zinc-500" />
+                            <span>Phone Number Column</span>
+                          </label>
+                          <select
+                            value={selectedPhoneCol}
+                            onChange={(e) => setSelectedPhoneCol(e.target.value)}
+                            className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-xl text-white text-xs outline-none focus:border-purple-500"
+                          >
+                            <option value="">-- Leave Blank (None) --</option>
+                            {csvHeaders.map(header => (
+                              <option key={header} value={header}>{header}</option>
+                            ))}
+                          </select>
+                        </div>
+
+                        {/* 4. School / College (Optional) */}
+                        <div className="space-y-1.5">
+                          <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">
+                            School / Institution Column
+                          </label>
+                          <select
+                            value={selectedSchoolCol}
+                            onChange={(e) => setSelectedSchoolCol(e.target.value)}
+                            className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-xl text-white text-xs outline-none focus:border-purple-500"
+                          >
+                            <option value="">-- Leave Blank (None) --</option>
+                            {csvHeaders.map(header => (
+                              <option key={header} value={header}>{header}</option>
+                            ))}
+                          </select>
+                        </div>
+
+                        {/* 5. Class / Grade (Optional) */}
+                        <div className="space-y-1.5">
+                          <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">
+                            Academic Class Column
+                          </label>
+                          <select
+                            value={selectedClassCol}
+                            onChange={(e) => setSelectedClassCol(e.target.value)}
+                            className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-xl text-white text-xs outline-none focus:border-purple-500"
+                          >
+                            <option value="">-- Leave Blank (None) --</option>
+                            {csvHeaders.map(header => (
+                              <option key={header} value={header}>{header}</option>
+                            ))}
+                          </select>
+                        </div>
+
+                        {/* 6. Target Academic Year */}
+                        <div className="space-y-1.5 sm:col-span-2">
+                          <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">
+                            Target Academic Year for Vault Archive
+                          </label>
+                          <input
+                            type="text"
+                            value={csvAcademicYear}
+                            onChange={(e) => setCsvAcademicYear(e.target.value)}
+                            placeholder="e.g. 2025-2026"
+                            className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-xl text-white font-mono text-xs outline-none focus:border-purple-500"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Options checkboxes */}
+                      <div className="pt-2 border-t border-white/5 flex flex-col sm:flex-row gap-4 text-xs text-zinc-300">
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={deduplicateInFile}
+                            onChange={(e) => setDeduplicateInFile(e.target.checked)}
+                            className="rounded border-white/20 bg-black text-purple-500 focus:ring-purple-500"
+                          />
+                          <span>Deduplicate emails within this CSV</span>
+                        </label>
+
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={skipDbDuplicates}
+                            onChange={(e) => setSkipDbDuplicates(e.target.checked)}
+                            className="rounded border-white/20 bg-black text-purple-500 focus:ring-purple-500"
+                          />
+                          <span>Skip emails already in <code className="text-purple-300">previous_year_participants</code></span>
+                        </label>
+                      </div>
+                    </div>
+
+                    {/* Preview Table of Extracted Data */}
+                    {parsedRecords.length > 0 && (
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="font-bold text-white uppercase tracking-wider flex items-center gap-2 text-[11px]">
+                            <Eye className="w-3.5 h-3.5 text-amber-400" />
+                            <span>Data Extraction Preview (First 5 of {parsedRecords.length} records)</span>
+                          </span>
+                          <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
+                            {parsedRecords.length} Ready to Save
+                          </span>
+                        </div>
+
+                        <div className="rounded-xl border border-white/10 overflow-x-auto bg-black/60">
+                          <table className="w-full text-left text-xs">
+                            <thead className="bg-white/5 text-[10px] uppercase font-bold text-zinc-400 border-b border-white/10">
+                              <tr>
+                                <th className="px-3 py-2">#</th>
+                                <th className="px-3 py-2">Email</th>
+                                <th className="px-3 py-2">Full Name</th>
+                                <th className="px-3 py-2">Phone</th>
+                                <th className="px-3 py-2">School</th>
+                                <th className="px-3 py-2">Class</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-white/5 font-mono text-[11px]">
+                              {parsedRecords.slice(0, 5).map((rec, idx) => (
+                                <tr key={idx} className="hover:bg-white/[0.02]">
+                                  <td className="px-3 py-2 text-zinc-500">{idx + 1}</td>
+                                  <td className="px-3 py-2 text-emerald-400 font-bold">{rec.email}</td>
+                                  <td className="px-3 py-2 text-white font-sans">{rec.full_name}</td>
+                                  <td className="px-3 py-2 text-zinc-400">{rec.phone || '—'}</td>
+                                  <td className="px-3 py-2 text-zinc-400 font-sans truncate max-w-[140px]">{rec.school || '—'}</td>
+                                  <td className="px-3 py-2 text-zinc-400">{rec.academic_class || '—'}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Action Buttons */}
+                    <div className="flex items-center justify-end gap-3 pt-4 border-t border-white/10">
+                      <button
+                        type="button"
+                        onClick={() => setShowCsvModal(false)}
+                        className="px-4 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-xs font-bold text-zinc-400 hover:text-white transition-colors cursor-pointer"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleSaveCsvToPreviousYearParticipants}
+                        disabled={importingCsv || !selectedEmailCol || parsedRecords.length === 0}
+                        className="px-6 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 disabled:opacity-50 text-white text-xs font-black uppercase tracking-wider flex items-center gap-2 shadow-lg shadow-purple-600/30 transition-all cursor-pointer"
+                      >
+                        {importingCsv ? (
+                          <>
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                            <span>Saving to previous_year_participants...</span>
+                          </>
+                        ) : (
+                          <>
+                            <Check className="w-4 h-4" />
+                            <span>Save {parsedRecords.length} to previous_year_participants</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
       )}

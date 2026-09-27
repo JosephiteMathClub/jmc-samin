@@ -117,6 +117,7 @@ export const DEFAULT_CONTENT = {
         deputyPresidents: [{ name: "Monwar Rafat", role: "Deputy President", imageUrl: "/images/members/panel_26/monwar_rafat.png" }],
         generalSecretary: [{ name: "Shoumik Saha Raj", role: "General Secretary", imageUrl: "/images/members/panel_26/shoumik_saha-raj.png" }],
         vicePresidents: [{ name: "Arefin Anwar", role: "Vice President", imageUrl: "/images/members/panel_26/arefin_anwar.png" }],
+        assistantVicePresidents: [],
         departments: [
           { dept: "Internal Affairs", name: "Utkorsho Mistry Shouvik", imageUrl: "/images/members/panel_26/utkorsho_mistry_shouvik.png" },
           { dept: "External Affairs", name: "Mahatab Hossain Zihan", imageUrl: "/images/members/panel_26/mahatab_hossain_zihan.png" },
@@ -141,6 +142,7 @@ export const DEFAULT_CONTENT = {
           generalSecretary: [],
           deputyPresidents: [],
           vicePresidents: [],
+          assistantVicePresidents: [],
           departments: [],
           secretaries: { asstGeneralSecretary: [], jointSecretary: [], organizingSecretary: [], correspondingSecretary: [] }
         },
@@ -151,6 +153,7 @@ export const DEFAULT_CONTENT = {
           generalSecretary: [],
           deputyPresidents: [],
           vicePresidents: [],
+          assistantVicePresidents: [],
           departments: [],
           secretaries: { asstGeneralSecretary: [], jointSecretary: [], organizingSecretary: [], correspondingSecretary: [] }
         }
